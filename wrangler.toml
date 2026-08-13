@@ -1,0 +1,9 @@
+# Cloudflare Pages 配置
+# 部署命令：npx wrangler pages deploy docs/.vitepress/dist --project-name seagull-llm
+# 或在 Cloudflare Dashboard 连接 GitHub 仓库自动构建
+
+name = "seagull-llm"
+pages_build_output_dir = "docs/.vitepress/dist"
+compatibility_date = "2024-12-01"
+
+# 免费额度：无限请求/带宽，Pages Functions 100,000 请求/天

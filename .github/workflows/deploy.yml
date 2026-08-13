@@ -1,0 +1,38 @@
+# 自动构建并部署到 Cloudflare Pages
+# 推送到 main 分支即触发
+#
+# 需在 GitHub 仓库 Settings → Secrets and variables → Actions 配置：
+#   CLOUDFLARE_API_TOKEN  — Cloudflare API Token（需 Cloudflare Pages:Edit 权限）
+#   CLOUDFLARE_ACCOUNT_ID — Cloudflare Account ID（Dashboard 右侧栏可见）
+
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy docs/.vitepress/dist --project-name seagull-llm
