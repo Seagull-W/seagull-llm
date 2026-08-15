@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useTokenizer } from '../composables/useTokenizer'
 
-type TokenizeMethod = 'char' | 'word' | 'bpe' | 'byte'
+type TokenizeMethod = 'char' | 'word' | 'bpe' | 'byte' | 'real'
 
 interface Token {
   text: string
   index: number
   tokenId: number
   isByte?: boolean
+  isSpecial?: boolean
 }
 
+const { tokenizerState, tokenizerProgress, tokenizerError, loadTokenizer, tokenizeWithReal } = useTokenizer()
+
 const inputValue = ref('大语言模型正在改变世界')
-const method = ref<TokenizeMethod>('bpe')
+const method = ref<TokenizeMethod>('real')
 const hoveredIndex = ref<number | null>(null)
 
 const presets = [
@@ -26,6 +30,7 @@ const methods: { key: TokenizeMethod; label: string; desc: string; vocab: string
   { key: 'word', label: '词级', desc: '每个完整词成为一个 token，遇生词回退到字符', vocab: '词表极大（数十万）' },
   { key: 'bpe', label: 'BPE 子词', desc: '高频字符组合被合并为子词 token（大模型实际使用的方式）', vocab: '词表适中（3~15 万）' },
   { key: 'byte', label: '字节级', desc: '每个 UTF-8 字节成为一个 token（中文 3 字节/字）', vocab: '词表固定 256' },
+  { key: 'real', label: '真实分词器', desc: '使用 Qwen2.5 模型的真实 BPE 分词器（需加载约 8MB 分词器文件）', vocab: '词表 151,936' },
 ]
 
 const currentMethodInfo = computed(() => methods.find(m => m.key === method.value)!)
@@ -231,8 +236,13 @@ const tokens = computed<Token[]>(() => {
     case 'word': return tokenizeWord(inputValue.value)
     case 'bpe': return tokenizeBPE(inputValue.value)
     case 'byte': return tokenizeByte(inputValue.value)
+    case 'real':
+      if (tokenizerState.value !== 'ready') return []
+      return tokenizeWithReal(inputValue.value)
   }
 })
+
+const showTokenizerLoader = computed(() => method.value === 'real' && tokenizerState.value !== 'ready')
 
 const tokenCount = computed(() => tokens.value.length)
 const charCount = computed(() => inputValue.value.replace(/\s/g, '').length)
@@ -240,7 +250,8 @@ const efficiency = computed(() =>
   tokenCount.value > 0 ? (charCount.value / tokenCount.value).toFixed(2) : '0.00'
 )
 
-function getTokenType(text: string, isByte?: boolean): 'cn' | 'en' | 'punct' | 'byte' {
+function getTokenType(text: string, isByte?: boolean, isSpecial?: boolean): 'cn' | 'en' | 'punct' | 'byte' | 'special' {
+  if (isSpecial) return 'special'
   if (isByte) return 'byte'
   if (/[\u4e00-\u9fff]/.test(text)) return 'cn'
   if (/[a-zA-Z0-9]/.test(text)) return 'en'
@@ -310,36 +321,56 @@ function getTokenType(text: string, isByte?: boolean): 'cn' | 'en' | 'punct' | '
 
     <!-- Token 展示区 -->
     <div class="tokens-container">
-      <span
-        v-for="token in tokens"
-        :key="token.index"
-        class="token-block"
-        :class="`type-${getTokenType(token.text, token.isByte)}`"
-        @mouseenter="hoveredIndex = token.index"
-        @mouseleave="hoveredIndex = null"
-      >
-        <span class="token-index">{{ token.index }}</span>
-        <span class="token-text">{{ token.text }}</span>
+      <!-- 真实分词器加载 UI -->
+      <div v-if="showTokenizerLoader" class="tokenizer-loader">
+        <template v-if="tokenizerState === 'idle'">
+          <p class="loader-text">使用 Qwen2.5 模型的真实分词器，展示实际的 Token ID。</p>
+          <button class="load-btn" @click="loadTokenizer">加载分词器（约 8MB）</button>
+        </template>
+        <template v-else-if="tokenizerState === 'loading'">
+          <div class="loader-spinner"></div>
+          <p class="loader-text">{{ tokenizerProgress || '加载中...' }}</p>
+          <p class="loader-hint">首次加载需下载分词器文件，浏览器缓存后下次秒开</p>
+        </template>
+        <template v-else-if="tokenizerState === 'error'">
+          <p class="loader-error">{{ tokenizerError }}</p>
+          <button class="load-btn" @click="loadTokenizer">重试</button>
+        </template>
+      </div>
 
-        <span v-if="hoveredIndex === token.index" class="token-tooltip">
-          <span class="tooltip-row">
-            <span class="tooltip-label">{{ token.isByte ? '字节' : '文本' }}</span>
-            <span class="tooltip-value">{{ token.isByte ? '0x' + token.text : token.text }}</span>
-          </span>
-          <span class="tooltip-row">
-            <span class="tooltip-label">序号</span>
-            <span class="tooltip-value">{{ token.index }}</span>
-          </span>
-          <span class="tooltip-row">
-            <span class="tooltip-label">Token ID</span>
-            <span class="tooltip-value">{{ token.tokenId }}</span>
+      <!-- Token 列表 -->
+      <template v-else>
+        <span
+          v-for="token in tokens"
+          :key="token.index"
+          class="token-block"
+          :class="`type-${getTokenType(token.text, token.isByte, token.isSpecial)}`"
+          @mouseenter="hoveredIndex = token.index"
+          @mouseleave="hoveredIndex = null"
+        >
+          <span class="token-index">{{ token.index }}</span>
+          <span class="token-text">{{ token.text }}</span>
+
+          <span v-if="hoveredIndex === token.index" class="token-tooltip">
+            <span class="tooltip-row">
+              <span class="tooltip-label">{{ token.isByte ? '字节' : token.isSpecial ? '特殊' : '文本' }}</span>
+              <span class="tooltip-value">{{ token.isByte ? '0x' + token.text : token.text }}</span>
+            </span>
+            <span class="tooltip-row">
+              <span class="tooltip-label">序号</span>
+              <span class="tooltip-value">{{ token.index }}</span>
+            </span>
+            <span class="tooltip-row">
+              <span class="tooltip-label">Token ID</span>
+              <span class="tooltip-value">{{ token.tokenId }}</span>
+            </span>
           </span>
         </span>
-      </span>
 
-      <span v-if="tokens.length === 0" class="empty-hint">
-        在上方输入文字即可看到分词结果
-      </span>
+        <span v-if="tokens.length === 0" class="empty-hint">
+          在上方输入文字即可看到分词结果
+        </span>
+      </template>
     </div>
 
     <!-- 图例 -->
@@ -355,6 +386,9 @@ function getTokenType(text: string, isByte?: boolean): 'cn' | 'en' | 'punct' | '
       </span>
       <span v-if="method === 'byte'" class="legend-item">
         <span class="legend-dot type-byte"></span>字节（十六进制）
+      </span>
+      <span v-if="method === 'real'" class="legend-item">
+        <span class="legend-dot type-special"></span>特殊 Token
       </span>
     </div>
   </div>
@@ -583,6 +617,74 @@ function getTokenType(text: string, isByte?: boolean): 'cn' | 'en' | 'punct' | '
   border: 1px solid var(--vp-c-border);
 }
 
+/* 特殊 token（真实分词器）：粉红色 */
+.token-block.type-special {
+  background: #ec4899;
+  color: #fff;
+  font-size: 12px;
+  font-family: var(--vp-font-family-mono, 'JetBrains Mono', monospace);
+}
+
+/* ---- 真实分词器加载区 ---- */
+.tokenizer-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  width: 100%;
+  text-align: center;
+}
+
+.loader-text {
+  font-size: 14px;
+  color: var(--vp-c-text-2);
+  margin: 0;
+}
+
+.loader-hint {
+  font-size: 12px;
+  color: var(--vp-c-text-3);
+  margin: 0;
+}
+
+.loader-error {
+  font-size: 13px;
+  color: #ef4444;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.load-btn {
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vp-c-bg);
+  background: var(--vp-c-brand-1);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.load-btn:hover {
+  background: var(--vp-c-brand-2);
+  transform: translateY(-1px);
+}
+
+.loader-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--vp-c-divider);
+  border-top-color: var(--vp-c-brand-1);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ---- Tooltip ---- */
 .token-tooltip {
   position: absolute;
@@ -680,6 +782,10 @@ function getTokenType(text: string, isByte?: boolean): 'cn' | 'en' | 'punct' | '
   background: rgba(245, 158, 11, 0.85);
 }
 
+.legend-dot.type-special {
+  background: #ec4899;
+}
+
 /* ---- 移动端适配 ---- */
 @media (max-width: 480px) {
   .token-demo {
@@ -712,6 +818,11 @@ function getTokenType(text: string, isByte?: boolean): 'cn' | 'en' | 'punct' | '
   }
 
   .token-block.type-byte {
+    padding: 3px 5px;
+    font-size: 11px;
+  }
+
+  .token-block.type-special {
     padding: 3px 5px;
     font-size: 11px;
   }
