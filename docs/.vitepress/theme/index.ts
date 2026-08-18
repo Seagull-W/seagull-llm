@@ -8,6 +8,7 @@ import AttentionViz from '../components/AttentionViz.vue'
 import WordEmbedViz from '../components/WordEmbedViz.vue'
 import NextTokenViz from '../components/NextTokenViz.vue'
 import SeagullLens from '../components/SeagullLens.vue'
+import HilbertQuote from '../components/HilbertQuote.vue'
 
 export default {
   extends: DefaultTheme,
@@ -18,5 +19,6 @@ export default {
     app.component('WordEmbedViz', WordEmbedViz)
     app.component('NextTokenViz', NextTokenViz)
     app.component('SeagullLens', SeagullLens)
+    app.component('HilbertQuote', HilbertQuote)
   }
 }

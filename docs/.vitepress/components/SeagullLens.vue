@@ -191,10 +191,6 @@ function drawLens() {
       :height="CANVAS_H"
       class="seagull-lens__canvas"
     ></canvas>
-    <div class="seagull-lens__hint">
-      <span class="seagull-lens__dot"></span>
-      移动鼠标，色散透镜会放大海鸥
-    </div>
   </div>
 </template>
 
@@ -223,43 +219,6 @@ function drawLens() {
   width: 100%;
   height: auto;
   aspect-ratio: 720 / 420;
-}
-
-.seagull-lens__hint {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  position: absolute;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 6px 14px;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  border-radius: 999px;
-  font-size: 13px;
-  color: #64748b;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0.85;
-  transition: opacity 0.3s;
-}
-
-.seagull-lens:hover .seagull-lens__hint {
-  opacity: 0;
-}
-
-.seagull-lens__dot {
-  width: 6px;
-  height: 6px;
-  background: #2563eb;
-  border-radius: 50%;
-  animation: seagull-pulse 2s infinite;
-}
-
-@keyframes seagull-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
 }
 
 @media (max-width: 768px) {

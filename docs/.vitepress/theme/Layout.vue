@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import DefaultTheme from 'vitepress/theme'
 import { onMounted, onUnmounted, ref } from 'vue'
+import { useRoute } from 'vitepress'
 import SeagullLens from '../components/SeagullLens.vue'
 import ReadingProgress from '../components/ReadingProgress.vue'
 import ChapterTag from '../components/ChapterTag.vue'
+import HilbertQuote from '../components/HilbertQuote.vue'
 
 const { Layout } = DefaultTheme
+const route = useRoute()
+const isHome = route.path === '/'
 
 // ===== 侧边栏状态 =====
 const sidebarWidth = ref(272)
@@ -108,50 +112,58 @@ onUnmounted(() => {
       <ClientOnly>
         <ReadingProgress />
       </ClientOnly>
-      <!-- 拖拽手柄 -->
-      <div
-        v-show="sidebarVisible"
-        class="vp-sidebar-resize-handle"
-        title="拖拽调整宽度，双击恢复默认"
-        @mousedown="startResize"
-        @dblclick="resetWidth"
-      ></div>
-      <!-- 折叠/展开按钮 -->
-      <button
-        class="vp-sidebar-toggle"
-        :class="{ collapsed: !sidebarVisible }"
-        :title="sidebarVisible ? '隐藏目录' : '显示目录'"
-        @click="toggleSidebar"
-      >
-        <svg
-          v-if="sidebarVisible"
-          width="14"
-          height="14"
-          viewBox="0 0 16 16"
-          fill="none"
+      <!-- 拖拽手柄 / 折叠按钮（仅文档页显示，首页无侧边栏） -->
+      <template v-if="!isHome">
+        <!-- 拖拽手柄 -->
+        <div
+          v-show="sidebarVisible"
+          class="vp-sidebar-resize-handle"
+          title="拖拽调整宽度，双击恢复默认"
+          @mousedown="startResize"
+          @dblclick="resetWidth"
+        ></div>
+        <!-- 折叠/展开按钮 -->
+        <button
+          class="vp-sidebar-toggle"
+          :class="{ collapsed: !sidebarVisible }"
+          :title="sidebarVisible ? '隐藏目录' : '显示目录'"
+          @click="toggleSidebar"
         >
-          <path
-            d="M10 3L5 8l5 5"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-        <svg v-else width="14" height="14" viewBox="0 0 16 16" fill="none">
-          <path
-            d="M6 3l5 5-5 5"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </button>
+          <svg
+            v-if="sidebarVisible"
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="none"
+          >
+            <path
+              d="M10 3L5 8l5 5"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <svg v-else width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M6 3l5 5-5 5"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      </template>
     </template>
     <template #home-hero-image>
       <ClientOnly>
         <SeagullLens />
+      </ClientOnly>
+    </template>
+    <template #home-features-after>
+      <ClientOnly>
+        <HilbertQuote />
       </ClientOnly>
     </template>
     <template #doc-before>

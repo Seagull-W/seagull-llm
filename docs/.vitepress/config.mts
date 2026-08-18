@@ -133,6 +133,27 @@ export default withMermaid({
   base: (typeof process !== 'undefined' && process.env.BASE) || '/',
   cleanUrls: true,
 
+  // ===== 全站 head 注入：Google Fonts =====
+  // Instrument Serif：经典高对比度衬线，专为优雅的引文/标题设计。
+  head: [
+    ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
+    [
+      'link',
+      {
+        rel: 'preconnect',
+        href: 'https://fonts.gstatic.com',
+        crossorigin: ''
+      }
+    ],
+    [
+      'link',
+      {
+        rel: 'stylesheet',
+        href: 'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap'
+      }
+    ]
+  ],
+
   // ===== 主题外观 =====
   appearance: true, // 亮色/暗色双模式，跟随系统 + 手动切换
 

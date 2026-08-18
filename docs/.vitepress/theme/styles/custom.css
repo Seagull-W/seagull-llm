@@ -374,18 +374,49 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ============================================================
-   首页特性卡片：玻璃拟态
+   首页特性卡片：渐变蓝 · 玻璃拟态
    ============================================================ */
 .VPFeatures .VPFeature {
-  background: var(--glass-bg) !important;
+  /* 渐变蓝叠加在玻璃底色之上（用 CSS 变量锁住 hover 不抖） */
+  background: linear-gradient(
+      135deg,
+      rgba(37, 99, 235, 0.08) 0%,
+      rgba(14, 165, 233, 0.05) 55%,
+      rgba(6, 182, 212, 0.03) 100%
+    ),
+    var(--glass-bg) !important;
   backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: var(--glass-blur);
+
+  /* 渐变蓝边（透明 → 蓝 → 透明，呼应海→天） */
+  border: 1px solid rgba(37, 99, 235, 0.22);
   border-radius: 18px;
-  box-shadow: var(--glass-shadow);
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+
   transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.28s, border-color 0.28s;
+    box-shadow 0.28s, border-color 0.28s, background 0.28s;
   overflow: hidden;
   position: relative;
+}
+
+/* 卡片右上角柔光晕（不抢戏） */
+.VPFeatures .VPFeature::after {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(
+    circle,
+    rgba(59, 130, 246, 0.18),
+    transparent 65%
+  );
+  pointer-events: none;
+  opacity: 0.7;
+  transition: opacity 0.28s, transform 0.28s;
 }
 
 /* 卡片顶部渐变光条 */
@@ -397,18 +428,44 @@ h1, h2, h3, h4, h5, h6 {
   right: 0;
   height: 3px;
   background: var(--grad-accent);
-  opacity: 0;
+  opacity: 0.6;
   transition: opacity 0.28s;
+  z-index: 1;
 }
 
 .VPFeatures .VPFeature:hover {
   transform: translateY(-6px);
-  box-shadow: var(--glass-shadow-hover);
-  border-color: rgba(59, 130, 246, 0.5);
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow:
+    var(--glass-shadow-hover),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .VPFeatures .VPFeature:hover::before {
   opacity: 1;
+}
+
+.VPFeatures .VPFeature:hover::after {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.dark .VPFeatures .VPFeature {
+  background: linear-gradient(
+      135deg,
+      rgba(96, 165, 250, 0.10) 0%,
+      rgba(14, 165, 233, 0.06) 55%,
+      rgba(6, 182, 212, 0.04) 100%
+    ),
+    var(--glass-bg) !important;
+  border-color: rgba(96, 165, 250, 0.28);
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.dark .VPFeatures .VPFeature:hover {
+  border-color: rgba(96, 165, 250, 0.5);
 }
 
 .VPFeature .title {
