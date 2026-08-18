@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import DefaultTheme from 'vitepress/theme'
-import { ClientOnly } from 'vitepress'
 import { onMounted, onUnmounted, ref } from 'vue'
 import SeagullLens from '../components/SeagullLens.vue'
 import ReadingProgress from '../components/ReadingProgress.vue'
