@@ -15,6 +15,7 @@ let offCanvas: HTMLCanvasElement
 let offCtx: CanvasRenderingContext2D
 let ctx: CanvasRenderingContext2D
 let rafId = 0
+let lastTime = 0
 let mouseX = -10000
 let mouseY = -10000
 let isHovering = false
@@ -34,13 +35,15 @@ onMounted(() => {
     offCanvas.width = CANVAS_W
     offCanvas.height = CANVAS_H
     offCtx.drawImage(img, 0, 0, CANVAS_W, CANVAS_H)
-    animate()
+    animate(0)
   }
 
   canvas.addEventListener('mousemove', onMouseMove)
   canvas.addEventListener('mouseleave', onMouseLeave)
+  canvas.addEventListener('touchstart', onTouchStart, { passive: false })
   canvas.addEventListener('touchmove', onTouchMove, { passive: false })
   canvas.addEventListener('touchend', onMouseLeave)
+  canvas.addEventListener('touchcancel', onMouseLeave)
 })
 
 onUnmounted(() => {
@@ -49,8 +52,10 @@ onUnmounted(() => {
   if (canvas) {
     canvas.removeEventListener('mousemove', onMouseMove)
     canvas.removeEventListener('mouseleave', onMouseLeave)
+    canvas.removeEventListener('touchstart', onTouchStart)
     canvas.removeEventListener('touchmove', onTouchMove)
     canvas.removeEventListener('touchend', onMouseLeave)
+    canvas.removeEventListener('touchcancel', onMouseLeave)
   }
 })
 
@@ -60,6 +65,11 @@ function onMouseMove(e: MouseEvent) {
   mouseX = (e.clientX - rect.left) * (CANVAS_W / rect.width)
   mouseY = (e.clientY - rect.top) * (CANVAS_H / rect.height)
   isHovering = true
+}
+
+function onTouchStart(e: TouchEvent) {
+  e.preventDefault()
+  onTouchMove(e)
 }
 
 function onTouchMove(e: TouchEvent) {
@@ -76,14 +86,23 @@ function onMouseLeave() {
   isHovering = false
 }
 
-function animate() {
+function animate(now: number) {
+  // 帧时间归一化，避免帧率波动影响速度
+  if (!lastTime) lastTime = now
+  const dt = Math.min(0.05, (now - lastTime) / 1000)
+  lastTime = now
+
   const target = isHovering ? 1 : 0
-  lensAlpha += (target - lensAlpha) * 0.18
+  // 指数 ease-out：淡入约 0.28s、淡出约 0.35s 收敛到 0.1%，任意帧率速度一致
+  const ease = 1 - Math.pow(0.001, dt / (target === 1 ? 0.28 : 0.35))
+  lensAlpha += (target - lensAlpha) * ease
+  if (lensAlpha < 0.001) lensAlpha = 0
 
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H)
   ctx.drawImage(offCanvas, 0, 0)
 
-  if (lensAlpha > 0.01) {
+  // 阈值极低 + 内容本身随 alpha 淡出，最后一帧已不可见，无硬切感
+  if (lensAlpha > 0.0005) {
     drawLens()
   }
 
@@ -108,7 +127,9 @@ function drawLens() {
   const a = lensAlpha
 
   // --- Clipped region: magnified image + chroma fringe ---
+  // 内容也随 lensAlpha 统一淡出，避免消失时内容仍全清晰导致"硬切"
   ctx.save()
+  ctx.globalAlpha = a
   ctx.beginPath()
   ctx.arc(mx, my, r, 0, Math.PI * 2)
   ctx.closePath()
