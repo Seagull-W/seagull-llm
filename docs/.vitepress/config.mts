@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
+import { sidebar } from './sidebar'
 
 // ===== Vite 插件：模型下载代理（仅 dev/preview 模式生效）=====
 // 浏览器 → /api/hf/* → Vite dev server → ModelScope（modelscope.cn，服务端跟随重定向到 OSS）→ 浏览器
@@ -139,7 +140,8 @@ export default withMermaid({
   markdown: {
     math: true, // 启用 MathJax3 数学公式渲染
     theme: {
-      light: 'github-light',
+      // 代码块统一深色主题（对应内页设计稿深色代码块）
+      light: 'github-dark',
       dark: 'github-dark'
     },
     lineNumbers: true, // 代码块显示行号
@@ -150,6 +152,9 @@ export default withMermaid({
 
   // ===== 主题配置 =====
   themeConfig: {
+    // --- 站点 Logo（海鸥） ---
+    logo: '/logo.svg',
+
     // --- 导航栏 ---
     nav: [
       { text: '首页', link: '/' },
@@ -157,51 +162,7 @@ export default withMermaid({
     ],
 
     // --- 侧边栏（扁平结构，数组形式）---
-    sidebar: [
-      {
-        text: '开篇',
-        collapsed: false,
-        items: [
-          { text: '第 0 章 大模型全景', link: '/ch00-overview' }
-        ]
-      },
-      {
-        text: '第一层 · 建立直觉',
-        collapsed: false,
-        items: [
-          { text: '第 1 章 从一次对话说起', link: '/ch01-what-is-lm' },
-          { text: '第 2 章 Token 化', link: '/ch02-tokenization' },
-          { text: '第 3 章 词嵌入', link: '/ch03-embedding' },
-          { text: '第 4 章 Transformer 架构概览', link: '/ch04-transformer' },
-          { text: '第 5 章 注意力机制', link: '/ch05-attention' },
-          { text: '第 6 章 训练过程', link: '/ch06-training' },
-          { text: '第 7 章 涌现能力', link: '/ch07-emergence' }
-        ]
-      },
-      {
-        text: '第二层 · 理解边界',
-        collapsed: false,
-        items: [
-          { text: '第 8 章 上下文窗口', link: '/ch08-context-window' },
-          { text: '第 9 章 幻觉问题', link: '/ch09-hallucination' },
-          { text: '第 10 章 能力边界', link: '/ch10-capability-boundary' },
-          { text: '第 11 章 提示工程基础', link: '/ch11-prompt-engineering' },
-          { text: '第 12 章 模型评估', link: '/ch12-evaluation' }
-        ]
-      },
-      {
-        text: '第三层 · 走向实践',
-        collapsed: false,
-        items: [
-          { text: '第 13 章 开源与闭源生态', link: '/ch13-ecosystem' },
-          { text: '第 14 章 模型选择策略', link: '/ch14-model-selection' },
-          { text: '第 15 章 RAG 检索增强生成', link: '/ch15-rag' },
-          { text: '第 16 章 微调入门', link: '/ch16-finetuning' },
-          { text: '第 17 章 部署方式概览', link: '/ch17-deployment' },
-          { text: '第 18 章 成本与性能考量', link: '/ch18-cost-performance' }
-        ]
-      }
-    ],
+    sidebar,
 
     // --- 右侧大纲 ---
     outline: {

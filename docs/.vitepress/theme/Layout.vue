@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import DefaultTheme from 'vitepress/theme'
+import { ClientOnly } from 'vitepress'
 import { onMounted, onUnmounted, ref } from 'vue'
+import SeagullLens from '../components/SeagullLens.vue'
+import ReadingProgress from '../components/ReadingProgress.vue'
+import ChapterTag from '../components/ChapterTag.vue'
 
 const { Layout } = DefaultTheme
 
@@ -101,6 +105,10 @@ onUnmounted(() => {
 <template>
   <Layout>
     <template #layout-top>
+      <!-- 阅读进度条 -->
+      <ClientOnly>
+        <ReadingProgress />
+      </ClientOnly>
       <!-- 拖拽手柄 -->
       <div
         v-show="sidebarVisible"
@@ -141,6 +149,14 @@ onUnmounted(() => {
           />
         </svg>
       </button>
+    </template>
+    <template #home-hero-image>
+      <ClientOnly>
+        <SeagullLens />
+      </ClientOnly>
+    </template>
+    <template #doc-before>
+      <ChapterTag />
     </template>
   </Layout>
 </template>

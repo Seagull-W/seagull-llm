@@ -7,6 +7,7 @@ import TokenDemo from '../components/TokenDemo.vue'
 import AttentionViz from '../components/AttentionViz.vue'
 import WordEmbedViz from '../components/WordEmbedViz.vue'
 import NextTokenViz from '../components/NextTokenViz.vue'
+import SeagullLens from '../components/SeagullLens.vue'
 
 export default {
   extends: DefaultTheme,
@@ -16,5 +17,6 @@ export default {
     app.component('AttentionViz', AttentionViz)
     app.component('WordEmbedViz', WordEmbedViz)
     app.component('NextTokenViz', NextTokenViz)
+    app.component('SeagullLens', SeagullLens)
   }
 }
