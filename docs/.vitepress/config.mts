@@ -127,8 +127,8 @@ function hfProxyPlugin() {
 export default withMermaid({
   // ===== 站点元数据 =====
   lang: 'zh-CN',
-  title: '大语言模型入门',
-  description: '面向零基础读者的大语言模型工作原理与实践指南',
+  title: 'seagull学习主页',
+  description: '分享学习经验，相互交流，共同进步',
   // GitHub Pages 子路径部署时设置 BASE 环境变量（如 /seagull-llm/），本地 dev 默认 '/'
   base: (typeof process !== 'undefined' && process.env.BASE) || '/',
   cleanUrls: true,
@@ -175,6 +175,9 @@ export default withMermaid({
   themeConfig: {
     // --- 站点 Logo（海鸥） ---
     logo: '/logo.svg',
+
+    // --- 导航栏标题（false = 只显示 logo，不显示文字） ---
+    siteTitle: false,
 
     // --- 导航栏 ---
     nav: [
