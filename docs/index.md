@@ -2,9 +2,9 @@
 layout: home
 
 hero:
-  name: 海鸥书斋
-  text: 从原理到论文
-  tagline: 一站式阅读 LLM 科普与论文笔记
+  name: seagull
+  text: 个人学习网页
+  tagline: 分享学习经验，相互交流，共同进步
   actions:
     - theme: brand
       text: 开始阅读
