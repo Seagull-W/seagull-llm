@@ -5,11 +5,16 @@ import { sidebar } from '../sidebar'
 
 const route = useRoute()
 
-// 运行时从侧边栏分组反推当前章节所属的层级标签
+// 多侧边栏：sidebar 为对象（按路径前缀分组），遍历所有分组反推当前章节所属层级标签
+const allGroups = computed(() => {
+  if (Array.isArray(sidebar)) return sidebar
+  return Object.values(sidebar).flat()
+})
+
 const layer = computed(() => {
   const path = route.path
-  for (const group of sidebar) {
-    if (group.items?.some((it) => it.link === path)) {
+  for (const group of allGroups.value) {
+    if (group.items?.some((it: any) => it.link === path)) {
       return group.text
     }
   }

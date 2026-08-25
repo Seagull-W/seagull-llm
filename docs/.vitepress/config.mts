@@ -179,7 +179,8 @@ export default withMermaid({
     // --- 导航栏 ---
     nav: [
       { text: '首页', link: '/' },
-      { text: 'LLM 指南', link: '/ch00-overview' }
+      { text: 'LLM 科普书', link: '/llm-book/' },
+      { text: '论文阅读笔记', link: '/papers/' }
     ],
 
     // --- 侧边栏（扁平结构，数组形式）---
