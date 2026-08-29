@@ -65,7 +65,7 @@ export const westlakeRlSidebar = [
     collapsed: false,
     items: [
       // 添加笔记时在此登记，如：
-      { text: '随即近似', link: '/westlake-rl/随即近似/' }
+      { text: '随机近似', link: '/westlake-rl/随机近似/' }
     ]
   }
 ]
