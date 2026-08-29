@@ -17,4 +17,10 @@ features:
   - title: 论文阅读笔记
     details: 精读大模型领域经典与前沿论文，配套图表与个人解读
     link: /papers/
+  - title: Nathan Lambert RL BOOK 学习笔记
+    details: 学习 Nathan Lambert 强化学习专著的读书笔记，聚焦 RLHF、PPO、DPO 等核心技术
+    link: /rl-book/
+  - title: 西湖大学强化学习笔记
+    details: 学习西湖大学强化学习课程笔记，涵盖强化学习基础、策略梯度、Actor-Critic 等核心内容
+    link: /westlake-rl/
 ---

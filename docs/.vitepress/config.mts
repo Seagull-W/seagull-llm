@@ -183,7 +183,9 @@ export default withMermaid({
     nav: [
       { text: '首页', link: '/' },
       { text: 'LLM 科普书', link: '/llm-book/' },
-      { text: '论文阅读笔记', link: '/papers/' }
+      { text: '论文阅读笔记', link: '/papers/' },
+      { text: 'RL 学习笔记', link: '/rl-book/' },
+      { text: '西湖 RL 笔记', link: '/westlake-rl/' }
     ],
 
     // --- 侧边栏（扁平结构，数组形式）---

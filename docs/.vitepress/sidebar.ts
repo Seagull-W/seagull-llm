@@ -46,6 +46,30 @@ export const llmBookSidebar = [
   }
 ]
 
+// ===== Nathan Lambert RL BOOK 学习笔记侧边栏（/rl-book/）=====
+export const rlBookSidebar = [
+  {
+    text: '学习笔记',
+    collapsed: false,
+    items: [
+      // 添加笔记时在此登记，如：
+      // { text: '第 1 章 RLHF 概述', link: '/rl-book/ch01-rlhf-overview' }
+    ]
+  }
+]
+
+// ===== 西湖大学强化学习笔记侧边栏（/westlake-rl/）=====
+export const westlakeRlSidebar = [
+  {
+    text: '学习笔记',
+    collapsed: false,
+    items: [
+      // 添加笔记时在此登记，如：
+      { text: '随即近似', link: '/westlake-rl/随即近似/' }
+    ]
+  }
+]
+
 // ===== 论文阅读笔记侧边栏（/papers/）=====
 export const papersSidebar = [
   {
@@ -60,5 +84,7 @@ export const papersSidebar = [
 // VitePress 多侧边栏：按路径前缀匹配
 export const sidebar = {
   '/llm-book/': llmBookSidebar,
-  '/papers/': papersSidebar
+  '/papers/': papersSidebar,
+  '/rl-book/': rlBookSidebar,
+  '/westlake-rl/': westlakeRlSidebar
 }
