@@ -52,8 +52,9 @@ export const rlBookSidebar = [
     text: '学习笔记',
     collapsed: false,
     items: [
-      // 添加笔记时在此登记，如：
-      // { text: '第 1 章 RLHF 概述', link: '/rl-book/ch01-rlhf-overview' }
+      { text: '对话模板与监督微调', link: '/rl-book/cha4对话模板与监督微调' },
+      { text: '奖励建模', link: '/rl-book/cha5奖励建模' },
+      { text: '强化学习', link: '/rl-book/cha6强化学习' }
     ]
   }
 ]
@@ -64,8 +65,10 @@ export const westlakeRlSidebar = [
     text: '学习笔记',
     collapsed: false,
     items: [
-      // 添加笔记时在此登记，如：
-      { text: '随机近似', link: '/westlake-rl/随机近似/' }
+      { text: '随机近似', link: '/westlake-rl/随机近似/' },
+      { text: '价值函数', link: '/westlake-rl/价值函数/' },
+      { text: '策略梯度', link: '/westlake-rl/策略梯度/' },
+      { text: 'TD 算法', link: '/westlake-rl/TD算法/TD' }
     ]
   }
 ]

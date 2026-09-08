@@ -106,7 +106,6 @@ body {
     radial-gradient(ellipse 75% 50% at 18% -5%, rgba(37, 99, 235, 0.10), transparent 60%),
     radial-gradient(ellipse 55% 45% at 85% 8%, rgba(6, 182, 212, 0.08), transparent 55%),
     radial-gradient(ellipse 70% 55% at 50% 105%, rgba(59, 130, 246, 0.08), transparent 60%);
-  background-attachment: fixed;
 }
 
 .dark body {
@@ -260,6 +259,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 768px) {
+  /* 移动端禁用 backdrop-filter（GPU 成本高），改纯半透明背景 */
+  :root,
+  .dark {
+    --glass-blur: none;
+  }
+
   .vp-doc table {
     display: block;
     overflow-x: auto;

@@ -124,7 +124,67 @@ function hfProxyPlugin() {
   }
 }
 
-export default withMermaid({
+// 让 Mermaid 组件异步加载：vitepress-plugin-mermaid 会在 build 时向
+// vitepress app/index.js 注入 `import Mermaid + app.component("Mermaid", Mermaid)`（同步），
+// 导致首页 app chunk 静态依赖 mermaid → 预加载全部图表 chunk。
+// 这里覆盖为 defineAsyncComponent 动态导入，切断静态依赖链：
+// mermaid 仅在页面实际渲染 <Mermaid> 时才加载，首页无 mermaid → 不预加载图表 chunk。
+function mermaidAsyncPlugin() {
+  return {
+    name: 'mermaid-async-load',
+    enforce: 'post',
+    transform(code: string, id: string) {
+      if (!id.includes('vitepress/dist/client/app/index.js')) return null
+      if (!code.includes('app.component("Mermaid", Mermaid)')) return null
+      const newCode = code
+        .replace(
+          /import\s+Mermaid\s+from\s+['"]vitepress-plugin-mermaid\/Mermaid\.vue['"];?\n?/,
+          ''
+        )
+        .replace(
+          'app.component("Mermaid", Mermaid)',
+          'app.component("Mermaid", defineAsyncComponent(() => import("vitepress-plugin-mermaid/Mermaid.vue")))'
+        )
+      return {
+        code: `import { defineAsyncComponent } from 'vue';\n` + newCode,
+        map: null
+      }
+    }
+  }
+}
+
+// 把 vitepress-plugin-mermaid 的 mermaid.ts wrapper 中「静态 import mermaid」
+// 改为动态 import，使 mermaid 库（~622KB）成为独立动态 chunk。
+// 这样 Mermaid.vue chunk 不再包含 mermaid 库，首页预加载的小 Mermaid chunk
+// 不会触发 mermaid 下载；只在页面渲染 <Mermaid> 调用 init/render 时才加载。
+function mermaidLazyPlugin() {
+  return {
+    name: 'mermaid-lazy-load',
+    enforce: 'pre',
+    load(id: string) {
+      if (!id.includes('vitepress-plugin-mermaid/dist/mermaid')) return null
+      return [
+        'let _m',
+        'const getMermaid = async () => (_m || (_m = (await import("mermaid")).default))',
+        'export const init = async (externalDiagrams) => {',
+        '  try {',
+        '    const mermaid = await getMermaid()',
+        '    if (mermaid.registerExternalDiagrams)',
+        '      await mermaid.registerExternalDiagrams(externalDiagrams)',
+        '  } catch (e) { console.error(e) }',
+        '}',
+        'export const render = async (id, code, config) => {',
+        '  const mermaid = await getMermaid()',
+        '  mermaid.initialize(config)',
+        '  const { svg } = await mermaid.render(id, code)',
+        '  return svg',
+        '}'
+      ].join('\n')
+    }
+  }
+}
+
+const config = withMermaid({
   // ===== 站点元数据 =====
   lang: 'zh-CN',
   title: 'seagull学习主页',
@@ -260,3 +320,9 @@ export default withMermaid({
     plugins: [hfProxyPlugin()]
   }
 })
+
+// 在 withMermaid 注入的 MermaidPlugin 之后追加异步化插件，
+// 顺序保证它在 MermaidPlugin transform 之后运行（enforce:'post' 按注册序）。
+;(config.vite.plugins as any[]).push(mermaidAsyncPlugin(), mermaidLazyPlugin())
+
+export default config

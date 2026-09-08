@@ -9,6 +9,6 @@ title: Nathan Lambert RL BOOK 学习笔记
 
 ## 笔记列表
 
-- 暂无笔记，待添加
-
-> 添加新笔记时，在 `docs/rl-book/` 下新建 `<章节名>/index.md`，并在上方列表登记即可。
+- [对话模板与监督微调](./cha4对话模板与监督微调) — IFT/SFT、对话模板、指令结构
+- [奖励建模](./cha5奖励建模) — Bradley-Terry 模型、偏好学习
+- [强化学习](./cha6强化学习) — 策略梯度、RLHF 训练循环

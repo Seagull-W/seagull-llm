@@ -65,6 +65,10 @@ function onMouseMove(e: MouseEvent) {
   mouseX = (e.clientX - rect.left) * (CANVAS_W / rect.width)
   mouseY = (e.clientY - rect.top) * (CANVAS_H / rect.height)
   isHovering = true
+  if (rafId === 0) {
+    lastTime = 0
+    rafId = requestAnimationFrame(animate)
+  }
 }
 
 function onTouchStart(e: TouchEvent) {
@@ -80,6 +84,10 @@ function onTouchMove(e: TouchEvent) {
   mouseX = (t.clientX - rect.left) * (CANVAS_W / rect.width)
   mouseY = (t.clientY - rect.top) * (CANVAS_H / rect.height)
   isHovering = true
+  if (rafId === 0) {
+    lastTime = 0
+    rafId = requestAnimationFrame(animate)
+  }
 }
 
 function onMouseLeave() {
@@ -104,6 +112,12 @@ function animate(now: number) {
   // 阈值极低 + 内容本身随 alpha 淡出，最后一帧已不可见，无硬切感
   if (lensAlpha > 0.0005) {
     drawLens()
+  }
+
+  // 无交互且透镜已淡出：停止 rAF，下次交互再重启（避免常驻空转）
+  if (!isHovering && lensAlpha === 0) {
+    rafId = 0
+    return
   }
 
   rafId = requestAnimationFrame(animate)

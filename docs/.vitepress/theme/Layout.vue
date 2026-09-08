@@ -15,6 +15,8 @@ const isHome = route.path === '/'
 const sidebarWidth = ref(272)
 const sidebarVisible = ref(true)
 let isResizing = false
+let resizeRafId = 0
+let pendingWidth = 0
 
 function loadState() {
   try {
@@ -61,8 +63,18 @@ function startResize(e: MouseEvent) {
 function onMouseMove(e: MouseEvent) {
   if (!isResizing) return
   const newWidth = Math.max(200, Math.min(500, e.clientX))
-  if (newWidth !== sidebarWidth.value) {
-    sidebarWidth.value = newWidth
+  if (newWidth !== pendingWidth) {
+    pendingWidth = newWidth
+    if (resizeRafId === 0) {
+      resizeRafId = requestAnimationFrame(flushResize)
+    }
+  }
+}
+
+function flushResize() {
+  resizeRafId = 0
+  if (pendingWidth !== sidebarWidth.value) {
+    sidebarWidth.value = pendingWidth
     applyWidth()
   }
 }
@@ -70,6 +82,12 @@ function onMouseMove(e: MouseEvent) {
 function onMouseUp() {
   if (isResizing) {
     isResizing = false
+    // 拖拽结束时立即 flush 残留帧，保证最终宽度与 localStorage 一致
+    if (resizeRafId !== 0) {
+      cancelAnimationFrame(resizeRafId)
+      resizeRafId = 0
+      flushResize()
+    }
     document.body.style.cursor = ''
     document.body.style.userSelect = ''
     try {
@@ -100,6 +118,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (resizeRafId !== 0) cancelAnimationFrame(resizeRafId)
   document.removeEventListener('mousemove', onMouseMove)
   document.removeEventListener('mouseup', onMouseUp)
 })
