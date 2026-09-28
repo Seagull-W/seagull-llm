@@ -19,3 +19,6 @@ research-reports/
 # Local Codex architecture notes
 /codex-arch/
 /codex_arch/
+
+# VitePress generated config timestamps
+/docs/.vitepress/config.mts.timestamp-*.mjs
