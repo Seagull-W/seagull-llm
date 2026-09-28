@@ -101,6 +101,7 @@
 
 /* ---------- 全局渐变光晕底 ---------- */
 body {
+  min-width: 0;
   background-color: var(--vp-c-bg);
   background-image:
     radial-gradient(ellipse 75% 50% at 18% -5%, rgba(37, 99, 235, 0.10), transparent 60%),
@@ -145,6 +146,7 @@ h1, h2, h3, h4, h5, h6 {
 .vp-doc a {
   color: var(--vp-c-brand-1);
   text-decoration: none;
+  overflow-wrap: anywhere;
   background-image: linear-gradient(90deg, var(--vp-c-brand-1), var(--vp-c-brand-1));
   background-size: 0% 1.5px;
   background-position: 0 100%;
@@ -258,6 +260,20 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--vp-custom-block-tip-bg);
 }
 
+/* Long inline formulas remain readable without widening the whole page. */
+.vp-doc mjx-container:not([display='true']) {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  vertical-align: middle;
+}
+
+.vp-doc mjx-container[display='true'] {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 @media (max-width: 768px) {
   /* 移动端禁用 backdrop-filter（GPU 成本高），改纯半透明背景 */
   :root,
@@ -317,10 +333,9 @@ h1, h2, h3, h4, h5, h6 {
   top: -10%;
   left: 50%;
   transform: translateX(-50%);
-  width: 620px;
+  width: min(620px, 100%);
   height: 320px;
   background: radial-gradient(ellipse at center, rgba(14, 165, 233, 0.18), transparent 70%);
-  filter: blur(40px);
   pointer-events: none;
   z-index: -1;
 }

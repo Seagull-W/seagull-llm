@@ -1,3 +1,14 @@
+---
+status: draft
+prev: false
+next: false
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex
+---
+
 # 第 10 章 能力边界
 
 ## 本章导引

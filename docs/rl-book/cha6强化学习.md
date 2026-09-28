@@ -1,7 +1,6 @@
 ## 强化学习
 
-<!-- TODO: 补充 RLHF 训练循环图 -->
-<!-- ![](/figures/RLHF训练循环.png) -->
+![RLHF 训练循环](./figures/RLHF训练循环.png)
 
 ### 策略梯度算法
 >强化学习中策略梯度优化是指，通过优化策略函数的参数来寻求最优策略的一类方法。
@@ -24,14 +23,24 @@ $$J(\theta)=\mathbb{E}_{\tau \sim p_{\theta}}[R(\tau)]$$
 有$p_{\theta}(\tau)=d_0(s_0)\prod_{t=0}^{\infty}\pi_{\theta}(a_t|s_t)p(s_{t+1}|a_t,s_t)$
 
 使用$\nabla f=f\nabla \text{log}f$的技巧，得到：
-$$\nabla_{\theta}J(\theta)=\mathbb{E}_{\tau \sim p_{\theta}}[R(\tau)\nabla_{\theta} \text{log}p_{\theta}(\tau)]$$
+
+$$
+\nabla_{\theta}J(\theta)=\mathbb{E}_{\tau \sim p_{\theta}}[R(\tau)\nabla_{\theta} \text{log}p_{\theta}(\tau)]
+$$
 
 简化中间过程，大致是$p$中只有$\pi$是含参的，化简之后得到：
-$$\nabla_{\theta}J(\theta)=\mathbb{E}_{\tau \sim p_{\theta}}[\Sigma_{t=0}^{\infty}R(\tau)\nabla_{\theta} \text{log}\pi_{\theta}(a_t|s_t)]$$
-，稍加推广得到:
-$$\nabla_{\theta}J(\theta)=\mathbb{E}_{\tau \sim p_{\theta}}[\Sigma_{t=0}^{\infty}\Psi_t\nabla_{\theta} \text{log}\pi_{\theta}(a_t|s_t)]$$
 
-其中，$$\Psi_t$ 表示用于策略梯度估计的回报信号；有些奖励均采用折扣因子 $\gamma$。常见选择依次为：
+$$
+\nabla_{\theta}J(\theta)=\mathbb{E}_{\tau \sim p_{\theta}}[\Sigma_{t=0}^{\infty}R(\tau)\nabla_{\theta} \text{log}\pi_{\theta}(a_t|s_t)]
+$$
+
+，稍加推广得到:
+
+$$
+\nabla_{\theta}J(\theta)=\mathbb{E}_{\tau \sim p_{\theta}}[\Sigma_{t=0}^{\infty}\Psi_t\nabla_{\theta} \text{log}\pi_{\theta}(a_t|s_t)]
+$$
+
+其中，$\Psi_t$ 表示用于策略梯度估计的回报信号；有些奖励均采用折扣因子 $\gamma$。常见选择依次为：
 
 1. **轨迹总回报**
    $$
@@ -86,7 +95,10 @@ $$
 #### 朴素策略梯度
 
 一个关于时刻t的简单版本为：
-$$\nabla_{\theta}J(\theta)=\mathbb{E}_{\tau \sim p_{\theta}}[\Sigma_{t=0}^{T}G_t\nabla_{\theta} \text{log}\pi_{\theta}(a_t|s_t)]$$
+
+$$
+\nabla_{\theta}J(\theta)=\mathbb{E}_{\tau \sim p_{\theta}}[\Sigma_{t=0}^{T}G_t\nabla_{\theta} \text{log}\pi_{\theta}(a_t|s_t)]
+$$
 
 简单地用当前轨迹的生成token来进行计算，即$G_t=\Sigma_{k=t}^{T_i}\gamma^{k-1}r_{i,k}$。这里每个token的分数取决于怎么将RM的分数分配到每个分数上（比如中间token置0，只分配给最后的token）。
 
@@ -106,7 +118,6 @@ $$\nabla_{\theta}J(\theta)=\mathbb{E}_{\tau \sim p_{\theta}}[\Sigma_{t=0}^{T}G_t
 
 #### PPO近端策略优化
 
-<!-- TODO: 补充 PPO 架构图 -->
-<!-- ![](figures/PPO.png) -->
+![PPO 架构](./figures/PPO.png)
 
 ##### 价值网络

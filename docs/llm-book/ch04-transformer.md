@@ -1,3 +1,14 @@
+---
+status: draft
+prev: false
+next: false
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex
+---
+
 # 第 4 章 Transformer 架构概览
 
 ## 本章导引

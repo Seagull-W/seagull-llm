@@ -1,3 +1,14 @@
+---
+status: draft
+prev: false
+next: false
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex
+---
+
 # 第 9 章 幻觉问题
 
 ## 本章导引

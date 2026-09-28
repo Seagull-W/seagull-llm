@@ -1,3 +1,14 @@
+---
+status: draft
+prev: false
+next: false
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex
+---
+
 # 第 13 章 开源与闭源生态
 
 ## 本章导引

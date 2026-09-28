@@ -758,6 +758,7 @@ function pct(p: number): string {
           </label>
           <span class="toggle-hint">{{ useMirror ? '当前：ModelScope 代理' : '当前：直连 HuggingFace' }}</span>
         </div>
+        <p class="model-hint">真实模型会下载约 512MB 文件，并占用较多内存与电量。手机或流量网络建议继续使用上方的轻量模拟；只有点击下方按钮后才会开始下载。</p>
         <button class="model-btn" @click="loadRealModel">
           🤖 加载真实模型（Qwen2.5-0.5B，约 512MB）
         </button>

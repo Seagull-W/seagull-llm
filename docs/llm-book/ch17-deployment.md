@@ -1,3 +1,14 @@
+---
+status: draft
+prev: false
+next: false
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex
+---
+
 # 第 17 章 部署方式概览
 
 ## 本章导引

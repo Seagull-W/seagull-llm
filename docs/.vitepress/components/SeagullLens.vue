@@ -2,229 +2,185 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { withBase } from 'vitepress'
 
+const containerRef = ref<HTMLElement>()
+const imageRef = ref<HTMLImageElement>()
 const canvasRef = ref<HTMLCanvasElement>()
 
 const CANVAS_W = 720
 const CANVAS_H = 420
 const LENS_RADIUS = 85
 const ZOOM = 1.5
-const CHANNEL_OFFSET = 3
 
-let img: HTMLImageElement
-let offCanvas: HTMLCanvasElement
-let offCtx: CanvasRenderingContext2D
-let ctx: CanvasRenderingContext2D
-let rafId = 0
+let sourceCanvas: HTMLCanvasElement
+let context: CanvasRenderingContext2D | null = null
+let hoverQuery: MediaQueryList | undefined
+let motionQuery: MediaQueryList | undefined
+let sourceReady = false
+let frameId = 0
 let lastTime = 0
-let mouseX = -10000
-let mouseY = -10000
+let pointerX = 0
+let pointerY = 0
+let previousX = 0
+let previousY = 0
+let hasPreviousFrame = false
 let isHovering = false
 let lensAlpha = 0
 
-onMounted(() => {
-  const canvas = canvasRef.value
-  if (!canvas) return
-  ctx = canvas.getContext('2d')!
+function canInteract() {
+  return hoverQuery?.matches === true && motionQuery?.matches === false
+}
 
-  offCanvas = document.createElement('canvas')
-  offCtx = offCanvas.getContext('2d')!
+function clearPreviousLens() {
+  if (!context || !hasPreviousFrame) return
+  const size = LENS_RADIUS + 5
+  context.clearRect(previousX - size, previousY - size, size * 2, size * 2)
+  hasPreviousFrame = false
+}
 
-  img = new Image()
-  img.src = withBase('/seagull.png')
-  img.onload = () => {
-    offCanvas.width = CANVAS_W
-    offCanvas.height = CANVAS_H
-    offCtx.drawImage(img, 0, 0, CANVAS_W, CANVAS_H)
-    animate(0)
+function stopAnimation() {
+  if (frameId) cancelAnimationFrame(frameId)
+  frameId = 0
+  lastTime = 0
+  lensAlpha = 0
+  isHovering = false
+  clearPreviousLens()
+}
+
+function onMediaChange() {
+  if (!canInteract()) stopAnimation()
+}
+
+function prepareSource() {
+  const image = imageRef.value
+  if (!image?.naturalWidth || !sourceCanvas) return
+  const sourceContext = sourceCanvas.getContext('2d')
+  if (!sourceContext) return
+  sourceContext.drawImage(image, 0, 0, CANVAS_W, CANVAS_H)
+  sourceReady = true
+  if (isHovering) scheduleFrame()
+}
+
+function scheduleFrame() {
+  if (!frameId && sourceReady && canInteract()) {
+    frameId = requestAnimationFrame(drawFrame)
+  }
+}
+
+function onPointerMove(event: PointerEvent) {
+  if (event.pointerType === 'touch' || !canInteract()) return
+  const bounds = containerRef.value?.getBoundingClientRect()
+  if (!bounds) return
+  pointerX = (event.clientX - bounds.left) * CANVAS_W / bounds.width
+  pointerY = (event.clientY - bounds.top) * CANVAS_H / bounds.height
+  isHovering = true
+  scheduleFrame()
+}
+
+function onPointerLeave() {
+  isHovering = false
+  scheduleFrame()
+}
+
+function drawFrame(now: number) {
+  frameId = 0
+  if (!context) return
+
+  const dt = lastTime ? Math.min(0.05, (now - lastTime) / 1000) : 1 / 60
+  lastTime = now
+  const target = isHovering ? 1 : 0
+  const duration = target ? 0.28 : 0.35
+  lensAlpha += (target - lensAlpha) * (1 - Math.pow(0.001, dt / duration))
+  if (Math.abs(target - lensAlpha) < 0.005) lensAlpha = target
+
+  // The image remains an ordinary <img>; only the small transparent lens is repainted.
+  clearPreviousLens()
+  if (lensAlpha > 0) {
+    drawLens(context)
+    previousX = pointerX
+    previousY = pointerY
+    hasPreviousFrame = true
   }
 
-  canvas.addEventListener('mousemove', onMouseMove)
-  canvas.addEventListener('mouseleave', onMouseLeave)
-  canvas.addEventListener('touchstart', onTouchStart, { passive: false })
-  canvas.addEventListener('touchmove', onTouchMove, { passive: false })
-  canvas.addEventListener('touchend', onMouseLeave)
-  canvas.addEventListener('touchcancel', onMouseLeave)
+  // A stationary lens needs no animation frames once its fade has finished.
+  if (lensAlpha !== target) scheduleFrame()
+  else lastTime = 0
+}
+
+function drawLens(ctx: CanvasRenderingContext2D) {
+  const x = pointerX
+  const y = pointerY
+  const radius = LENS_RADIUS
+  const sourceSize = radius * 2 / ZOOM
+
+  ctx.save()
+  ctx.globalAlpha = lensAlpha
+  ctx.beginPath()
+  ctx.arc(x, y, radius, 0, Math.PI * 2)
+  ctx.clip()
+  ctx.drawImage(
+    sourceCanvas,
+    x - sourceSize / 2, y - sourceSize / 2, sourceSize, sourceSize,
+    x - radius, y - radius, radius * 2, radius * 2
+  )
+  ctx.restore()
+
+  ctx.save()
+  ctx.globalAlpha = lensAlpha
+  ctx.beginPath()
+  ctx.arc(x, y, radius, 0, Math.PI * 2)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)'
+  ctx.lineWidth = 2
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.arc(x, y, radius + 2, 0, Math.PI * 2)
+  ctx.strokeStyle = 'rgba(37, 99, 235, 0.35)'
+  ctx.lineWidth = 1
+  ctx.stroke()
+  ctx.restore()
+}
+
+onMounted(() => {
+  context = canvasRef.value?.getContext('2d') ?? null
+  sourceCanvas = document.createElement('canvas')
+  sourceCanvas.width = CANVAS_W
+  sourceCanvas.height = CANVAS_H
+  hoverQuery = window.matchMedia('(hover: hover) and (pointer: fine)')
+  motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  hoverQuery.addEventListener('change', onMediaChange)
+  motionQuery.addEventListener('change', onMediaChange)
+  if (imageRef.value?.complete) prepareSource()
 })
 
 onUnmounted(() => {
-  cancelAnimationFrame(rafId)
-  const canvas = canvasRef.value
-  if (canvas) {
-    canvas.removeEventListener('mousemove', onMouseMove)
-    canvas.removeEventListener('mouseleave', onMouseLeave)
-    canvas.removeEventListener('touchstart', onTouchStart)
-    canvas.removeEventListener('touchmove', onTouchMove)
-    canvas.removeEventListener('touchend', onMouseLeave)
-    canvas.removeEventListener('touchcancel', onMouseLeave)
-  }
+  stopAnimation()
+  hoverQuery?.removeEventListener('change', onMediaChange)
+  motionQuery?.removeEventListener('change', onMediaChange)
 })
-
-function onMouseMove(e: MouseEvent) {
-  const canvas = canvasRef.value!
-  const rect = canvas.getBoundingClientRect()
-  mouseX = (e.clientX - rect.left) * (CANVAS_W / rect.width)
-  mouseY = (e.clientY - rect.top) * (CANVAS_H / rect.height)
-  isHovering = true
-  if (rafId === 0) {
-    lastTime = 0
-    rafId = requestAnimationFrame(animate)
-  }
-}
-
-function onTouchStart(e: TouchEvent) {
-  e.preventDefault()
-  onTouchMove(e)
-}
-
-function onTouchMove(e: TouchEvent) {
-  e.preventDefault()
-  const canvas = canvasRef.value!
-  const rect = canvas.getBoundingClientRect()
-  const t = e.touches[0]
-  mouseX = (t.clientX - rect.left) * (CANVAS_W / rect.width)
-  mouseY = (t.clientY - rect.top) * (CANVAS_H / rect.height)
-  isHovering = true
-  if (rafId === 0) {
-    lastTime = 0
-    rafId = requestAnimationFrame(animate)
-  }
-}
-
-function onMouseLeave() {
-  isHovering = false
-}
-
-function animate(now: number) {
-  // 帧时间归一化，避免帧率波动影响速度
-  if (!lastTime) lastTime = now
-  const dt = Math.min(0.05, (now - lastTime) / 1000)
-  lastTime = now
-
-  const target = isHovering ? 1 : 0
-  // 指数 ease-out：淡入约 0.28s、淡出约 0.35s 收敛到 0.1%，任意帧率速度一致
-  const ease = 1 - Math.pow(0.001, dt / (target === 1 ? 0.28 : 0.35))
-  lensAlpha += (target - lensAlpha) * ease
-  if (lensAlpha < 0.001) lensAlpha = 0
-
-  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H)
-  ctx.drawImage(offCanvas, 0, 0)
-
-  // 阈值极低 + 内容本身随 alpha 淡出，最后一帧已不可见，无硬切感
-  if (lensAlpha > 0.0005) {
-    drawLens()
-  }
-
-  // 无交互且透镜已淡出：停止 rAF，下次交互再重启（避免常驻空转）
-  if (!isHovering && lensAlpha === 0) {
-    rafId = 0
-    return
-  }
-
-  rafId = requestAnimationFrame(animate)
-}
-
-function drawMagnified(mx: number, my: number, r: number, zoom: number) {
-  const srcSize = (r * 2) / zoom
-  const srcX = mx - srcSize / 2
-  const srcY = my - srcSize / 2
-  ctx.drawImage(
-    offCanvas,
-    srcX, srcY, srcSize, srcSize,
-    mx - r, my - r, r * 2, r * 2
-  )
-}
-
-function drawLens() {
-  const r = LENS_RADIUS
-  const mx = mouseX
-  const my = mouseY
-  const a = lensAlpha
-
-  // --- Clipped region: magnified image + chroma fringe ---
-  // 内容也随 lensAlpha 统一淡出，避免消失时内容仍全清晰导致"硬切"
-  ctx.save()
-  ctx.globalAlpha = a
-  ctx.beginPath()
-  ctx.arc(mx, my, r, 0, Math.PI * 2)
-  ctx.closePath()
-  ctx.clip()
-
-  drawMagnified(mx, my, r, ZOOM)
-
-  // Chromatic fringe at edges
-  const fringe = ctx.createRadialGradient(mx, my, r * 0.65, mx, my, r)
-  fringe.addColorStop(0, 'rgba(0,0,0,0)')
-  fringe.addColorStop(0.7, 'rgba(255, 0, 80, 0.06)')
-  fringe.addColorStop(0.85, 'rgba(0, 255, 100, 0.06)')
-  fringe.addColorStop(1, 'rgba(0, 80, 255, 0.12)')
-  ctx.fillStyle = fringe
-  ctx.fillRect(mx - r, my - r, r * 2, r * 2)
-
-  ctx.restore()
-
-  // --- Glass border & highlights (not clipped) ---
-  ctx.save()
-  ctx.globalAlpha = a
-
-  // Outer glow
-  const glow = ctx.createRadialGradient(mx, my, r * 0.9, mx, my, r + 12)
-  glow.addColorStop(0, 'rgba(37, 99, 235, 0)')
-  glow.addColorStop(0.5, 'rgba(37, 99, 235, 0.06)')
-  glow.addColorStop(1, 'rgba(37, 99, 235, 0)')
-  ctx.fillStyle = glow
-  ctx.beginPath()
-  ctx.arc(mx, my, r + 12, 0, Math.PI * 2)
-  ctx.fill()
-
-  // Inner shadow ring
-  const inner = ctx.createRadialGradient(mx, my, r * 0.75, mx, my, r)
-  inner.addColorStop(0, 'rgba(0, 0, 0, 0)')
-  inner.addColorStop(0.8, 'rgba(0, 0, 0, 0)')
-  inner.addColorStop(1, 'rgba(15, 23, 42, 0.35)')
-  ctx.fillStyle = inner
-  ctx.beginPath()
-  ctx.arc(mx, my, r, 0, Math.PI * 2)
-  ctx.fill()
-
-  // Glass border
-  ctx.beginPath()
-  ctx.arc(mx, my, r, 0, Math.PI * 2)
-  ctx.strokeStyle = `rgba(255, 255, 255, ${0.7 * a})`
-  ctx.lineWidth = 2
-  ctx.stroke()
-
-  // Outer thin ring
-  ctx.beginPath()
-  ctx.arc(mx, my, r + 1, 0, Math.PI * 2)
-  ctx.strokeStyle = `rgba(37, 99, 235, ${0.2 * a})`
-  ctx.lineWidth = 1
-  ctx.stroke()
-
-  // Highlight arc (top-left)
-  ctx.beginPath()
-  ctx.arc(mx, my, r - 3, Math.PI * 1.1, Math.PI * 1.45)
-  ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 * a})`
-  ctx.lineWidth = 2.5
-  ctx.lineCap = 'round'
-  ctx.stroke()
-
-  // Small highlight dot
-  ctx.beginPath()
-  ctx.arc(mx - r * 0.35, my - r * 0.35, r * 0.06, 0, Math.PI * 2)
-  ctx.fillStyle = `rgba(255, 255, 255, ${0.5 * a})`
-  ctx.fill()
-
-  ctx.restore()
-}
 </script>
 
 <template>
-  <div class="seagull-lens">
-    <canvas
-      ref="canvasRef"
+  <div
+    ref="containerRef"
+    class="seagull-lens"
+    @pointermove="onPointerMove"
+    @pointerleave="onPointerLeave"
+  >
+    <img
+      ref="imageRef"
+      class="seagull-lens__image"
+      :src="withBase('/seagull.png')"
+      alt="一只展翅飞翔的海鸥插画"
       :width="CANVAS_W"
       :height="CANVAS_H"
+      fetchpriority="high"
+      @load="prepareSource"
+    >
+    <canvas
+      ref="canvasRef"
       class="seagull-lens__canvas"
+      :width="CANVAS_W"
+      :height="CANVAS_H"
+      aria-hidden="true"
     ></canvas>
   </div>
 </template>
@@ -232,23 +188,13 @@ function drawLens() {
 <style scoped>
 .seagull-lens {
   position: relative;
-  border-radius: 24px;
   overflow: hidden;
-  box-shadow:
-    0 20px 50px -20px rgba(15, 23, 42, 0.15),
-    0 0 0 1px rgba(255, 255, 255, 0.6) inset;
   border: 1.5px solid rgba(255, 255, 255, 0.5);
-  cursor: crosshair;
-  transition: box-shadow 0.3s, transform 0.3s;
+  border-radius: 24px;
+  box-shadow: 0 20px 50px -20px rgba(15, 23, 42, 0.15);
 }
 
-.seagull-lens:hover {
-  box-shadow:
-    0 30px 60px -20px rgba(15, 23, 42, 0.2),
-    0 0 0 1px rgba(255, 255, 255, 0.6) inset;
-  transform: translateY(-2px);
-}
-
+.seagull-lens__image,
 .seagull-lens__canvas {
   display: block;
   width: 100%;
@@ -256,9 +202,17 @@ function drawLens() {
   aspect-ratio: 720 / 420;
 }
 
+.seagull-lens__canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .seagull-lens { cursor: crosshair; }
+}
+
 @media (max-width: 768px) {
-  .seagull-lens {
-    border-radius: 16px;
-  }
+  .seagull-lens { border-radius: 16px; }
 }
 </style>

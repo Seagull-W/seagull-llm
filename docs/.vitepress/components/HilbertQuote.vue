@@ -38,8 +38,8 @@
       rgba(6, 182, 212, 0.04) 100%
     ),
     var(--glass-bg, rgba(255, 255, 255, 0.65));
-  backdrop-filter: blur(14px) saturate(150%);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 
   /* 渐变蓝边 */
   border: 1px solid rgba(37, 99, 235, 0.18);
