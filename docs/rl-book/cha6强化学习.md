@@ -242,7 +242,7 @@ GRPO（Group Relative Policy Optimization，组相对策略优化）的核心思
 \{o_1,o_2,\ldots,o_G\}\sim \pi_{\theta_{\mathrm{old}}}(\cdot|q)
 \]
 
-奖励模型或可验证奖励函数分别给这些回答打分。GRPO 使用组内奖励构造优势：**高于组内平均水平的回答得到正优势，低于平均水平的回答得到负优势**，然后使用类似 PPO 的 clipped objective 更新策略。:chatgpt-content-reference{index="0"}
+奖励模型或可验证奖励函数分别给这些回答打分。GRPO 使用组内奖励构造优势：**高于组内平均水平的回答得到正优势，低于平均水平的回答得到负优势**，然后使用类似 PPO 的 clipped objective 更新策略。
 
 与 PPO 相比，最关键的变化是：
 
@@ -314,7 +314,7 @@ J_{\mathrm{GRPO}}(\theta)
 \beta D_{\mathrm{KL}}[\pi_\theta\|\pi_{\mathrm{ref}}]
 \]
 
-则约束当前策略不要过度偏离参考模型。:chatgpt-content-reference{index="1"}
+则约束当前策略不要过度偏离参考模型。
 
 因此 GRPO 和 PPO 的一个核心区别并不在 clipping，而在于 **\(\hat A_{i,t}\) 如何得到**。
 
@@ -356,11 +356,11 @@ r_1,r_2,\ldots,r_G.
 \text{第 }i\text{ 个回答相对于同一问题下其他回答好多少。}
 \]
 
-因此 GRPO 不需要学习 \(V(s)\)，而是直接利用同组回答作为相对比较基准。:chatgpt-content-reference{index="2"}
+因此 GRPO 不需要学习 \(V(s)\)，而是直接利用同组回答作为相对比较基准。
 
 ##### 结果监督与过程监督
 
-GRPO 可以使用两种不同粒度的奖励：**结果监督（Outcome Supervision）**和**过程监督（Process Supervision）**。两者的根本区别在于奖励落在什么位置。:chatgpt-content-reference{index="3"}
+GRPO 可以使用两种不同粒度的奖励：**结果监督（Outcome Supervision）**和**过程监督（Process Supervision）**。两者的根本区别在于奖励落在什么位置。
 
 **结果监督**只评价整个回答最终是否好，例如数学题只判断最终答案是否正确：
 
@@ -409,7 +409,7 @@ x_1\rightarrow x_2\rightarrow x_3\rightarrow x_4
 (0.8,0.8,0.8,0.8).
 \]
 
-它的优点是简单，而且最终正确性通常容易验证；缺点是**无法判断一个长推理过程中究竟哪一步做得好、哪一步出现了错误**。:chatgpt-content-reference{index="4"}
+它的优点是简单，而且最终正确性通常容易验证；缺点是**无法判断一个长推理过程中究竟哪一步做得好、哪一步出现了错误**。
 
 **过程监督**则进一步评价推理过程中的各个步骤。例如：
 
@@ -493,7 +493,7 @@ A=1.0.
 \end{aligned}}
 \]
 
-过程监督的 credit assignment 更细，可以告诉模型“哪部分推理值得强化”；结果监督则只告诉模型“整个答案最终好不好”。:chatgpt-content-reference{index="5"}
+过程监督的 credit assignment 更细，可以告诉模型“哪部分推理值得强化”；结果监督则只告诉模型“整个答案最终好不好”。
 
 ##### 与 RLOO 的关系
 
