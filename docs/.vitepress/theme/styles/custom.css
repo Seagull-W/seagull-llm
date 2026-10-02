@@ -344,34 +344,53 @@ h1, h2, h3, h4, h5, h6 {
   background: radial-gradient(ellipse at center, rgba(14, 165, 233, 0.26), transparent 70%);
 }
 
-/* 首页字标：用排版呈现海面与天空的层次 */
+/* 本地 TeX 衬线字体，避免字标依赖外部字体加载。 */
+@font-face {
+  font-family: 'Seagull TeX';
+  src: url('../../../../node_modules/katex/dist/fonts/KaTeX_Main-Regular.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* 首页字标：借鉴 TeX 的错位排版，留出完整的字形空间。 */
 .VPHome .VPHero .seagull-hero-heading {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 20px;
 }
 
 .VPHome .VPHero .seagull-hero-wordmark {
   display: block;
   max-width: 100%;
-  padding-right: 0.09em;
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-size: clamp(72px, 14vw, 112px);
-  font-style: italic;
+  padding: 0.08em 0 0.12em;
+  font-family: 'Seagull TeX', 'Times New Roman', serif;
+  font-size: clamp(48px, 11vw, 92px);
+  font-style: normal;
   font-weight: 400;
-  line-height: 0.98;
-  letter-spacing: -0.055em;
+  line-height: 1;
+  letter-spacing: -0.035em;
   white-space: nowrap;
   color: #1569a9;
-  background: linear-gradient(115deg, #123d7a 3%, #176db2 52%, #27a8cd 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+}
+
+.seagull-hero-wordmark .wordmark-e {
+  display: inline-block;
+  transform: translateY(0.13em);
+  margin-left: -0.025em;
+  margin-right: -0.055em;
+}
+
+.seagull-hero-wordmark .wordmark-a {
+  display: inline-block;
+  font-size: 0.72em;
+  vertical-align: 0.3em;
+  margin-right: -0.045em;
 }
 
 .dark .VPHome .VPHero .seagull-hero-wordmark {
   color: #8fd8ed;
-  background-image: linear-gradient(115deg, #a8cbff 3%, #74b9ed 52%, #87e1e5 100%);
 }
 
 .VPHome .VPHero .seagull-hero-title {

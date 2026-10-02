@@ -22,3 +22,8 @@ research-reports/
 
 # VitePress generated config timestamps
 /docs/.vitepress/config.mts.timestamp-*.mjs
+
+# Local W&B exports; publish the processed assets in docs/public/experiments.
+/docs/rl-book/expriment_data/
+__pycache__/
+*.pyc

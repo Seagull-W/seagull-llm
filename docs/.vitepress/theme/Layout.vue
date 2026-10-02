@@ -222,7 +222,7 @@ onUnmounted(() => {
     </template>
     <template #home-hero-info>
       <h1 class="seagull-hero-heading">
-        <span class="seagull-hero-wordmark">seagull</span>
+        <span class="seagull-hero-wordmark" aria-label="SEAGULL"><span aria-hidden="true">S<span class="wordmark-e">E</span><span class="wordmark-a">A</span>GULL</span></span>
         <span class="seagull-hero-title">{{ frontmatter.hero.text }}</span>
       </h1>
       <p class="seagull-hero-tagline">{{ frontmatter.hero.tagline }}</p>

@@ -26,6 +26,7 @@ export const rlBookSidebar = [
     items: [
       { text: '对话模板与监督微调', link: '/rl-book/cha4对话模板与监督微调' },
       { text: '奖励建模', link: '/rl-book/cha5奖励建模' },
+      { text: '奖励模型训练实验与分析', link: '/rl-book/奖励模型训练实验' },
       { text: '强化学习', link: '/rl-book/cha6强化学习' }
     ]
   }

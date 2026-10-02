@@ -15,6 +15,7 @@ const TokenDemo = defineAsyncComponent(() => import('../components/TokenDemo.vue
 const AttentionViz = defineAsyncComponent(() => import('../components/AttentionViz.vue'))
 const WordEmbedViz = defineAsyncComponent(() => import('../components/WordEmbedViz.vue'))
 const NextTokenViz = defineAsyncComponent(() => import('../components/NextTokenViz.vue'))
+const RewardTrainingResults = defineAsyncComponent(() => import('../components/RewardTrainingResults.vue'))
 
 export default {
   extends: DefaultTheme,
@@ -24,6 +25,7 @@ export default {
     app.component('AttentionViz', AttentionViz)
     app.component('WordEmbedViz', WordEmbedViz)
     app.component('NextTokenViz', NextTokenViz)
+    app.component('RewardTrainingResults', RewardTrainingResults)
     app.component('SeagullLens', SeagullLens)
     app.component('HilbertQuote', HilbertQuote)
   }

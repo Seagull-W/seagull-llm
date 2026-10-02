@@ -1,0 +1,76 @@
+{
+  "source": "用户提供的 W&B SVG 图像导出（非数值日志）",
+  "metrics": [
+    {
+      "key": "val/loss",
+      "asset": "/experiments/reward-model-svg/val-loss.svg",
+      "sourceFile": "val_loss.svg"
+    },
+    {
+      "key": "val/accuracy",
+      "asset": "/experiments/reward-model-svg/val-accuracy.svg",
+      "sourceFile": "val_accuracy.svg"
+    },
+    {
+      "key": "val/reward_margin",
+      "asset": "/experiments/reward-model-svg/val-reward_margin.svg",
+      "sourceFile": "val_reward_margin.svg"
+    },
+    {
+      "key": "train/loss",
+      "asset": "/experiments/reward-model-svg/train-loss.svg",
+      "sourceFile": "trainloss.svg"
+    },
+    {
+      "key": "train/accuracy",
+      "asset": "/experiments/reward-model-svg/train-accuracy.svg",
+      "sourceFile": "train_accuracy.svg"
+    },
+    {
+      "key": "train/reward_margin",
+      "asset": "/experiments/reward-model-svg/train-reward_margin.svg",
+      "sourceFile": "train_reward_margin.svg"
+    },
+    {
+      "key": "train/r_chosen_mean",
+      "asset": "/experiments/reward-model-svg/train-r_chosen_mean.svg",
+      "sourceFile": "train_r_chosen_mean.svg"
+    },
+    {
+      "key": "train/r_rejected_mean",
+      "asset": "/experiments/reward-model-svg/train-r_rejected_mean.svg",
+      "sourceFile": "train_r_rejected_mean.svg"
+    },
+    {
+      "key": "val/r_chosen_mean",
+      "asset": "/experiments/reward-model-svg/val-r_chosen_mean.svg",
+      "sourceFile": "val_r_chosen_mean.svg"
+    },
+    {
+      "key": "val/r_rejected_mean",
+      "asset": "/experiments/reward-model-svg/val-r_rejected_mean.svg",
+      "sourceFile": "val_r_rejected_mean.svg"
+    },
+    {
+      "key": "train/lr",
+      "asset": "/experiments/reward-model-svg/train-lr.svg",
+      "sourceFile": "train_lr.svg"
+    }
+  ],
+  "runs": [
+    {
+      "id": "g3827aan",
+      "label": "f32",
+      "name": "preference-rm-qwen3-0.6b-linear-float32",
+      "url": "https://forge.coreweave.com/wandb/15244895545-/rlhf-book/runs/g3827aan",
+      "color": "#479a5f"
+    },
+    {
+      "id": "wklgx0t9",
+      "label": "bf16",
+      "name": "preference-rm-qwen3-0.6b-linear-bf16",
+      "url": "https://forge.coreweave.com/wandb/15244895545-/rlhf-book/runs/wklgx0t9",
+      "color": "#f0434f"
+    }
+  ]
+}
