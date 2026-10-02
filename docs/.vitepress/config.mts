@@ -233,7 +233,7 @@ const config = withMermaid({
 
     // --- 右侧大纲 ---
     outline: {
-      level: [2, 3], // 显示 h2 和 h3
+      level: [2, 6], // 显示 h2–h6，包含算法推导和公式等深层小节
       label: '本页目录'
     },
 
