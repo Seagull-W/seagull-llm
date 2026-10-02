@@ -220,6 +220,13 @@ onUnmounted(() => {
     <template #home-hero-image>
       <SeagullLens />
     </template>
+    <template #home-hero-info>
+      <h1 class="seagull-hero-heading">
+        <span class="seagull-hero-wordmark">seagull</span>
+        <span class="seagull-hero-title">{{ frontmatter.hero.text }}</span>
+      </h1>
+      <p class="seagull-hero-tagline">{{ frontmatter.hero.tagline }}</p>
+    </template>
     <template #home-features-after>
       <ClientOnly>
         <HilbertQuote />
