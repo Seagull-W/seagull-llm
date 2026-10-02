@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import { sidebar } from './sidebar'
+import texDelimiters from './markdown/tex-delimiters.mjs'
 
 // ===== Vite 插件：模型下载代理（仅 dev/preview 模式生效）=====
 // 浏览器 → /api/hf/* → Vite dev server → ModelScope（modelscope.cn，服务端跟随重定向到 OSS）→ 浏览器
@@ -206,7 +207,7 @@ const config = withMermaid({
     },
     lineNumbers: true, // 代码块显示行号
     config(md) {
-      // 如需额外 markdown-it 插件在此注册
+      md.use(texDelimiters)
     }
   },
 
