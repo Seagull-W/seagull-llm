@@ -6,6 +6,7 @@ import SeagullLens from '../components/SeagullLens.vue'
 import ReadingProgress from '../components/ReadingProgress.vue'
 import ChapterTag from '../components/ChapterTag.vue'
 import HilbertQuote from '../components/HilbertQuote.vue'
+import VideoGallery from '../components/VideoGallery.vue'
 
 const { Layout } = DefaultTheme
 const route = useRoute()
@@ -164,7 +165,7 @@ onUnmounted(() => {
         <ReadingProgress />
       </ClientOnly>
       <!-- 拖拽手柄 / 折叠按钮（仅文档页显示，首页无侧边栏） -->
-      <template v-if="!isHome">
+      <template v-if="!isHome && frontmatter.layout !== 'page'">
         <!-- 拖拽手柄 -->
         <div
           v-show="sidebarVisible"
@@ -228,6 +229,7 @@ onUnmounted(() => {
       <p class="seagull-hero-tagline">{{ frontmatter.hero.tagline }}</p>
     </template>
     <template #home-features-after>
+      <VideoGallery preview />
       <ClientOnly>
         <HilbertQuote />
       </ClientOnly>

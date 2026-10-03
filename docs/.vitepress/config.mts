@@ -222,6 +222,7 @@ const config = withMermaid({
     // --- 导航栏 ---
     nav: [
       { text: '首页', link: '/' },
+      { text: '科普视频', link: '/videos/' },
       { text: 'LLM 科普书', link: '/llm-book/' },
       { text: '论文阅读笔记', link: '/papers/' },
       { text: 'RL 学习笔记', link: '/rl-book/' },

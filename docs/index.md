@@ -8,6 +8,9 @@ hero:
     - theme: brand
       text: 开始阅读
       link: /rl-book/
+    - theme: alt
+      text: 看科普视频
+      link: /videos/
 
 features:
   - title: Nathan Lambert RL BOOK 学习笔记
