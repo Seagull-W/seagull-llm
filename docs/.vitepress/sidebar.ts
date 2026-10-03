@@ -52,7 +52,9 @@ export const papersSidebar = [
     text: '强化学习与推理模型',
     collapsed: false,
     items: [
-      { text: 'DeepSeek-R1 技术报告', link: '/papers/deepseek-r1/' }
+      { text: 'DeepSeek-R1 技术报告', link: '/papers/deepseek-r1/' },
+      { text: 'GiGPO', link: '/papers/gigpo/' },
+      { text: 'Graph-GPO', link: '/papers/graph-gpo/' }
     ]
   }
 ]
