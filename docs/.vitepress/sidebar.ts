@@ -74,10 +74,23 @@ export const papersSidebar = [
   }
 ]
 
+// ===== Rust 学习笔记侧边栏（/rust-notes/）=====
+export const rustNotesSidebar = [
+  {
+    text: 'Rust 学习笔记',
+    collapsed: false,
+    items: [
+      { text: '笔记目录', link: '/rust-notes/' },
+      { text: '多线程并发编程', link: '/rust-notes/多线程并发编程' }
+    ]
+  }
+]
+
 // VitePress 多侧边栏：按路径前缀匹配
 export const sidebar = {
   '/llm-book/': llmBookSidebar,
   '/papers/': papersSidebar,
   '/rl-book/': rlBookSidebar,
-  '/westlake-rl/': westlakeRlSidebar
+  '/westlake-rl/': westlakeRlSidebar,
+  '/rust-notes/': rustNotesSidebar
 }

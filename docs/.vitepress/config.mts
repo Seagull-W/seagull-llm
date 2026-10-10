@@ -226,7 +226,8 @@ const config = withMermaid({
       { text: 'LLM 科普书', link: '/llm-book/' },
       { text: '论文阅读笔记', link: '/papers/' },
       { text: 'RL 学习笔记', link: '/rl-book/' },
-      { text: '西湖 RL 笔记', link: '/westlake-rl/' }
+      { text: '西湖 RL 笔记', link: '/westlake-rl/' },
+      { text: 'Rust 学习笔记', link: '/rust-notes/' }
     ],
 
     // --- 侧边栏（扁平结构，数组形式）---

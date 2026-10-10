@@ -24,4 +24,7 @@ features:
   - title: 西湖大学强化学习笔记
     details: 学习西湖大学强化学习课程笔记，涵盖强化学习基础、策略梯度、Actor-Critic 等核心内容
     link: /westlake-rl/
+  - title: Rust 学习笔记
+    details: 记录 Rust 学习中的概念与代码示例，从多线程与并发编程开始
+    link: /rust-notes/
 ---
