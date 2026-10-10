@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 450" role="img" aria-labelledby="title desc">
+  <title id="title">从训练到一次可检查的回答</title>
+  <desc id="desc">训练资料通过训练得到模型参数。使用时，当次输入与资料进入模型，生成回答。工具返回的信息再次进入输入。回答需要按任务标准核验。</desc>
+  <defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#2563eb" stroke-width="1.5"/></marker></defs>
+  <rect width="760" height="450" rx="16" fill="#fff"/>
+  <g font-family="sans-serif" fill="#16233a" font-size="21" text-anchor="middle">
+    <text x="380" y="37" font-size="23" font-weight="700">模型学到的、当次给的、工具返回的</text>
+    <rect x="270" y="65" width="220" height="58" rx="8" fill="#eef3fc" stroke="#d7e1f2"/>
+    <text x="380" y="100">训练资料与训练过程</text>
+    <path d="M380 123V173" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="470" y="151" font-size="16" fill="#45536b">更新参数</text>
+    <rect x="24" y="183" width="196" height="88" rx="8" fill="#eef3fc" stroke="#d7e1f2"/>
+    <text x="122" y="219">当次输入与资料</text><text x="122" y="245" font-size="16" fill="#45536b">组成可用的上下文</text>
+    <rect x="280" y="183" width="200" height="88" rx="8" fill="#e3ebf8" stroke="#2563eb" stroke-width="2"/>
+    <text x="380" y="219">模型计算</text><text x="380" y="245" font-size="16" fill="#45536b">使用已训练的参数</text>
+    <rect x="540" y="183" width="196" height="88" rx="8" fill="#fef3c7" stroke="#a16207"/>
+    <text x="638" y="219">生成回答</text><text x="638" y="245" font-size="16" fill="#45536b">需要任务相关的核验</text>
+    <path d="M220 227H270M480 227H530" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="24" y="326" width="196" height="66" rx="8" fill="#ecfeff" stroke="#0e7490"/>
+    <text x="122" y="354">外部检索与工具</text><text x="122" y="378" font-size="16" fill="#45536b">查资料、计算、执行</text>
+    <path d="M122 326V281" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M380 271V359H230" fill="none" stroke="#2563eb" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+    <text x="359" y="390" font-size="16" fill="#45536b">软件解析调用并执行工具</text>
+    <text x="380" y="430" font-size="16" fill="#45536b">概念示意：工具结果进入上下文；获得回答与完成核验是两个环节。</text>
+  </g>
+</svg>

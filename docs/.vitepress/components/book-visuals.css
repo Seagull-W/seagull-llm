@@ -1,0 +1,83 @@
+.book-viz {
+  --book-info: var(--vp-c-brand-1);
+  --book-result: #a16207;
+  --book-pass: #15803d;
+  --book-stop: #9a3412;
+  margin: 28px 0;
+  padding: 22px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  background: var(--vp-c-bg-alt);
+  color: var(--vp-c-text-1);
+  font-family: var(--vp-font-family-base);
+}
+.dark .book-viz { --book-result: #fbbf24; --book-pass: #86efac; --book-stop: #fdba74; }
+.book-viz .book-viz-title { margin: 0 0 8px; font-size: 19px; font-weight: 700; line-height: 1.5; }
+.book-viz .book-viz-meta { margin: 0 0 18px; color: var(--vp-c-text-2); font-size: 13px; line-height: 1.7; }
+.book-viz .book-viz-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 18px 0; }
+.book-viz button {
+  border: 1px solid var(--vp-c-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: var(--vp-c-bg-alt);
+  color: var(--vp-c-text-1);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: border-color .18s, background-color .18s;
+}
+.book-viz button:hover:not(:disabled) { border-color: var(--book-info); background: var(--vp-c-bg-soft); }
+.book-viz button[aria-pressed='true'], .book-viz button[aria-current='step'] { border-color: var(--book-info); background: var(--vp-c-bg-soft); color: var(--book-info); font-weight: 600; }
+.book-viz button:disabled { opacity: .45; cursor: default; }
+.book-viz :is(button, a):focus-visible { outline: 3px solid var(--book-info); outline-offset: 3px; }
+.book-viz .book-viz-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.book-viz .book-viz-controls .book-primary { background: var(--book-info); border-color: var(--book-info); color: var(--vp-c-bg-alt); }
+.book-viz .book-viz-controls .book-primary:hover:not(:disabled) { background: var(--book-info); opacity: .9; }
+.book-viz .book-viz-explanation { min-height: 76px; margin: 16px 0 0; padding-left: 14px; border-left: 3px solid var(--book-info); }
+.book-viz .book-viz-explanation strong { display: block; }
+.book-viz .book-viz-explanation p { margin: 4px 0 0; line-height: 1.75; }
+.book-viz .book-viz-svg { display: block; width: 100%; height: auto; color: var(--vp-c-text-1); overflow: visible; }
+.book-viz-svg text { fill: currentColor; font-family: var(--vp-font-family-base); font-size: 19px; }
+.book-viz-svg .book-small { font-size: 16px; fill: var(--vp-c-text-2); }
+.book-viz-svg .book-box { fill: var(--vp-c-bg-soft); stroke: var(--vp-c-border); stroke-width: 1.5; }
+.book-viz-svg .book-flow { fill: none; stroke: var(--book-info); stroke-width: 2; }
+.book-viz-svg .book-accent { fill: var(--book-info); }
+.book-viz-svg .book-dim { opacity: .35; }
+.book-viz-svg .book-token { fill: var(--vp-c-bg-alt); stroke: var(--book-result); stroke-width: 2; }
+.book-viz-svg .book-value { fill: var(--book-result); }
+.book-viz .book-viz-question { margin: 0 0 14px; font-size: 16px; }
+.book-viz .book-viz-choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.book-viz .book-viz-context { overflow-wrap: anywhere; font-weight: 600; color: var(--book-result); }
+.book-viz .book-viz-context::before { content: '当前上下文：'; color: var(--vp-c-text-2); font-weight: 400; }
+.book-viz .book-viz-notice { margin: 10px 0 0; color: var(--vp-c-text-2); font-size: 13px; line-height: 1.7; }
+.book-viz .book-viz-docs { display: grid; gap: 8px; margin: 16px 0; }
+.book-viz .book-viz-doc { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; padding: 12px 0; border-top: 1px solid var(--vp-c-divider); }
+.book-viz .book-viz-doc p { margin: 3px 0 0; line-height: 1.65; font-size: 14px; }
+.book-viz .book-doc-id { color: var(--book-info); font-size: 21px; font-weight: 700; }
+.book-viz .book-viz-claims { margin: 18px 0; padding: 14px; background: var(--vp-c-bg-soft); border-radius: 6px; }
+.book-viz .book-viz-claim { padding: 10px 0; border-bottom: 1px solid var(--vp-c-divider); }
+.book-viz .book-viz-claim:last-child { border-bottom: 0; }
+.book-viz .book-viz-claim p { margin: 3px 0; line-height: 1.65; }
+.book-viz .book-viz-check { font-size: 14px; color: var(--book-stop); }
+.book-viz .book-viz-check.is-supported { color: var(--book-pass); }
+.book-viz .book-viz-outcome { padding: 12px 0 0; border-top: 2px solid var(--book-stop); color: var(--book-stop); font-weight: 600; }
+.book-viz .book-viz-outcome.is-supported { border-color: var(--book-pass); color: var(--book-pass); }
+.book-viz .book-svg-flow-dot { transform-box: fill-box; transform-origin: center; }
+.book-viz.is-playing .book-svg-flow-dot { animation: book-flow-pulse 1s ease-in-out infinite alternate; }
+.book-viz .book-data-particle { offset-path: path('M150 56L275 104'); offset-distance: 100%; }
+.book-viz.is-playing .book-data-particle { animation: book-data-travel 1.1s ease-out infinite; }
+.book-viz .book-probability-bar { transition: width .4s ease; }
+@keyframes book-flow-pulse { from { opacity: .4; } to { opacity: 1; } }
+@keyframes book-data-travel { from { offset-distance: 0%; opacity: .3; } to { offset-distance: 100%; opacity: 1; } }
+@media (max-width: 540px) {
+  .book-viz { padding: 16px 12px; }
+  .book-viz .book-viz-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .book-viz .book-viz-steps button { text-align: left; padding: 8px; }
+  .book-viz .book-viz-svg text { font-size: 25px; }
+  .book-viz .book-viz-svg .book-small { font-size: 22px; }
+  .book-viz .book-viz-explanation { min-height: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .book-viz *, .book-viz *::before, .book-viz *::after { animation: none !important; transition: none !important; }
+}

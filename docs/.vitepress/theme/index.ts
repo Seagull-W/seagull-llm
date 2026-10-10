@@ -16,6 +16,8 @@ const AttentionViz = defineAsyncComponent(() => import('../components/AttentionV
 const WordEmbedViz = defineAsyncComponent(() => import('../components/WordEmbedViz.vue'))
 const NextTokenViz = defineAsyncComponent(() => import('../components/NextTokenViz.vue'))
 const RewardTrainingResults = defineAsyncComponent(() => import('../components/RewardTrainingResults.vue'))
+const GenerationWalkthrough = defineAsyncComponent(() => import('../components/GenerationWalkthrough.vue'))
+const EvidenceWalkthrough = defineAsyncComponent(() => import('../components/EvidenceWalkthrough.vue'))
 
 export default {
   extends: DefaultTheme,
@@ -26,6 +28,8 @@ export default {
     app.component('WordEmbedViz', WordEmbedViz)
     app.component('NextTokenViz', NextTokenViz)
     app.component('RewardTrainingResults', RewardTrainingResults)
+    app.component('GenerationWalkthrough', GenerationWalkthrough)
+    app.component('EvidenceWalkthrough', EvidenceWalkthrough)
     app.component('SeagullLens', SeagullLens)
     app.component('HilbertQuote', HilbertQuote)
   }

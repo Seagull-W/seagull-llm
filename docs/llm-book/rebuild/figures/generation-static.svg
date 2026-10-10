@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 310" role="img" aria-labelledby="title desc">
+  <title id="title">一次生成步骤的四个阶段</title><desc id="desc">切分文字、查表获得表示、处理上下文、形成候选分布。选择的 token 加入后续上下文，进入下一轮。</desc>
+  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#2563eb"/></marker></defs>
+  <rect width="640" height="310" rx="12" fill="#fff"/>
+  <g fill="#16233a" font-family="sans-serif" text-anchor="middle" font-size="21">
+    <rect x="25" y="27" width="255" height="72" rx="8" fill="#eef3fc" stroke="#d7e1f2"/><text x="152" y="70">1　文字切成 Token</text>
+    <rect x="360" y="27" width="255" height="72" rx="8" fill="#ecfeff" stroke="#0e7490"/><text x="487" y="70">2　Token 查表得到表示</text>
+    <rect x="360" y="149" width="255" height="72" rx="8" fill="#e3ebf8" stroke="#2563eb"/><text x="487" y="192">3　根据上下文更新表示</text>
+    <rect x="25" y="149" width="255" height="72" rx="8" fill="#fef3c7" stroke="#a16207"/><text x="152" y="192">4　形成下一 Token 分布</text>
+    <g fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#a)"><path d="M280 63H350"/><path d="M487 99V139"/><path d="M360 185H290"/></g>
+    <text x="320" y="262" font-size="19">选中的 Token 加入上下文，再进行下一步生成</text>
+    <text x="320" y="290" font-size="16" fill="#45536b">概念示意：本图没有展示特定模型的实测数据。</text>
+  </g>
+</svg>

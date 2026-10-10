@@ -15,6 +15,16 @@ export const llmBookSidebar = [
       { text: '第 1 章 从一次对话说起', link: '/llm-book/ch01-what-is-lm' },
       { text: '第 2 章 Token 化', link: '/llm-book/ch02-tokenization' }
     ]
+  },
+  {
+    text: '新版重构试读',
+    collapsed: false,
+    items: [
+      { text: '学习地图与样章', link: '/llm-book/rebuild/' },
+      { text: '一次回答是怎样生成的', link: '/llm-book/rebuild/how-generation-works' },
+      { text: '带引用的回答，怎样才算有依据', link: '/llm-book/rebuild/verifiable-answers' },
+      { text: '图与动画的来源及范围', link: '/llm-book/rebuild/visual-resources' }
+    ]
   }
 ]
 
@@ -41,6 +51,11 @@ export const westlakeRlSidebar = [
       { text: '随机近似', link: '/westlake-rl/随机近似/' },
       { text: '价值函数', link: '/westlake-rl/价值函数/' },
       { text: '策略梯度', link: '/westlake-rl/策略梯度/' },
+      { text: '第 1–2 讲 强化学习基本概念与贝尔曼方程', link: '/westlake-rl/强化学习基本概念与贝尔曼方程/' },
+      { text: '第 3 讲 最优状态价值与贝尔曼最优方程', link: '/westlake-rl/最优状态价值与贝尔曼最优方程/' },
+      { text: '第 4 讲 值迭代与策略迭代', link: '/westlake-rl/值迭代与策略迭代/' },
+      { text: '第 5 讲 蒙特卡洛方法', link: '/westlake-rl/蒙特卡洛方法/' },
+      { text: '第 6 讲 随机近似', link: '/westlake-rl/随机近似/课程讲义' },
       { text: 'TD 算法', link: '/westlake-rl/TD算法/TD' }
     ]
   }
