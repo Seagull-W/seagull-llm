@@ -3,6 +3,7 @@ layout: doc
 title: 第 4 讲：值迭代与策略迭代
 outline: false
 aside: false
+pdf: true
 ---
 
 <script setup>
@@ -22,8 +23,4 @@ import page11 from './预览/11.webp'
 const previewPages = [page1, page2, page3, page4, page5, page6, page7, page8, page9, page10, page11]
 </script>
 
-# 第 4 讲：值迭代与策略迭代
-
-值迭代、策略迭代与截断策略迭代，理解基于模型的动态规划方法。
-
-<PdfViewer :src="pdfUrl" title="值迭代与策略迭代" :preview-pages="previewPages" :pages="11" />
+<PdfViewer :src="pdfUrl" title="值迭代与策略迭代" :preview-pages="previewPages" />

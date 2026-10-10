@@ -3,6 +3,7 @@ layout: doc
 title: 第 5 讲：蒙特卡洛方法
 outline: false
 aside: false
+pdf: true
 ---
 
 <script setup>
@@ -22,8 +23,4 @@ import page11 from './预览/11.webp'
 const previewPages = [page1, page2, page3, page4, page5, page6, page7, page8, page9, page10, page11]
 </script>
 
-# 第 5 讲：蒙特卡洛方法
-
-均值估计、MC Basic、探索起点与 ε-Greedy，从交互经验中学习。
-
-<PdfViewer :src="pdfUrl" title="蒙特卡洛方法" :preview-pages="previewPages" :pages="11" />
+<PdfViewer :src="pdfUrl" title="蒙特卡洛方法" :preview-pages="previewPages" />

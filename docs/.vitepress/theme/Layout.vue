@@ -235,7 +235,7 @@ onUnmounted(() => {
       </ClientOnly>
     </template>
     <template #doc-before>
-      <ChapterTag />
+      <ChapterTag v-if="!frontmatter.pdf" />
       <div v-if="frontmatter.status === 'draft'" class="draft-notice">
         本章仍在写作中，内容尚未完成。<a :href="withBase('/llm-book/')">查看已发布章节</a>
       </div>

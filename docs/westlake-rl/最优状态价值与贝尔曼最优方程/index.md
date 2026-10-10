@@ -3,6 +3,7 @@ layout: doc
 title: 第 3 讲：最优状态价值与贝尔曼最优方程
 outline: false
 aside: false
+pdf: true
 ---
 
 <script setup>
@@ -20,8 +21,4 @@ import page9 from './预览/09.webp'
 const previewPages = [page1, page2, page3, page4, page5, page6, page7, page8, page9]
 </script>
 
-# 第 3 讲：最优状态价值与贝尔曼最优方程
-
-最优策略、最优状态价值、贝尔曼最优方程与压缩映射。
-
-<PdfViewer :src="pdfUrl" title="最优状态价值与贝尔曼最优方程" :preview-pages="previewPages" :pages="9" />
+<PdfViewer :src="pdfUrl" title="最优状态价值与贝尔曼最优方程" :preview-pages="previewPages" />
