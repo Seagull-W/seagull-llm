@@ -1,0 +1,66 @@
+[
+  {
+    "title": "5.1 动机示例：均值估计",
+    "page": 1
+  },
+  {
+    "title": "5.2 MC Basic ：最简单的 MC 强化学习算法",
+    "page": 2
+  },
+  {
+    "title": "5.2.1 将策略迭代改造为无模型方法",
+    "page": 2
+  },
+  {
+    "title": "5.2.2 MC Basic 算法",
+    "page": 3
+  },
+  {
+    "title": "5.2.3 示例分析",
+    "page": 3
+  },
+  {
+    "title": "5.3 MC Exploring Starts",
+    "page": 4
+  },
+  {
+    "title": "5.3.1 更高效地利用样本",
+    "page": 4
+  },
+  {
+    "title": "5.3.2 更高效地更新策略",
+    "page": 7
+  },
+  {
+    "title": "5.3.3 算法描述",
+    "page": 7
+  },
+  {
+    "title": "5.4 MC ε-Greedy：无需 Exploring Starts 的学习",
+    "page": 8
+  },
+  {
+    "title": "5.4.1 ε-greedy 策略",
+    "page": 8
+  },
+  {
+    "title": "5.4.2 算法描述",
+    "page": 8
+  },
+  {
+    "title": "5.4.3 示例分析",
+    "page": 9
+  },
+  {
+    "title": "5.5 ε-Greedy 策略的探索与利用",
+    "page": 9
+  },
+  {
+    "title": "5.6 本章小结",
+    "page": 10
+  },
+  {
+    "title": "5.7 常见问题解答",
+    "page": 11
+  }
+]

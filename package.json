@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
+    "pdfjs-dist": "^6.4.299",
     "undici": "^7.29.0"
   }
 }

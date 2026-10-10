@@ -1,0 +1,70 @@
+[
+  {
+    "title": "6.1 动机示例：均值估计",
+    "page": 1
+  },
+  {
+    "title": "6.2 Robbins-Monro 算法",
+    "page": 2
+  },
+  {
+    "title": "6.2.1 收敛性质",
+    "page": 2
+  },
+  {
+    "title": "6.2.2 在均值估计中的应用",
+    "page": 4
+  },
+  {
+    "title": "6.3 Dvoretzky 收敛定理",
+    "page": 4
+  },
+  {
+    "title": "6.3.1 Dvoretzky 定理的证明",
+    "page": 5
+  },
+  {
+    "title": "6.3.2 在均值估计中的应用",
+    "page": 6
+  },
+  {
+    "title": "6.3.3 在 Robbins-Monro 定理中的应用",
+    "page": 7
+  },
+  {
+    "title": "6.3.4 Dvoretzky 定理的推广",
+    "page": 7
+  },
+  {
+    "title": "6.4 随机梯度下降",
+    "page": 8
+  },
+  {
+    "title": "6.4.1 在均值估计中的应用",
+    "page": 9
+  },
+  {
+    "title": "6.4.2 SGD 的收敛模式",
+    "page": 9
+  },
+  {
+    "title": "6.4.3 SGD 的确定性形式",
+    "page": 10
+  },
+  {
+    "title": "6.4.4 BGD 、SGD 与 MBGD",
+    "page": 10
+  },
+  {
+    "title": "6.4.5 SGD 的收敛性",
+    "page": 12
+  },
+  {
+    "title": "6.5 本章小结",
+    "page": 13
+  },
+  {
+    "title": "6.6 常见问题解答",
+    "page": 13
+  }
+]
