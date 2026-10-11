@@ -1,4 +1,5 @@
 ---
+tags: ["大语言模型","微调","预训练"]
 status: draft
 prev: false
 next: false

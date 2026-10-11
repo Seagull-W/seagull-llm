@@ -2,6 +2,9 @@ import DefaultTheme from 'vitepress/theme'
 import { defineAsyncComponent } from 'vue'
 import Layout from './Layout.vue'
 import './styles/custom.css'
+import './styles/reading.css'
+import ChapterCards from '../components/ChapterCards.vue'
+import TagsIndex from '../components/TagsIndex.vue'
 
 // 首页 / 全局必需组件：同步导入
 import SeagullLens from '../components/SeagullLens.vue'
@@ -23,6 +26,8 @@ export default {
   extends: DefaultTheme,
   Layout,
   enhanceApp({ app }) {
+    app.component('ChapterCards', ChapterCards)
+    app.component('TagsIndex', TagsIndex)
     app.component('TokenDemo', TokenDemo)
     app.component('AttentionViz', AttentionViz)
     app.component('WordEmbedViz', WordEmbedViz)

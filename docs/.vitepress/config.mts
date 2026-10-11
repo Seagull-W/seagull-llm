@@ -201,8 +201,8 @@ const config = withMermaid({
   markdown: {
     math: true, // 启用 MathJax3 数学公式渲染
     theme: {
-      // 代码块统一深色主题（对应内页设计稿深色代码块）
-      light: 'github-dark',
+      // 代码配色与阅读界面的明暗模式保持一致。
+      light: 'github-light',
       dark: 'github-dark'
     },
     lineNumbers: true, // 代码块显示行号
@@ -222,6 +222,7 @@ const config = withMermaid({
     // --- 导航栏 ---
     nav: [
       { text: '首页', link: '/' },
+      { text: '标签索引', link: '/tags' },
       { text: '科普视频', link: '/videos/' },
       { text: 'LLM 科普书', link: '/llm-book/' },
       { text: '论文阅读笔记', link: '/papers/' },

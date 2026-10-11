@@ -1,4 +1,5 @@
 ---
+tags: ["强化学习","蒙特卡洛"]
 layout: doc
 title: 第 5 讲：蒙特卡洛方法
 outline: false

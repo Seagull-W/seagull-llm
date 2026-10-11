@@ -1,4 +1,5 @@
 ---
+tags: ["大语言模型","提示工程"]
 status: draft
 prev: false
 next: false

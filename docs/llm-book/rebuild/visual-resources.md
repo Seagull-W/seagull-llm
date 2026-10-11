@@ -1,4 +1,5 @@
 ---
+tags: ["大语言模型","Token 化","Transformer","可靠性"]
 layout: doc
 title: 图与动画的来源及范围
 status: draft

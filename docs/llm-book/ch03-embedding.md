@@ -1,4 +1,5 @@
 ---
+tags: ["大语言模型","词嵌入","Token 化"]
 status: draft
 prev: false
 next: false

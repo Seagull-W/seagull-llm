@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "大语言模型介绍文档",
   "scripts": {
+    "tags": "node scripts/generate-content-tags.mjs",
+    "predev": "npm run tags",
+    "prebuild": "npm run tags",
     "dev": "vitepress dev docs",
     "build": "vitepress build docs",
     "preview": "vitepress preview docs"

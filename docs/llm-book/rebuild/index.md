@@ -1,4 +1,5 @@
 ---
+tags: ["大语言模型","可靠性","模型评估"]
 layout: doc
 title: 新版学习地图与样章
 status: draft

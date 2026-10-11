@@ -1,4 +1,5 @@
 ---
+tags: ["大语言模型","模型选型","模型部署"]
 status: draft
 prev: false
 next: false

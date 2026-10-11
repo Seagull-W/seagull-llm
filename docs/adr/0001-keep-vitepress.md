@@ -1,3 +1,7 @@
+---
+search: false
+---
+
 # ADR 0001: 保留 VitePress 做架构层性能重构，而非更换框架
 
 Status: Accepted

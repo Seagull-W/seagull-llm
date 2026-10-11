@@ -7,6 +7,7 @@ import ReadingProgress from '../components/ReadingProgress.vue'
 import ChapterTag from '../components/ChapterTag.vue'
 import HilbertQuote from '../components/HilbertQuote.vue'
 import VideoGallery from '../components/VideoGallery.vue'
+import { isPublicContent } from '../public-content'
 
 const { Layout } = DefaultTheme
 const route = useRoute()
@@ -165,7 +166,7 @@ onUnmounted(() => {
         <ReadingProgress />
       </ClientOnly>
       <!-- 拖拽手柄 / 折叠按钮（仅文档页显示，首页无侧边栏） -->
-      <template v-if="!isHome && frontmatter.layout !== 'page'">
+      <template v-if="!isHome && frontmatter.layout !== 'page' && frontmatter.sidebar !== false">
         <!-- 拖拽手柄 -->
         <div
           v-show="sidebarVisible"
@@ -239,6 +240,11 @@ onUnmounted(() => {
       <div v-if="frontmatter.status === 'draft'" class="draft-notice">
         本章仍在写作中，内容尚未完成。<a :href="withBase('/llm-book/')">查看已发布章节</a>
       </div>
+    </template>
+    <template #doc-footer-before>
+      <nav v-if="frontmatter.tags?.length && isPublicContent(route.path, frontmatter)" class="article-tags" aria-label="文章标签">
+        <a v-for="tag in frontmatter.tags" :key="tag" :href="withBase('/tags') + '#' + encodeURIComponent(tag)">{{ tag }}</a>
+      </nav>
     </template>
   </Layout>
 </template>

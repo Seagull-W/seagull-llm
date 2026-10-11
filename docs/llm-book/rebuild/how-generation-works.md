@@ -1,4 +1,5 @@
 ---
+tags: ["大语言模型","Token 化","Transformer","预训练"]
 layout: doc
 title: 一次回答是怎样生成的
 status: draft

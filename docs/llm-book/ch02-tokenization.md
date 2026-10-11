@@ -1,3 +1,7 @@
+---
+tags: ["大语言模型","Token 化"]
+---
+
 # 第 2 章 Tokenization
 
 ## 本章导引

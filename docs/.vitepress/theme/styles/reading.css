@@ -1,0 +1,75 @@
+/* Quiet reading surfaces; the home page retains its Seagull identity. */
+.Layout:has(.VPDoc) {
+  --vp-c-bg: #fcfdff;
+  --vp-c-bg-alt: #ffffff;
+  --vp-c-bg-soft: #f2f6fa;
+  --vp-c-text-1: #243247;
+  --vp-c-text-2: #59677a;
+  --vp-c-text-3: #69788c;
+  --vp-c-divider: #e1e7ee;
+  --vp-c-border: #d9e2ec;
+  --vp-c-brand-1: #21658a;
+  --vp-c-brand-2: #184e6b;
+  background: var(--vp-c-bg);
+}
+.dark .Layout:has(.VPDoc) {
+  --vp-c-bg: #101722;
+  --vp-c-bg-alt: #151f2d;
+  --vp-c-bg-soft: #1b2839;
+  --vp-c-text-1: #e1e8f1;
+  --vp-c-text-2: #aab8ca;
+  --vp-c-text-3: #95a5ba;
+  --vp-c-divider: #2a374a;
+  --vp-c-border: #324158;
+  --vp-c-brand-1: #7bc4e5;
+  --vp-c-brand-2: #a1d9f0;
+}
+.Layout:has(.VPDoc) .VPNavBar { background: var(--vp-c-bg) !important; border-bottom: 1px solid var(--vp-c-divider); backdrop-filter: none; }
+.Layout:has(.VPDoc) .VPSidebar { background: var(--vp-c-bg-soft) !important; border-right: 1px solid var(--vp-c-divider); backdrop-filter: none; }
+.VPDoc .content-container { max-width: 760px !important; }
+.VPDoc .vp-doc { font-size: 16px; line-height: 1.9; }
+.VPDoc .vp-doc h1 {
+  margin: 0 0 24px;
+  font-size: clamp(28px, 2.5vw, 36px);
+  line-height: 1.4;
+  letter-spacing: -0.025em;
+  text-wrap: pretty;
+  color: var(--vp-c-text-1);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+.VPDoc .vp-doc h2 { margin: 48px 0 20px; padding: 0; border: 0; border-image: none; font-size: 25px; line-height: 1.5; }
+.VPDoc .vp-doc h3 { margin: 32px 0 16px; font-size: 20px; line-height: 1.6; }
+.VPDoc .vp-doc h4 { margin: 24px 0 12px; font-size: 17px; line-height: 1.6; }
+.VPDoc .vp-doc h5, .VPDoc .vp-doc h6 { margin: 24px 0 12px; font-size: 16px; }
+.VPDoc .vp-doc p { margin: 18px 0; line-height: 1.9; letter-spacing: 0; }
+.VPDoc .vp-doc li { line-height: 1.85; }
+.VPDoc .vp-doc li + li { margin-top: 8px; }
+.VPDoc .vp-doc hr { margin: 36px 0; border-color: var(--vp-c-divider); }
+.VPDoc .vp-doc blockquote { margin: 24px 0; padding: 12px 20px; border-left: 3px solid var(--vp-c-brand-1); border-radius: 0 6px 6px 0; background: var(--vp-c-bg-soft); font-size: 15px; color: var(--vp-c-text-2); }
+.VPDoc .vp-doc blockquote > p { margin: 4px 0; line-height: 1.8; }
+.VPDoc .vp-doc a:not(.header-anchor):not(.chapter-card) { background-image: none; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--vp-c-brand-1) 35%, transparent); text-underline-offset: 3px; }
+.VPDoc .vp-doc a:hover { text-decoration-color: currentColor; }
+.VPDoc .vp-doc .header-anchor { background-image: none; }
+.VPDoc .vp-doc :not(pre) > code { padding: 2px 5px; border: 0; border-radius: 4px; font-size: 0.86em; color: var(--vp-c-text-1); background: var(--vp-c-bg-soft); overflow-wrap: anywhere; }
+/* Follow Shiki's paired themes so light-mode token colors stay readable. */
+.VPDoc .vp-doc div[class*='language-'] { background: var(--vp-code-block-bg); border: 1px solid var(--vp-c-divider); border-radius: 8px; box-shadow: none; margin: 24px 0; }
+.VPDoc .vp-doc div[class*='language-'] .lang,
+.VPDoc .vp-doc div[class*='language-'] .line-numbers-wrapper { color: var(--vp-c-text-2); }
+.VPDoc .vp-doc table { display: block; width: max-content; max-width: 100%; overflow-x: auto; border-radius: 6px; margin: 24px 0; box-shadow: none; font-size: 14px; line-height: 1.75; }
+.VPDoc .vp-doc thead { background: var(--vp-c-bg-soft); }
+.VPDoc .vp-doc th { white-space: normal; }
+.VPDoc .vp-doc .custom-block { border-radius: 8px; }
+.VPDoc .vp-doc .custom-block p { font-size: 14px; line-height: 1.8; }
+.VPDoc .vp-doc img { border-radius: 6px; }
+.chapter-index .VPDoc .content-container { max-width: 960px !important; }
+.chapter-index .VPDoc .vp-doc > div > h1 + p { max-width: 680px; margin-bottom: 32px; font-size: 17px; color: var(--vp-c-text-2); }
+.article-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; }
+.article-tags a { padding: 3px 10px; border: 1px solid var(--vp-c-divider); border-radius: 6px; color: var(--vp-c-text-2); font-size: 12px; line-height: 1.7; }
+.article-tags a:hover { color: var(--vp-c-brand-1); border-color: var(--vp-c-brand-1); }
+.article-tags a:focus-visible { outline: 2px solid var(--vp-c-brand-1); outline-offset: 3px; }
+@media (max-width: 640px) {
+  .VPDoc .vp-doc h2 { margin-top: 36px; font-size: 23px; }
+  .VPDoc .vp-doc h3 { font-size: 19px; }
+  .VPDoc .vp-doc blockquote { padding: 12px 16px; }
+}

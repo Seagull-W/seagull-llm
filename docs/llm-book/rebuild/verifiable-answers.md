@@ -1,4 +1,5 @@
 ---
+tags: ["大语言模型","可靠性","RAG","模型评估"]
 layout: doc
 title: 带引用的回答，怎样才算有依据
 status: draft

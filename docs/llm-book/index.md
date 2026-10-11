@@ -1,6 +1,9 @@
 ---
+tags: ["大语言模型","Token 化","生成机制","可靠性"]
 layout: doc
 title: 所有人都能看懂的大语言模型科普及实践书
+pageClass: chapter-index
+aside: false
 ---
 
 # 所有人都能看懂的大语言模型科普及实践书
@@ -15,6 +18,10 @@ title: 所有人都能看懂的大语言模型科普及实践书
 
 ## 已发布章节
 
-从 [第 0 章 大模型全景](./ch00-overview) 开始，依次阅读 [第 1 章 从一次对话说起](./ch01-what-is-lm) 和 [第 2 章 Token 化](./ch02-tokenization)。
+<ChapterCards :items="[
+  { label: '第 0 章', title: '大模型全景', link: '/llm-book/ch00-overview', description: '先建立整体地图，认识大语言模型的机制、能力与实践方向。' },
+  { label: '第 1 章', title: '从一次对话说起', link: '/llm-book/ch01-what-is-lm', description: '从熟悉的对话体验出发，理解语言模型在做什么。' },
+  { label: '第 2 章', title: 'Token 化', link: '/llm-book/ch02-tokenization', description: '理解文本如何变成模型能够处理的 Token。' }
+]" />
 
 第 3–18 章仍在写作中，当前不纳入正式目录和站内搜索。后续将继续补充模型架构、训练、能力边界与实践主题。
