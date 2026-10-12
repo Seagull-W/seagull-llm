@@ -276,7 +276,7 @@ const config = withMermaid({
 
     // --- 社交链接 ---
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/<username>/seagull-llm' }
+      { icon: 'github', link: 'https://github.com/Seagull-W/seagull-llm' }
     ],
 
     // --- 页脚 ---
