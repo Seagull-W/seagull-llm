@@ -21,5 +21,6 @@ aside: false
 ## 训练实践
 
 <ChapterCards :items="[
-  { label: '奖励模型实验', title: '奖励模型训练实验与分析', link: '/rl-book/奖励模型训练实验', description: '对照 bf16 与 f32 两次训练，观察损失、偏好准确率和奖励分数的变化。' }
+  { label: '奖励模型实验', title: '奖励模型训练实验与分析', link: '/rl-book/奖励模型训练实验', description: '对照 bf16 与 f32 两次训练，观察损失、偏好准确率和奖励分数的变化。' },
+  { label: 'GRPO 实验', title: '强化学习训练实验与分析', link: '/rl-book/cha6-experiment', description: '结合训练配置与源码，分析数据加载、rollout、策略更新和显存占用。' }
 ]" />
