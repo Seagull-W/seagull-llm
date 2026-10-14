@@ -14,5 +14,5 @@
     },
     { "id": "huggingface-daily", "type": "hf-papers", "days": 3 }
   ],
-  "publishing": { "remote": "origin", "branch": "main", "site_url": "" }
+  "publishing": { "remote": "origin", "branch": "main", "site_url": "https://seagull-llm.pages.dev" }
 }
