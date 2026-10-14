@@ -125,6 +125,8 @@ python scripts/research-workflow.py verify-site --date 2026-10-14
 
 若现有 Cloudflare Pages 已连接仓库，main 推送可沿用该平台的构建部署。若是直接上传模式，需要另外接入其部署凭据与固定发布动作。仅从本仓库的 wrangler 配置无法确认线上部署状态。确认实际网站地址后填写 `publishing.site_url`。
 
+2026-10-14 最小验证已确认本项目的 Cloudflare Pages 集成会随 main 推送自动部署，实际地址是 `https://seagull-llm.pages.dev/`，配置已登记。因此本项目的发布器只需推送 GitHub，无需给调研 Agent 配置 Cloudflare Token。首篇文章及构建证据见 [VALIDATION.md](./VALIDATION.md)。
+
 ## 迁移到服务器与更换 Agent
 
 服务器复制仓库、配置执行身份、安装 Python/Node/Git 与 Agent，再执行 `npm ci`。Agent 的唯一写作输出是 `article.schema.json` 定义的 JSON：`bundle_sha256`、文章标题/摘要、章节、段落及来源 ID。换 Agent 时保留采集器和发布器，只替换 `generate()` 中的调用，或使用外部 JSON 模式。
