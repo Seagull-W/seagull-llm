@@ -3,6 +3,7 @@ import { defineAsyncComponent } from 'vue'
 import Layout from './Layout.vue'
 import './styles/custom.css'
 import './styles/reading.css'
+import './styles/sections.css'
 import ChapterCards from '../components/ChapterCards.vue'
 import TagsIndex from '../components/TagsIndex.vue'
 

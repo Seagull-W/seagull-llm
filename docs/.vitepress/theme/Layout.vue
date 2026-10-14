@@ -11,8 +11,14 @@ import { isPublicContent } from '../public-content'
 
 const { Layout } = DefaultTheme
 const route = useRoute()
-const { frontmatter } = useData()
+const { frontmatter, page } = useData()
 const isHome = computed(() => route.path === '/')
+// Source paths work with base URLs, encoded routes, and client-side navigation.
+const sectionClass = computed(() => {
+  const section = page.value.relativePath?.split('/')[0]
+  return ['research', 'llm-book', 'papers', 'rl-book', 'westlake-rl', 'rust-notes', 'videos'].includes(section)
+    ? `section-${section}` : ''
+})
 
 // ===== 侧边栏状态 =====
 const sidebarWidth = ref(272)
@@ -159,7 +165,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Layout>
+  <Layout :class="sectionClass">
     <template #layout-top>
       <!-- 阅读进度条 -->
       <ClientOnly>
@@ -236,7 +242,10 @@ onUnmounted(() => {
       </ClientOnly>
     </template>
     <template #doc-before>
-      <ChapterTag v-if="!frontmatter.pdf" />
+      <div v-if="sectionClass === 'section-research' && frontmatter.date" class="research-issue">
+        <span>每日调研</span><time :datetime="String(frontmatter.date)">{{ frontmatter.date }}</time>
+      </div>
+      <ChapterTag v-else-if="!frontmatter.pdf" />
       <div v-if="frontmatter.status === 'draft'" class="draft-notice">
         本章仍在写作中，内容尚未完成。<a :href="withBase('/llm-book/')">查看已发布章节</a>
       </div>
