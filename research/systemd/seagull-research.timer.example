@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Seagull research (Shanghai time)
+
+[Timer]
+OnCalendar=*-*-* 09:15:00 Asia/Shanghai
+Persistent=true
+Unit=seagull-research.service
+
+[Install]
+WantedBy=timers.target

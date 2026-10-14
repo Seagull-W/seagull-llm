@@ -1,5 +1,6 @@
 // 侧边栏结构（共享模块）：config.mts 与 ChapterTag.vue 共用，保证标签与分组一致
 // 多模块多侧边栏：按路径前缀区分
+import { researchSidebar } from './research-sidebar'
 
 // ===== LLM 科普书侧边栏（/llm-book/）=====
 export const llmBookSidebar = [
@@ -89,6 +90,7 @@ export const rustNotesSidebar = [
 
 // VitePress 多侧边栏：按路径前缀匹配
 export const sidebar = {
+  '/research/': researchSidebar,
   '/llm-book/': llmBookSidebar,
   '/papers/': papersSidebar,
   '/rl-book/': rlBookSidebar,

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../docs')
 const categories = {
   'llm-book': '大语言模型', 'rl-book': 'RLHF', 'westlake-rl': '强化学习',
-  papers: '论文精读', 'rust-notes': 'Rust', videos: '科普视频', adr: '网站开发'
+  papers: '论文精读', research: '每日调研', 'rust-notes': 'Rust', videos: '科普视频', adr: '网站开发'
 }
 const topics = [
   ['监督微调', /监督微调|指令微调|\bSFT\b|\bIFT\b/i],

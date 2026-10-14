@@ -1,0 +1,19 @@
+[
+  {
+    "date": "2026-10-14",
+    "slug": "llm-post-training-agentic-rl",
+    "title": "2026-10-14 后训练与 agentic RL：从轨迹奖励走向步骤反馈",
+    "description": "基于 arXiv 与 Hugging Face 公开摘要，筛选步骤信用分配、教师指导、反思训练与上下文优化的近期工作，并说明待核验的问题。",
+    "route": "/research/2026-10-14-llm-post-training-agentic-rl",
+    "source_urls": [
+      "https://arxiv.org/abs/2610.15772",
+      "https://arxiv.org/abs/2610.18459",
+      "https://arxiv.org/abs/2610.17953",
+      "https://arxiv.org/abs/2610.17666",
+      "https://arxiv.org/abs/2610.18683",
+      "https://arxiv.org/abs/2610.18216"
+    ],
+    "window_end": "2026-10-15T00:00:00+08:00",
+    "bundle_sha256": "fce905f4ea1dba4af68f3f68ba4513abbbca3d1a15809171852f15683cf613e0"
+  }
+]

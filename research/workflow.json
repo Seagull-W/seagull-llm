@@ -1,0 +1,18 @@
+{
+  "topic": "大模型强化学习、后训练与 agentic RL",
+  "slug": "llm-post-training-agentic-rl",
+  "tags": ["每日调研", "RLHF", "后训练", "Agent"],
+  "lookback_days": 7,
+  "max_items": 10,
+  "keywords": ["reinforcement", "post-training", "post training", "rlvr", "rlhf", "grpo", "policy optimization", "agentic", "reward", "distillation"],
+  "sources": [
+    {
+      "id": "arxiv",
+      "type": "arxiv",
+      "query": "(all:\"reinforcement learning\" OR all:\"post-training\" OR all:\"agentic reinforcement\") AND (all:\"language model\" OR all:agent)",
+      "limit": 30
+    },
+    { "id": "huggingface-daily", "type": "hf-papers", "days": 3 }
+  ],
+  "publishing": { "remote": "origin", "branch": "main", "site_url": "" }
+}

@@ -1,0 +1,13 @@
+[Unit]
+Description=Seagull topic research and publication
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=research
+WorkingDirectory=/srv/seagull-llm
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/python3 scripts/research-workflow.py run --publish
+TimeoutStartSec=30min
+UMask=0077

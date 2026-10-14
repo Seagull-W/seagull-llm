@@ -27,3 +27,6 @@ research-reports/
 /docs/rl-book/expriment_data/
 __pycache__/
 *.pyc
+
+# Local research evidence, agent logs and execution locks
+/.research/
