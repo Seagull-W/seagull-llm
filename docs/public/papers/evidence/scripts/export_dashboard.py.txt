@@ -1,0 +1,72 @@
+"""Derive CSVs and summary from Xiaomi's public static RL archive. No training."""
+import csv, hashlib, json
+from collections import Counter
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+ROOT=Path(__file__).resolve().parents[2]
+SRC=Path(__file__).parent
+OUT=ROOT/'05-证据与数据'/'小米看板归档'
+OUT.mkdir(parents=True,exist_ok=True)
+TZ=timezone(timedelta(hours=8))
+BASE='https://mimo.xiaomi.com/rl/data.04135c89/'
+def stamp(t): return datetime.fromtimestamp(t,TZ).isoformat() if t is not None else ''
+def load(name): return json.loads((SRC/('dashboard-'+name+'.json')).read_text(encoding='utf-8'))
+def writecsv(name,headers,rows):
+ with (OUT/name).open('w',newline='',encoding='utf-8-sig') as f:
+  w=csv.writer(f);w.writerow(headers);w.writerows(rows)
+
+KEYS=['dynsam/avg@n','critic/rewards/mean','critic/rewards/min','critic/rewards/max','critic/advantages/mean','critic/advantages/min','critic/advantages/max','actor/entropy_loss','actor/pg_loss','actor/grad_norm','actor/lr','actor/pg_clipfrac','actor/pg_tis_clipfrac','actor/pg_tis_clipfrac_pos_high','actor/pg_tis_clipfrac_pos_low','actor/pg_tis_clipfrac_neg_high','actor/pg_tis_clipfrac_neg_low','actor/clip_high','actor/clip_low','actor/ppo_kl','actor/update_skipped','actor/update_successful','actor/num_zeros_in_grad','training/actor_optimizer_steps','training/global_step','train/adv_pos_sum_pre_penalty','train/adv_pos_sum_post_penalty','train/adv_neg_sum_pre_penalty','train/adv_neg_sum_post_penalty','train_infer_diff/new_infer/kl','ctx_total_length/mean','ctx_response_length/mean','dynsam/agg_turn/mean','perf/total_num_tokens','timing_s/step','timing_s/outer_gen','timing_s/trainer_ops','dynsam/passrate/zero','dynsam/passrate/one','dynsam/infra_error/seq_rate','env/active','partial/avg_staleness','dynsam/num_measurable']
+summary={};longrows=[];keyrows=[];tagrows=[];eventrows=[];manifest=[]
+for p in sorted(SRC.glob('dashboard-*.json')):
+ data=p.read_bytes(); target=OUT/p.name.replace('dashboard-','');target.write_bytes(data)
+ manifest.append({'url':BASE+target.name,'file':target.name,'retrieved_date':'2026-10-11','sha256':hashlib.sha256(data).hexdigest(),'bytes':len(data)})
+for run in ['flash','pro']:
+ s=load('series-'+run);st=load('status-'+run);tags=load('tags-'+run)
+ assert s['steps']==list(range(1,31))
+ assert len(s['walls'])==30
+ summary[run]={'tags':len(s['series']),'series_version':s['version'],'start':stamp(st['run']['start']),'end':stamp(st['run']['end']),'status':st,'prefix_counts':dict(Counter(k.split('/')[0] for k in s['series'])),'metrics':{}}
+ for tag,values in s['series'].items():
+  assert len(values)==30,(run,tag,len(values))
+  tagrows.append([run,tag,tag.split('/')[0],sum(v is not None for v in values)])
+  longrows.extend([run,step,stamp(wall),tag,value] for step,wall,value in zip(s['steps'],s['walls'],values))
+ for tag in KEYS:
+  values=s['series'].get(tag)
+  if values is None: continue
+  valid=[(step,value) for step,value in zip(s['steps'],values) if value is not None]
+  summary[run]['metrics'][tag]={'first':values[0],'last':values[-1],'min':min(valid,key=lambda x:x[1]),'max':max(valid,key=lambda x:x[1])}
+ for i,step in enumerate(s['steps']): keyrows.append([run,step,stamp(s['walls'][i])]+[s['series'].get(k,[None]*30)[i] for k in KEYS])
+ for e in st.get('events',[]): eventrows.append([run,stamp(e.get('t')),json.dumps(e,ensure_ascii=False)])
+writecsv('全量指标长表.csv',['run','step','wall_time_Asia_Shanghai','metric','value'],longrows)
+writecsv('关键指标逐步.csv',['run','step','wall_time_Asia_Shanghai']+KEYS,keyrows)
+writecsv('指标索引.csv',['run','metric','prefix','non_null_steps'],tagrows)
+writecsv('末尾事件窗口.csv',['run','time_Asia_Shanghai','event_json'],eventrows)
+notices=load('notices')['notices']
+writecsv('团队公告原文.csv',['id','time_Asia_Shanghai','run_field','text'],[[n['id'],stamp(n['t']),n['run'],n['text']] for n in sorted(notices,key=lambda x:x['t'])])
+brows=[]
+for b in load('benchmarks')['benchmarks']:
+ for run,res in b['results'].items():
+  brows.extend([b['title'],b['note'],run,int(step),value] for step,value in sorted(res.items(),key=lambda x:int(x[0])))
+writecsv('离线评测.csv',['benchmark','protocol','run','step','score'],brows)
+(OUT/'derived-summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
+(OUT/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
+print(json.dumps({'rows':len(longrows),'metric_run_pairs':len(tagrows),'key_step_rows':len(keyrows),'summary':{k:{'tags':v['tags'],'start':v['start'],'end':v['end'],'prefix_counts':v['prefix_counts']} for k,v in summary.items()}},ensure_ascii=False,indent=2))
+print('notices',[(stamp(n['t']),n['id']) for n in sorted(notices,key=lambda x:x['t'])])
+try:
+ import matplotlib
+ matplotlib.use('Agg')
+ import matplotlib.pyplot as plt
+ fig,axes=plt.subplots(2,2,figsize=(12,7))
+ for run,color in [('flash','#dc7b24'),('pro','#326bb9')]:
+  s=load('series-'+run)
+  axes[0,0].plot(s['steps'],s['series']['dynsam/avg@n'],label=run,color=color)
+  b=load('benchmarks')['benchmarks'][0]['results'][run]
+  axes[0,1].plot([int(x) for x in b],list(b.values()),label=run,color=color)
+  axes[1,0].plot(s['steps'],[x/1e9 if x is not None else None for x in s['series']['perf/total_num_tokens']],label=run,color=color)
+  axes[1,1].plot(s['steps'],[x/3600 if x is not None else None for x in s['series']['timing_s/step']],label=run,color=color)
+ for ax,title in zip(axes.flat,['Training avg@n (task mix changed)','DeepSWE v1.1, mini-swe-agent avg@3','Trained tokens per step (billion)','Step timing_s/step (hours)']):
+  ax.set_title(title);ax.set_xlabel('Final retained step');ax.grid(alpha=.2);ax.legend()
+ fig.suptitle('Xiaomi MiMo-V2.6 public RL archive | retrieved 2026-10-11\nFinal step series; rollback attempts are absent from these curves',fontsize=12)
+ fig.tight_layout();fig.savefig(OUT/'训练与评测.png',dpi=160);plt.close(fig)
+ print('chart saved')
+except ImportError: print('matplotlib unavailable; CSVs saved')

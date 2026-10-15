@@ -1,0 +1,79 @@
+[
+  {
+    "url": "https://mimo.xiaomi.com/rl/data.04135c89/benchmarks.json",
+    "file": "benchmarks.json",
+    "retrieved_date": "2026-10-11",
+    "sha256": "1397e72c853e0a71288df127da89e81d840349ec695eaa9c50ed7c5ef67f0f4c",
+    "bytes": 2103
+  },
+  {
+    "url": "https://mimo.xiaomi.com/rl/data.04135c89/live-flash.json",
+    "file": "live-flash.json",
+    "retrieved_date": "2026-10-11",
+    "sha256": "a5ade823c30f858eedb772febeaa9d0cb82b3efdba35aba83335bf27d56bbf83",
+    "bytes": 17353
+  },
+  {
+    "url": "https://mimo.xiaomi.com/rl/data.04135c89/live-pro.json",
+    "file": "live-pro.json",
+    "retrieved_date": "2026-10-11",
+    "sha256": "fe1672e40c2f542452986a35f242bcf0fe74006927f15b49371d901f7d095adb",
+    "bytes": 16649
+  },
+  {
+    "url": "https://mimo.xiaomi.com/rl/data.04135c89/notices.json",
+    "file": "notices.json",
+    "retrieved_date": "2026-10-11",
+    "sha256": "7d245e1aac5f00c5fbd6a1475e5f5d4c1b09b54996eaae3c8d5bc910f2a75f9e",
+    "bytes": 1186
+  },
+  {
+    "url": "https://mimo.xiaomi.com/rl/data.04135c89/runs.json",
+    "file": "runs.json",
+    "retrieved_date": "2026-10-11",
+    "sha256": "06784c35fb303c2323497ee757533c2498a8338c982565fb5f1517ab5c84f25e",
+    "bytes": 3566
+  },
+  {
+    "url": "https://mimo.xiaomi.com/rl/data.04135c89/series-flash.json",
+    "file": "series-flash.json",
+    "retrieved_date": "2026-10-11",
+    "sha256": "668d161b0db0f66a30968e7c29e23e2230fd4f1b9140135cd06e05e27167d921",
+    "bytes": 571786
+  },
+  {
+    "url": "https://mimo.xiaomi.com/rl/data.04135c89/series-pro.json",
+    "file": "series-pro.json",
+    "retrieved_date": "2026-10-11",
+    "sha256": "6c1272155fb5754c471fe72b2fcda4ca97b420655c52b7f7376dd01ac723d34a",
+    "bytes": 554687
+  },
+  {
+    "url": "https://mimo.xiaomi.com/rl/data.04135c89/status-flash.json",
+    "file": "status-flash.json",
+    "retrieved_date": "2026-10-11",
+    "sha256": "aeb13ff96f90f7b4eb6a38218485379f7488a140f3ae319a8b8324cead30fb41",
+    "bytes": 4132
+  },
+  {
+    "url": "https://mimo.xiaomi.com/rl/data.04135c89/status-pro.json",
+    "file": "status-pro.json",
+    "retrieved_date": "2026-10-11",
+    "sha256": "b626cc1c5aa0c92cee5556295dd816cf5d5d79562aaaf613c20865085410233b",
+    "bytes": 3675
+  },
+  {
+    "url": "https://mimo.xiaomi.com/rl/data.04135c89/tags-flash.json",
+    "file": "tags-flash.json",
+    "retrieved_date": "2026-10-11",
+    "sha256": "a00d079254a7f19d7c486e35c3ed97bee7dc397d3824842dda807ab06c7a5168",
+    "bytes": 97716
+  },
+  {
+    "url": "https://mimo.xiaomi.com/rl/data.04135c89/tags-pro.json",
+    "file": "tags-pro.json",
+    "retrieved_date": "2026-10-11",
+    "sha256": "f7d6948bae200ca727e6120e27c1e7b5221ec3c20c13f5208098512497b9173e",
+    "bytes": 96789
+  }
+]

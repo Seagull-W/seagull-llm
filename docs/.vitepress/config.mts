@@ -226,7 +226,7 @@ const config = withMermaid({
       { text: '每日调研', link: '/research/' },
       { text: '科普视频', link: '/videos/' },
       { text: 'LLM 科普书', link: '/llm-book/' },
-      { text: '论文阅读笔记', link: '/papers/' },
+      { text: '论文与项目随谈', link: '/papers/' },
       { text: 'RL 学习笔记', link: '/rl-book/' },
       { text: '西湖 RL 笔记', link: '/westlake-rl/' },
       { text: 'Rust 学习笔记', link: '/rust-notes/' }

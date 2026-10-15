@@ -13,14 +13,18 @@ const { isPublicContent, normalizeContentPath } = await import(
 test('published articles and PDF lectures remain discoverable', () => {
   for (const path of ['/llm-book/ch00-overview', '/papers/deepseek-r1/',
     '/rl-book/cha4对话模板与监督微调', '/rl-book/cha6-experiment',
-    '/westlake-rl/随机近似/课程讲义', '/rust-notes/多线程并发编程']) {
+    '/westlake-rl/随机近似/课程讲义', '/rust-notes/多线程并发编程',
+    '/papers/projects/mimo-v2-6/', '/papers/projects/miles-glm-5-2/',
+    '/papers/projects/intellect-3/', '/papers/projects/deepswe-preview/',
+    '/papers/projects/codemidas/', '/papers/engineering/failure-handbook',
+    '/papers/evidence/gaps']) {
     assert.equal(isPublicContent(path, {}), true, path)
   }
 })
 
 test('internal documents and unlisted experiments never enter the index', () => {
   for (const path of ['/adr/0001-keep-vitepress', '/rl-book/unlisted-experiment',
-    '/llm-book/ch03-embedding', '/private/new-note']) {
+    '/llm-book/ch03-embedding', '/private/new-note', '/papers/unlisted-project']) {
     assert.equal(isPublicContent(path, {}), false, path)
   }
 })

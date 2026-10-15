@@ -63,15 +63,156 @@ export const westlakeRlSidebar = [
   }
 ]
 
-// ===== 论文阅读笔记侧边栏（/papers/）=====
+// ===== 论文与项目随谈侧边栏（/papers/）=====
 export const papersSidebar = [
   {
-    text: '强化学习与推理模型',
-    collapsed: false,
-    items: [
-      { text: 'DeepSeek-R1 技术报告', link: '/papers/deepseek-r1/' },
-      { text: 'GiGPO', link: '/papers/gigpo/' },
-      { text: 'Graph-GPO', link: '/papers/graph-gpo/' }
+    "text": "论文精读",
+    "collapsed": false,
+    "items": [
+      {
+        "text": "DeepSeek-R1 技术报告阅读笔记",
+        "link": "/papers/deepseek-r1/"
+      },
+      {
+        "text": "GiGPO：面向长程智能体的分层信用分配",
+        "link": "/papers/gigpo/"
+      },
+      {
+        "text": "Graph-GPO：基于状态转移图的信用分配",
+        "link": "/papers/graph-gpo/"
+      }
+    ]
+  },
+  {
+    "text": "项目导读与全链路对照",
+    "collapsed": false,
+    "items": [
+      {
+        "text": "公开后训练项目阅读导引",
+        "link": "/papers/post-training-guide"
+      },
+      {
+        "text": "项目目录与全链路覆盖",
+        "link": "/papers/projects/coverage"
+      }
+    ]
+  },
+  {
+    "text": "MiMo-V2.6 · 公开运行与复现",
+    "collapsed": true,
+    "items": [
+      {
+        "text": "小米 MiMo-V2.6：从公开训练到上线修复",
+        "link": "/papers/projects/mimo-v2-6/"
+      },
+      {
+        "text": "MiMo 训练损失、稳定性与 benchmark",
+        "link": "/papers/projects/mimo-v2-6/loss-and-metrics"
+      },
+      {
+        "text": "小米 9B 开源复现：配置核对表",
+        "link": "/papers/projects/mimo-v2-6/9b-config"
+      },
+      {
+        "text": "小米公开看板：指标字典与数据阅读指南",
+        "link": "/papers/projects/mimo-v2-6/dashboard-guide"
+      }
+    ]
+  },
+  {
+    "text": "Miles GLM-5.2",
+    "collapsed": true,
+    "items": [
+      {
+        "text": "Miles GLM-5.2：终端 Agent 的大型异步 RL 参考运行",
+        "link": "/papers/projects/miles-glm-5-2/"
+      }
+    ]
+  },
+  {
+    "text": "INTELLECT-3",
+    "collapsed": true,
+    "items": [
+      {
+        "text": "INTELLECT-3：SFT、异步 RL 与多节点工程",
+        "link": "/papers/projects/intellect-3/"
+      }
+    ]
+  },
+  {
+    "text": "DeepSWE-Preview",
+    "collapsed": true,
+    "items": [
+      {
+        "text": "DeepSWE-Preview：软件工程 Agent 的数据、RL 与评测闭环",
+        "link": "/papers/projects/deepswe-preview/"
+      }
+    ]
+  },
+  {
+    "text": "CodeMidas",
+    "collapsed": true,
+    "items": [
+      {
+        "text": "CodeMidas：从源码构建环境到 MiMo-V2.5 RL 实验",
+        "link": "/papers/projects/codemidas/"
+      }
+    ]
+  },
+  {
+    "text": "跨项目工程专题与故障",
+    "collapsed": true,
+    "items": [
+      {
+        "text": "从数据到上线：后训练的工程闭环",
+        "link": "/papers/engineering/workflow"
+      },
+      {
+        "text": "数据、环境与可验证任务",
+        "link": "/papers/engineering/data-and-environments"
+      },
+      {
+        "text": "奖励、优势与策略更新",
+        "link": "/papers/engineering/rewards-and-algorithms"
+      },
+      {
+        "text": "异步采样与训练推理一致性",
+        "link": "/papers/engineering/async-and-consistency"
+      },
+      {
+        "text": "分布式调度、显存与端到端性能",
+        "link": "/papers/engineering/distributed-performance"
+      },
+      {
+        "text": "启动、观测与恢复：把训练做成可追溯的运行",
+        "link": "/papers/engineering/operations-and-recovery"
+      },
+      {
+        "text": "Benchmark、checkpoint 选择与上线反馈",
+        "link": "/papers/engineering/evaluation-and-feedback"
+      },
+      {
+        "text": "实际故障与反馈手册",
+        "link": "/papers/engineering/failure-handbook"
+      }
+    ]
+  },
+  {
+    "text": "证据、指标与阅读边界",
+    "collapsed": true,
+    "items": [
+      {
+        "text": "各项目 benchmark、loss 与运行指标证据索引",
+        "link": "/papers/evidence/project-metrics"
+      },
+      {
+        "text": "后训练项目来源与版本定位",
+        "link": "/papers/evidence/sources"
+      },
+      {
+        "text": "项目证据边界与待核验项",
+        "link": "/papers/evidence/gaps"
+      }
     ]
   }
 ]

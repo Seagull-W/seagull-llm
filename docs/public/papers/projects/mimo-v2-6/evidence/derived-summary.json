@@ -1,0 +1,1639 @@
+{
+  "flash": {
+    "tags": 2062,
+    "series_version": "3-5513.32.6.28",
+    "start": "2026-09-15T23:16:29.264000+08:00",
+    "end": "2026-09-19T10:22:09.264000+08:00",
+    "status": {
+      "run": {
+        "key": "flash",
+        "label": "mimo-v2.6-flash",
+        "start": 1789485389.264,
+        "end": 1789784529.264,
+        "mode": "ended"
+      },
+      "cost": {
+        "rate_per_s": 2.855,
+        "so_far": 854044.7
+      },
+      "clock": {
+        "now": 1789927300.953
+      },
+      "version": "3-5513.32.6.28",
+      "step": {
+        "last": 30,
+        "last_wall": 1789779870.257751,
+        "since": 4659.006248950958,
+        "expected": 12066.1,
+        "progress": null,
+        "phase": null,
+        "gen_frac": 0.5172568827262272,
+        "restarted_at": null
+      },
+      "totals": {
+        "tokens_step": 3695980000.0,
+        "trained_step": 25088.0,
+        "sandboxes_step": 170368.0,
+        "prompts_per_step": 1568.0,
+        "tokens_cum": 81397700000.0,
+        "trained_cum": 752640.0,
+        "sandboxes_cum": 6859919.0,
+        "restarts": 5
+      },
+      "events": [
+        {
+          "t": 1789541518.0333548,
+          "kind": "step",
+          "step": 8,
+          "value": 0.560746,
+          "delta": 0.020193999999999934,
+          "tokens": 2345010000.0,
+          "redo": false
+        },
+        {
+          "t": 1789547719.1431658,
+          "kind": "step",
+          "step": 9,
+          "value": 0.572833,
+          "delta": 0.01208700000000007,
+          "tokens": 2330290000.0,
+          "redo": false
+        },
+        {
+          "t": 1789553938.0457628,
+          "kind": "step",
+          "step": 10,
+          "value": 0.569299,
+          "delta": -0.003534000000000037,
+          "tokens": 2401220000.0,
+          "redo": false
+        },
+        {
+          "t": 1789560980.035882,
+          "kind": "step",
+          "step": 11,
+          "value": 0.558439,
+          "delta": -0.01085999999999998,
+          "tokens": 2574190000.0,
+          "redo": false
+        },
+        {
+          "t": 1789567997.1453834,
+          "kind": "step",
+          "step": 12,
+          "value": 0.576982,
+          "delta": 0.018542999999999976,
+          "tokens": 2585290000.0,
+          "redo": false
+        },
+        {
+          "t": 1789575121.7758799,
+          "kind": "step",
+          "step": 13,
+          "value": 0.575977,
+          "delta": -0.0010050000000000336,
+          "tokens": 2599210000.0,
+          "redo": false
+        },
+        {
+          "t": 1789583302.2138321,
+          "kind": "step",
+          "step": 14,
+          "value": 0.583968,
+          "delta": 0.007991000000000081,
+          "tokens": 2805300000.0,
+          "redo": false
+        },
+        {
+          "t": 1789590857.6535773,
+          "kind": "step",
+          "step": 15,
+          "value": 0.596286,
+          "delta": 0.01231799999999994,
+          "tokens": 2685540000.0,
+          "redo": false
+        },
+        {
+          "t": 1789597499.2269247,
+          "kind": "step",
+          "step": 16,
+          "value": 0.602504,
+          "delta": 0.006218000000000057,
+          "tokens": 2602520000.0,
+          "redo": false
+        },
+        {
+          "t": 1789605123.0308907,
+          "kind": "step",
+          "step": 17,
+          "value": 0.585664,
+          "delta": -0.016840000000000077,
+          "tokens": 2741730000.0,
+          "redo": false
+        },
+        {
+          "t": 1789610803.264,
+          "kind": "restart"
+        },
+        {
+          "t": 1789621327.9862616,
+          "kind": "step",
+          "step": 16,
+          "value": 0.594958,
+          "delta": -0.0013279999999999959,
+          "tokens": 2418430000.0,
+          "redo": true
+        },
+        {
+          "t": 1789629325.0817387,
+          "kind": "step",
+          "step": 17,
+          "value": 0.601257,
+          "delta": 0.0062990000000000546,
+          "tokens": 2662630000.0,
+          "redo": true
+        },
+        {
+          "t": 1789638268.1659763,
+          "kind": "step",
+          "step": 18,
+          "value": 0.602259,
+          "delta": 0.0010019999999999474,
+          "tokens": 2822210000.0,
+          "redo": false
+        },
+        {
+          "t": 1789647034.274265,
+          "kind": "step",
+          "step": 19,
+          "value": 0.626157,
+          "delta": 0.023897999999999975,
+          "tokens": 3078240000.0,
+          "redo": false
+        },
+        {
+          "t": 1789657177.7751129,
+          "kind": "step",
+          "step": 20,
+          "value": 0.607065,
+          "delta": -0.019091999999999998,
+          "tokens": 3216910000.0,
+          "redo": false
+        },
+        {
+          "t": 1789665386.1791396,
+          "kind": "step",
+          "step": 21,
+          "value": 0.629946,
+          "delta": 0.02288100000000004,
+          "tokens": 3047490000.0,
+          "redo": false
+        },
+        {
+          "t": 1789674518.7076056,
+          "kind": "step",
+          "step": 22,
+          "value": 0.621152,
+          "delta": -0.008793999999999969,
+          "tokens": 3136610000.0,
+          "redo": false
+        },
+        {
+          "t": 1789682902.6098073,
+          "kind": "step",
+          "step": 23,
+          "value": 0.634844,
+          "delta": 0.013691999999999926,
+          "tokens": 3106290000.0,
+          "redo": false
+        },
+        {
+          "t": 1789692339.9484417,
+          "kind": "step",
+          "step": 24,
+          "value": 0.615464,
+          "delta": -0.019379999999999953,
+          "tokens": 3196010000.0,
+          "redo": false
+        },
+        {
+          "t": 1789699766.264,
+          "kind": "restart"
+        },
+        {
+          "t": 1789708192.264,
+          "kind": "restart"
+        },
+        {
+          "t": 1789719387.4023232,
+          "kind": "step",
+          "step": 25,
+          "value": 0.640833,
+          "delta": 0.025368999999999975,
+          "tokens": 2950260000.0,
+          "redo": false
+        },
+        {
+          "t": 1789728838.17863,
+          "kind": "step",
+          "step": 26,
+          "value": 0.637992,
+          "delta": -0.0028409999999999824,
+          "tokens": 3142350000.0,
+          "redo": false
+        },
+        {
+          "t": 1789738585.1605282,
+          "kind": "step",
+          "step": 27,
+          "value": 0.644028,
+          "delta": 0.006036000000000041,
+          "tokens": 3265840000.0,
+          "redo": false
+        },
+        {
+          "t": 1789745488.264,
+          "kind": "restart"
+        },
+        {
+          "t": 1789757921.31581,
+          "kind": "step",
+          "step": 28,
+          "value": 0.643194,
+          "delta": -0.0008340000000000014,
+          "tokens": 3184700000.0,
+          "redo": false
+        },
+        {
+          "t": 1789767448.3806615,
+          "kind": "step",
+          "step": 29,
+          "value": 0.662291,
+          "delta": 0.01909699999999992,
+          "tokens": 3269450000.0,
+          "redo": false
+        },
+        {
+          "t": 1789779870.257751,
+          "kind": "step",
+          "step": 30,
+          "value": 0.643526,
+          "delta": -0.01876499999999992,
+          "tokens": 3695980000.0,
+          "redo": false
+        },
+        {
+          "t": 1789784529.264,
+          "kind": "end"
+        }
+      ],
+      "headline": {
+        "tag": "dynsam/avg@n",
+        "last": 0.643526,
+        "prev": 0.662291,
+        "first": 0.513693,
+        "first_step": 1
+      }
+    },
+    "prefix_counts": {
+      "actor": 256,
+      "critic": 324,
+      "ctx_prompt_length": 81,
+      "ctx_response_length": 81,
+      "ctx_total_length": 108,
+      "dynsam": 83,
+      "env": 15,
+      "partial": 385,
+      "penalty": 521,
+      "perf": 1,
+      "timing_s": 3,
+      "train": 191,
+      "train_infer_diff": 11,
+      "training": 2
+    },
+    "metrics": {
+      "dynsam/avg@n": {
+        "first": 0.513693,
+        "last": 0.643526,
+        "min": [
+          2,
+          0.496314
+        ],
+        "max": [
+          29,
+          0.662291
+        ]
+      },
+      "critic/rewards/mean": {
+        "first": 0.516717,
+        "last": 0.60052,
+        "min": [
+          1,
+          0.516717
+        ],
+        "max": [
+          30,
+          0.60052
+        ]
+      },
+      "critic/rewards/min": {
+        "first": -0.7972,
+        "last": -0.8,
+        "min": [
+          15,
+          -0.8
+        ],
+        "max": [
+          3,
+          -0.178554
+        ]
+      },
+      "critic/rewards/max": {
+        "first": 1.0,
+        "last": 1.0,
+        "min": [
+          1,
+          1.0
+        ],
+        "max": [
+          1,
+          1.0
+        ]
+      },
+      "critic/advantages/mean": {
+        "first": 0.00174863,
+        "last": -0.0390604,
+        "min": [
+          19,
+          -0.0466903
+        ],
+        "max": [
+          1,
+          0.00174863
+        ]
+      },
+      "critic/advantages/min": {
+        "first": -1.21154,
+        "last": -1.66579,
+        "min": [
+          30,
+          -1.66579
+        ],
+        "max": [
+          7,
+          -0.92613
+        ]
+      },
+      "critic/advantages/max": {
+        "first": 1.16071,
+        "last": 1.12246,
+        "min": [
+          7,
+          1.08333
+        ],
+        "max": [
+          3,
+          1.32344
+        ]
+      },
+      "actor/entropy_loss": {
+        "first": 0.413307,
+        "last": 0.470623,
+        "min": [
+          5,
+          0.408574
+        ],
+        "max": [
+          30,
+          0.470623
+        ]
+      },
+      "actor/pg_loss": {
+        "first": 0.000840813,
+        "last": 0.0261328,
+        "min": [
+          1,
+          0.000840813
+        ],
+        "max": [
+          30,
+          0.0261328
+        ]
+      },
+      "actor/grad_norm": {
+        "first": 0.00603667,
+        "last": 0.00628155,
+        "min": [
+          24,
+          0.00492753
+        ],
+        "max": [
+          16,
+          0.00905447
+        ]
+      },
+      "actor/lr": {
+        "first": 3e-06,
+        "last": 3e-06,
+        "min": [
+          1,
+          3e-06
+        ],
+        "max": [
+          1,
+          3e-06
+        ]
+      },
+      "actor/pg_clipfrac": {
+        "first": 0.0,
+        "last": 0.0,
+        "min": [
+          1,
+          0.0
+        ],
+        "max": [
+          1,
+          0.0
+        ]
+      },
+      "actor/pg_tis_clipfrac": {
+        "first": 4.51336e-05,
+        "last": 0.00032649,
+        "min": [
+          16,
+          4.03914e-05
+        ],
+        "max": [
+          30,
+          0.00032649
+        ]
+      },
+      "actor/pg_tis_clipfrac_pos_high": {
+        "first": 2.21919e-06,
+        "last": 1.90217e-05,
+        "min": [
+          16,
+          2.0273e-06
+        ],
+        "max": [
+          30,
+          1.90217e-05
+        ]
+      },
+      "actor/pg_tis_clipfrac_pos_low": {
+        "first": 2.23491e-05,
+        "last": 0.000154814,
+        "min": [
+          16,
+          2.03601e-05
+        ],
+        "max": [
+          24,
+          0.000155252
+        ]
+      },
+      "actor/pg_tis_clipfrac_neg_high": {
+        "first": 1.87207e-06,
+        "last": 1.67011e-05,
+        "min": [
+          16,
+          1.58729e-06
+        ],
+        "max": [
+          30,
+          1.67011e-05
+        ]
+      },
+      "actor/pg_tis_clipfrac_neg_low": {
+        "first": 1.86933e-05,
+        "last": 0.000135953,
+        "min": [
+          16,
+          1.64168e-05
+        ],
+        "max": [
+          30,
+          0.000135953
+        ]
+      },
+      "actor/clip_high": {
+        "first": 0.27,
+        "last": 0.27,
+        "min": [
+          1,
+          0.27
+        ],
+        "max": [
+          1,
+          0.27
+        ]
+      },
+      "actor/clip_low": {
+        "first": 0.2,
+        "last": 0.2,
+        "min": [
+          1,
+          0.2
+        ],
+        "max": [
+          1,
+          0.2
+        ]
+      },
+      "actor/ppo_kl": {
+        "first": 0.0,
+        "last": 0.0,
+        "min": [
+          1,
+          0.0
+        ],
+        "max": [
+          1,
+          0.0
+        ]
+      },
+      "actor/update_skipped": {
+        "first": 0.0,
+        "last": 0.0,
+        "min": [
+          1,
+          0.0
+        ],
+        "max": [
+          1,
+          0.0
+        ]
+      },
+      "actor/update_successful": {
+        "first": 1.0,
+        "last": 1.0,
+        "min": [
+          1,
+          1.0
+        ],
+        "max": [
+          1,
+          1.0
+        ]
+      },
+      "actor/num_zeros_in_grad": {
+        "first": 445522000.0,
+        "last": 399922000.0,
+        "min": [
+          14,
+          395179000.0
+        ],
+        "max": [
+          10,
+          448403000.0
+        ]
+      },
+      "training/actor_optimizer_steps": {
+        "first": 1.0,
+        "last": 1.0,
+        "min": [
+          1,
+          1.0
+        ],
+        "max": [
+          1,
+          1.0
+        ]
+      },
+      "training/global_step": {
+        "first": 1.0,
+        "last": 30.0,
+        "min": [
+          1,
+          1.0
+        ],
+        "max": [
+          30,
+          30.0
+        ]
+      },
+      "train/adv_pos_sum_pre_penalty": {
+        "first": 107630000.0,
+        "last": 222975000.0,
+        "min": [
+          1,
+          107630000.0
+        ],
+        "max": [
+          30,
+          222975000.0
+        ]
+      },
+      "train/adv_pos_sum_post_penalty": {
+        "first": 107630000.0,
+        "last": 222975000.0,
+        "min": [
+          1,
+          107630000.0
+        ],
+        "max": [
+          30,
+          222975000.0
+        ]
+      },
+      "train/adv_neg_sum_pre_penalty": {
+        "first": -106200000.0,
+        "last": -305631000.0,
+        "min": [
+          30,
+          -305631000.0
+        ],
+        "max": [
+          1,
+          -106200000.0
+        ]
+      },
+      "train/adv_neg_sum_post_penalty": {
+        "first": -106200000.0,
+        "last": -305631000.0,
+        "min": [
+          30,
+          -305631000.0
+        ],
+        "max": [
+          1,
+          -106200000.0
+        ]
+      },
+      "train_infer_diff/new_infer/kl": {
+        "first": 0.00286778,
+        "last": 0.0105611,
+        "min": [
+          1,
+          0.00286778
+        ],
+        "max": [
+          30,
+          0.0105611
+        ]
+      },
+      "ctx_total_length/mean": {
+        "first": 71633.5,
+        "last": 147751.0,
+        "min": [
+          1,
+          71633.5
+        ],
+        "max": [
+          30,
+          147751.0
+        ]
+      },
+      "ctx_response_length/mean": {
+        "first": 67462.9,
+        "last": 143385.0,
+        "min": [
+          1,
+          67462.9
+        ],
+        "max": [
+          30,
+          143385.0
+        ]
+      },
+      "dynsam/agg_turn/mean": {
+        "first": 47.3148,
+        "last": 68.523,
+        "min": [
+          1,
+          47.3148
+        ],
+        "max": [
+          30,
+          68.523
+        ]
+      },
+      "perf/total_num_tokens": {
+        "first": 1789670000.0,
+        "last": 3695980000.0,
+        "min": [
+          1,
+          1789670000.0
+        ],
+        "max": [
+          30,
+          3695980000.0
+        ]
+      },
+      "timing_s/step": {
+        "first": 6482.77,
+        "last": 12433.3,
+        "min": [
+          2,
+          4898.82
+        ],
+        "max": [
+          30,
+          12433.3
+        ]
+      },
+      "timing_s/outer_gen": {
+        "first": 4442.69,
+        "last": 6431.21,
+        "min": [
+          5,
+          2442.04
+        ],
+        "max": [
+          28,
+          7248.86
+        ]
+      },
+      "timing_s/trainer_ops": {
+        "first": 1884.41,
+        "last": 5738.03,
+        "min": [
+          1,
+          1884.41
+        ],
+        "max": [
+          30,
+          5738.03
+        ]
+      },
+      "dynsam/passrate/zero": {
+        "first": 0.16046,
+        "last": 0.156434,
+        "min": [
+          29,
+          0.132253
+        ],
+        "max": [
+          7,
+          0.169382
+        ]
+      },
+      "dynsam/passrate/one": {
+        "first": 0.120756,
+        "last": 0.29072,
+        "min": [
+          1,
+          0.120756
+        ],
+        "max": [
+          28,
+          0.31351
+        ]
+      },
+      "dynsam/infra_error/seq_rate": {
+        "first": 0.00571605,
+        "last": 0.00714886,
+        "min": [
+          5,
+          0.00266372
+        ],
+        "max": [
+          17,
+          0.030355
+        ]
+      },
+      "env/active": {
+        "first": 39280.0,
+        "last": 38694.0,
+        "min": [
+          5,
+          37257.0
+        ],
+        "max": [
+          16,
+          39296.0
+        ]
+      },
+      "partial/avg_staleness": {
+        "first": 0.0,
+        "last": 1.1918,
+        "min": [
+          1,
+          0.0
+        ],
+        "max": [
+          24,
+          2.1832
+        ]
+      },
+      "dynsam/num_measurable": {
+        "first": 3642.0,
+        "last": 3553.0,
+        "min": [
+          5,
+          1924.0
+        ],
+        "max": [
+          28,
+          4630.0
+        ]
+      }
+    }
+  },
+  "pro": {
+    "tags": 2029,
+    "series_version": "3-5513.30.15.30",
+    "start": "2026-09-15T18:32:19.334000+08:00",
+    "end": "2026-09-21T02:01:40.953000+08:00",
+    "status": {
+      "run": {
+        "key": "pro",
+        "label": "mimo-v2.6-pro",
+        "start": 1789468339.334,
+        "end": 1789927300.953,
+        "mode": "ended"
+      },
+      "cost": {
+        "rate_per_s": 5.71,
+        "so_far": 2620670.84448976
+      },
+      "clock": {
+        "now": 1789927300.953
+      },
+      "version": "3-5513.30.15.30",
+      "step": {
+        "last": 30,
+        "last_wall": 1789926408.4091287,
+        "since": 892.5438714027405,
+        "expected": 16711.0,
+        "progress": null,
+        "phase": null,
+        "gen_frac": 0.5417027865112327,
+        "restarted_at": null
+      },
+      "totals": {
+        "tokens_step": 3431370000.0,
+        "trained_step": 25088.0,
+        "sandboxes_step": 11180.0,
+        "prompts_per_step": 1568.0,
+        "tokens_cum": 75004390000.0,
+        "trained_cum": 752640.0,
+        "sandboxes_cum": 3560844.0,
+        "restarts": 14
+      },
+      "events": [
+        {
+          "t": 1789598901.2092798,
+          "kind": "step",
+          "step": 11,
+          "value": 0.614156,
+          "delta": 0.02375000000000005,
+          "tokens": 2164150000.0,
+          "redo": false
+        },
+        {
+          "t": 1789607960.959003,
+          "kind": "step",
+          "step": 12,
+          "value": 0.608784,
+          "delta": -0.005372000000000043,
+          "tokens": 2328100000.0,
+          "redo": false
+        },
+        {
+          "t": 1789617388.31858,
+          "kind": "step",
+          "step": 13,
+          "value": 0.623849,
+          "delta": 0.015064999999999995,
+          "tokens": 2491010000.0,
+          "redo": false
+        },
+        {
+          "t": 1789627881.7613647,
+          "kind": "step",
+          "step": 14,
+          "value": 0.615234,
+          "delta": -0.00861500000000004,
+          "tokens": 2649950000.0,
+          "redo": false
+        },
+        {
+          "t": 1789637357.334,
+          "kind": "restart"
+        },
+        {
+          "t": 1789644107.334,
+          "kind": "restart"
+        },
+        {
+          "t": 1789657788.7837918,
+          "kind": "step",
+          "step": 15,
+          "value": 0.617202,
+          "delta": 0.001968000000000081,
+          "tokens": 2286060000.0,
+          "redo": false
+        },
+        {
+          "t": 1789665782.943318,
+          "kind": "step",
+          "step": 16,
+          "value": 0.635523,
+          "delta": 0.01832099999999992,
+          "tokens": 2353110000.0,
+          "redo": false
+        },
+        {
+          "t": 1789676418.334,
+          "kind": "restart"
+        },
+        {
+          "t": 1789686193.334,
+          "kind": "restart"
+        },
+        {
+          "t": 1789699763.516178,
+          "kind": "step",
+          "step": 17,
+          "value": 0.629303,
+          "delta": -0.006220000000000003,
+          "tokens": 2296260000.0,
+          "redo": false
+        },
+        {
+          "t": 1789712372.8293705,
+          "kind": "step",
+          "step": 18,
+          "value": 0.617368,
+          "delta": -0.011934999999999918,
+          "tokens": 2490070000.0,
+          "redo": false
+        },
+        {
+          "t": 1789724202.0425003,
+          "kind": "step",
+          "step": 19,
+          "value": 0.633419,
+          "delta": 0.016050999999999926,
+          "tokens": 2522330000.0,
+          "redo": false
+        },
+        {
+          "t": 1789737899.1774454,
+          "kind": "step",
+          "step": 20,
+          "value": 0.643078,
+          "delta": 0.009659000000000084,
+          "tokens": 2709780000.0,
+          "redo": false
+        },
+        {
+          "t": 1789751404.062385,
+          "kind": "step",
+          "step": 21,
+          "value": 0.64211,
+          "delta": -0.0009680000000000799,
+          "tokens": 2699770000.0,
+          "redo": false
+        },
+        {
+          "t": 1789764362.737879,
+          "kind": "step",
+          "step": 22,
+          "value": 0.622907,
+          "delta": -0.01920299999999997,
+          "tokens": 2772240000.0,
+          "redo": false
+        },
+        {
+          "t": 1789772772.334,
+          "kind": "restart"
+        },
+        {
+          "t": 1789776238.334,
+          "kind": "restart"
+        },
+        {
+          "t": 1789791158.7968752,
+          "kind": "step",
+          "step": 23,
+          "value": 0.621683,
+          "delta": -0.0012240000000000029,
+          "tokens": 2639280000.0,
+          "redo": false
+        },
+        {
+          "t": 1789804322.9385362,
+          "kind": "step",
+          "step": 24,
+          "value": 0.596417,
+          "delta": -0.02526600000000001,
+          "tokens": 2969060000.0,
+          "redo": false
+        },
+        {
+          "t": 1789817711.3393211,
+          "kind": "step",
+          "step": 25,
+          "value": 0.626439,
+          "delta": 0.030021999999999993,
+          "tokens": 3088150000.0,
+          "redo": false
+        },
+        {
+          "t": 1789824100.334,
+          "kind": "restart"
+        },
+        {
+          "t": 1789840512.2571833,
+          "kind": "step",
+          "step": 26,
+          "value": 0.62138,
+          "delta": -0.005058999999999925,
+          "tokens": 2925840000.0,
+          "redo": false
+        },
+        {
+          "t": 1789855804.2271216,
+          "kind": "step",
+          "step": 27,
+          "value": 0.602605,
+          "delta": -0.018775000000000097,
+          "tokens": 3151650000.0,
+          "redo": false
+        },
+        {
+          "t": 1789864064.334,
+          "kind": "restart"
+        },
+        {
+          "t": 1789881123.7658803,
+          "kind": "step",
+          "step": 28,
+          "value": 0.626591,
+          "delta": 0.023986000000000063,
+          "tokens": 3024470000.0,
+          "redo": false
+        },
+        {
+          "t": 1789897840.0371299,
+          "kind": "step",
+          "step": 29,
+          "value": 0.622112,
+          "delta": -0.004479000000000011,
+          "tokens": 3421290000.0,
+          "redo": false
+        },
+        {
+          "t": 1789902465.334,
+          "kind": "restart"
+        },
+        {
+          "t": 1789926408.4091287,
+          "kind": "step",
+          "step": 30,
+          "value": 0.633138,
+          "delta": 0.01102599999999998,
+          "tokens": 3431370000.0,
+          "redo": false
+        },
+        {
+          "t": 1789927300.953,
+          "kind": "end"
+        }
+      ],
+      "headline": {
+        "tag": "dynsam/avg@n",
+        "last": 0.633138,
+        "prev": 0.622112,
+        "first": 0.564662,
+        "first_step": 1
+      }
+    },
+    "prefix_counts": {
+      "actor": 257,
+      "critic": 324,
+      "ctx_prompt_length": 81,
+      "ctx_response_length": 81,
+      "ctx_total_length": 108,
+      "dynsam": 83,
+      "env": 15,
+      "partial": 337,
+      "penalty": 535,
+      "perf": 1,
+      "timing_s": 3,
+      "train": 191,
+      "train_infer_diff": 11,
+      "training": 2
+    },
+    "metrics": {
+      "dynsam/avg@n": {
+        "first": 0.564662,
+        "last": 0.633138,
+        "min": [
+          2,
+          0.555333
+        ],
+        "max": [
+          20,
+          0.643078
+        ]
+      },
+      "critic/rewards/mean": {
+        "first": 0.552211,
+        "last": 0.596393,
+        "min": [
+          1,
+          0.552211
+        ],
+        "max": [
+          21,
+          0.599731
+        ]
+      },
+      "critic/rewards/min": {
+        "first": -0.707069,
+        "last": -0.799166,
+        "min": [
+          14,
+          -0.8
+        ],
+        "max": [
+          3,
+          0.0
+        ]
+      },
+      "critic/rewards/max": {
+        "first": 1.0,
+        "last": 1.0,
+        "min": [
+          1,
+          1.0
+        ],
+        "max": [
+          1,
+          1.0
+        ]
+      },
+      "critic/advantages/mean": {
+        "first": -0.00336077,
+        "last": -0.0432752,
+        "min": [
+          30,
+          -0.0432752
+        ],
+        "max": [
+          2,
+          -0.00115565
+        ]
+      },
+      "critic/advantages/min": {
+        "first": -0.931142,
+        "last": -1.65557,
+        "min": [
+          21,
+          -1.6652
+        ],
+        "max": [
+          15,
+          -0.929167
+        ]
+      },
+      "critic/advantages/max": {
+        "first": 1.32344,
+        "last": 1.26209,
+        "min": [
+          3,
+          1.08333
+        ],
+        "max": [
+          15,
+          1.33216
+        ]
+      },
+      "actor/entropy_loss": {
+        "first": 0.395265,
+        "last": 0.461504,
+        "min": [
+          2,
+          0.379237
+        ],
+        "max": [
+          28,
+          0.468514
+        ]
+      },
+      "actor/pg_loss": {
+        "first": 0.00411032,
+        "last": 0.0182077,
+        "min": [
+          17,
+          0.00199298
+        ],
+        "max": [
+          30,
+          0.0182077
+        ]
+      },
+      "actor/grad_norm": {
+        "first": 0.00533389,
+        "last": 0.0048511,
+        "min": [
+          29,
+          0.00437199
+        ],
+        "max": [
+          19,
+          0.0335148
+        ]
+      },
+      "actor/lr": {
+        "first": 3e-06,
+        "last": 3e-06,
+        "min": [
+          1,
+          3e-06
+        ],
+        "max": [
+          1,
+          3e-06
+        ]
+      },
+      "actor/pg_clipfrac": {
+        "first": 0.0,
+        "last": 0.0,
+        "min": [
+          1,
+          0.0
+        ],
+        "max": [
+          1,
+          0.0
+        ]
+      },
+      "actor/pg_tis_clipfrac": {
+        "first": 2.12671e-05,
+        "last": 2.23987e-05,
+        "min": [
+          1,
+          2.12671e-05
+        ],
+        "max": [
+          21,
+          0.000365636
+        ]
+      },
+      "actor/pg_tis_clipfrac_pos_high": {
+        "first": 1.03424e-06,
+        "last": 1.23158e-06,
+        "min": [
+          1,
+          1.03424e-06
+        ],
+        "max": [
+          21,
+          2.29958e-05
+        ]
+      },
+      "actor/pg_tis_clipfrac_pos_low": {
+        "first": 1.08459e-05,
+        "last": 1.21613e-05,
+        "min": [
+          1,
+          1.08459e-05
+        ],
+        "max": [
+          21,
+          0.00019095
+        ]
+      },
+      "actor/pg_tis_clipfrac_neg_high": {
+        "first": 8.5623e-07,
+        "last": 8.65929e-07,
+        "min": [
+          1,
+          8.5623e-07
+        ],
+        "max": [
+          25,
+          1.81565e-05
+        ]
+      },
+      "actor/pg_tis_clipfrac_neg_low": {
+        "first": 8.53074e-06,
+        "last": 8.13998e-06,
+        "min": [
+          30,
+          8.13998e-06
+        ],
+        "max": [
+          25,
+          0.000149212
+        ]
+      },
+      "actor/clip_high": {
+        "first": 0.27,
+        "last": 0.27,
+        "min": [
+          1,
+          0.27
+        ],
+        "max": [
+          1,
+          0.27
+        ]
+      },
+      "actor/clip_low": {
+        "first": 0.2,
+        "last": 0.2,
+        "min": [
+          1,
+          0.2
+        ],
+        "max": [
+          1,
+          0.2
+        ]
+      },
+      "actor/ppo_kl": {
+        "first": 0.0,
+        "last": 0.0,
+        "min": [
+          1,
+          0.0
+        ],
+        "max": [
+          1,
+          0.0
+        ]
+      },
+      "actor/update_skipped": {
+        "first": 0.0,
+        "last": 0.0,
+        "min": [
+          1,
+          0.0
+        ],
+        "max": [
+          1,
+          0.0
+        ]
+      },
+      "actor/update_successful": {
+        "first": 1.0,
+        "last": 1.0,
+        "min": [
+          1,
+          1.0
+        ],
+        "max": [
+          1,
+          1.0
+        ]
+      },
+      "actor/num_zeros_in_grad": {
+        "first": 608780000.0,
+        "last": 520565000.0,
+        "min": [
+          15,
+          508147000.0
+        ],
+        "max": [
+          11,
+          637385000.0
+        ]
+      },
+      "training/actor_optimizer_steps": {
+        "first": 1.0,
+        "last": 1.0,
+        "min": [
+          1,
+          1.0
+        ],
+        "max": [
+          1,
+          1.0
+        ]
+      },
+      "training/global_step": {
+        "first": 1.0,
+        "last": 30.0,
+        "min": [
+          1,
+          1.0
+        ],
+        "max": [
+          30,
+          30.0
+        ]
+      },
+      "train/adv_pos_sum_pre_penalty": {
+        "first": 103591000.0,
+        "last": 256888000.0,
+        "min": [
+          2,
+          98946700.0
+        ],
+        "max": [
+          30,
+          256888000.0
+        ]
+      },
+      "train/adv_pos_sum_post_penalty": {
+        "first": 103591000.0,
+        "last": 256888000.0,
+        "min": [
+          2,
+          98946700.0
+        ],
+        "max": [
+          30,
+          256888000.0
+        ]
+      },
+      "train/adv_neg_sum_pre_penalty": {
+        "first": -106332000.0,
+        "last": -349229000.0,
+        "min": [
+          30,
+          -349229000.0
+        ],
+        "max": [
+          2,
+          -99864500.0
+        ]
+      },
+      "train/adv_neg_sum_post_penalty": {
+        "first": -106332000.0,
+        "last": -349229000.0,
+        "min": [
+          30,
+          -349229000.0
+        ],
+        "max": [
+          2,
+          -99864500.0
+        ]
+      },
+      "train_infer_diff/new_infer/kl": {
+        "first": 0.0021894,
+        "last": 0.00277385,
+        "min": [
+          1,
+          0.0021894
+        ],
+        "max": [
+          9,
+          0.00980071
+        ]
+      },
+      "ctx_total_length/mean": {
+        "first": 72177.6,
+        "last": 137239.0,
+        "min": [
+          2,
+          69231.9
+        ],
+        "max": [
+          30,
+          137239.0
+        ]
+      },
+      "ctx_response_length/mean": {
+        "first": 68078.1,
+        "last": 133102.0,
+        "min": [
+          2,
+          65098.9
+        ],
+        "max": [
+          30,
+          133102.0
+        ]
+      },
+      "dynsam/agg_turn/mean": {
+        "first": 47.4689,
+        "last": 43.5635,
+        "min": [
+          28,
+          41.3541
+        ],
+        "max": [
+          13,
+          64.8149
+        ]
+      },
+      "perf/total_num_tokens": {
+        "first": 1800520000.0,
+        "last": 3431370000.0,
+        "min": [
+          2,
+          1730640000.0
+        ],
+        "max": [
+          30,
+          3431370000.0
+        ]
+      },
+      "timing_s/step": {
+        "first": 9569.79,
+        "last": 23186.7,
+        "min": [
+          4,
+          6850.61
+        ],
+        "max": [
+          30,
+          23186.7
+        ]
+      },
+      "timing_s/outer_gen": {
+        "first": 6513.95,
+        "last": 12560.3,
+        "min": [
+          6,
+          3132.2
+        ],
+        "max": [
+          30,
+          12560.3
+        ]
+      },
+      "timing_s/trainer_ops": {
+        "first": 2889.26,
+        "last": 10313.0,
+        "min": [
+          2,
+          2625.98
+        ],
+        "max": [
+          30,
+          10313.0
+        ]
+      },
+      "dynsam/passrate/zero": {
+        "first": 0.146245,
+        "last": 0.132272,
+        "min": [
+          16,
+          0.129111
+        ],
+        "max": [
+          18,
+          0.162622
+        ]
+      },
+      "dynsam/passrate/one": {
+        "first": 0.177866,
+        "last": 0.261526,
+        "min": [
+          2,
+          0.170505
+        ],
+        "max": [
+          20,
+          0.293059
+        ]
+      },
+      "dynsam/infra_error/seq_rate": {
+        "first": 0.00725667,
+        "last": 0.00517975,
+        "min": [
+          4,
+          0.00336793
+        ],
+        "max": [
+          24,
+          0.0098262
+        ]
+      },
+      "env/active": {
+        "first": 31135.0,
+        "last": 11180.0,
+        "min": [
+          30,
+          11180.0
+        ],
+        "max": [
+          24,
+          38437.0
+        ]
+      },
+      "partial/avg_staleness": {
+        "first": 0.0,
+        "last": 0.0125335,
+        "min": [
+          1,
+          0.0
+        ],
+        "max": [
+          9,
+          1.82084
+        ]
+      },
+      "dynsam/num_measurable": {
+        "first": 4040.0,
+        "last": 3633.0,
+        "min": [
+          16,
+          1636.0
+        ],
+        "max": [
+          15,
+          4728.0
+        ]
+      }
+    }
+  }
+}
