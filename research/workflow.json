@@ -1,18 +1,121 @@
 {
   "topic": "大模型强化学习、后训练与 agentic RL",
   "slug": "llm-post-training-agentic-rl",
-  "tags": ["每日调研", "RLHF", "后训练", "Agent"],
+  "tags": [
+    "每日调研",
+    "RLHF",
+    "后训练",
+    "Agent"
+  ],
   "lookback_days": 7,
-  "max_items": 10,
-  "keywords": ["reinforcement", "post-training", "post training", "rlvr", "rlhf", "grpo", "policy optimization", "agentic", "reward", "distillation"],
+  "max_items": 12,
+  "keywords": [
+    "reinforcement",
+    "post-training",
+    "post training",
+    "rlvr",
+    "rlhf",
+    "grpo",
+    "policy optimization",
+    "agentic",
+    "reward",
+    "distillation",
+    "dpo",
+    "ppo",
+    "rlaif",
+    "reward model",
+    "preference optimization",
+    "tool use",
+    "reasoning",
+    "强化学习",
+    "后训练",
+    "奖励",
+    "智能体",
+    "推理"
+  ],
   "sources": [
     {
       "id": "arxiv",
       "type": "arxiv",
       "query": "(all:\"reinforcement learning\" OR all:\"post-training\" OR all:\"agentic reinforcement\") AND (all:\"language model\" OR all:agent)",
-      "limit": 30
+      "limit": 30,
+      "required": true,
+      "group": "paper"
     },
-    { "id": "huggingface-daily", "type": "hf-papers", "days": 3 }
+    {
+      "id": "huggingface-daily",
+      "type": "hf-papers",
+      "days": 3,
+      "required": true,
+      "group": "paper"
+    },
+    {
+      "id": "hf-blog",
+      "name": "Hugging Face Blog",
+      "type": "rss",
+      "url": "https://huggingface.co/blog/feed.xml",
+      "group": "research-blog",
+      "required": false,
+      "enrich_missing_summary": true,
+      "enrich_limit": 5
+    },
+    {
+      "id": "bair-blog",
+      "name": "Berkeley AI Research",
+      "type": "rss",
+      "url": "https://bair.berkeley.edu/blog/feed.xml",
+      "group": "research-blog",
+      "required": false,
+      "upgrade_http": true
+    },
+    {
+      "id": "openai-news",
+      "name": "OpenAI News",
+      "type": "rss",
+      "url": "https://openai.com/news/rss.xml",
+      "group": "research-blog",
+      "required": false
+    },
+    {
+      "id": "lilian-weng",
+      "name": "Lil’Log",
+      "type": "rss",
+      "url": "https://lilianweng.github.io/index.xml",
+      "group": "research-blog",
+      "required": false
+    },
+    {
+      "id": "verl-releases",
+      "name": "verl",
+      "type": "github-releases",
+      "repository": "verl-project/verl",
+      "group": "release",
+      "required": false,
+      "limit": 20
+    },
+    {
+      "id": "trl-releases",
+      "name": "TRL",
+      "type": "github-releases",
+      "repository": "huggingface/trl",
+      "group": "release",
+      "required": false,
+      "limit": 20
+    },
+    {
+      "id": "openrlhf-releases",
+      "name": "OpenRLHF",
+      "type": "github-releases",
+      "repository": "OpenRLHF/OpenRLHF",
+      "group": "release",
+      "required": false,
+      "limit": 20
+    }
   ],
-  "publishing": { "remote": "origin", "branch": "main", "site_url": "https://seagull-llm.pages.dev" }
+  "publishing": {
+    "remote": "origin",
+    "branch": "main",
+    "site_url": "https://seagull-llm.pages.dev"
+  },
+  "max_per_source": 4
 }

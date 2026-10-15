@@ -15,6 +15,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+      - run: python3 scripts/test-research-workflow.py
       - run: npm ci
       - run: node scripts/test-public-content.mjs
       - run: node scripts/check-research-content.mjs

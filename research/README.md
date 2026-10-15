@@ -15,6 +15,17 @@ git ls-remote origin HEAD
 
 登录由用户完成，不把登录缓存、API key 或 SSH 私钥写进仓库。当前 Codex 桌面会话可用，不代表独立 CLI 已登录。如果 npm 缓存被环境限制，可用 `npm ci --cache .research/npm-cache`。
 
+## 扩展后的调研入口
+
+默认 9 个自动来源、补充检索和 Hermes 执行规范见 [来源与调研规范](SOURCES.md)。开始前运行：
+
+```bash
+python3 scripts/research-workflow.py source-check
+python3 scripts/test-research-workflow.py
+```
+
+source-check 只检查来源读取与解析，不写运行状态、不生成文章；任一启用来源失败都会返回非零。完整验收还要执行 collect 并检查 bundle.json 的日期过滤、入选数量和拒绝原因。
+
 ## 指定主题与来源
 
 编辑 `research/workflow.json`：
@@ -23,13 +34,15 @@ git ls-remote origin HEAD
 - `keywords` 是候选材料的英文或中文筛选词；仅改主题标题不会自动翻译检索词。
 - arXiv `query` 支持它的布尔查询；默认检索最近一周、最多 30 条候选。
 - Hugging Face 默认读取最近 3 个日期的 Daily Papers。它是社区论文发现渠道，不覆盖整个 HF 社区的讨论。
-- `max_items` 限制送给 Agent 的去重候选；关键词评分只是初筛，Agent 还需判断相关性。
+- `max_items` 默认 12。按 paper / research-blog / release / manual 分组轮流取材，组内按关键词得分和更新时间排序；`max_per_source` 默认 4，按合并后发现渠道的首个 ID 计数。分类不代表质量背书，Agent 仍需判断相关性。
+- 来源支持 `name`、`group`、`enabled`、`required`。原有来源默认 required=true，新增博客与项目来源显式为 false；必需来源失败停止，可选来源失败继续但标记 partial 并在文章披露。
+- bundle.json 记录各来源 retrieved、eligible、selected、rejected 及 selection。重复材料会跨渠道合并，来源计数不可相加当作独立证据数。
 - `publishing.branch/remote` 指定发布分支和 Git remote。
 - `publishing.site_url` 需填写真实部署地址，包括网站 base 子路径。未配置时只能确认 GitHub 推送与 CI，不能声称网页已经上线。
 
 来源扩展由 Agent 先选择并更新配置，再执行采集。第一版不会自行启用新域名、登录账户或收费接口。
 
-支持的来源类型：`arxiv`、`hf-papers`、`rss`（RSS/Atom）。RSS 示例：
+支持 `arxiv`、`hf-papers`、`rss`（RSS 2.0/Atom）、`github-releases`。Release 使用 published_at，默认排除草稿与预发布；优先用 gh 当前身份，无 gh 时用公开 API，可能被匿名限流。每源只读最近 limit 条，不宣称全量覆盖。RSS 示例：
 
 ```json
 { "id": "research-blog", "type": "rss", "url": "https://example.com/feed.xml" }
@@ -104,7 +117,7 @@ python scripts/research-workflow.py collect --import-items .research/manual-item
 
 脚本校验文章是否绑定当前资料包、每段是否引用有效来源、至少引用若干条材料。正文采用纯文本结构，脚本统一添加引用，转义 HTML、Markdown 结构和 Vue 表达式。它能发现缺失或无效引用，不能自动证明一段分析被引用材料支持。
 
-无新材料时不造文章、不推送。来源失败默认停止；仅主动添加 `--allow-partial` 才接受部分结果，文章会注明缺失来源。查询与候选数量有上限，不能宣称穷尽全部站点更新。
+无新材料时不造文章、不推送。必需来源失败默认停止；仅主动添加 `--allow-partial` 才接受部分结果，文章会注明缺失来源。查询与候选数量有上限，不能宣称穷尽全部站点更新。
 
 已接入的往期文章提供去重状态。同一日期与主题使用同一个路由，重跑更新原文章和入口。下一次采集会排除往期文章已引用的规范 URL；同一论文的新版本也会合并，因此第一版不专门报道旧论文修订。漏跑时会扩展窗口，最多回补 90 天；窗口扩展仍受候选数量上限限制。仅本地生成但尚未推送的文章也进入本地去重状态，因此失败后应优先补推该运行，不能把“本地已接入”当成“线上已发布”。
 
