@@ -1,5 +1,26 @@
 [
   {
+    "date": "2026-10-15",
+    "slug": "llm-post-training-agentic-rl",
+    "title": "2026-10-15 大模型强化学习、后训练与 agentic RL",
+    "description": "摘要筛选显示，本周 RLVR 仍在处理单轨迹信用分配和动量，自蒸馏方法继续增加，但同期对照研究发现相对 GRPO 的优势并不稳定；语言智能体工作则转向中间动作监督和执行环境内训练。",
+    "route": "/research/2026-10-15-llm-post-training-agentic-rl",
+    "source_urls": [
+      "https://arxiv.org/abs/2610.20497",
+      "https://arxiv.org/abs/2610.19687",
+      "https://arxiv.org/abs/2610.20597",
+      "https://arxiv.org/abs/2610.20413",
+      "https://arxiv.org/abs/2610.19882",
+      "https://arxiv.org/abs/2610.19789",
+      "https://arxiv.org/abs/2610.20584",
+      "https://arxiv.org/abs/2610.20576",
+      "https://arxiv.org/abs/2610.12274",
+      "https://arxiv.org/abs/2610.20181"
+    ],
+    "window_end": "2026-10-16T00:00:00+08:00",
+    "bundle_sha256": "3bbcf666e8ca0b8946ab76fd57971ba8e6a8c1729aa49cae4d870ebe977e45c8"
+  },
+  {
     "date": "2026-10-14",
     "slug": "llm-post-training-agentic-rl",
     "title": "2026-10-14 后训练与 agentic RL：从轨迹奖励走向步骤反馈",

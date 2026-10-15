@@ -5,6 +5,10 @@ export const researchSidebar = [
     "collapsed": false,
     "items": [
       {
+        "text": "2026-10-15 大模型强化学习、后训练与 agentic RL",
+        "link": "/research/2026-10-15-llm-post-training-agentic-rl"
+      },
+      {
         "text": "2026-10-14 后训练与 agentic RL：从轨迹奖励走向步骤反馈",
         "link": "/research/2026-10-14-llm-post-training-agentic-rl"
       }
