@@ -7,7 +7,7 @@ const researchSidebarWithFrameworks = researchSidebar.map((group, index) => inde
   ...group,
   items: [
     {
-      text: '2026-10-16 大模型后训练：强化学习框架的配置与故障现场',
+      text: '2026-10-16 后训练强化学习框架：五个入口与三组配置',
       link: '/research/2026-10-16-post-training-rl-frameworks'
     },
     ...group.items
