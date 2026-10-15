@@ -1,150 +1,167 @@
 ---
-title: "2026-10-16 后训练强化学习框架：五个入口与三组配置"
-description: "介绍 verl、TRL、OpenRLHF、slime 和 AReaL 各自的训练与生成入口，再对照 DAPO、Open R1、ProRL v2 的公开配置和故障记录。"
+title: "2026-10-16 后训练强化学习：框架运行机制与项目材料"
+description: "先梳理 verl、TRL、OpenRLHF、slime 和 AReaL 的训练、采样与权重交接，再分别核对项目配置、框架自带示例和故障记录。"
 tags: ["每日调研", "RLHF", "后训练", "GRPO"]
 date: "2026-10-16"
 ---
 
-# 2026-10-16 后训练强化学习框架：五个入口与三组配置
+# 2026-10-16 后训练强化学习：框架运行机制与项目材料
 
 ::: info 本期要点
-- **先认框架，再看配置。** verl、TRL、OpenRLHF、slime、AReaL 解决的是训练与生成如何交接，不是同一套算法。 [S1](#source-s1) [S4](#source-s4) [S7](#source-s7) [S10](#source-s10) [S11](#source-s11)
-- **同名脚本不等于同一次实验。** DAPO、Open R1、ProRL v2 的报告、博客和仓库脚本要分开读。 [S2](#source-s2) [S3](#source-s3) [S6](#source-s6) [S8](#source-s8)
-- **故障先看发生在哪一段。** 显存切换、主机内存、集合通信卡住和奖励失真，不是同一个旋钮。 [S12](#source-s12) [S13](#source-s13) [S14](#source-s14)
+- **前半篇只讲框架怎么跑。** 谁更新参数、谁采样、权重怎么交回去、同步和异步差在哪里。 [S1](#source-s1) [S4](#source-s4) [S7](#source-s7) [S10](#source-s10) [S11](#source-s11)
+- **后半篇一篇材料一节。** 项目脚本、框架自带示例和故障帖分开读。同名材料不一定是同一次实验。 [S2](#source-s2) [S6](#source-s6) [S8](#source-s8)
+- **故障帖只保留现场里写明的事。** 没有修复结论的，就停在观察。 [S12](#source-s12) [S13](#source-s13)
 :::
 
-> 调研基准日：2026-10-16（Asia/Shanghai）。这不是按最近一天筛摘要的日报，而是回看 2025–2026 仍能打开的实现与实践。阅读范围是 README、指定版本的配置和局部代码、release 正文、issue 可见回复，以及几篇工程博客。没有跑 GPU，也没有复现实验。文中的「配置事实」只表示文件里这样写。
+> 调研基准日：2026-10-16（Asia/Shanghai）。这篇沿用已核对过的来源，没有另开一轮检索，也没有跑 GPU。文件里写了的配置、作者报告的结果、编辑把两者对上的地方，下面分开说。
 
-## 五个框架分别做什么
+## 第一部分：五个框架怎么运行
 
-选框架时先回答三件事：谁做参数更新，谁做采样，权重怎么交回去。算法名相同，这三件事仍可能不同。
+这里只写运行分工。具体配方、示例数字和故障帖在第二部分。
 
-### verl：配方落在 FSDP 或 Megatron 上，采样交给 vLLM / SGLang
+### verl：训练和采样用两套后端，中间重新切分权重
 
-verl 把后训练拆成训练后端和 rollout 后端。官方 README 列出的训练路径是 FSDP、FSDP2 和 Megatron-LM，rollout 路径是 vLLM 和 SGLang。具体算法不都写在核心 trainer 里，而是放到配方；本次用 DAPO 配方核对它怎么落地。 [S1](#source-s1) [S2](#source-s2)
+verl 是 HybridFlow 的开源实现。一个控制器把后训练数据流串起来，训练和推理各自接不同后端。 [S1](#source-s1)
 
-使用前要先对上四样东西：配方锁的依赖版本、动态采样会不会丢掉整组、loss 按什么聚合，以及训练和生成各用哪种并行。本次读了 README、发布页、DAPO 复现表和一份固定 commit 的脚本，没有通读核心 trainer。 [S1](#source-s1)
+一次循环里，actor 用 FSDP、FSDP2 或 Megatron-LM 更新参数；回答由 vLLM、SGLang 或 HF Transformers 生成。两边的并行方式可以不同。README 里的 3D-HybridEngine 在训练和生成切换时，把 actor 权重按另一套并行布局重新切分，再交给采样。具体走哪次传输调用，README 没有写到函数。 [S1](#source-s1)
 
-### TRL：入口叫 GRPOTrainer，损失不一定还是 GRPO
+按阶段看，同步就是：采样，更新，把新权重交给下一轮采样。README 另外列了 `fully_async_policy` 等实验入口。队列怎么排、隔几步更新、策略允许落后多少，要到那些实现里看，这里只记有这个入口。 [S1](#source-s1)
 
-TRL 是 Hugging Face 放在 Transformers 和 Accelerate 上的 trainer 库。Open R1 的训练入口直接构造 `GRPOTrainer`。名字只说明走这条 trainer，不说明损失公式。当前快照里 `loss_type` 默认是 `dapo`，还可以分别选 token 级或 sequence 级重要性采样。 [S4](#source-s4) [S6](#source-s6)
+### TRL：trainer 更新参数，生成可以留在模型里，也可以交给 vLLM
 
-`beta=0` 时不加载 reference 模型。原始 `grpo` 按回答长度归一化，作者注明有长度偏差；`dr_grpo` 用固定长度常量；`dapo` 按全局累积 batch 里的有效 token 数归一化。所以不能用今天的默认值反推早期 Open R1 实验。本次读了 README、release 页、`GRPOConfig` 和文档里的 loss 段落，没有通读 trainer 实现。 [S4](#source-s4) [S5](#source-s5)
+TRL 是架在 Transformers 和 Accelerate 上的 trainer 库。这里只看 `GRPOTrainer` 的配置。 [S4](#source-s4) [S5](#source-s5)
 
-### OpenRLHF：Ray 调度，DeepSpeed 训练，vLLM 生成
+trainer 拿生成结果和奖励组成训练目标，再反传更新策略。`use_vllm=False` 时调用模型自己的 `generate()`，权重就是正在训练的那份。打开 vLLM 之后，采样在推理侧做，训练完的策略要交过去。配置里两种摆法：`colocate` 是和训练进程共享 GPU，`server` 是单独的生成服务。配置没有写权重用什么协议传。 [S4](#source-s4)
 
-本次核对的路径是 Ray 调度进程、DeepSpeed ZeRO 更新参数、vLLM 负责生成。官方工程文说明训练和 rollout 可以共置，权重通过 NCCL 或 CUDA IPC 同步。远程 reward 进程也占主机内存，不能只算 GPU。 [S7](#source-s7) [S9](#source-s9)
+`colocate` 和 `server` 说的是生成服务放在哪。采样和训练是否重叠、策略允许落后几步，这份 `GRPOConfig` 没有定义。 [S4](#source-s4)
 
-共置时，脚本里 actor、reference、vLLM 各自写的 GPU 数不能相加成物理卡数。本次读了 README、release 页、ProRL v2 脚本和两条内存 issue，没有审计全部算法。 [S7](#source-s7) [S12](#source-s12)
+### OpenRLHF：Ray 负责调度，DeepSpeed 更新，vLLM 采样
 
-### slime：Megatron 训练，SGLang 采样，同步和全异步走同一个入口
+Ray 把训练、生成和其他组件编排在一起。组件可以分到不同机器，也可以共置在同一组 GPU 上。这里核对的是 DeepSpeed 加 vLLM 这条路径。 [S7](#source-s7) [S9](#source-s9)
 
-slime 用 Megatron 做训练、SGLang 做 rollout。训练循环里能看到生成、训练、权重更新和 KV 恢复的次序。2026-10-09 的 v0.4.0 把同步和完全异步都收进 `train.py`，并移除旧的 `train_async.py`，同时加上持久化 rollout 和训练失败后的恢复。这是已发布的维护记录，不是路线图。 [S10](#source-s10)
+一步里面，vLLM 先出回答，actor 用 DeepSpeed ZeRO 更新参数，再把策略交回生成侧。梯度在 DeepSpeed 里算，Ray 只调度。权重同步有两条已写明的路：actor 和 vLLM 之间用 NCCL；共置的 hybrid engine 还可以用 CUDA IPC 把权重组过去。走哪条，看部署。 [S7](#source-s7) [S9](#source-s9)
 
-示例脚本会自动检测卡数，检测失败时回退到 8，而且没有写 GPU 型号，不能把它当成某张卡的最低配置。本次读了 README、v0.4.0 发布说明、`train.py`、Qwen3-4B 示例和调试文档。 [S10](#source-s10)
+同步是串行的「生成，再训练」，每轮生成用的是刚更新的权重。异步用队列让两边重叠，样本可能来自更早的策略。partial rollout 还可以在中途停下、换权重、接着生成，于是一条回答里会混进不同版本打出来的 token。共置只决定卡怎么分，异步与否要看有没有这条队列。 [S7](#source-s7)
 
-### AReaL：异步是允许策略落后，不是多开几个 worker
+### slime：一个 train.py 接 Megatron 和 SGLang
 
-AReaL 把训练和生成拆开跑。本次 v2.1.0 的 GSM8K 示例明确是 FSDP actor 加 SGLang rollout。异步时，生成策略可以落后于正在更新的策略；一条 partial rollout 还可能跨过多个权重版本。文档用 `max_head_offpolicyness` 限制落后步数，并用 decoupled loss；设为 0 可以回到同步。2026-08-25 的 v2.1.0 修了 Megatron optimizer sharding 和恢复状态，2026-07-01 的 v2.0.0 已经改成训练、推理、agent、权重更新的微服务。 [S11](#source-s11)
+slime 用 Megatron 训练、SGLang 采样。v0.4.0 起，同步和完全异步都从 `train.py` 进，异步调度放在 rollout 实现里。 [S10](#source-s10)
 
-文档写的是 `recompute_logprobs`，示例 YAML 的字段是单数 `recompute_logprob`。照抄前要以该版本的配置定义为准。本次读了 README、release 正文、异步文档和这份 YAML，没有通读调度器。 [S11](#source-s11)
+入口先向 rollout manager 要数据，再调用 actor 的 `async_train` 并等它结束；开了 critic 就再训 critic。`async_train` 这个函数名只说明这次更新调用是异步等待的，整条流水线是否异步要看 rollout 那边。 [S10](#source-s10)
 
-| 框架 | 本次看到的交接方式 | 先核对什么 |
+权重交回的顺序写在入口里：初始化加载之后先 `actor_model.update_weights()`。每一轮训练前会暂停接收新 rollout，更新生成侧权重，再按条件恢复。开了 rollout offload 时，权重恢复和 KV cache 恢复是两次调用。传输协议不在这个入口文件里。 [S10](#source-s10)
+
+同步是一轮生成数据拿齐再训练。完全异步时，rollout 一直在生产，训练批次可以只收已经完成的组，不必等所有生成 worker。入口能看到这个差别；队列内部怎么保证一致，在 rollout 实现里。 [S10](#source-s10)
+
+### AReaL：生成和训练可以同时进行，并限制策略落后几步
+
+AReaL 让 rollout 和训练分在不同 GPU 上并行。这一节只按它的异步文档来。文档这一页没有规定必须配哪种训练后端或推理后端。 [S11](#source-s11)
+
+生成侧产轨迹，训练侧消费轨迹并更新策略。异步时两边同时干活。生成侧会拿到更新后的策略；partial rollout 允许同一条轨迹跨过多个策略版本。这一页讲的是版本关系，没有写权重传输协议，也没有写更新调用的先后。 [S11](#source-s11)
+
+`max_head_offpolicyness=0` 时回到同步，生成用的策略和训练侧对齐。大于 0 时允许生成落后，并规定最多落后几步。文档用 decoupled loss 处理这种偏差，打开时要重算 logprob。和同步循环的差别就在这里：旧策略打出来的样本可以进训练，但落后步数有上限。 [S11](#source-s11)
+
+## 第二部分：具体项目、自带示例和故障记录
+
+### DAPO 复现：生成了多少，和拿去训练的不是同一个数
+
+关注点是生成提示 batch 和训练提示 batch，以及报告和历史脚本对不上的两个字段。
+
+材料是 verl 配方的复现表和 commit `4f80e465` 的脚本。复现表写的机器是 16 节点、每节点 8 张 H800。数字以这个 commit 为准，不用当前分支替换。 [S2](#source-s2)
+
+脚本里 `gen_prompt_bsz=512 * 3`，`train_prompt_bsz=512`，每条提示 16 个回答，`train_prompt_mini_bsz=32`。动态采样会丢掉组内指标完全一样的提示，继续生成，直到凑够训练 batch，最多试 10 批。所以训练步吃掉的提示数，小于前面已经生成过的提示数。 [S2](#source-s2)
+
+同一次脚本里还有：Qwen2.5-32B，优势估计 `grpo`，clip 下限/上限 0.2/0.28，loss 聚合 `token-mean`，reward KL 和单独的 KL loss 都关着。rollout 张量并行是 4，`gpu_memory_utilization=0.7`。这些是这份历史脚本的设置。 [S2](#source-s2)
+
+| 对照项 | DAPO 报告 v2 第 4.1 节 | commit 4f80e465 脚本 |
 | --- | --- | --- |
-| verl | FSDP / FSDP2 / Megatron 训练，vLLM 或 SGLang 采样，算法放在配方。 [S1](#source-s1) | 依赖版本、动态采样、loss 聚合、训练/生成并行。 [S2](#source-s2) |
-| TRL | Transformers trainer；`GRPOTrainer` 不等于原始 GRPO。 [S4](#source-s4) | `loss_type`、重要性采样粒度、vLLM 是同进程还是独立服务。 [S6](#source-s6) |
-| OpenRLHF | Ray + DeepSpeed ZeRO + vLLM，可共置并用 NCCL/CUDA IPC 同步。 [S9](#source-s9) | 共置后的真实卡数，以及 reward 进程的主机内存。 [S7](#source-s7) [S12](#source-s12) |
-| slime | Megatron + SGLang；v0.4.0 起同步和全异步共用 `train.py`。 [S10](#source-s10) | 参数映射、共置时的内存恢复顺序、脚本回退的卡数。 [S10](#source-s10) |
-| AReaL | FSDP 与 SGLang 解耦，允许策略滞后。 [S11](#source-s11) | 滞后上限、logprob 是否重算、字段名以 YAML 还是文档为准。 [S11](#source-s11) |
+| rollout 提示数 | 512，每提示 16 个回答 | 生成 batch `512 * 3`，训练 batch `512`，每提示 16 个回答 |
+| 训练 mini-batch | 512，并写明每次 rollout 做 16 次梯度更新 | `train_prompt_mini_bsz=32`，传给 `ppo_mini_batch_size` |
+| warm-up | 20 个 rollout step 的线性 warm-up | `lr_warmup_steps=10` |
 
-::: warning 待核验：活跃只说明仓库还在改
-slime v0.4.0 和 AReaL v2.1.0 的发布记录，加上仍能读到的配置，只支持「检索当日还有人维护」。不能据此说每条示例都在所有机器上跑通。上表也不比较分数或吞吐。 [S10](#source-s10) [S11](#source-s11)
-:::
+三列各自摘自原文。报告里的 mini-batch 和脚本里的提示 mini-batch，计步单位没有在材料里对齐；两处 warm-up 也没有写成同一个口径。先按表里的差异留着。 [S2](#source-s2) [S3](#source-s3)
 
-## 三组公开配置：报告和脚本不要并成一次实验
+### Open R1：两种 vLLM 摆法，YAML 里没有 loss
 
-### DAPO：生成 batch 和训练 batch 不是同一个数
+关注点是这个项目怎么摆 vLLM，以及这份 YAML 没有填写损失类型。
 
-这里引用的是 verl 配方作者公开的复现，不是把论文、当前主分支和旧脚本合成同一次运行。复现表写的硬件是 16 节点、每节点 8 张 H800，镜像名里包含 vLLM 0.8.3，commit 是 `4f80e465`。下面的数字来自这个 commit 的完整脚本。 [S2](#source-s2)
+固定快照的 README 写了两种入口。`colocate` 和训练共用 GPU；另一种是训练节点之外单独起 vLLM server。训练命令按 8×H100 80GB 来写，另外给了多节点启动例子。这是文档里的机器假设。 [S6](#source-s6)
 
-- **配置事实：**Qwen2.5-32B，数据 `dapo-math-17k.parquet`，优势估计 `grpo`。生成提示 batch 是 `512 * 3`，训练提示 batch 是 `512`，每条提示 16 个回答，提示 mini-batch 是 32。 [S2](#source-s2)
-- **配置事实：**FSDP 打开参数和 optimizer offload；Ulysses sequence parallel 为 8；vLLM tensor parallel 为 4，`gpu_memory_utilization=0.7`，并打开动态 token batch。 [S2](#source-s2)
-- **配置事实：**prompt 上限 2048，response 上限 20480，overlong buffer 4096。clip 下限/上限是 0.2/0.28，loss 聚合是 `token-mean`。reward 里的 KL 和单独的 KL loss 都关掉。这里的 clip 是概率比裁剪，不是梯度范数阈值。 [S2](#source-s2)
-- **配方作者的处理：**动态采样丢掉组内指标完全相同的提示，继续生成直到凑够训练 batch，最多尝试 10 批。超过上限时，配方正文里的代码抛出 `Generated too many. Please check your data.` [S2](#source-s2)
+YAML 使用 Qwen2.5-1.5B-Instruct 和 OpenR1-Math-220k，`use_vllm=true`。`num_generations=16`，每设备训练 batch 16，梯度累积 4，prompt / completion 上限 512 / 1024。文件里没有 `loss_type`。入口构造的是 `GRPOTrainer`，trainer 的名字不决定损失公式。 [S6](#source-s6)
 
-**和报告对不上的地方要保留。** DAPO 报告 v2 第 4.1 节写的是 AdamW、学习率 1e-6、20 个 rollout step 的线性 warm-up、每批 512 个提示、每提示 16 个回答、训练 mini-batch 512，并写明每次 rollout 做 16 次梯度更新。历史脚本的提示 mini-batch 是 32，warm-up 字段是 10。两边不能只按同名字段对齐，也不能说逐项相同。 [S2](#source-s2) [S3](#source-s3)
+另有一份后来核对的 TRL `GRPOConfig`，里面 `loss_type` 的默认值是 `dapo`。那是那份 TRL 快照的默认值。这份 Open R1 YAML 当时装的是哪个 TRL、默认损失实际解析成什么，要同时钉住项目 commit、TRL 版本和生效配置才能知道。 [S4](#source-s4) [S6](#source-s6)
 
-**编辑归纳：**日志里的一个训练 batch 不等于生成成本。全对或全错的组被丢掉之后，rollout 已经花过了。凑不够 batch 时，先看题目难度和组内奖励是不是挤在一起。这是按配方代码推的排查方向，不是本篇看到的一次崩溃。 [S2](#source-s2)
+### ProRL v2：工程文和同名脚本各记各的
 
-### Open R1：同一个项目里有两种 vLLM 摆法
+关注点是 NVIDIA 工程文和 OpenRLHF 里同名脚本的三处差异：clip、长度惩罚、reference reset。
 
-- **配置事实：**Qwen2.5-1.5B-Instruct 的 GRPO demo 用 OpenR1-Math-220k，打开 vLLM。`num_generations=16`，`per_device_train_batch_size=16`，梯度累积 4。prompt / completion 上限是 512 / 1024，学习率 `2e-5`。accuracy、format、tag_count 三个 reward 权重都是 1.0。 [S6](#source-s6)
-- **部署事实：**README 的训练命令按 8×H100 80GB 来写。GRPO 一节同时给出同进程 `colocate`，以及训练节点之外单独起 vLLM server。多节点例子是 2 个节点、训练 DP=8、TP=1。配套 `zero2.yaml` 是 ZeRO stage 2、8 个进程。 [S6](#source-s6)
-
-**编辑归纳：**这是项目给出的入口，不是一份已经跑完的逐卡账单。每设备 batch、生成组大小和提示数不能互换。复现时要同时留下 YAML、启动命令和 TRL 版本。 [S4](#source-s4) [S6](#source-s6)
-
-### ProRL v2：博客参数和仓库脚本差在 clip 与长度惩罚
-
-- **作者声称：**NVIDIA 工程文以 DeepSeek-R1-Distill-Qwen-1.5B 做长期 RL，损失是 PPO-Clip 加 REINFORCE++-baseline，并加上 Clip-Higher、dynamic sampling、KL、reference reset 和阶段性长度惩罚。正文里的 clip 是 0.20/0.28。reference 在每 200–500 步，或遇到 KL 尖峰、验证停滞时重置，optimizer 状态保留。页面署名日期是 2025-08-13。 [S8](#source-s8)
-- **配置事实：**OpenRLHF 的同名脚本用这个 1.5B、数据集 `OpenRLHF/dapo-math-17k`、估计器 `reinforce_baseline`。训练 batch 1024，rollout batch 512，每提示 16 个回答。actor 和 reference 都写成单节点 8 GPU，并打开共置；vLLM engine 数 8、TP 1；ZeRO stage 3；最大新 token 8192。脚本没写 GPU 型号。 [S7](#source-s7)
-- **对不上的地方：**脚本的 clip 是 0.2/0.27，不是博客的 0.28。token 级重要性修正打开后，区间 `[0.5, 5.0]` 之外的样本被 mask。长度惩罚有一部分只出现在注释里，不能当成已经启用。脚本本身也证明不了博客里的周期性 reference reset 已经接进训练循环。 [S7](#source-s7) [S8](#source-s8)
-
-::: warning 待核验：三组配置不能横着比分数
-DAPO 的 32B 复现、Open R1 的 1.5B demo、ProRL 的 1.5B 脚本，硬件、损失和 KL 都不一样。DAPO 示例关掉 KL，ProRL 工程文保留 KL 和 reference reset。这是两套配方，不能收成「后训练都该关 KL」。 [S2](#source-s2) [S6](#source-s6) [S8](#source-s8)
-:::
-
-### 框架自带示例只说明接口，不说明外部项目的效果
-
-| 固定版本 | 脚本里写了什么 | 没有写什么 |
+| 对照项 | NVIDIA 工程文 | OpenRLHF 固定 commit 脚本 |
 | --- | --- | --- |
-| slime v0.4.0，Qwen3-4B [S10](#source-s10) | GRPO。rollout 提示 batch 32，每提示 8 个回答，global batch 256，response 上限 8192。Megatron TP 2、PP 1、CP 1，打开 sequence parallel。每个 SGLang engine 2 张 GPU，静态显存比例 0.7，训练和生成共置。 | GPU 型号。卡数检测失败才回退到 8，不能写成最低配置。 |
-| AReaL v2.1.0，GSM8K GRPO [S11](#source-s11) | Qwen2.5-1.5B-Instruct。集群 1×8 GPU。actor `fsdp:d4p1t1`，rollout `sglang:d4p1t1`。训练 batch 256，每提示 4 个回答，最大新 token 1024。策略滞后允许 2，打开 decoupled loss 和 logprob 重算。 | GPU 型号和峰值显存。这个 batch 也不能直接对 TRL 的每设备 batch。 |
+| 概率比 clip 下限/上限 | 0.20 / 0.28 | 0.2 / 0.27 |
+| 长度惩罚 | 周期性启停的 cosine 长度惩罚 | overlong 参数在注释里；命令行是 `stop_properly_penalty_coef=0.0`，注释把它解释为截断样本奖励归零 |
+| reference reset | 每 200–500 步，或遇到 KL 尖峰、验证停滞时重置，optimizer 状态保留 | 启动命令里没有这条日程 |
 
-## 故障记录：先分阶段，再拧旋钮
+注释里的参数不算已经启用。同名只说明两份材料相关。 [S7](#source-s7) [S8](#source-s8)
 
-### 切回 rollout 时的显存，和 Ray 杀掉的主机内存，不是一回事
+脚本自身写的是：DeepSeek-R1-Distill-Qwen-1.5B，估计器 `reinforce_baseline`，训练 batch 1024，rollout batch 512，每提示 16 个回答，开启共置。GPU 型号没有写。长度日程和 reference reset 是否进了训练循环，要看对应版本的实现和运行记录，这次没有审到那里。 [S7](#source-s7) [S8](#source-s8)
 
-Biao He 和 Ata Fatahi 写的是 verl 加 SGLang 的内存切换。他们的顺序是：先载入训练权重，恢复推理权重，同步，卸掉训练模型，最后恢复 KV cache；底层用带 tag 的暂停和恢复。作者报告最终能在 8×H200 上、KV cache 比例 0.9 训练 Qwen 32B。这是他们的结果，本篇没有复现，也不能只抄一个显存比例。 [S14](#source-s14)
+### slime v0.4.0 的 Qwen3-4B 示例
 
-OpenRLHF #911 是另一类现场。2025-03-24，报告者用 8×A800 训练 7B，估计器 `reinforce_baseline`，训练 batch 256，rollout batch 64，每提示 16 个回答，vLLM 是 2 engine × TP 2，ZeRO stage 2。触发 Ray 阈值时，节点内存是 239.02/251.56 GB，日志里的 `nl2sql_reward.py` 占了 176.97 GB。这是主机内存，不是 CUDA OOM。页面上没有维护者确认的修复。被杀掉的是权重更新 worker，不表示它就是内存涨起来的那个进程。 [S12](#source-s12)
+这是框架自带示例，不是外部项目的训练报告。关注点只是脚本写了什么、没写什么。
 
-相关的 #1013 里，另一位报告者说去掉 `--vllm_enable_sleep` 之后不再遇到问题，但同时在问这样做对不对。这句话不能升级成已确认根因。 [S12](#source-s12)
+写了：GRPO；rollout 提示 batch 32，每提示 8 个回答，global batch 256，response 上限 8192。Megatron 的 TP 2、PP 1、CP 1，打开 sequence parallel。每个 SGLang engine 2 张 GPU，`sglang-mem-fraction-static=0.7`，训练和生成共置。 [S10](#source-s10)
 
-**编辑建议：**OOM 如果正好发生在权重同步或 KV 恢复，先记阶段交界的显存，再看训练权重、推理权重和 KV 是不是叠在一起。降低 micro-batch 未必打中这个峰值。Ray 杀 worker 时，先看 RSS、reward 服务和对象存储。关掉监控也不等于把占用降下去。 [S12](#source-s12) [S14](#source-s14)
+没写：GPU 型号、峰值显存、这次跑出来的成绩。脚本会检测卡数，检测失败才回退到 8。8 是回退值，不是最低硬件要求。 [S10](#source-s10)
 
-### 日志停住，不一定停在 W&B 显示的那一步
+### AReaL v2.1.0 的 GSM8K 示例
 
-Open R1 discussion #512：报告者在 DGX H100 上用 4 个进程跑 GRPO，W&B 停在 step 8，减小 batch 仍然复现。维护者要求中断堆栈并核对 vLLM 版本。后续回复给出 vLLM 0.7.2，并说明控制台其实到了 step 15，最后抓到的是 `_ALLGATHER_BASE` 的 NCCL watchdog timeout。讨论结尾仍在追原因，没有已验证的修复。 [S13](#source-s13)
+同样是框架自带示例。关注点是 YAML 里的字段，以及它和异步文档的拼写差一个字母。
 
-**编辑归纳：**能直接用的动作是留下各 rank 日志、对上运行版本、找到真正堵住的位置，再判断是生成、reward 还是集合通信没有返回。这条讨论支持不了「把超时调大」或「升级到某个版本就好」。 [S13](#source-s13)
+写了：Qwen2.5-1.5B-Instruct，集群 1×8 GPU。actor 是 `fsdp:d4p1t1`，rollout 是 `sglang:d4p1t1`。`train_dataset.batch_size=256`，每提示 4 个回答，最大新 token 1024。`max_head_offpolicyness=2`，`use_decoupled_loss=true`，`recompute_logprob=true`，`weight_update_mode=xccl`。 [S11](#source-s11)
 
-### 奖励涨了，先确认它量的是任务成功
+没写：GPU 型号、峰值显存、训练结果。异步文档把重算字段写成复数 `recompute_logprobs`，这份 YAML 是单数。两处先按原文保留，这次没有再去对配置解析代码。 [S11](#source-s11)
 
-Open R1 在 2025-03-11 的更新里检查了 7 道竞赛题：R1 的解答都通过公开短测试，却都没通过 Codeforces 的完整测试。这说明测试覆盖不够。它没有证明 RL 模型在主动 reward hacking。 [S15](#source-s15)
+### verl 加 SGLang：切回 rollout 时先同步权重，再恢复 KV
 
-kalomaze 在 2025-03-03 的语义判断实验里，把 XML 格式加分 0.2 限定为「判断也对才给」，长度加分同样要求判断正确。作者偏好 `constant_with_warmup` 和 `max_grad_norm=0.2`，并写明奖励幂次没有严格对照。这些是个人调参记录，不是普适最优值。 [S16](#source-s16)
+关注点是内存恢复的顺序，以及这个顺序怎么把峰值显存顶上去。
 
-**编辑建议：**正确性、格式、长度和留出集通过率分开记。格式权重抬高之后总 reward 上升，不能直接写成能力变强。梯度范数裁剪和 PPO 的概率比 clip 也要分开看。 [S15](#source-s15) [S16](#source-s16)
+作者的顺序是：训练权重载入 GPU，恢复推理权重，做同步，卸掉训练模型，最后恢复 KV cache。底层用带 tag 的暂停和恢复，把权重和 KV cache 分开。峰值出在这几步叠在一起的时候，而不是稳定训练那一段。 [S14](#source-s14)
 
-### 长度异常和异步偏差，各有自己的记录字段
+文中的结果是：8×H200、KV cache 比例 0.9、Qwen 32B。这是他们那台机器上的数。 [S14](#source-s14)
 
-DAPO 报告第 3.1–3.4 节把三件事拆开：早期熵塌缩、长回答里的重复和乱码、对截断回答一律惩罚带来的奖励噪声。对应做法是 Clip-Higher、token 级 loss，以及 overlong filtering / shaping。这只支持「先分清是哪一种长度问题」，不支持把所有变长都叫同一种崩溃。本篇没有足够材料给出跨任务的长度惩罚系数或数据配比。 [S3](#source-s3)
+### OpenRLHF #911：Ray 杀掉进程，是因为主机内存
 
-AReaL 要求给 rollout 记下策略版本。落后由 `max_head_offpolicyness` 限制；重要性修正不能代替权重同步本身是否正确。队列变长也不等于有效训练变快。slime 可以用 `--debug-rollout-only` 把 rollout 存下来，再用 `--load-debug-rollout-data` 只跑训练，用来把优化问题和生成问题分开。调试文档还建议对齐 checkpoint、参数映射和 chat template，并检查随后加载权重时的 OOM。 [S10](#source-s10) [S11](#source-s11)
+关注点是被杀掉的 worker 和真正占内存的进程不是同一个。
 
-::: tip 拿到自己机器上时先固定什么
-1. 从最接近自己模型和卡的那份完整启动命令开始。记下框架 commit、推理引擎、镜像，以及提示 batch、回答组、训练 mini-batch 各自指什么。 [S2](#source-s2) [S6](#source-s6) [S7](#source-s7)
-2. 先走通生成、reward、训练、同步之后的再次生成，以及 checkpoint 恢复。第一步 loss 正常，不能说明循环是对的。 [S10](#source-s10) [S14](#source-s14)
-3. 先留一个同步或固定 rollout 的重放，再一次只改共置、offload、异步或重要性修正中的一项。看验证成功率和有效样本量，不要只看 rollout 吞吐。 [S11](#source-s11)
-4. 对外写结果时，把脚本默认值、作者声称的运行、自己复现的结果分成三列。没有 GPU 型号或峰值显存，就留空。 [S8](#source-s8) [S10](#source-s10)
+节点内存 239.02 / 251.56 GB，过了 Ray 的阈值。进程列表里 `nl2sql_reward.py` 占了 176.97 GB。日志记的是主机内存。Ray 按最近调度的任务挑选被杀 worker，所以被杀的那个不一定是把内存吃掉的进程。回复里有配置建议，没有经确认的修复。 [S12](#source-s12)
+
+### OpenRLHF #1013：关掉 sleep 之后能跑，帖子停在这里
+
+关注点是报告者对 `--vllm_enable_sleep` 的一次观察。
+
+保留这个选项时，加载数据或模型阶段遇到 Ray OOM；去掉之后能跑。报告者同时在问这样改对不对。帖子没有把选项、内存变化和故障串成一条因果，也没有维护者确认的修法。 [S12](#source-s12)
+
+### Open R1 discussion #512：W&B 停住的步数，不是进程停住的步数
+
+关注点是用控制台和堆栈校正监控上的停滞位置。
+
+报告者在 DGX H100 上用 4 个进程跑。W&B 停在 step 8，减小 batch 仍然这样。维护者要求看中断堆栈和 vLLM 版本。后面的回复给出 vLLM 0.7.2，控制台至少走到 step 15，最后的日志是 `_ALLGATHER_BASE` 的 NCCL watchdog timeout。讨论停在继续查原因。帖子留下的做法是保留各 rank 日志、版本和阻塞堆栈。 [S13](#source-s13)
+
+### Open R1 Update #3：公开短测试过了，完整测试没过
+
+关注点是公开测试覆盖不够时，可验证奖励会失真。
+
+作者挑了 7 道题，R1 的解答通过了全部公开测试。交到 Codeforces 之后，完整测试全部失败。这 7 道题说明公开样例盖不住隐藏测试。 [S15](#source-s15)
+
+### kalomaze：格式分和长度分都要判断正确才给
+
+关注点是这次语义判断实验怎么限制辅助奖励。
+
+XML 格式奖励固定 0.2，判断正确才发；长度奖励同样挂在判断正确上。作者写明，奖励缩放没有和替代方案做过严格比较。权重是这次实验的记录。 [S16](#source-s16)
+
+::: tip 读的时候标三列
+文件里的配置、作者报告的结果、把两份材料对上之后的差异，分开记。示例没写 GPU 型号就空着。帖子没有修复结论，就停在观察。第二部分的数字不要回填到第一部分的运行机制里。
 :::
-
-## 阅读边界
-
-- **没有复现。** 配置事实来自指定 commit 或 tag 的文件。作者报告的 H200、H800 结果没有在本机重跑。 [S2](#source-s2) [S14](#source-s14)
-- **issue 不是修复说明。** #911、#1013 和 discussion #512 都没有维护者确认的修复。 [S12](#source-s12) [S13](#source-s13)
-- **个人博客不是对照实验。** kalomaze 自己写了缺少严格对照。 [S16](#source-s16)
-- **这次没读到的入口：**知乎专栏在代理和直连下都立刻返回 403，正文是拦截页，没有引用。X 和微信公众号没有读。SimpleRL 只读到 README，尝试的脚本路径 404，默认分支是 `v1`，所以没有把它写进配置表。 [S17](#source-s17)
 
 ## 来源与阅读范围
 
@@ -152,7 +169,7 @@ AReaL 要求给 rollout 记下策略版本。落后由 `max_head_offpolicyness` 
 
 [README](https://github.com/verl-project/verl/blob/5b550b0c3dad8c7bb7aab834a3fe195f8cdfc517/README.md) · [releases](https://github.com/verl-project/verl/releases)
 
-阅读范围：README 里的后端、算法和配方入口；发布页可见正文。没有逐个打开 PR，也没有通读核心 trainer。
+阅读范围：README 的控制器、训练与采样后端、权重重新切分和异步实验入口。发布页保留为入口。未通读核心 trainer 和异步实现。
 
 ### S2：DAPO 配方与历史训练脚本 {#source-s2}
 
@@ -164,7 +181,7 @@ AReaL 要求给 rollout 记下策略版本。落后由 `max_head_offpolicyness` 
 
 [报告 HTML](https://arxiv.org/html/2503.14476v2)
 
-阅读范围：第 2–3 节方法和第 4.1 节训练设置。没有精读附录，也没有复核图中的原始数据。
+阅读范围：第 2–3 节方法和第 4.1 节训练设置。未精读附录，未复核图中的原始数据。
 
 ### S4：TRL 的 GRPOConfig 与 GRPO 文档 {#source-s4}
 
@@ -194,7 +211,7 @@ AReaL 要求给 rollout 记下策略版本。落后由 `max_head_offpolicyness` 
 
 [NVIDIA 开发者博客](https://developer.nvidia.com/blog/scaling-llm-reinforcement-learning-with-prolonged-training-using-prorl-v2/)
 
-阅读范围：署名正文全文。没有把页面上的 AI 摘要当证据，也没有从图里估读分数。
+阅读范围：署名正文全文。页面上的 AI 摘要和图中估读的分数没有当作证据。
 
 ### S9：OpenRLHF 与 vLLM 的权重同步说明 {#source-s9}
 
@@ -206,7 +223,7 @@ AReaL 要求给 rollout 记下策略版本。落后由 `max_head_offpolicyness` 
 
 [README](https://github.com/THUDM/slime) · [v0.4.0](https://github.com/THUDM/slime/releases/tag/v0.4.0) · [train.py](https://github.com/THUDM/slime/blob/v0.4.0/train.py) · [Qwen3-4B 脚本](https://github.com/THUDM/slime/blob/v0.4.0/scripts/run-qwen3-4B.sh) · [调试文档](https://github.com/THUDM/slime/blob/v0.4.0/docs/en/developer_guide/debug.md) · [policy mismatch](https://github.com/THUDM/slime/blob/main/docs/en/advanced/policy-mismatch.md)
 
-阅读范围：发布正文、训练入口、示例脚本、调试文档，以及当前分支上的策略偏差说明。没有执行脚本，也没有用可变分支推断旧实验。policy mismatch 文档的链接论文未追读。
+阅读范围：v0.4.0 发布正文、`train.py` 和 Qwen3-4B 脚本。调试文档与 policy mismatch 保留为原文入口，这次没有据此扩展运行结论。未执行脚本，未审计具体权重传输实现。
 
 ### S11：AReaL v2.1.0 {#source-s11}
 
@@ -236,16 +253,10 @@ AReaL 要求给 rollout 记下策略版本。落后由 `max_head_offpolicyness` 
 
 [Hugging Face 博客](https://huggingface.co/blog/open-r1/update-3)
 
-阅读范围：正文全文。竞赛测试覆盖、SFT 经验和 GRPO 更新分开理解，没有把 SFT 的 OOM 数字写成 RL 结果。
+阅读范围：正文全文。竞赛测试覆盖、SFT 经验和 GRPO 更新分开看。SFT 的 OOM 数字没有写成 RL 结果。
 
 ### S16：kalomaze 的 GRPO 奖励笔记 {#source-s16}
 
 [GRPO Judge](https://kalomaze.bearblog.dev/grpo-judge-experiments-findings-and-empirical-observations/)
 
-阅读范围：全文文字。未打开外链 W&B，也没有把配图趋势当成测量。
-
-### S17：只核对了入口、没有纳入配置的材料 {#source-s17}
-
-[SimpleRL README](https://github.com/hkust-nlp/simpleRL-reason/blob/cf1c7858bfc145a27aa733e75d930d34f0d318a6/README.md)
-
-阅读范围：README 中与 PPO、OpenRLHF、vLLM 相关的使用说明。尝试的归档和训练脚本返回 404。知乎链接 `https://zhuanlan.zhihu.com/p/2073117804711113332` 返回 403，未读正文。
+阅读范围：正文里的正确性门槛、格式与长度奖励，以及作者自己写的「没有严格对照」。未打开外链 W&B，配图趋势没有当成测量。
