@@ -2,17 +2,7 @@
 // 多模块多侧边栏：按路径前缀区分
 import { researchSidebar } from './research-sidebar'
 
-// 手工专题与自动日报共用公开入口，避免修改工作流生成的文件。
-const researchSidebarWithFrameworks = researchSidebar.map((group, index) => index === 0 ? {
-  ...group,
-  items: [
-    {
-      text: '2026-10-16 后训练强化学习：框架运行机制与项目材料',
-      link: '/research/2026-10-16-post-training-rl-frameworks'
-    },
-    ...group.items
-  ]
-} : group)
+// 手工专题和流水线文章统一登记在 docs/research/catalog.json。
 
 // ===== LLM 科普书侧边栏（/llm-book/）=====
 export const llmBookSidebar = [
@@ -243,7 +233,7 @@ export const rustNotesSidebar = [
 
 // VitePress 多侧边栏：按路径前缀匹配
 export const sidebar = {
-  '/research/': researchSidebarWithFrameworks,
+  '/research/': researchSidebar,
   '/llm-book/': llmBookSidebar,
   '/papers/': papersSidebar,
   '/rl-book/': rlBookSidebar,

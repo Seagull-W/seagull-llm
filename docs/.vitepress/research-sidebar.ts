@@ -5,6 +5,14 @@ export const researchSidebar = [
     "collapsed": false,
     "items": [
       {
+        "text": "2026-10-16 后训练与 agentic RL 的 benchmark：准则、保证与数据形式",
+        "link": "/research/2026-10-16-post-training-rl-benchmarks"
+      },
+      {
+        "text": "2026-10-16 后训练强化学习：框架运行机制与项目材料",
+        "link": "/research/2026-10-16-post-training-rl-frameworks"
+      },
+      {
         "text": "2026-10-15 大模型强化学习、后训练与 agentic RL",
         "link": "/research/2026-10-15-llm-post-training-agentic-rl"
       },
