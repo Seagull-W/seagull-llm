@@ -27,4 +27,7 @@ features:
   - title: Rust 学习笔记
     details: 记录 Rust 学习中的概念与代码示例，从多线程与并发编程开始
     link: /rust-notes/
+  - title: linux学习笔记
+    details: 记录 Linux 系统概念与实践，从 Namespace、cgroups 和 seccomp 隔离机制开始
+    link: /linux-notes/
 ---

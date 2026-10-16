@@ -231,6 +231,18 @@ export const rustNotesSidebar = [
   }
 ]
 
+// ===== linux学习笔记侧边栏（/linux-notes/）=====
+export const linuxNotesSidebar = [
+  {
+    text: 'linux学习笔记',
+    collapsed: false,
+    items: [
+      { text: '笔记目录', link: '/linux-notes/' },
+      { text: 'Linux 隔离机制：Namespace、cgroups 与 seccomp', link: '/linux-notes/linux-isolation' }
+    ]
+  }
+]
+
 // VitePress 多侧边栏：按路径前缀匹配
 export const sidebar = {
   '/research/': researchSidebar,
@@ -238,5 +250,6 @@ export const sidebar = {
   '/papers/': papersSidebar,
   '/rl-book/': rlBookSidebar,
   '/westlake-rl/': westlakeRlSidebar,
-  '/rust-notes/': rustNotesSidebar
+  '/rust-notes/': rustNotesSidebar,
+  '/linux-notes/': linuxNotesSidebar
 }
