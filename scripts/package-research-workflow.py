@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,12 +16,26 @@ ROOT = Path(__file__).resolve().parents[1]
 # An explicit list prevents accidental inclusion of auth caches, logs or raw inputs.
 SOURCES = {
     'research/README.md': '完整操作手册与已知限制',
+    '.agents/skills/seagull-research/references/task-pipeline.md': '通用任务、时间策略、发现与证据审阅契约',
+    '.agents/skills/seagull-research/references/delivery-contract.md': '提示词优先的对象介绍、具体样本与成稿验收流程',
+    '.agents/skills/seagull-research/SKILL.md': '按交付目的检索、归纳与试读的统一 skill',
+    'research/DELIVERY_VALIDATION.md': '最新 benchmark 文章失败案例与交付回归范围',
+    'research/TASK_VALIDATION.md': '通用调研的回归与真实资料验证范围',
+    '.agents/skills/seagull-research/references/daily.md': '固定日报来源与补充阅读规范',
+    'research/examples/concept.json': '已细化的概念调研任务样例，非已执行记录',
+    'research/examples/benchmark-delivery.json': '逐 benchmark 介绍与实际数据形式的任务约定样例',
+    'research/catalog-article.schema.json': '按对象集中交付的文章契约',
+    'research/task-article.schema.json': '通用报告输出：事实、推断、缺口与知识轴',
     'research/VALIDATION.md': '2026-10-14 验证记录和公网证据',
     'research/workflow.json': '主题、来源、检索窗口和发布目标',
     'research/article.schema.json': '可替换 Agent 的写作输出契约',
     'research/systemd/seagull-research.service.example': '服务器执行单元示例，尚未安装',
     'research/systemd/seagull-research.timer.example': '服务器每日调度示例，尚未启用',
     'scripts/research-workflow.py': '采集、生成、文章接入、构建、推送与验证主程序',
+    'scripts/research_tasks.py': '按任务发现、跨年代证据审阅、覆盖检查与补查',
+    'scripts/research_delivery.py': '对象矩阵、原始样本提取与确切成稿验收辅助',
+    'scripts/test-research-delivery.py': '答案/ID 投影、漏对象、浏览器来源与成稿验收回归',
+    'scripts/test-research-tasks.py': '通用调研回归测试',
     'scripts/test-research-workflow.py': '离线单元测试',
     'scripts/check-research-content.mjs': '文章、卡片、元数据及公开范围一致性检查',
     'scripts/test-public-content.mjs': '公开范围回归检查',
@@ -48,6 +63,20 @@ SOURCES = {
     'docs/research/index.md': '当前调研栏目卡片',
     'docs/research/catalog.json': '文章目录与跨日期去重状态'
 }
+
+
+# Shared research skills and the Hermes/Codex handoff docs are part of this bundle.
+for relative in ('hermes/README.md', 'hermes/task-template.md', 'hermes/skills.md',
+                 'hermes/skills-installation.json'):
+    SOURCES[relative] = 'Hermes/Codex 共用执行与技能安装记录'
+for skill_name in ('scholar-deep-research', 'scientific-writing', 'unslop-academic-writing'):
+    skill_root = ROOT / '.agents' / 'skills' / skill_name
+    if not (skill_root / 'SKILL.md').is_file():
+        raise ValueError('Missing shared skill: ' + skill_name)
+    for resource in sorted(skill_root.rglob('*')):
+        if resource.is_file() and not resource.is_symlink() and '__pycache__' not in resource.parts:
+            if resource.suffix in ('.md', '.py', '.json', '.yaml', '.yml', '.txt', '.html') or resource.name == 'LICENSE':
+                SOURCES[resource.relative_to(ROOT).as_posix()] = '固定版本的共享学术技能资源'
 
 VERIFY = '''#!/usr/bin/env python3
 """Verify this handoff bundle without network access or dependencies."""
@@ -120,13 +149,17 @@ def main():
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / source, target)
 
-    write(folder / 'START_HERE.md', f'''# 每日主题调研工作流：AI 交接入口
+    write(folder / 'START_HERE.md', f'''# 信息检索与调研工作流：AI 交接入口
 
 打包日期：{now.isoformat()}。源码基准：`{head}`。
 
 ## 用途与范围
 
-目标是指定主题和检索来源，采集并去重，交给 Agent 形成带引用的文章，接入 VitePress，推送 GitHub，构建并由已有 Cloudflare Pages 集成发布。当前主题为大模型强化学习、后训练与 agentic RL。
+通用任务先读 repo/.agents/skills/seagull-research/SKILL.md，按文献整理、领域汇报等交付目的检索、归纳和试读，默认直接交付 Markdown。
+
+只有需要结构化交接或恢复已有任务时，才使用 skill 的 references/task-pipeline.md 与 references/delivery-contract.md。这些契约约束文件接口，不证明内容质量。网站接入与发布按当前授权进行。
+
+不带 --task 的兼容日报仍围绕大模型强化学习、后训练与 agentic RL，通过 workflow.json 的固定来源和近期窗口执行；不能用这个默认值回答任意知识问题。
 
 这是工作流源码与规范的精选快照，不是完整网站。`repo/` 保留原仓库相对路径；其中的配置和组件会引用未打包的其他栏目、组件与资产。不要直接在快照内运行全站构建，也不要覆盖目标网站的完整配置。
 
@@ -145,6 +178,7 @@ def main():
 - 未通过：独立 Codex CLI 生成，历史探测显示未登录且遇到证书信任错误。
 - 未启用：每日定时。systemd 文件只是示例。
 - 未实现：X/知乎自动采集、自动启用新站点；支持导入已读取资料和 RSS/Atom 扩展。
+- 通用任务的新验证范围以 repo/research/TASK_VALIDATION.md 为准；网页搜索需要当前 Agent 的已授权工具，独立脚本不会把待查任务记成已执行。
 - 内容检查能验证引用 ID 与格式，不能证明每个结论真实；只有摘要时必须说明阅读范围。
 
 ## 使用前核验
@@ -163,13 +197,23 @@ def main():
 ''')
     write(folder / 'guides/CONTRACTS.md', '''# 数据契约与执行阶段
 
+## 可选结构化任务 v2
+
+以 repo/.agents/skills/seagull-research/references/task-pipeline.md 为当前契约。plan 生成可编辑的 task.json；discover 执行 arXiv/Crossref/URL 等已配置适配器，网页任务交给 Agent。Agent 交回真实 search-log.json 和 evidence.json；collect/review 输出逐轴审核和补查任务。prompt/generate 使用 task-article.schema.json；report 输出本地 report.md。所有这些阶段传 --task。
+
+概念任务默认跨年代；背景材料允许无发布日期，现状证据另有时效检查。只在本次任务内规范 URL 去重，不排除往期日报引用。每段新增 kind 与 axis_ids，已知缺口必须披露。候选不自动变成证据。其他网站接入与发布阶段仍沿用下表；默认 report 不接入网站。
+
+## 兼容日报 v1
+
+以下采集字段、近期窗口、catalog 排除和 article.schema.json 指无 --task 的日报入口。
+
 ## 阶段入口
 
 主程序为 `repo/scripts/research-workflow.py`。在完整仓库根目录调用，所有路径相对于该仓库。
 
 | 阶段 | 输入 | 输出 / 副作用 |
 |---|---|---|
-| collect | workflow.json、可选手动资料 JSON、公开接口 | 本机 .research/runs/日期-slug/bundle.json |
+| collect | workflow.json、可选手动资料 JSON、可选检索计划 JSON、公开接口 | 本机 .research/runs/日期-slug/bundle.json |
 | prompt | bundle.json、article.schema.json | prompt.txt，包含资料包哈希和 schema |
 | generate | prompt.txt、Codex CLI 或外部文章 JSON | 验证后写 article.json |
 | integrate | bundle.json、article.json | 文章 Markdown、catalog、栏目卡片、生成侧边栏 |
@@ -181,9 +225,9 @@ def main():
 
 ## 采集器统一记录
 
-每条材料包含 `url`、`title`、`summary`、`published_at`、`updated_at`、`authors`、`reading_scope`、`discovered_via`；筛选后追加 `id`、`score`。HF 可附 `discovery_url`。手动导入格式见操作手册。记录须具有可靠时间并满足主题筛选条件。
+每条材料包含 `url`、`title`、`summary`、`published_at`、`updated_at`、`authors`、`reading_scope`、`discovered_via`；筛选后追加 `id`、`score`。HF 可附 `discovery_url`。手动导入格式见操作手册。记录须具有可靠时间。新闻材料还须落在检索窗口内并命中主题词。`--retrieval-plan` 的规范摘录可以早于窗口，并按知识轴覆盖；取不到的轴记为缺口，不编造。
 
-bundle 包含主题、slug、日期、检索窗口、实际采集时间、source_status、partial 和 items。来源失败默认停止；明确允许部分结果时文章标记缺失来源。没有新材料则不创建文章。
+bundle 包含主题、slug、日期、检索窗口、实际采集时间、source_status、partial 和 items。有检索计划时另含 `retrieval` 与 `selection.axis_coverage`。来源失败默认停止；明确允许部分结果时文章标记缺失来源。没有新材料则不创建文章。
 
 ## 可替换 Agent 的唯一写作输出
 
@@ -205,8 +249,8 @@ catalog 是跨日期去重状态，不能在迁移时随意清空。旧论文修
 
 1. 获取完整仓库 `https://github.com/Seagull-W/seagull-llm`，核对基准提交 `{head}`。本包中 repo 是精选文件快照；主题和资产不齐全。
 2. 安装 Python 3.10+、Node.js 24、npm 和 Git，在完整仓库运行 `npm ci`。
-3. 检查 `research/workflow.json` 的主题、英文检索词、来源、slug、发布分支和站点地址。
-4. 选择 Agent。继续用 Codex 时先解决独立 CLI 登录与证书信任链；换 Agent 时按 CONTRACTS.md 返回 JSON，先分步跑 collect、prompt、integrate 和 verify。
+3. 通用任务先读 .agents/skills/seagull-research/SKILL.md；需要结构化任务时再读 references/task-pipeline.md；固定日报才检查 workflow.json 的主题、英文检索词、来源和窗口。网站发布目标仍在 workflow.json。
+4. 选择 Agent。继续用独立 Codex CLI 时先核验登录与网络；网页发现必须有可用搜索/阅读工具。换 Agent 时按 CONTRACTS.md 返回对应版本的 JSON；通用任务先本地 report，已授权网站接入才 integrate/verify。
 5. 保留 catalog 和已有文章；若需要恢复未完成运行，另行在受控环境迁移本机 .research/runs，不能将其凭据或日志放到公开仓库。
 6. 按操作手册完成测试、构建与样例检查，再启用 Git 推送，等待 CI/Pages 完成后运行 verify-site。
 7. 最后再配置每日调度。systemd 示例中的 User、WorkingDirectory、PATH、ExecStart 都要按服务器实际环境调整；示例不自动安装。
@@ -249,7 +293,7 @@ catalog 是跨日期去重状态，不能在迁移时随意清空。旧论文修
                 'integrity_note': 'MANIFEST.json excludes itself; ZIP checksum is in a sibling .sha256 file.',
                 'files': files}
     write(folder / 'MANIFEST.json', json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
-    subprocess.run(['python', str(folder / 'VERIFY_BUNDLE.py')], check=True)
+    subprocess.run([sys.executable, str(folder / 'VERIFY_BUNDLE.py')], check=True)
     with zipfile.ZipFile(archive, 'x', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as bundle:
         for path in sorted(folder.rglob('*')):
             if path.is_file():

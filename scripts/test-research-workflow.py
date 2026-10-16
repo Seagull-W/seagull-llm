@@ -217,5 +217,75 @@ class FeedCompatibilityTests(unittest.TestCase):
                 w.source_check(config, date(2026, 10, 14))
 
 
+class InstructionRetrievalTests(unittest.TestCase):
+    def config(self):
+        return {'topic': 'RL', 'slug': 'rl', 'tags': ['RL'], 'lookback_days': 7, 'max_items': 3, 'max_per_source': 2,
+                'keywords': ['reinforcement'], 'sources': [
+                    {'id': 'paper', 'type': 'rss', 'url': 'https://example.org/feed', 'group': 'paper'},
+                    {'id': 'notes', 'type': 'rss', 'url': 'https://example.org/notes', 'group': 'release', 'required': False}]}
+
+    def item(self, suffix, summary, group='paper'):
+        return {'url': 'https://example.org/' + suffix, 'title': 'RL study', 'summary': summary,
+                'published_at': '2026-10-13T00:00:00Z', 'updated_at': '', 'reading_scope': 'feed-excerpt',
+                'source_group': group}
+
+    def plan(self, **kwargs):
+        value = {'instruction': '说明优势估计，而不是项目发布', 'axes': [
+            {'id': 'advantage', 'question': '优势如何估计', 'queries': ['advantage'], 'preferred_groups': ['systematic']},
+            {'id': 'absent', 'question': '没有材料的轴', 'queries': ['zzznomatch']}]}
+        value.update(kwargs)
+        return value
+
+    def test_canonical_anchor_survives_window_and_gap_stays_open(self):
+        anchor = {'axis': 'advantage', 'url': 'https://arxiv.org/abs/2402.03300', 'title': 'DeepSeekMath',
+                  'summary': 'group relative advantage', 'published_at': '2024-02-05T00:00:00Z',
+                  'reading_scope': 'manual-excerpt'}
+        paper = self.item('new', 'reinforcement learning paper')
+        release = self.item('rel', 'reinforcement advantage release notes', 'release')
+        with tempfile.TemporaryDirectory() as directory:
+            run = Path(directory)
+            w.write_json(run / 'catalog', [{'slug': 'rl', 'date': '2026-10-01', 'window_end': '2026-10-02T00:00:00+08:00',
+                                            'source_urls': ['https://arxiv.org/abs/2402.03300']}])
+            with patch.object(w, 'CATALOG', run / 'catalog'), patch.object(w, 'source_records', side_effect=lambda source, *args: [paper] if source['id'] == 'paper' else [release]):
+                w.collect(self.config(), date(2026, 10, 14), run, plan=self.plan(anchors=[anchor]))
+            bundle = w.read_json(run / 'bundle.json')
+            covered = {row['id']: row for row in bundle['selection']['axis_coverage']}
+            self.assertEqual(covered['advantage']['status'], 'covered')
+            self.assertTrue(covered['advantage']['canonical'])
+            self.assertTrue(covered['advantage']['preferred_hit'])
+            self.assertEqual(covered['absent'], {'id': 'absent', 'status': 'gap', 'reason': 'no-match'})
+            self.assertEqual(bundle['items'][0]['url'], 'https://arxiv.org/abs/2402.03300')
+            self.assertIn('reinforcement', bundle['items'][1]['summary'])
+            self.assertEqual(bundle['selection']['strategy'], 'instruction-axes+group-round-robin')
+            self.assertFalse(bundle['source_status'][-1]['required'])
+            article = {'bundle_sha256': w.digest(bundle), 'title': 'RL', 'description': 'RL', 'sections': [
+                {'heading': h, 'paragraphs': [{'text': 'RL', 'source_ids': ['S1', 'S2', 'S3']}]} for h in ['判断', '局限']]}
+            w.write_json(run / 'article.json', article)
+            with patch.object(w, 'ROOT', run), patch.object(w, 'CATALOG', run / 'docs/research/catalog.json'):
+                w.integrate(self.config(), run)
+            page = (run / 'docs/research/2026-10-14-rl.md').read_text()
+            self.assertIn('规范摘录', page)
+            self.assertIn('无匹配材料', page)
+
+    def test_axis_only_hits_do_not_fill_the_news_pool(self):
+        rows = [self.item('base', 'advantage baseline only'), self.item('other', 'advantage without the standing keyword'),
+                self.item('news', 'reinforcement learning update')]
+        with tempfile.TemporaryDirectory() as directory:
+            run = Path(directory)
+            with patch.object(w, 'CATALOG', run / 'catalog'), patch.object(w, 'source_records', return_value=rows):
+                w.collect(self.config(), date(2026, 10, 14), run, plan=self.plan())
+            bundle = w.read_json(run / 'bundle.json')
+            summaries = [item['summary'] for item in bundle['items']]
+            self.assertEqual(sum('advantage' in text and 'reinforcement' not in text for text in summaries), 1)
+            self.assertTrue(any('reinforcement' in text for text in summaries))
+            self.assertLessEqual(len(bundle['items']), 3)
+
+    def test_plan_rejects_undated_or_unscoped_anchors(self):
+        with self.assertRaises(ValueError):
+            w.normalize_retrieval_plan(self.plan(anchors=[{'axis': 'advantage', 'url': 'https://example.org/a', 'title': 'A', 'summary': 'advantage'}]))
+        with self.assertRaises(ValueError):
+            w.normalize_retrieval_plan({'instruction': 'x', 'axes': [{'id': 'Bad', 'question': 'q', 'queries': ['a']}]})
+
+
 if __name__ == '__main__':
     unittest.main()

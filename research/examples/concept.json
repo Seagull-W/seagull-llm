@@ -1,0 +1,222 @@
+{
+  "version": 2,
+  "question": "因果推断中的混杂是什么，为什么相关不等于因果？",
+  "topic": "因果推断中的混杂是什么，为什么相关不等于因果？",
+  "slug": "causal-confounding",
+  "mode": "concept",
+  "profile": "academic",
+  "audience": "了解基本概率、希望理解混杂与因果识别的读者",
+  "scope": "入门概念说明，必要的概率直觉；不覆盖完整估计器目录，不给出医疗或政策决策建议。",
+  "time_policy": "all-time",
+  "recent_days": 365,
+  "tags": [
+    "调研",
+    "概念调研"
+  ],
+  "axes": [
+    {
+      "id": "definition",
+      "question": "混杂的定义，相关与干预效应有什么差别？",
+      "required": true,
+      "min_sources": 2,
+      "require_primary": true
+    },
+    {
+      "id": "mechanism",
+      "question": "共同原因如何产生混杂，调整需要哪些假设？",
+      "required": true,
+      "min_sources": 2,
+      "require_primary": true
+    },
+    {
+      "id": "history",
+      "question": "混杂、反事实与因果图的经典出处和不同表述是什么？",
+      "required": true,
+      "min_sources": 2,
+      "require_primary": true
+    },
+    {
+      "id": "examples",
+      "question": "有哪些具体例子能区分混杂、因果效应与调整？",
+      "required": true,
+      "min_sources": 2,
+      "require_primary": true
+    },
+    {
+      "id": "limits",
+      "question": "哪些变量不能随意控制，何时无法从观察数据识别效应？",
+      "required": true,
+      "min_sources": 2,
+      "require_primary": true
+    }
+  ],
+  "searches": [
+    {
+      "id": "definition-foundation",
+      "provider": "web",
+      "axis_ids": [
+        "definition"
+      ],
+      "query": "confounding causal inference definition association intervention textbook",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "definition-critical",
+      "provider": "web",
+      "axis_ids": [
+        "definition"
+      ],
+      "query": "confounding causal inference definition association intervention textbook counterexample limitations",
+      "role": "critical",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "mechanism-foundation",
+      "provider": "web",
+      "axis_ids": [
+        "mechanism"
+      ],
+      "query": "causal inference common cause backdoor adjustment assumptions",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "mechanism-critical",
+      "provider": "web",
+      "axis_ids": [
+        "mechanism"
+      ],
+      "query": "causal inference common cause backdoor adjustment assumptions counterexample limitations",
+      "role": "critical",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "history-foundation",
+      "provider": "web",
+      "axis_ids": [
+        "history"
+      ],
+      "query": "confounding potential outcomes causal graphs foundational references",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "history-critical",
+      "provider": "web",
+      "axis_ids": [
+        "history"
+      ],
+      "query": "confounding potential outcomes causal graphs foundational references counterexample limitations",
+      "role": "critical",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "examples-foundation",
+      "provider": "web",
+      "axis_ids": [
+        "examples"
+      ],
+      "query": "confounding causal inference examples textbook",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "examples-critical",
+      "provider": "web",
+      "axis_ids": [
+        "examples"
+      ],
+      "query": "confounding causal inference examples textbook counterexample limitations",
+      "role": "critical",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "limits-foundation",
+      "provider": "web",
+      "axis_ids": [
+        "limits"
+      ],
+      "query": "causal inference collider bias unmeasured confounding identification limitations",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "limits-critical",
+      "provider": "web",
+      "axis_ids": [
+        "limits"
+      ],
+      "query": "causal inference collider bias unmeasured confounding identification limitations counterexample limitations",
+      "role": "critical",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "arxiv-discovery",
+      "provider": "arxiv",
+      "axis_ids": [
+        "definition",
+        "mechanism",
+        "history",
+        "examples",
+        "limits"
+      ],
+      "query": "all:\"causal inference\" AND all:confounding",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": false,
+      "limit": 10
+    },
+    {
+      "id": "crossref-discovery",
+      "provider": "crossref",
+      "axis_ids": [
+        "definition",
+        "mechanism",
+        "history",
+        "examples",
+        "limits"
+      ],
+      "query": "causal inference confounding",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": false,
+      "limit": 10
+    }
+  ],
+  "budget": {
+    "max_rounds": 3,
+    "max_queries": 60,
+    "max_candidates": 150,
+    "max_evidence": 40,
+    "max_excerpt_chars": 60000
+  },
+  "delivery": {
+    "profile": "narrative",
+    "requirements": [
+      "直接回答用户问题，按读者的理解顺序组织成稿"
+    ],
+    "subjects": [],
+    "facets": []
+  }
+}

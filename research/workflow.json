@@ -117,5 +117,10 @@
     "branch": "main",
     "site_url": "https://seagull-llm.pages.dev"
   },
-  "max_per_source": 4
+  "max_per_source": 4,
+  "retrieval": {
+    "news": "group-round-robin",
+    "systematic": "legacy daily supplement only; general research follows .agents/skills/seagull-research/SKILL.md; --task is optional structured tooling",
+    "task_entry": "python3 scripts/research-workflow.py plan --question <question> --mode concept --slug <slug>"
+  }
 }

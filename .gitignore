@@ -30,3 +30,17 @@ __pycache__/
 
 # Local research evidence, agent logs and execution locks
 /.research/
+
+# Local historical handoffs and installation bundles
+/archive/
+
+# Local agent skills, configuration and Hermes handoff documentation
+/.agents/
+/.codex/
+/.hermes/
+/.aws/
+/hermes/
+
+# Local workspace overview and connectivity diagnostic
+/README.md
+/scripts/check-github-access.py

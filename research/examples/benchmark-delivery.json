@@ -1,0 +1,387 @@
+{
+  "version": 2,
+  "question": "介绍后训练与 agentic RL 的各个 benchmark，并展示具体数据形式、解释评测准则与理论保证的适用范围。",
+  "topic": "介绍后训练与 agentic RL 的各个 benchmark，并展示具体数据形式、解释评测准则与理论保证的适用范围。",
+  "slug": "benchmark-introductions",
+  "mode": "custom",
+  "delivery": {
+    "profile": "dataset-catalog",
+    "requirements": [
+      "读者无需跨节拼凑，就能理解每个 benchmark 测什么、一个样本是什么。",
+      "每个对象给出已读记录中的实际输入、参考/验收数据，解释模型输出与评分，禁止仅答案或 ID 投影。",
+      "准则与理论在对象介绍之后集中说明；理论讲清适用对象与假设，不重复空泛的无保证声明。",
+      "浏览器检索正常用于发现与阅读，区分原始来源、二手解释、实际阅读范围及主张支持。"
+    ],
+    "subjects": [
+      {
+        "id": "gsm8k",
+        "name": "GSM8K",
+        "required_roles": [
+          "input",
+          "reference"
+        ],
+        "min_examples": 1
+      },
+      {
+        "id": "math500",
+        "name": "MATH-500",
+        "required_roles": [
+          "input",
+          "reference"
+        ],
+        "min_examples": 1
+      },
+      {
+        "id": "aime2024",
+        "name": "AIME 2024",
+        "required_roles": [
+          "input",
+          "reference"
+        ],
+        "min_examples": 1
+      },
+      {
+        "id": "humaneval",
+        "name": "HumanEval",
+        "required_roles": [
+          "input",
+          "reference",
+          "scoring"
+        ],
+        "min_examples": 1
+      },
+      {
+        "id": "swe-bench",
+        "name": "SWE-bench",
+        "required_roles": [
+          "input",
+          "reference",
+          "scoring",
+          "environment"
+        ],
+        "min_examples": 1
+      },
+      {
+        "id": "swe-verified",
+        "name": "SWE-bench Verified",
+        "required_roles": [
+          "input",
+          "reference",
+          "scoring",
+          "environment"
+        ],
+        "min_examples": 1
+      },
+      {
+        "id": "tau-bench",
+        "name": "tau-bench",
+        "required_roles": [
+          "input",
+          "reference"
+        ],
+        "min_examples": 1
+      },
+      {
+        "id": "webarena",
+        "name": "WebArena",
+        "required_roles": [
+          "input",
+          "scoring",
+          "environment"
+        ],
+        "min_examples": 1
+      }
+    ],
+    "facets": [
+      {
+        "id": "overview",
+        "label": "一句话介绍",
+        "axis_ids": [
+          "objects"
+        ]
+      },
+      {
+        "id": "task",
+        "label": "测什么、要求完成什么",
+        "axis_ids": [
+          "objects"
+        ]
+      },
+      {
+        "id": "unit",
+        "label": "一条样本是什么",
+        "axis_ids": [
+          "objects"
+        ]
+      },
+      {
+        "id": "version",
+        "label": "版本与来源",
+        "axis_ids": [
+          "data"
+        ]
+      },
+      {
+        "id": "splits",
+        "label": "规模与切分",
+        "axis_ids": [
+          "protocol"
+        ]
+      },
+      {
+        "id": "storage",
+        "label": "文件与存储格式",
+        "axis_ids": [
+          "data"
+        ]
+      },
+      {
+        "id": "input",
+        "label": "模型实际看到什么",
+        "axis_ids": [
+          "data"
+        ]
+      },
+      {
+        "id": "output",
+        "label": "模型需要输出什么",
+        "axis_ids": [
+          "data"
+        ]
+      },
+      {
+        "id": "scoring",
+        "label": "如何判分",
+        "axis_ids": [
+          "protocol"
+        ]
+      },
+      {
+        "id": "use",
+        "label": "训练与评测用途",
+        "axis_ids": [
+          "protocol"
+        ]
+      },
+      {
+        "id": "limits",
+        "label": "适用范围与主要限制",
+        "axis_ids": [
+          "limits"
+        ]
+      }
+    ]
+  },
+  "profile": "general",
+  "audience": "需要理解问题并核对证据的中文读者",
+  "scope": "逐对象直接介绍与实际样本优先；准则和理论集中解释，明确假设；不执行模型或 benchmark。此文件仅为任务计划。",
+  "time_policy": "all-time",
+  "recent_days": 365,
+  "tags": [
+    "调研",
+    "后训练",
+    "评测"
+  ],
+  "axes": [
+    {
+      "id": "objects",
+      "question": "逐个对象介绍任务、用途和样本单位",
+      "required": true,
+      "min_sources": 1,
+      "require_primary": true
+    },
+    {
+      "id": "data",
+      "question": "具体数据形式与输入输出",
+      "required": true,
+      "min_sources": 1,
+      "require_primary": true
+    },
+    {
+      "id": "protocol",
+      "question": "切分、评分与使用协议",
+      "required": true,
+      "min_sources": 1,
+      "require_primary": true
+    },
+    {
+      "id": "limits",
+      "question": "适用条件与限制",
+      "required": true,
+      "min_sources": 1,
+      "require_primary": true
+    },
+    {
+      "id": "theory",
+      "question": "哪些命题直接相关，它们保证什么、依赖什么假设，哪里仍无直接保证？",
+      "required": true,
+      "min_sources": 1,
+      "require_primary": true
+    }
+  ],
+  "searches": [
+    {
+      "id": "objects-foundation",
+      "provider": "web",
+      "axis_ids": [
+        "objects"
+      ],
+      "query": "逐个对象介绍任务、用途和样本单位",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "objects-critical",
+      "provider": "web",
+      "axis_ids": [
+        "objects"
+      ],
+      "query": "逐个对象介绍任务、用途和样本单位 反例 局限 争议",
+      "role": "critical",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "objects-current",
+      "provider": "web",
+      "axis_ids": [
+        "objects"
+      ],
+      "query": "逐个对象介绍任务、用途和样本单位",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "data-foundation",
+      "provider": "web",
+      "axis_ids": [
+        "data"
+      ],
+      "query": "具体数据形式与输入输出",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "data-critical",
+      "provider": "web",
+      "axis_ids": [
+        "data"
+      ],
+      "query": "具体数据形式与输入输出 反例 局限 争议",
+      "role": "critical",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "data-current",
+      "provider": "web",
+      "axis_ids": [
+        "data"
+      ],
+      "query": "具体数据形式与输入输出",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "protocol-foundation",
+      "provider": "web",
+      "axis_ids": [
+        "protocol"
+      ],
+      "query": "切分、评分与使用协议",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "protocol-critical",
+      "provider": "web",
+      "axis_ids": [
+        "protocol"
+      ],
+      "query": "切分、评分与使用协议 反例 局限 争议",
+      "role": "critical",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "protocol-current",
+      "provider": "web",
+      "axis_ids": [
+        "protocol"
+      ],
+      "query": "切分、评分与使用协议",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "limits-foundation",
+      "provider": "web",
+      "axis_ids": [
+        "limits"
+      ],
+      "query": "适用条件与限制",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "limits-critical",
+      "provider": "web",
+      "axis_ids": [
+        "limits"
+      ],
+      "query": "适用条件与限制 反例 局限 争议",
+      "role": "critical",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "limits-current",
+      "provider": "web",
+      "axis_ids": [
+        "limits"
+      ],
+      "query": "适用条件与限制",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    },
+    {
+      "id": "theory-primary",
+      "provider": "web",
+      "axis_ids": [
+        "theory"
+      ],
+      "query": "verifiable rewards reinforcement learning benchmark verifier theoretical guarantees assumptions original paper",
+      "role": "foundation",
+      "time_policy": "all-time",
+      "required": true,
+      "limit": 8
+    }
+  ],
+  "budget": {
+    "max_rounds": 3,
+    "max_queries": 60,
+    "max_candidates": 150,
+    "max_evidence": 40,
+    "max_excerpt_chars": 60000
+  }
+}
