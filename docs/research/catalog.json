@@ -3,7 +3,7 @@
     "date": "2026-10-16",
     "slug": "post-training-rl-benchmarks",
     "title": "2026-10-16 后训练与 agentic RL 的 benchmark：准则、保证与数据形式",
-    "description": "逐项核对数学短答案、代码、软件工程、工具调用与网页环境基准的评测对象、评分协议和真实样本，区分 RL 训练用途与独立测试，并限定可验证奖励理论保证的假设与缺口。",
+    "description": "用一条真实记录讲清数学、代码、仓库修复、工具对话和网页任务各自的输入、交付和判分，并说明训练奖励与独立评测如何分开，以及可验证奖励理论保证的适用条件。",
     "route": "/research/2026-10-16-post-training-rl-benchmarks",
     "source_urls": [
       "https://raw.githubusercontent.com/openai/grade-school-math/master/README.md",
