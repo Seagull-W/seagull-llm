@@ -1,6 +1,7 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { readContent } from './content-source.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../docs')
 const categories = {
@@ -52,10 +53,10 @@ for await (const path of markdownFiles(root)) {
   const frontmatter = source.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)
   // Preserve hand-edited metadata and tags, including multiline YAML lists.
   if (frontmatter && /^tags\s*:/m.test(frontmatter[1])) { kept++; continue }
-  const text = source.slice(frontmatter?.[0].length ?? 0)
+  const text = readContent(path).content
     .replace(/```[\s\S]*?```/g, '').replace(/<script\b[\s\S]*?<\/script>/g, '')
   const title = frontmatter?.[1].match(/^title:\s*(.+)$/m)?.[1] ?? text.match(/^#{1,2}\s+(.+)$/m)?.[1] ?? name
-  const headings = text.match(/^#{1,6}\s+.+$/gm)?.join('\n') ?? ''
+  const headings = text.match(/^#{1,6}\s+.+$|<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]>/gm)?.join('\n') ?? ''
   const ranked = (name.startsWith('adr/') ? [] : topics).map(([tag, pattern], order) => ({
     tag, order, score: pattern.test(title) ? 10 : pattern.test(headings) ? 4 : pattern.test(text) ? 1 : 0
   })).filter(item => item.score > 0).sort((a, b) => b.score - a.score || a.order - b.order)

@@ -1,0 +1,137 @@
+<article class="native-document format-paper" data-format="paper" aria-label="项目目录与全链路覆盖">
+<header class="document-intro">
+<h1 id="项目目录与全链路覆盖" tabindex="-1">项目目录与全链路覆盖 <a class="header-anchor" href="#项目目录与全链路覆盖" aria-label="Permalink to &quot;项目目录与全链路覆盖&quot;">&ZeroWidthSpace;</a></h1>
+<blockquote>
+<p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
+</blockquote>
+<p>更新：2026-10-11。每个适合研究的项目都是独立、同等重要的目标；目录顺序不表示优先级。项目是否入选，取决于能否追溯真实训练、实验或环境构建的工程证据。资料多寡决定档案的证据深度。</p>
+</header>
+<section class="document-section">
+<h2 id="_1-独立项目入口" tabindex="-1">1. 独立项目入口 <a class="header-anchor" href="#_1-独立项目入口" aria-label="Permalink to &quot;1. 独立项目入口&quot;">&ZeroWidthSpace;</a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>项目</th>
+<th>时间与对象</th>
+<th>当前档案内容</th>
+<th>仍需追踪</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="/papers/projects/mimo-v2-6/">MiMo-V2.6</a></td>
+<td>2026-09；Pro/Flash 公开 RL、9B 复现与发布后修复</td>
+<td>看板原始序列、公告、回滚、数据、配置、benchmark、用户反馈</td>
+<td>原帖回复串、生产配置、全部重启日志与评分样本</td>
+</tr>
+<tr>
+<td><a href="/papers/projects/miles-glm-5-2/">Miles GLM-5.2</a></td>
+<td>2026-08 工程文章及当前 recipe；744B-A40B、64 GB300 参考运行</td>
+<td>终端任务、GRPO/TIS、Slurm/Ray、并行、KV、routing、replay</td>
+<td>原运行 SHA、完整 loss/评测序列与时间口径差异</td>
+</tr>
+<tr>
+<td><a href="/papers/projects/intellect-3/">INTELLECT-3</a></td>
+<td>2025-11 发布、2025-12 报告；106B-A12B、SFT→RL</td>
+<td>两阶段 SFT、环境、异步算法、实际资源分配、评测与失败尝试</td>
+<td>原运行配置、图表原始数值、checkpoint/恢复记录</td>
+</tr>
+<tr>
+<td><a href="/papers/projects/deepswe-preview/">DeepSWE-Preview</a></td>
+<td>2025-07；Qwen3-32B、64 H100、约六天 RL</td>
+<td>R2E-Gym 数据、奖励、GRPO++、容器调度、脚本、评测与实验反馈</td>
+<td>W&amp;B 原始曲线、评测包、历史训练脚本与恢复记录</td>
+</tr>
+<tr>
+<td><a href="/papers/projects/codemidas/">CodeMidas</a></td>
+<td>2026-09；任务生成管线与 MiMo-V2.5 RL 实验</td>
+<td>环境构建、执行验证、过滤、GRPO 配置、五项 benchmark 与行为分析</td>
+<td>官方生成代码、GPU/调度、loss 序列与故障日志</td>
+</tr>
+</tbody>
+</table>
+<p>INTELLECT-3 和 DeepSWE-Preview 的日期早于近期窗口，保留它们是因为存在可核验的实际工程材料。CodeMidas 同时包含环境构建与 RL 实验，尚未发现可读的训练直播归档。</p>
+</section>
+<section class="document-section">
+<h2 id="_2-同一套全链路检查项" tabindex="-1">2. 同一套全链路检查项 <a class="header-anchor" href="#_2-同一套全链路检查项" aria-label="Permalink to &quot;2. 同一套全链路检查项&quot;">&ZeroWidthSpace;</a></h2>
+<p>每份档案都检查：目标与模型起点 → 数据生产与切分 → 环境与 verifier → SFT/偏好/蒸馏阶段 → RL 算法与 loss 实现 → rollout、批次与权重版本 → 并行与调度 → 监控、性能与损失 → benchmark → 故障、修复与恢复 → checkpoint、发布与反馈。</p>
+<p>未知项明确写出“本轮未核验”；项目未使用的阶段需有来源才能标为“不适用”。同一框架的当前默认值不能替代某项目的历史配置。档案篇幅不强行一致，但每个项目都保留自己的检索缺口。</p>
+</section>
+<section class="document-section">
+<h2 id="_3-当前证据覆盖" tabindex="-1">3. 当前证据覆盖 <a class="header-anchor" href="#_3-当前证据覆盖" aria-label="Permalink to &quot;3. 当前证据覆盖&quot;">&ZeroWidthSpace;</a></h2>
+<p>表中“报告”指作者说明或图表，“代码”指可读实现，“数值”指已读取的机器可读观测；它们不代表同样的验证程度。</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>项目</th>
+<th>数据/环境</th>
+<th>算法与配置</th>
+<th>分布式/性能</th>
+<th>训练 loss</th>
+<th>benchmark</th>
+<th>故障/反馈</th>
+<th>恢复</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MiMo-V2.6</td>
+<td>数据卡、9B 代码；生产映射有缺口</td>
+<td>报告、9B 固定 SHA；生产配置不全</td>
+<td>报告、看板；生产拓扑不全</td>
+<td>已保存 Pro/Flash 全部公开数值</td>
+<td>三组逐步数值、9B 报告表</td>
+<td>公告、事件窗口、Issue、修复文章</td>
+<td>回滚可见；全部恢复状态未知</td>
+</tr>
+<tr>
+<td>Miles GLM-5.2</td>
+<td>任务与 Daytona recipe</td>
+<td>当前 GRPO/TIS 配置</td>
+<td>64 卡说明、Slurm/Ray 代码</td>
+<td>日志字段/保存路径；原序列未取得</td>
+<td>held-out 协议；完整分数未取得</td>
+<td>KV/routing/启动排错</td>
+<td>trainer replay、checkpoint 评测入口</td>
+</tr>
+<tr>
+<td>INTELLECT-3</td>
+<td>SFT 数据表、环境说明</td>
+<td>报告算法/参数、当前框架文档</td>
+<td>集群运维、480 卡 RL 布局说明</td>
+<td>SFT 曲线图；原始序列未取得</td>
+<td>最终表、在线曲线与评测附录</td>
+<td>offload 泄漏、CP/算法失败尝试</td>
+<td>当前框架文档；原 run 日志未知</td>
+</tr>
+<tr>
+<td>DeepSWE-Preview</td>
+<td>数据/环境代码、作者说明</td>
+<td>GRPO++ 说明、当前脚本</td>
+<td>Kubernetes、64 卡/512 容器说明</td>
+<td>W&amp;B 入口已确认；曲线读取受限</td>
+<td>最终结果、harness、评测包入口</td>
+<td>dockerd 崩溃、过滤与失败实验</td>
+<td>save cadence 可见；原恢复记录未知</td>
+</tr>
+<tr>
+<td>CodeMidas</td>
+<td>完整方法说明、过滤与验证</td>
+<td>GRPO 与附录参数</td>
+<td>GPU/拓扑/调度未核验</td>
+<td>评测/长度图可见；loss 原序列未取得</td>
+<td>五项协议，部分正文精确数值</td>
+<td>verifier 缺陷与泄漏筛选；运行事故未知</td>
+<td>原 checkpoint/恢复日志未知</td>
+</tr>
+</tbody>
+</table>
+<p>详细指标入口见 <a href="/papers/evidence/project-metrics">各项目指标证据索引</a>。不能把“公开了日志链接”写成“已经获取日志”，也不能将各项目的不同 benchmark 和采样协议直接排序。</p>
+</section>
+<section class="document-section">
+<h2 id="_4-后续检索如何推进" tabindex="-1">4. 后续检索如何推进 <a class="header-anchor" href="#_4-后续检索如何推进" aria-label="Permalink to &quot;4. 后续检索如何推进&quot;">&ZeroWidthSpace;</a></h2>
+<p>每个项目独立沿官网、作者帖子和回复串、仓库、模型/数据卡、看板、Issue、PR、报告附录追踪；先取得该项目自己的完整路径，再做跨项目比较。检索顺序根据可访问入口和待核验问题安排，已在一个项目中找到某个环节的资料，不会结束对另一项目同一环节的搜索。</p>
+<p>新项目满足证据条件时直接加入目录并建立档案，不设固定数量上限。框架的通用功能保存在工程专题；发现框架背后的具体运行时，以那次运行独立建档。</p>
+<p>返回：<a href="/papers/post-training-guide">阅读导引</a>、<a href="/papers/engineering/workflow">全链路地图</a>、<a href="/papers/evidence/gaps">各项目检索缺口</a>。</p>
+</section>
+</article>

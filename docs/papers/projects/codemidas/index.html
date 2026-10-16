@@ -1,0 +1,108 @@
+<article class="native-document format-paper" data-format="paper" aria-label="CodeMidas：从源码构建环境到 MiMo-V2.5 RL 实验">
+<header class="document-intro">
+<h1 id="codemidas-从源码构建环境到-mimo-v2-5-rl-实验" tabindex="-1">CodeMidas：从源码构建环境到 MiMo-V2.5 RL 实验 <a class="header-anchor" href="#codemidas-从源码构建环境到-mimo-v2-5-rl-实验" aria-label="Permalink to &quot;CodeMidas：从源码构建环境到 MiMo-V2.5 RL 实验&quot;">&ZeroWidthSpace;</a></h1>
+<blockquote>
+<p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
+</blockquote>
+</header>
+<section class="document-section">
+<h2 id="_1-对象与证据范围" tabindex="-1">1. 对象与证据范围 <a class="header-anchor" href="#_1-对象与证据范围" aria-label="Permalink to &quot;1. 对象与证据范围&quot;">&ZeroWidthSpace;</a></h2>
+<p>2026-09-18 发布的 CodeMidas 同时包含任务生成管线和 MiMo-V2.5 RL 实验。本轮已由摘要扩展到<a href="https://arxiv.org/html/2609.22068v1" target="_blank" rel="noreferrer">报告 v1 全文与 Appendix A</a>。原始生成代码、GPU 运行日志与直播看板尚未核验。</p>
+</section>
+<section class="document-section">
+<h2 id="_2-数据与环境路径" tabindex="-1">2. 数据与环境路径 <a class="header-anchor" href="#_2-数据与环境路径" aria-label="Permalink to &quot;2. 数据与环境路径&quot;">&ZeroWidthSpace;</a></h2>
+<p>路径是源码功能 → 行为规格/删去实现的开发起点 → 基于原实现执行构建测试 → 环境清理与一致性检查 → rollout 后过滤。最终 5,545 题、3,185 仓库、23 语言、15 领域。任务包含容器和隐藏 verifier；后者评分时才注入。过滤检查泄漏、测试判决缺陷和求解结果退化。<a href="https://arxiv.org/html/2609.22068v1" target="_blank" rel="noreferrer">报告 §3</a></p>
+<p>独立复核时需要逐题 source revision、规格、镜像、隐藏测试、过滤证据和 split manifest。第三方采用 CodeMidas 名称的仓库不能自动成为官方原管线；这些执行产物本轮尚未逐题取得。</p>
+</section>
+<section class="document-section">
+<h2 id="_3-算法与训练配置" tabindex="-1">3. 算法与训练配置 <a class="header-anchor" href="#_3-算法与训练配置" aria-label="Permalink to &quot;3. 算法与训练配置&quot;">&ZeroWidthSpace;</a></h2>
+<p>以下按报告 Appendix A 记录，不移植 MiMo-V2.6 或 9B 配方。</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>字段</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>起点 / 算法 / reward</td>
+<td>MiMo-V2.5 / GRPO / verifier 0 或 1</td>
+</tr>
+<tr>
+<td>batch / rollouts per task</td>
+<td>32 / 32</td>
+</tr>
+<tr>
+<td>advantage 标准差归一化</td>
+<td>disabled</td>
+</tr>
+<tr>
+<td>prompt / response 上限</td>
+<td>8,192 / 516,096 tokens</td>
+</tr>
+<tr>
+<td>最大 turns / staleness</td>
+<td>500 / 8</td>
+</tr>
+<tr>
+<td>optimizer / LR / warmup</td>
+<td>Adam / 5e-6 / 0</td>
+</tr>
+<tr>
+<td>Adam β / ε</td>
+<td>(0.95, 0.95) / 1e-15</td>
+</tr>
+<tr>
+<td>gradient clip / weight decay</td>
+<td>1 / 0</td>
+</tr>
+</tbody>
+</table>
+<p>出处：<a href="https://arxiv.org/html/2609.22068v1" target="_blank" rel="noreferrer">Appendix A</a>。上限值不能解释为平均轨迹长度或实际每卡可承载长度。本实验另有 SFT/偏好阶段尚未核验；模型更新、并行布局、调度器、依赖版本和权重传输代码仍待核验。</p>
+</section>
+<section class="document-section">
+<h2 id="_4-loss、benchmark-与行为反馈" tabindex="-1">4. loss、benchmark 与行为反馈 <a class="header-anchor" href="#_4-loss、benchmark-与行为反馈" aria-label="Permalink to &quot;4. loss、benchmark 与行为反馈&quot;">&ZeroWidthSpace;</a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>benchmark</th>
+<th>初始 → RL 后</th>
+<th>指标</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DeepSWE v1.1</td>
+<td>10.0 → 21.7</td>
+<td>pass rate，+11.7 个百分点</td>
+</tr>
+<tr>
+<td>ProgramBench</td>
+<td>4.5 → 21.5</td>
+<td>Almost Solved，至少 95% 测试通过，+17.0 个百分点</td>
+</tr>
+<tr>
+<td>Terminal-Bench v2.1</td>
+<td>63.7 → 72.2</td>
+<td>pass rate，+8.5 个百分点</td>
+</tr>
+<tr>
+<td>SWE-bench Pro / RepoZero C2Rust</td>
+<td>已列入五项外部评测；本轮未转录图中精确值</td>
+<td>待取逐题结果与数值表</td>
+</tr>
+</tbody>
+</table>
+<p>出处：<a href="https://arxiv.org/html/2609.22068v1" target="_blank" rel="noreferrer">报告 §4</a>。CodeMidas Val 为独立 200 题、每题 3 次尝试。报告还有验证成功率/长度、任务规模消融和行为分析；本轮未取得逐步训练 loss、KL、entropy、gradient 或图表原始 CSV。行为相关性不能直接证明训练收益的因果来源。</p>
+</section>
+<section class="document-section">
+<h2 id="_5-故障、恢复与发布闭环" tabindex="-1">5. 故障、恢复与发布闭环 <a class="header-anchor" href="#_5-故障、恢复与发布闭环" aria-label="Permalink to &quot;5. 故障、恢复与发布闭环&quot;">&ZeroWidthSpace;</a></h2>
+<p>本项目目前可研究的失败反馈主要在环境质量：泄漏、测试误判、起始/参考实现执行不一致、全成功或全失败。需进一步取得 rejected-task 样本和原始审查记录。集群 OOM、通信、重启、checkpoint 恢复及上线反馈尚未核验，不补写事故或恢复步骤。</p>
+</section>
+<section class="document-section">
+<h2 id="_6-独立检索缺口" tabindex="-1">6. 独立检索缺口 <a class="header-anchor" href="#_6-独立检索缺口" aria-label="Permalink to &quot;6. 独立检索缺口&quot;">&ZeroWidthSpace;</a></h2>
+<p>继续追踪官方代码与数据入口、作者社交线程/回复、任务构建和筛选记录、分布式资源/配置、训练 loss 与评测原序列、checkpoint 和失败样本。论文中的参数及结果是目前一类证据，还需逐项寻找真实运行材料。</p>
+<p>返回：<a href="/papers/projects/coverage">项目目录</a>、<a href="/papers/evidence/project-metrics">指标证据索引</a>。</p>
+</section>
+</article>

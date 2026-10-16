@@ -1,0 +1,168 @@
+<article class="native-document format-paper" data-format="paper" aria-label="公开后训练项目阅读导引">
+<header class="document-intro">
+<h1 id="公开后训练项目阅读导引" tabindex="-1">公开后训练项目阅读导引 <a class="header-anchor" href="#公开后训练项目阅读导引" aria-label="Permalink to &quot;公开后训练项目阅读导引&quot;">&ZeroWidthSpace;</a></h1>
+<blockquote>
+<p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
+</blockquote>
+<p>检索截止：2026-10-11。<strong>每个合适的项目都是独立、同等重要的研究目标</strong>，按数据、环境、奖励、算法、训练、分布式、监控、故障恢复、benchmark 和发布反馈的完整路径整理。来源包括作者社交帖子及回复、公开训练看板、团队公告、代码、配置、Issue、PR、评测、修复记录和报告附录。每个项目保留自己的证据与检索缺口。</p>
+</header>
+<section class="document-section">
+<h2 id="选择一个项目开始读" tabindex="-1">选择一个项目开始读 <a class="header-anchor" href="#选择一个项目开始读" aria-label="Permalink to &quot;选择一个项目开始读&quot;">&ZeroWidthSpace;</a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>项目</th>
+<th>独立档案</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MiMo-V2.6</td>
+<td><a href="/papers/projects/mimo-v2-6/">Pro/Flash 公开运行、9B 复现与上线修复</a></td>
+</tr>
+<tr>
+<td>Miles GLM-5.2</td>
+<td><a href="/papers/projects/miles-glm-5-2/">大型异步 RL、终端环境、Slurm/Ray 与排错</a></td>
+</tr>
+<tr>
+<td>INTELLECT-3</td>
+<td><a href="/papers/projects/intellect-3/">SFT→RL、环境、集群、算法、loss 与评测</a></td>
+</tr>
+<tr>
+<td>DeepSWE-Preview</td>
+<td><a href="/papers/projects/deepswe-preview/">R2E-Gym、GRPO++、容器调度与评测复现</a></td>
+</tr>
+<tr>
+<td>CodeMidas</td>
+<td><a href="/papers/projects/codemidas/">源码到环境的生产管线与 MiMo-V2.5 RL 实验</a></td>
+</tr>
+</tbody>
+</table>
+<p><a href="/papers/projects/coverage">项目目录与全链路覆盖</a>列出统一检查项、各项目开放程度与继续检索的问题。表格顺序不表示研究优先级；后续发现合适项目时继续独立建档。</p>
+</section>
+<section class="document-section">
+<h2 id="从哪里开始读" tabindex="-1">从哪里开始读 <a class="header-anchor" href="#从哪里开始读" aria-label="Permalink to &quot;从哪里开始读&quot;">&ZeroWidthSpace;</a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>你的目的</th>
+<th>阅读入口</th>
+<th>读完应能回答</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>先确认是不是罗福莉分享的那次训练</td>
+<td><a href="/papers/projects/mimo-v2-6/">小米公开运行</a></td>
+<td>什么时候训练、公开了什么、发生了哪些回滚和故障？</td>
+</tr>
+<tr>
+<td>建立完整流程</td>
+<td><a href="/papers/engineering/workflow">全链路地图</a></td>
+<td>每一阶段输入什么、输出什么、谁负责、如何验收？</td>
+</tr>
+<tr>
+<td>研究数据、任务和 reward</td>
+<td><a href="/papers/engineering/data-and-environments">数据与环境</a>、<a href="/papers/engineering/rewards-and-algorithms">奖励与算法</a></td>
+<td>如何避免把环境失败变成错误学习信号？</td>
+</tr>
+<tr>
+<td>研究真正的系统工程</td>
+<td><a href="/papers/engineering/async-and-consistency">异步采样</a>、<a href="/papers/engineering/distributed-performance">分布式调度</a></td>
+<td>为什么 GPU 多了仍然慢，为什么能跑却学不好？</td>
+</tr>
+<tr>
+<td>分析 benchmark、loss 和训练稳定性</td>
+<td><a href="/papers/evidence/project-metrics">各项目指标证据</a>、<a href="/papers/projects/mimo-v2-6/loss-and-metrics">损失与指标</a>、<a href="/papers/engineering/evaluation-and-feedback">评测</a></td>
+<td>哪些是原始数值、报告曲线、最终表或尚未读到的日志？</td>
+</tr>
+<tr>
+<td>准备训练或排查事故</td>
+<td><a href="/papers/engineering/operations-and-recovery">运行与恢复</a>、<a href="/papers/engineering/failure-handbook">故障手册</a></td>
+<td>怎么缩小问题范围，恢复时需要哪些状态？</td>
+</tr>
+<tr>
+<td>核对小米开源复现参数</td>
+<td><a href="/papers/projects/mimo-v2-6/9b-config">9B 配置表</a></td>
+<td>五个领域的资源、采样、评分与恢复参数有什么差异？</td>
+</tr>
+<tr>
+<td>看上线后的真实闭环</td>
+<td><a href="/papers/engineering/evaluation-and-feedback">评测与发布反馈</a></td>
+<td>checkpoint、harness、评测与 API 版本如何对应？</td>
+</tr>
+<tr>
+<td>按项目追踪完整路径</td>
+<td><a href="/papers/projects/coverage">独立项目目录</a></td>
+<td>每个项目的数据、算法、系统、结果和故障证据有哪些？</td>
+</tr>
+<tr>
+<td>复核数值与证据</td>
+<td><a href="/papers/projects/mimo-v2-6/dashboard-guide">看板指标指南</a>、<a href="/papers/evidence/sources">来源索引</a></td>
+<td>每个数字的口径、出处、版本及访问限制是什么？</td>
+</tr>
+</tbody>
+</table>
+<p>可以从任意项目档案连续阅读，也可以先读全链路地图，再按工程问题查专题。遇到具体报错时直接查故障手册。</p>
+</section>
+<section class="document-section">
+<h2 id="当前整理到的证据" tabindex="-1">当前整理到的证据 <a class="header-anchor" href="#当前整理到的证据" aria-label="Permalink to &quot;当前整理到的证据&quot;">&ZeroWidthSpace;</a></h2>
+<ul>
+<li>小米两个模型各 30 个最终保留训练步；Flash 2,062 个指标名、Pro 2,029 个。公开序列展开为 <strong>122,730 个记录槽位</strong>，包含原始缺失值，并非每个槽位都有观测。</li>
+<li>六条公开团队公告；保存了末尾事件窗口中的回滚记录。事件窗口和 <code>live</code> 文件不是完整日志，不能据此解释全部 19 次重启。</li>
+<li>三组离线评测；保留缺失步数、原始 benchmark 名称和 <code>avg@3</code> 口径。</li>
+<li>小米 9B 开源复现的配置与代码，明确区别于 Pro/Flash 原始生产训练。</li>
+<li>Miles 的 GLM-5.2 参考运行配置、Slurm/Ray 启动、KV/routing 故障与 replay；原 loss/benchmark 序列待取得。</li>
+<li>INTELLECT-3 的报告全文、两阶段 SFT、RL 算法与资源分配、最终评测表及失败尝试；原曲线数值待取得。</li>
+<li>DeepSWE-Preview 的数据/训练/评测代码、容器事故和实验反馈；W&amp;B 曲线及评测归档读取有缺口。</li>
+<li>CodeMidas 的任务生产/验证/过滤、GRPO 参数、benchmark 协议和部分精确结果；集群日志与官方生成代码待核验。</li>
+<li>跨项目工程专题，以及 slime 等框架的真实 Issue、候选修复与恢复文档。</li>
+</ul>
+</section>
+<section class="document-section">
+<h2 id="如何识别证据强度" tabindex="-1">如何识别证据强度 <a class="header-anchor" href="#如何识别证据强度" aria-label="Permalink to &quot;如何识别证据强度&quot;">&ZeroWidthSpace;</a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>标记</th>
+<th>含义</th>
+<th>可得结论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>归档观测</td>
+<td>看板 JSON、代码或配置直接可见</td>
+<td>文件中确实存在这个值/行为；不自动证明因果</td>
+</tr>
+<tr>
+<td>团队说明</td>
+<td>官方公告、作者技术文章</td>
+<td>团队公开给出的解释；未做独立集群验证</td>
+</tr>
+<tr>
+<td>用户反馈</td>
+<td>Issue 内报告和复现材料</td>
+<td>已有人报告此现象；不能代表所有配置</td>
+</tr>
+<tr>
+<td>整理建议</td>
+<td>由证据导出的运行方法</td>
+<td>可用作实验设计；不是该团队实际操作记录</td>
+</tr>
+<tr>
+<td>未公开/未核验</td>
+<td>找不到资料或入口不可读</td>
+<td>保留缺口，不补写 GPU 拓扑、日志或修复结果</td>
+</tr>
+</tbody>
+</table>
+<p>罗福莉的 <a href="https://x.com/_LuoFuli/status/2100296686719610932" target="_blank" rel="noreferrer">X 原帖链接</a>已定位，直接访问返回 403，全文未直接核验。原帖与这次运行的对应关系有转载线索；训练本身则由<a href="https://mimo.xiaomi.com/rl/" target="_blank" rel="noreferrer">小米官方看板</a>和<a href="https://mimo.mi.com/docs/en-US/news/latest/v2-6" target="_blank" rel="noreferrer">官方发布</a>确认。现在看板已是静态归档，不能把页面上的 <code>live</code> 标签当成训练仍在进行。</p>
+<p>没有在本机启动 GPU 训练、部署沙箱或调用评分模型。本次验证的是资料、代码可见行为、公开数值和整理文件的一致性。</p>
+</section>
+<section class="document-section">
+<h2 id="数据文件" tabindex="-1">数据文件 <a class="header-anchor" href="#数据文件" aria-label="Permalink to &quot;数据文件&quot;">&ZeroWidthSpace;</a></h2>
+<p><a href="/papers/projects/mimo-v2-6/evidence/manifest.json">小米看板归档目录</a>包含原始 JSON、SHA-256、逐步关键指标、全量指标长表、公告时间转换和离线评测 CSV。<a href="/papers/evidence/gaps">检索记录与缺口</a>说明哪些方向已经找到可用证据，哪些仍缺原始日志或社交平台全文。</p>
+<p>当前材料是截至 2026-10-11 的阶段性整理；各项目的证据缺口分别追踪。</p>
+</section>
+</article>

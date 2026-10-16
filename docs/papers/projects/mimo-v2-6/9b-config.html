@@ -1,0 +1,197 @@
+<article class="native-document format-paper" data-format="paper" aria-label="小米 9B 开源复现：配置核对表">
+<header class="document-intro">
+<h1 id="小米-9b-开源复现-配置核对表" tabindex="-1">小米 9B 开源复现：配置核对表 <a class="header-anchor" href="#小米-9b-开源复现-配置核对表" aria-label="Permalink to &quot;小米 9B 开源复现：配置核对表&quot;">&ZeroWidthSpace;</a></h1>
+<blockquote>
+<p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
+</blockquote>
+<p>这些是固定源码版本中的 <strong>启动器默认值</strong>，可以被环境变量或 CLI 覆盖。它们不代表直播中 Pro/Flash 的生产配置。以实际生成的 resolved config 为最终运行依据。</p>
+<p>版本：<code>XiaomiMiMo/verl</code> 的 <code>a2ad9f6160b03ff2d47e59832bfb6b289f37c917</code>。Code 核心文件已分别从分支与固定 SHA 再读取，内容相同。其他参数的完整原始表达式见 <a href="/papers/projects/mimo-v2-6/evidence/%E5%B0%8F%E7%B1%B39B%E5%90%AF%E5%8A%A8%E5%8F%82%E6%95%B0.csv">启动参数 CSV</a>，没有执行其中的 shell 表达式。</p>
+</header>
+<section class="document-section">
+<h2 id="_1-各领域需要独立配置" tabindex="-1">1. 各领域需要独立配置 <a class="header-anchor" href="#_1-各领域需要独立配置" aria-label="Permalink to &quot;1. 各领域需要独立配置&quot;">&ZeroWidthSpace;</a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>字段</th>
+<th style="text-align:right">Code</th>
+<th style="text-align:right">Cyber</th>
+<th style="text-align:right">General</th>
+<th style="text-align:right">Visual</th>
+<th style="text-align:right">Music</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>默认训练节点×每节点卡数</td>
+<td style="text-align:right">8×8</td>
+<td style="text-align:right">8×8</td>
+<td style="text-align:right">4×8</td>
+<td style="text-align:right">8×8</td>
+<td style="text-align:right">8×8</td>
+</tr>
+<tr>
+<td>rollout TP</td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">4</td>
+<td style="text-align:right">4</td>
+<td style="text-align:right">4</td>
+</tr>
+<tr>
+<td>task batch 变量</td>
+<td style="text-align:right">64</td>
+<td style="text-align:right">64</td>
+<td style="text-align:right">64</td>
+<td style="text-align:right">32</td>
+<td style="text-align:right">32</td>
+</tr>
+<tr>
+<td>每题 rollout n</td>
+<td style="text-align:right">16</td>
+<td style="text-align:right">16</td>
+<td style="text-align:right">8</td>
+<td style="text-align:right">8</td>
+<td style="text-align:right">8</td>
+</tr>
+<tr>
+<td>最大窗口 token</td>
+<td style="text-align:right">262,144</td>
+<td style="text-align:right">262,144</td>
+<td style="text-align:right">262,144</td>
+<td style="text-align:right">262,144</td>
+<td style="text-align:right">116,384</td>
+</tr>
+<tr>
+<td>prompt 预算</td>
+<td style="text-align:right">16,384</td>
+<td style="text-align:right">16,384</td>
+<td style="text-align:right">49,152</td>
+<td style="text-align:right">16,384</td>
+<td style="text-align:right">16,384</td>
+</tr>
+<tr>
+<td>最大推理 running requests</td>
+<td style="text-align:right">128</td>
+<td style="text-align:right">64</td>
+<td style="text-align:right">64</td>
+<td style="text-align:right">64</td>
+<td style="text-align:right">128</td>
+</tr>
+<tr>
+<td>agent worker 变量</td>
+<td style="text-align:right">64</td>
+<td style="text-align:right">128</td>
+<td style="text-align:right">32</td>
+<td style="text-align:right">32</td>
+<td style="text-align:right">32</td>
+</tr>
+<tr>
+<td>rollout 内存比例</td>
+<td style="text-align:right">0.78</td>
+<td style="text-align:right">0.78</td>
+<td style="text-align:right">0.75</td>
+<td style="text-align:right">0.75</td>
+<td style="text-align:right">0.85</td>
+</tr>
+<tr>
+<td>save freq</td>
+<td style="text-align:right">5</td>
+<td style="text-align:right">1</td>
+<td style="text-align:right">见下层脚本</td>
+<td style="text-align:right">10</td>
+<td style="text-align:right">10</td>
+</tr>
+<tr>
+<td>test freq</td>
+<td style="text-align:right">-1</td>
+<td style="text-align:right">999</td>
+<td style="text-align:right">见下层脚本</td>
+<td style="text-align:right">训练 -1 / 评测 1</td>
+<td style="text-align:right">10</td>
+</tr>
+</tbody>
+</table>
+<p>逐列来源：<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/code/train.sh" target="_blank" rel="noreferrer">Code</a>、<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/arvo/arvo.sh" target="_blank" rel="noreferrer">Cyber</a>、<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/general/general.sh" target="_blank" rel="noreferrer">General</a>、<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/design/webdev.sh" target="_blank" rel="noreferrer">Visual</a>、<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/design/music.sh" target="_blank" rel="noreferrer">Music</a>。这是源码索引，不能从默认 batch×n 直接推出真实并发或实际有效更新量。</p>
+</section>
+<section class="document-section">
+<h2 id="_2-code-的关键参数" tabindex="-1">2. Code 的关键参数 <a class="header-anchor" href="#_2-code-的关键参数" aria-label="Permalink to &quot;2. Code 的关键参数&quot;">&ZeroWidthSpace;</a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>组别</th>
+<th>默认设置</th>
+<th>为什么要检查</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>任务混合</td>
+<td>四个 white-box harness，step-hash，seed 20260911</td>
+<td>改 seed 或选择规则会改变实验</td>
+</tr>
+<tr>
+<td>训练量</td>
+<td>200 steps，batch64，n16</td>
+<td>与公开生产的 30 步/1568 prompts 不同</td>
+</tr>
+<tr>
+<td>loss</td>
+<td>prompt-mean，group filtering，优势不按标准差归一化</td>
+<td>聚合/过滤改变信号权重</td>
+</tr>
+<tr>
+<td>entropy</td>
+<td>coefficient0，chunking 开启，chunk size16384</td>
+<td>系数为 0 不意味着没有监控内存成本</td>
+</tr>
+<tr>
+<td>microbatch</td>
+<td>每 GPU 1，dynamic batch 开启</td>
+<td>token budget 与最长样本仍影响峰值</td>
+</tr>
+<tr>
+<td>旧策略</td>
+<td>阈值2，drop</td>
+<td>检查被丢弃的任务族与实际 staleness</td>
+</tr>
+<tr>
+<td>模型/布局</td>
+<td>actor TP8/PP1/CP1/EP1，共置默认</td>
+<td>不能把 9B 布局当作生产架构</td>
+</tr>
+<tr>
+<td>服务容量</td>
+<td>gateway8、max session2048、task CPU0.5</td>
+<td>session 还受 Pod quota 限制</td>
+</tr>
+<tr>
+<td>时间预算</td>
+<td>模型请求3600s、trajectory4800s、idle720s</td>
+<td>不同阶段超时语义不同</td>
+</tr>
+<tr>
+<td>行为监控</td>
+<td>repetition detect 开，zero reward/penalty 默认关</td>
+<td>检测不等于惩罚</td>
+</tr>
+<tr>
+<td>运行</td>
+<td>resume 禁用，save5，默认无周期评测</td>
+<td>启动成功不能证明续训或泛化收益</td>
+</tr>
+</tbody>
+</table>
+<p>来源为上述 Code 启动器、<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/code/env.example" target="_blank" rel="noreferrer">env</a>与 <a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/recipes/code/run_train.sh" target="_blank" rel="noreferrer">run_train</a>。启动器会将单轮 token/timeout/retry 写入实际 harness 配置，检查原 YAML 不足以确认最终值。</p>
+</section>
+<section class="document-section">
+<h2 id="_3-其他领域的差异" tabindex="-1">3. 其他领域的差异 <a class="header-anchor" href="#_3-其他领域的差异" aria-label="Permalink to &quot;3. 其他领域的差异&quot;">&ZeroWidthSpace;</a></h2>
+<p>General 必须配置 judge URL/key；默认模型名是脚本配置，不是证明生产 grader 使用同一模型。启动器将 reward 二值化阈值设为 1，开启 length penalty 与 infra sentinel；环境 setup3600s、trajectory1200s、reward timeout0 要结合实现解释。<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/general/general.sh" target="_blank" rel="noreferrer">General 启动器</a></p>
+<p>Cyber 默认 off-policy 阈值8、drop，启用 infra 从 group 剔除；environment setup900s、trajectory28800s。与 Code 的阈值2或 General 的时间预算不通用。<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/arvo/arvo.sh" target="_blank" rel="noreferrer">Cyber 启动器</a></p>
+<p>Visual 默认 temperature0.6/top-p0.95/top-k20，训练和评测 grader 参数分开；Music 则特意不指定这三项，以继承下层默认。给 Music 随手复制 Visual 采样参数会改变原参考实验。<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/design/webdev.sh" target="_blank" rel="noreferrer">Visual</a>、<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/design/music.env.example" target="_blank" rel="noreferrer">Music 环境</a></p>
+</section>
+<section class="document-section">
+<h2 id="_4-复现推进顺序" tabindex="-1">4. 复现推进顺序 <a class="header-anchor" href="#_4-复现推进顺序" aria-label="Permalink to &quot;4. 复现推进顺序&quot;">&ZeroWidthSpace;</a></h2>
+<p>这是整理建议，不是已经跑过的结果：固定父仓库/submodule revision与镜像 → 获取 9B SFT 模型和目标领域数据 → 确认环境/grader 依赖 → resolved config 预检 → 参考正确答案/失败答案评分检查 → 单 group rollout 捕获 → 固定轨迹的单更新 → 保存/恢复短跑 → 小规模 benchmark → 扩并发与节点。</p>
+<p>每一步应留下可审阅产物。数据、镜像、源码开放并不消除 GPU、Pod、grader API 和外部依赖的资源需求。</p>
+</section>
+</article>

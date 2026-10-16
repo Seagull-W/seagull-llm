@@ -2,13 +2,13 @@ import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
 import { test } from 'node:test'
 import { build } from 'esbuild'
-import matter from 'gray-matter'
 import { createHash } from 'node:crypto'
+import { readContent } from './content-source.mjs'
 
 const bundled = await build({ entryPoints: ['docs/.vitepress/sidebar.ts'], bundle: true,
   write: false, platform: 'node', format: 'esm' })
 const { papersSidebar } = await import(`data:text/javascript;base64,${Buffer.from(bundled.outputFiles[0].text).toString('base64')}`)
-const index = readFileSync('docs/papers/index.md', 'utf8')
+const index = readContent('docs/papers/index.md').content
 const cards = [...index.matchAll(/<ChapterCards :items='([\s\S]*?)'\s*\/>/g)]
   .flatMap(match => JSON.parse(match[1].replaceAll('&#39;', "'")))
 const fileFor = route => `docs${route.endsWith('/') ? route + 'index' : route}.md`
@@ -21,21 +21,21 @@ test('every paper and project has matching navigation, card and metadata', () =>
   for (const item of navItems) {
     const card = cards.find(card => card.link === item.link)
     assert.ok(card, item.link)
-    const { data, content } = matter(readFileSync(fileFor(item.link), 'utf8'))
+    const { data, content } = readContent(fileFor(item.link))
     assert.equal(card.title, data.title, item.link)
     assert.equal(card.description, data.description, item.link)
     assert.equal(item.text, data.title, item.link)
     assert.ok(data.tags.includes('论文与项目随谈'), item.link)
-    assert.equal((content.match(/^# /gm) ?? []).length, 1, item.link)
+    assert.equal((content.match(/<h1\b/g) ?? []).length, 1, item.link)
     for (const flag of ['hidden', 'search', 'published', 'status']) assert.equal(data[flag], undefined, item.link)
   }
 })
 
 test('imported links and images resolve inside the site', () => {
   for (const item of navItems.filter(item => !/^\/papers\/(deepseek-r1|gigpo|graph-gpo)\//.test(item.link))) {
-    const source = readFileSync(fileFor(item.link), 'utf8')
+    const source = readContent(fileFor(item.link)).content
     assert.doesNotMatch(source, /D:[/\\]|\.\.\/tmp\//, item.link)
-    for (const match of source.matchAll(/!?\[[^\]]*\]\((\/[^)]*)\)/g)) {
+    for (const match of source.matchAll(/(?:href|src)="(\/[^"#]*)(?:#[^"]*)?"/g)) {
       const route = decodeURIComponent(match[1].split('#')[0])
       assert.ok(existsSync(fileFor(route)) || existsSync(`docs/public${route}`), `${item.link}: ${route}`)
     }

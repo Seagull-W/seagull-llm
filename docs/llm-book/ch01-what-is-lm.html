@@ -1,0 +1,269 @@
+<article class="native-document format-book" data-format="book" aria-label="第 1 章 从一次对话说起：大模型到底在做什么">
+<header class="document-intro">
+<h1 id="第-1-章-从一次对话说起-大模型到底在做什么" tabindex="-1">第 1 章 从一次对话说起：大模型到底在做什么 <a class="header-anchor" href="#第-1-章-从一次对话说起-大模型到底在做什么" aria-label="Permalink to &quot;第 1 章 从一次对话说起：大模型到底在做什么&quot;">&ZeroWidthSpace;</a></h1>
+</header>
+<section class="document-section">
+<h2 id="本章导引" tabindex="-1">本章导引 <a class="header-anchor" href="#本章导引" aria-label="Permalink to &quot;本章导引&quot;">&ZeroWidthSpace;</a></h2>
+<blockquote>
+<p>你大概率已经用过 ChatGPT、DeepSeek 或类似的工具：让它写一封邮件、解释一份化验单、翻译一段文献，它几乎总能给出像样的回答。但它到底是什么？那个&quot;会说话的机器&quot;内部发生了什么？本章不急于抛出公式，而是从你最熟悉的体验出发，先建立一张全景地图——大模型在做什么、它是怎么做到的、它擅长什么又做不好什么。</p>
+</blockquote>
+</section>
+<section class="document-section">
+<h2 id="_1-1-你已经见过它了" tabindex="-1">1.1 你已经见过它了 <a class="header-anchor" href="#_1-1-你已经见过它了" aria-label="Permalink to &quot;1.1 你已经见过它了&quot;">&ZeroWidthSpace;</a></h2>
+<p>如果你打开过任何一个大模型对话产品，比如网页版的 DeepSeek、豆包，输入&quot;帮我用通俗的话解释什么是胆固醇&quot;，它会流畅地生成一段回答，讲清楚低密度脂蛋白和高密度脂蛋白的区别，顺便叮嘱你注意饮食。你可能会觉得：它好像真的&quot;懂&quot;医学。</p>
+<p>但请注意一个细节：它的回答不是一次性出现的，而是一个字、一个字地蹦出来。这个看似不起眼的现象，恰恰是理解大模型一切行为的钥匙。本章就从这把钥匙开始。</p>
+<p>那么，这个&quot;一个字一个字蹦出来&quot;的过程，背后到底在做什么？</p>
+</section>
+<section class="document-section">
+<h2 id="_1-2-一个字一个字蹦出来-它在做什么" tabindex="-1">1.2 一个字一个字蹦出来：它在做什么 <a class="header-anchor" href="#_1-2-一个字一个字蹦出来-它在做什么" aria-label="Permalink to &quot;1.2 一个字一个字蹦出来：它在做什么&quot;">&ZeroWidthSpace;</a></h2>
+<p>做一个很小的思想实验。请把下面这句话补完整：</p>
+<blockquote>
+<p>今天天气很___</p>
+</blockquote>
+<p>你的脑海里大概浮现出&quot;好&quot;或者&quot;差&quot;。你并没有去查天气预报，只是凭经验知道：在中文里，&quot;今天天气很&quot;后面接&quot;好&quot;的概率，远远高于接&quot;苹果&quot;。</p>
+<p>这就是大模型在做的事情——<strong>预测下一个词</strong>。</p>
+<p>给定已经出现的一段文字，大模型计算出&quot;下一个最可能是什么&quot;，把这个词接上去；再以更长的文字为输入，预测下一个词，如此循环。你在屏幕上看到的&quot;一个字一个字蹦出来&quot;，正是这个循环过程的外在表现。当你让它写一封邮件时，它实际上在不断&quot;接龙&quot;：每一步都根据前面已经写下的内容，猜下一个字该是什么。实际实现远比这复杂，但原理并无二致。</p>
+<p>这里有一个关键认知，值得在阅读全书时反复回想：<strong>大模型并不是先&quot;理解&quot;了你的问题，再去&quot;组织&quot;答案。它从头到尾只在做一件事——根据上文，预测下一个词。</strong> 目前的大语言模型仍然做不到严格的因果推理；有研究表明，模型有时会先确定回答的结论，再根据结论生成看似合理的推导过程。</p>
+<p>下面这个演示让你亲手体验&quot;预测下一个词&quot;的过程。每次点击一个候选词，它就会被接上去，然后模型根据新的文本重新预测——这就是&quot;一个字一个字蹦出来&quot;的内部循环。你也可以点击&quot;自动生成&quot;，让模型自己接龙。</p>
+<p>下面的折叠内容会包含一些术语，可以不用细究。另外，下方选择真实模型的话会需要下载一段时间，建议先选择模拟。由于模型参数量小，生成的句子可能不会很流畅。</p>
+<details class="details custom-block"><summary>本演示使用的模型（点击展开/折叠）</summary>
+<p>演示默认使用基于统计的 n-gram 模拟引擎（无需下载）。你也可以点击组件中的&quot;加载真实模型&quot;按钮，切换到 <strong>Qwen2.5-0.5B-Instruct</strong> 真实模型，在浏览器中本地运行推理。</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>属性</th>
+<th>数值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>参数量</td>
+<td>5 亿（0.5B）</td>
+<td>每个参数是一个浮点数，量化后约需 500MB 存储</td>
+</tr>
+<tr>
+<td>网络层数</td>
+<td>24 层</td>
+<td>Transformer 解码器层数，数据逐层加工</td>
+</tr>
+<tr>
+<td>隐藏维度</td>
+<td>896</td>
+<td>每层内部向量的宽度</td>
+</tr>
+<tr>
+<td>注意力头数</td>
+<td>14</td>
+<td>并行关注上文不同位置的能力</td>
+</tr>
+<tr>
+<td>词表大小</td>
+<td>151,936</td>
+<td>模型认识的所有 token 数量</td>
+</tr>
+<tr>
+<td>量化精度</td>
+<td>4-bit</td>
+<td>每个权重用 4 比特存储（原始 16-bit 压缩到 1/4）</td>
+</tr>
+<tr>
+<td>推理框架</td>
+<td>ONNX Runtime Web</td>
+<td>通过 WebGPU（GPU 加速）或 WASM（CPU）在浏览器中执行</td>
+</tr>
+</tbody>
+</table>
+<p><strong>从输入到输出的完整过程：</strong></p>
+<ol>
+<li><strong>分词</strong>：输入文本被切分为 token，每个 token 查表得到一个整数 ID。例如&quot;今天天气很&quot;→ 5 个 token ID。</li>
+<li><strong>嵌入</strong>：每个 token ID 映射为一个 896 维向量（可以理解为一个有 896 个数字的坐标），编码该词的语义信息。</li>
+<li><strong>Transformer 计算</strong>：这组向量依次通过 24 层 Transformer Block。每层包含自注意力机制（让每个词&quot;看到&quot;上下文中其他词）和前馈网络（对注意力结果做非线性变换）。</li>
+<li><strong>输出 logits</strong>：最后一层输出一个形状为 <code>[1, 序列长度, 151936]</code> 的张量——即对词表中每个 token 打一个原始分数（logits）。</li>
+<li><strong>Softmax</strong>：取序列最后一个位置的 logits（151936 个分数），经 softmax 归一化为概率分布（所有概率之和为 1）。</li>
+<li><strong>选取候选</strong>：按概率从高到低排序，取前 6 个 token 展示在界面上。点击其中一个，它会被拼回原文，然后从第 1 步重新开始。</li>
+</ol>
+</details>
+<ClientOnly>
+  <NextTokenViz />
+</ClientOnly>
+</section>
+<section class="document-section">
+<h2 id="_1-3-它-读-过多少-一个关于规模的直觉" tabindex="-1">1.3 它&quot;读&quot;过多少：一个关于规模的直觉 <a class="header-anchor" href="#_1-3-它-读-过多少-一个关于规模的直觉" aria-label="Permalink to &quot;1.3 它&quot;读&quot;过多少：一个关于规模的直觉&quot;">&ZeroWidthSpace;</a></h2>
+<p>&quot;预测下一个词&quot;听起来简单得近乎幼稚——这真的能产生智能吗？关键在于一个字：<strong>多</strong>（所谓的 scaling law）。</p>
+<p>以 GPT-3 为例，它在训练阶段&quot;读&quot;过的文本，大约是 4990 亿个 token（token 可以先粗略理解为&quot;词&quot;，即大模型能够直接处理和理解的文本单元）。这个数字大得没有实感，换算一下：它大约相当于 <strong>86 万本《西游记》</strong>。人生不过三万天，就算不吃不睡、每天读完一本《西游记》，也要读上 <strong>28.6 辈子</strong> 才能读完它看过的材料 [1]。</p>
+<p>当一个程序把人类有史以来写下的海量文本都&quot;读&quot;了一遍之后（并且能够很好地学习），它对&quot;在某种上下文里，接下来通常会出现什么&quot;的判断，就会准得惊人。语言里藏着规律——语法是规律，常识是规律，&quot;问诊之后通常会给出建议&quot;也是一种规律。大模型把这些规律，连同规律里承载的知识，一并学进了它那堆数字参数里。</p>
+<p>所以，与其说大模型&quot;懂&quot;医学，不如说它&quot;见过太多医学文本，于是知道在病人描述症状之后，一个称职的回答通常会包含哪些内容&quot;。这个区别很重要，它决定了你该如何信任它、如何使用它——我们会在第二层详细讨论。需要说明的是，这不代表模型无法给出正确的回答；了解这个区别的意义在于，帮助你对其工作机制建立更准确的认识。</p>
+</section>
+<section class="document-section">
+<h2 id="_1-4-打开黑盒-从文字到回答-中间发生了什么" tabindex="-1">1.4 打开黑盒：从文字到回答，中间发生了什么 <a class="header-anchor" href="#_1-4-打开黑盒-从文字到回答-中间发生了什么" aria-label="Permalink to &quot;1.4 打开黑盒：从文字到回答，中间发生了什么&quot;">&ZeroWidthSpace;</a></h2>
+<p>现在，你大致知道大模型在&quot;预测下一个词&quot;，也知道了它凭什么能预测得这么准。但&quot;预测&quot;这两个字背后，到底发生了什么？我们先把那个神秘的&quot;黑盒&quot;打开一条缝，看一眼全景。</p>
+<p>当你输入一句话、大模型开始生成回答时，数据会经历这样一段旅程：</p>
+
+      <Suspense> 
+      <template #default>
+      <Mermaid id="mermaid-211" class="mermaid" graph="graph%20LR%0A%20%20%20%20A%5B%E4%BD%A0%E8%BE%93%E5%85%A5%E7%9A%84%E6%96%87%E5%AD%97%5D%20--%3E%20B%5B%E5%88%87%E6%88%90%E5%B0%8F%E5%9D%97%3Cbr%2F%3EToken%5D%0A%20%20%20%20B%20--%3E%20C%5B%E6%AF%8F%E4%B8%AA%E5%9D%97%E5%8F%98%E6%88%90%3Cbr%2F%3E%E4%B8%80%E4%B8%B2%E6%95%B0%E5%AD%97%5D%0A%20%20%20%20C%20--%3E%20D%5B%E9%80%81%E5%85%A5%E5%A4%A7%E8%84%91%3Cbr%2F%3ETransformer%5D%0A%20%20%20%20D%20--%3E%20E%5B%E7%AE%97%E5%87%BA%E4%B8%8B%E4%B8%80%E4%B8%AA%E8%AF%8D%3Cbr%2F%3E%E7%9A%84%E6%A6%82%E7%8E%87%5D%0A%20%20%20%20E%20--%3E%20F%5B%E9%80%89%E4%B8%80%E4%B8%AA%E8%AF%8D%3Cbr%2F%3E%E6%8E%A5%E4%B8%8A%E5%8E%BB%5D%0A%20%20%20%20F%20--%3E%20D%0A"></Mermaid>
+      </template>
+        <!-- loading state via #fallback slot -->
+        <template #fallback>
+          Loading...
+        </template>
+      </Suspense><p>逐步说明每一步：</p>
+<ul>
+<li><strong>切成小块（Token）</strong>：模型不直接认字，它先把你的输入切成一个个小单元，比如&quot;胆固醇&quot;可能被切成&quot;胆&quot;和&quot;固醇&quot;，每个token以一个数字的形式表示。</li>
+<li><strong>变成数字</strong>：每个小块被查表换成一串数字（向量）。可以理解成给每个词发一张&quot;身份证&quot;，身份证上记录着它的&quot;含义坐标&quot;。用术语来讲，这步叫词嵌入（embedding）——想象一个多维空间，每个 token 被映射到其中某个位置，这个转变过程就是将一个整数变成一个高维向量。</li>
+<li><strong>送入大脑（Transformer）</strong>：这串数字进入一个叫 Transformer 的网络，在里面经过多层处理。这是大模型最核心的部分。</li>
+<li><strong>算出概率</strong>：处理完后，模型对词表里每一个候选词打一个分，表示&quot;下一个是它的可能性有多大&quot;。</li>
+<li><strong>选一个、接上去、再来一遍</strong>：根据概率选一个词（通常选概率高的，但也可以带一定随机性），接在后面，然后把新的整段文字重新喂回去，进入下一轮。</li>
+</ul>
+<p>这整段旅程里，没有任何一步是&quot;魔法&quot;。每一步都是确定的、可解释的计算。本书的第一层，就是把这张地图上的每一站一个一个讲清楚。你不需要现在就理解每一步——记住这张全景图就够了。</p>
+</section>
+<section class="document-section">
+<h2 id="_1-5-它能做什么-不能做什么" tabindex="-1">1.5 它能做什么，不能做什么 <a class="header-anchor" href="#_1-5-它能做什么-不能做什么" aria-label="Permalink to &quot;1.5 它能做什么，不能做什么&quot;">&ZeroWidthSpace;</a></h2>
+<p>在深入细节之前，有一件事比&quot;它怎么工作&quot;更实用：先建立对它的合理预期。很多对大模型的失望，都来自预期错位。而要建立准确预期，需要看清两件事——<strong>这个模型本身擅长什么</strong>，以及<strong>它是原生单打独斗，还是被套上了一层外壳</strong>。</p>
+<h3 id="先看原生大模型-它的边界在哪" tabindex="-1">先看原生大模型：它的边界在哪 <a class="header-anchor" href="#先看原生大模型-它的边界在哪" aria-label="Permalink to &quot;先看原生大模型：它的边界在哪&quot;">&ZeroWidthSpace;</a></h3>
+<p>所谓&quot;原生大模型&quot;，就是模型本身——文本进、文本出，回答完一个提问就停下。它两次回答之间没有记忆，也不会自己去查资料、算算术或执行代码。把它单独拎出来看，能力边界大致如下。</p>
+<p><strong>它比较擅长的：</strong></p>
+<ul>
+<li>与语言打交道的事：改写、摘要、翻译、润色、解释概念</li>
+<li>从大量文本里提取和整理信息</li>
+<li>写常见的代码、解释报错</li>
+<li>基于它&quot;读过&quot;的内容回答常识性问题</li>
+</ul>
+<p><strong>它不太擅长的：</strong></p>
+<ul>
+<li>需要精确计算的事（它本质是在&quot;猜&quot;下一个词，不是在算算术——让它直接算药物剂量很容易出错）</li>
+<li>需要绝对可靠的事，比如确诊一个病、做一个法律判断</li>
+<li>它训练数据截止之后才发生的事（它不知道&quot;今天&quot;的最新诊疗指南）</li>
+<li>复杂的多步规划与执行</li>
+</ul>
+<p>一句话总结：<strong>把原生大模型当成一个读过海量书籍、博学但会自信地犯错、且手无寸铁的研究助理。</strong> 它的每句话都值得听，但没有一句可以不经核实就直接用于关键决策。</p>
+<h3 id="而且-不同模型的强项并不一样" tabindex="-1">而且，不同模型的强项并不一样 <a class="header-anchor" href="#而且-不同模型的强项并不一样" aria-label="Permalink to &quot;而且，不同模型的强项并不一样&quot;">&ZeroWidthSpace;</a></h3>
+<p>上面这份&quot;擅长 / 不擅长&quot;只是大方向。具体到某个模型，强项会因训练数据和设计取向而不同：有的更会写代码，有的更会做数学推理，有的中文表达更地道，有的长文本处理更强。业界用一批标准化的&quot;考试&quot;来量化这些方向，常见的有：</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>评测</th>
+<th>衡量的方向</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MMLU</td>
+<td>跨 57 个学科的综合知识问答</td>
+</tr>
+<tr>
+<td>HumanEval</td>
+<td>写出的代码能否通过测试用例</td>
+</tr>
+<tr>
+<td>GSM8K</td>
+<td>小学级别的数学推理</td>
+</tr>
+<tr>
+<td>GPQA</td>
+<td>研究生级别的科学推理</td>
+</tr>
+<tr>
+<td>Chatbot Arena</td>
+<td>真人盲测投票的综合体感排名</td>
+</tr>
+</tbody>
+</table>
+<p>所以&quot;哪个模型更好&quot;往往没有标准答案，只有&quot;在你关心的那个方向上谁更强&quot;。</p>
+<h3 id="边界不是固定的-harness-登场" tabindex="-1">边界不是固定的：harness 登场 <a class="header-anchor" href="#边界不是固定的-harness-登场" aria-label="Permalink to &quot;边界不是固定的：harness 登场&quot;">&ZeroWidthSpace;</a></h3>
+<p>这里有一个关键转折——上面那些短板，很多并不是&quot;大模型&quot;这个概念的宿命，而是&quot;原生大模型&quot;的局限。一旦给模型套上一层外壳，它的能力边界就会大幅外扩。这层外壳，业界叫 <strong>harness</strong>（字面理解为约束即可，我们对大模型能力的讨论离不开约束二字，甚至在某种程度上围绕它们进行）。</p>
+<p>一句最简洁的定义：<strong>Agent = 模型 + Harness。除了模型本身，围绕它的一切都是 harness。</strong> 它是套在模型外面的软件脚手架——那个不断&quot;调用模型→解析它想用什么工具→执行工具→把结果喂回去→再调用&quot;的循环，那些给模型装上的工具（计算器、代码执行、联网搜索、调用 API），那套跨会话的记忆，以及出错时的纠错与护栏 [7][8]。</p>
+<p>换句话说，原生模型只能&quot;说&quot;，harness 让它能&quot;做&quot;。它如何补上原生短板，一目了然：</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>原生大模型的短板</th>
+<th>harness 给了它什么</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>算不准精确数学</td>
+<td>计算器 / 代码执行</td>
+<td>模型列算式，工具负责算</td>
+</tr>
+<tr>
+<td>不知道今天的新信息</td>
+<td>联网搜索 / 检索（RAG）</td>
+<td>先查再答，基于事实</td>
+</tr>
+<tr>
+<td>两次对话间没记忆</td>
+<td>记忆 / 持久存储</td>
+<td>记住你之前的病情与偏好</td>
+</tr>
+<tr>
+<td>只会输出文字</td>
+<td>工具调用（发邮件、查库、调 API）</td>
+<td>从&quot;会说话&quot;到&quot;会干活&quot;</td>
+</tr>
+<tr>
+<td>复杂多步任务容易乱</td>
+<td>规划循环 + 纠错 + 进度跟踪</td>
+<td>拆步、纠错、逐步推进</td>
+</tr>
+</tbody>
+</table>
+<h3 id="一个重要的提醒-harness-拓展边界-但不消除本性" tabindex="-1">一个重要的提醒：harness 拓展边界，但不消除本性 <a class="header-anchor" href="#一个重要的提醒-harness-拓展边界-但不消除本性" aria-label="Permalink to &quot;一个重要的提醒：harness 拓展边界，但不消除本性&quot;">&ZeroWidthSpace;</a></h3>
+<p>需要注意的是：harness 拓展的是模型的<strong>能力边界</strong>，却没有改变它的<strong>概率本性</strong>。</p>
+<p>模型还是会幻觉——哪怕 harness 给了它搜索工具，它也可能把搜到的事实拼接错；harness 能让它算对一道算术题，却管不住它推理时偶尔的&quot;信口开河&quot;。所以更准确的心智模型是：<strong>agent 是一个&quot;手眼齐全、但仍会自信犯错&quot;的研究助理</strong>——比原生模型能干得多，但它的每一句结论、每一次操作依然需要你的核查，尤其在医疗、法律这类容错率极低的场景。</p>
+<p>实际上，经过多年发展，业界先进模型往往会对 harness 做专门的适配和训练。你目前不需要了解具体怎么做的，只需理解一点：模型和 harness 的联系越来越紧密，甚至可以说是不可分割的。</p>
+<hr>
+</section>
+<section class="document-section">
+<h2 id="_1-6〔深入·可选〕如果你想更精确-概率的语言" tabindex="-1">1.6〔深入·可选〕如果你想更精确：概率的语言 <a class="header-anchor" href="#_1-6〔深入·可选〕如果你想更精确-概率的语言" aria-label="Permalink to &quot;1.6〔深入·可选〕如果你想更精确：概率的语言&quot;">&ZeroWidthSpace;</a></h2>
+<blockquote>
+<p>这一节是给&quot;想看看严谨版本长什么样&quot;的读者准备的。如果此刻你只想先建立直觉，完全可以跳过，等读完第一层再回来看。</p>
+</blockquote>
+<p>前面我们说大模型在&quot;预测下一个词&quot;，用更精确的语言讲，它建模的是一个<strong>条件概率</strong>——在已经出现 <span class="math-inline" data-tex="w_1, w_2, \ldots, w_{t-1}"></span> 这些词的前提下，下一个词是 <span class="math-inline" data-tex="w_t"></span> 的概率：</p>
+<p><span class="math-inline" data-tex="P(w_t \mid w_1, w_2, \ldots, w_{t-1})"></span></p>
+<p>这里 <span class="math-inline" data-tex="w_t"></span> 表示序列里第 <span class="math-inline" data-tex="t"></span> 个词，竖线 <span class="math-inline" data-tex="\mid"></span> 读作&quot;在……的条件下&quot;。大模型每一步做的事，就是对词表里每一个候选词算出这个概率，从而得到一张&quot;下一个词的可能性分布&quot;。</p>
+<p>进而，一整句话 <span class="math-inline" data-tex="w_1, w_2, \ldots, w_n"></span> 出现的总概率，可以用概率论的链式法则，拆成每一步条件概率的连乘：</p>
+<p><span class="math-inline" data-tex="P(w_1, w_2, \ldots, w_n) = \prod_{t=1}^{n} P(w_t \mid w_1, \ldots, w_{t-1})"></span></p>
+<p><span class="math-inline" data-tex="\prod"></span> 是连乘符号，意思是把每一项乘起来；当 <span class="math-inline" data-tex="t=1"></span> 时，<span class="math-inline" data-tex="P(w_1 \mid \emptyset) = P(w_1)"></span>，即第一个词的无条件概率。这个分解告诉我们：<strong>看似不可计算的&quot;整句话的概率&quot;，被拆成了一系列可以逐个估计的&quot;下一步预测&quot;——这正是大模型一步步生成文本的数学写照。</strong></p>
+<p>你会发现，这一节的公式，无非是把 1.2 节的&quot;接龙&quot;直觉，换成了精确的数学语言。直觉在先，形式化在后——这也是全书对待公式的方式。这一思想最早由 Shannon（1948）在《通信的数学理论》中奠定 [2]。</p>
+<p>需要注意的是，数学表达的简洁背后隐藏着相当大的复杂性。对条件概率的建模是一件复杂的事，现实中总会遇到各种各样的问题；如果不深入了解，最终也只是雾里看花，见不得全貌。</p>
+</section>
+<section class="document-section">
+<h2 id="_1-7-简短的历史脉络" tabindex="-1">1.7 简短的历史脉络 <a class="header-anchor" href="#_1-7-简短的历史脉络" aria-label="Permalink to &quot;1.7 简短的历史脉络&quot;">&ZeroWidthSpace;</a></h2>
+<p>把镜头拉远，&quot;对语言进行概率建模&quot;这件事，比大模型早得多。</p>
+<ul>
+<li><strong>1913 年</strong>，马尔可夫用统计方法分析普希金的《叶甫盖尼·奥涅金》，被视作语言建模的最早雏形 [3]。</li>
+<li><strong>1948 年</strong>，Shannon 把自然语言视为随机过程，提出用统计方法估计词序列的概率，奠定了语言建模的理论基础 [2]。</li>
+<li><strong>20 世纪后半叶</strong>，n-gram 等统计语言模型在语音识别、机器翻译里广泛应用，但受限于&quot;只看前面几个词&quot;和&quot;把每个词当成孤立符号&quot;。</li>
+<li><strong>2003 年</strong>，Bengio 等人提出神经概率语言模型，让每个词变成一串连续的向量，&quot;猫&quot;和&quot;狗&quot;在模型眼里终于有了相似性 [4]。</li>
+<li><strong>2017 年</strong>，Vaswani 等人提出 Transformer 架构，用&quot;注意力机制&quot;取代循环结构，让模型能并行处理、能直接看到任意两个词之间的关系 [5]。</li>
+<li><strong>2020 年至今</strong>，GPT-3 及其后继者把参数规模推向千亿、训练数据推向万亿 token，展现出此前小模型不具备的&quot;涌现&quot;能力 [6]。</li>
+</ul>
+<p>从 Shannon 到今天的千亿模型，核心思想——<strong>对语言进行概率建模、预测下一个词</strong>——其实一脉相承。变的，是模型的容量、数据的规模和训练的方法。</p>
+</section>
+<section class="document-section">
+<h2 id="本章小结" tabindex="-1">本章小结 <a class="header-anchor" href="#本章小结" aria-label="Permalink to &quot;本章小结&quot;">&ZeroWidthSpace;</a></h2>
+<ul>
+<li>大模型最核心的动作，是<strong>根据上文预测下一个词</strong>，然后把预测结果接上去、循环生成——你在屏幕上看到的&quot;一个字一个字蹦出来&quot;，就是这个过程。</li>
+<li>它之所以能预测得准，是因为&quot;读&quot;过海量文本（量级相当于 86 万本《西游记》），把语言里的规律和知识都学进了参数。</li>
+<li>数据在模型里的旅程是：文字 → 切成 Token → 变成数字向量 → 经过 Transformer → 算出下一个词的概率 → 选一个接上去 → 重复。本书第一层会逐站展开。</li>
+<li>原生大模型擅长语言类与模式识别类任务，但不擅长精确计算、不保证绝对可靠、不知道训练截止后的事；而且不同模型强项不同（代码 / 数学 / 中文等，靠 MMLU、HumanEval 等评测衡量）——把它当&quot;博学但会自信犯错的研究助理&quot;。</li>
+<li>给模型套上 harness（工具、记忆、检索、规划循环）能大幅外拓能力边界，从&quot;只会说&quot;变成&quot;会做事&quot;；但 harness 拓展的是能力，不改变模型的概率本性，幻觉与自信犯错依然存在。</li>
+<li>公式只在需要精确时出现，且总在直觉之后；从 Shannon（1948）到今天的千亿模型，&quot;预测下一个词&quot;的核心思想始终未变。</li>
+</ul>
+</section>
+<section class="document-section">
+<h2 id="参考文献" tabindex="-1">参考文献 <a class="header-anchor" href="#参考文献" aria-label="Permalink to &quot;参考文献&quot;">&ZeroWidthSpace;</a></h2>
+<p>[1] 通往 AGI 之路.《入门大模型的简要学习清单》/ 字节跳动《走入 AI 的世界》. <a href="https://www.waytoagi.com/zh/question/66037" target="_blank" rel="noreferrer">https://www.waytoagi.com/zh/question/66037</a></p>
+<p>[2] Shannon, C. E. A Mathematical Theory of Communication. Bell System Technical Journal, 27(3): 379-423, 1948. <a href="https://people.math.harvard.edu/~ctm/home/text/others/shannon/entropy/entropy.pdf" target="_blank" rel="noreferrer">https://people.math.harvard.edu/~ctm/home/text/others/shannon/entropy/entropy.pdf</a></p>
+<p>[3] Markov, A. A. An Example of Statistical Investigation of the Text Eugene Onegin Concerning the Connection of Samples in Chains. Bulletin of the Imperial Academy of Sciences of St. Petersburg, 1913.</p>
+<p>[4] Bengio, Y., Ducharme, R., Vincent, P., &amp; Jauvin, C. A Neural Probabilistic Language Model. Journal of Machine Learning Research, 3: 1137-1155, 2003. <a href="https://www.jmlr.org/papers/v3/bengio03a.html" target="_blank" rel="noreferrer">https://www.jmlr.org/papers/v3/bengio03a.html</a></p>
+<p>[5] Vaswani, A., Shazeer, N., Parmar, N., et al. Attention Is All You Need. Advances in Neural Information Processing Systems (NeurIPS), 2017. <a href="https://arxiv.org/abs/1706.03762" target="_blank" rel="noreferrer">https://arxiv.org/abs/1706.03762</a></p>
+<p>[6] Brown, T. B., Mann, B., Ryder, N., et al. Language Models are Few-Shot Learners. Advances in Neural Information Processing Systems (NeurIPS), 2020. <a href="https://arxiv.org/abs/2005.14165" target="_blank" rel="noreferrer">https://arxiv.org/abs/2005.14165</a></p>
+<p>[7] Anthropic. Agent Harness Design: 3 Patterns for Harnessing Claude's Intelligence. <a href="https://claude.com/blog/harnessing-claudes-intelligence" target="_blank" rel="noreferrer">https://claude.com/blog/harnessing-claudes-intelligence</a></p>
+<p>[8] HuggingFace AI Agent 词汇表（经 51CTO 整理）：《Model / Scaffold / Harness / Agent 的区分》. <a href="https://www.51cto.com/article/844978.html" target="_blank" rel="noreferrer">https://www.51cto.com/article/844978.html</a></p>
+</section>
+</article>

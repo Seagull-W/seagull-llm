@@ -1,0 +1,54 @@
+<article class="native-document format-course" data-format="course" aria-label="随机近似">
+<header class="document-intro">
+<h1 id="article-title" tabindex="-1">随机近似 <a class="header-anchor" href="#article-title" aria-label="文章链接">&#8203;</a></h1>
+<h2 id="均值估计——动机" tabindex="-1">均值估计——动机 <a class="header-anchor" href="#均值估计——动机" aria-label="Permalink to &quot;均值估计——动机&quot;">&ZeroWidthSpace;</a></h2>
+<p>有增量式更新如下：</p>
+<div class="math-block" data-tex="w_{k+1} = w_k - \frac{1}{k}(w_k - x_k)
+"></div><p>更一般的，</p>
+<div class="math-block" data-tex="w_{k+1} = w_k - \alpha_k(w_k - x_k)
+"></div><p>可以称 <span class="math-inline" data-tex="w_k - x_k"></span> 为新息（<em>innovation</em>），顾名思义，新的数据带来的新的信息。</p>
+<p><span class="math-inline" data-tex="\alpha_k"></span> 为步长，代表新信息对估计产出多大程度影响。</p>
+</header>
+<section class="document-section">
+<h2 id="robbins-monro-算法" tabindex="-1">Robbins-Monro 算法 <a class="header-anchor" href="#robbins-monro-算法" aria-label="Permalink to &quot;Robbins-Monro 算法&quot;">&ZeroWidthSpace;</a></h2>
+<blockquote>
+<p>Robbins-Monro (RM) 算法是随机近似领域的开创性工作。著名的随机梯度下降算法是 RM 算法的一种特殊形式。</p>
+</blockquote>
+<p>下面我们介绍 RM 算法的细节。</p>
+<blockquote>
+<p>从来源而论：</p>
+<p>假设我们需要求解方程：</p>
+<div class="math-block" data-tex="g(w) = 0 
+"></div><p>其中 <span class="math-inline" data-tex="w \in \mathbb{R}"></span> 是未知变量，<span class="math-inline" data-tex="g: \mathbb{R} \to \mathbb{R}"></span> 是一个函数。</p>
+<p>我们面临的问题是：函数 <span class="math-inline" data-tex="g"></span> 的表达式是未知的。我们只能获得 <span class="math-inline" data-tex="g(w)"></span> 的带噪观测值：</p>
+<div class="math-block" data-tex="\tilde{g}(w, \eta) = g(w) + \eta 
+"></div><p>其中 <span class="math-inline" data-tex="\eta \in \mathbb{R}"></span> 是观测误差（不一定服从高斯分布）。简而言之，这是一个黑箱系统，只有输入 <span class="math-inline" data-tex="w"></span> 和带噪输出 <span class="math-inline" data-tex="\tilde{g}(w, \eta)"></span> 是已知的。我们的目标是用 <span class="math-inline" data-tex="w"></span> 和 <span class="math-inline" data-tex="\tilde{g}"></span> 求解 <span class="math-inline" data-tex="g(w) = 0"></span>。</p>
+<p>直观地考虑，用传统高斯不动点迭代去求解方程 <span class="math-inline" data-tex="\tilde{g}(w_k, \eta_k)=0"></span>，即</p>
+<div class="math-block" data-tex="w_{k+1} = w_k - a\cdot \tilde{g}(w_k, \eta_k), \quad k = 1, 2, 3, \dots 
+"></div><p>在常数项下噪声会不断累积，从而偏离最终解。</p>
+<p>于是，我们想用一个**&quot;合适的&quot;**的步长来抵消噪声的偏差。</p>
+</blockquote>
+<p>给出求解 <span class="math-inline" data-tex="g(w) = 0"></span> 的 <strong>RM 算法</strong>形式为：</p>
+<div class="math-block" data-tex="w_{k+1} = w_k - a_k \tilde{g}(w_k, \eta_k), \quad k = 1, 2, 3, \dots \tag{*}
+"></div><p>其中 <span class="math-inline" data-tex="w_k"></span> 是对根的第 <span class="math-inline" data-tex="k"></span> 次估计，<span class="math-inline" data-tex="\tilde{g}(w_k, \eta_k)"></span> 是第 <span class="math-inline" data-tex="k"></span> 次带噪观测，<span class="math-inline" data-tex="a_k"></span> 是正系数步长。可以看出，RM 算法不需要函数的任何信息，只需要输入和输出。</p>
+<h3 id="收敛性" tabindex="-1">收敛性 <a class="header-anchor" href="#收敛性" aria-label="Permalink to &quot;收敛性&quot;">&ZeroWidthSpace;</a></h3>
+<p>在 RM 算法 (*) 中，若以下条件成立：</p>
+<ol>
+<li>
+<p><span class="math-inline" data-tex="0 &lt; c_1 \leq \nabla_w g(w) \leq c_2"></span> 对所有 <span class="math-inline" data-tex="w"></span> 成立；</p>
+</li>
+<li>
+<p><span class="math-inline" data-tex="\sum_{k=1}^\infty a_k = \infty"></span> 且 <span class="math-inline" data-tex="\sum_{k=1}^\infty a_k^2 &lt; \infty"></span>；</p>
+</li>
+<li>
+<p><span class="math-inline" data-tex="\mathbb{E}[\eta_k \mid \mathcal{H}_k] = 0"></span> 且 <span class="math-inline" data-tex="\mathbb{E}[\eta_k^2 \mid \mathcal{H}_k] &lt; \infty"></span>；</p>
+</li>
+</ol>
+<p>其中 <span class="math-inline" data-tex="\mathcal{H}_k = \{w_k, w_{k-1}, \dots\}"></span>，则 <span class="math-inline" data-tex="w_k"></span> 几乎必然收敛到满足 <span class="math-inline" data-tex="g(w^*) = 0"></span> 的根 <span class="math-inline" data-tex="w^*"></span>。</p>
+<blockquote>
+<p>Condition 1 对待估函数的梯度做了限制，要求函数单增且梯度有限（立刻可扩展为对原函数凹凸性的条件）</p>
+<p>Condition 2 给出步长的合适条件</p>
+<p>Condition 3 对观测误差的随机性做了一定的界定</p>
+</blockquote>
+</section>
+</article>

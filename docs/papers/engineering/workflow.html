@@ -1,0 +1,187 @@
+<article class="native-document format-paper" data-format="paper" aria-label="从数据到上线：后训练的工程闭环">
+<header class="document-intro">
+<h1 id="从数据到上线-后训练的工程闭环" tabindex="-1">从数据到上线：后训练的工程闭环 <a class="header-anchor" href="#从数据到上线-后训练的工程闭环" aria-label="Permalink to &quot;从数据到上线：后训练的工程闭环&quot;">&ZeroWidthSpace;</a></h1>
+<blockquote>
+<p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
+</blockquote>
+<p>这张图是跨项目整理的流程模型。它不表示小米或其他团队逐步执行了完全相同的方案；具体事实见项目案例。SFT、偏好训练、RL、蒸馏可以组合，也可以省略某些阶段，例如 DeepSWE-Preview 公开的是从既有 Qwen3-32B 起点进行 RL。<a href="https://www.together.ai/blog/deepswe" target="_blank" rel="noreferrer">DeepSWE 作者说明</a></p>
+</header>
+<section class="document-section">
+<h2 id="_1-整体数据流" tabindex="-1">1. 整体数据流 <a class="header-anchor" href="#_1-整体数据流" aria-label="Permalink to &quot;1. 整体数据流&quot;">&ZeroWidthSpace;</a></h2>
+
+      <Suspense> 
+      <template #default>
+      <Mermaid id="mermaid-14" class="mermaid" graph="flowchart%20TD%0A%20%20A%5B%E7%9B%AE%E6%A0%87%E8%83%BD%E5%8A%9B%E4%B8%8E%E5%9B%BA%E5%AE%9A%E8%AF%84%E6%B5%8B%E5%8D%8F%E8%AE%AE%5D%20--%3E%20B%5B%E4%BB%BB%E5%8A%A1%E4%B8%8E%E6%95%B0%E6%8D%AE%E6%9E%84%E5%BB%BA%E3%80%81%E5%88%87%E5%88%86%E3%80%81%E5%8E%BB%E9%87%8D%E3%80%81%E7%89%88%E6%9C%AC%E5%8C%96%5D%0A%20%20B%20--%3E%20C%5B%E7%8E%AF%E5%A2%83%E3%80%81%E5%B7%A5%E5%85%B7%E3%80%81harness%E3%80%81grader%20%E5%8F%AF%E6%89%A7%E8%A1%8C%E9%AA%8C%E8%AF%81%5D%0A%20%20C%20--%3E%20D%5B%E5%8F%AF%E9%80%89%3A%20SFT%20%E6%88%96%E8%92%B8%E9%A6%8F%E8%B5%B7%E7%82%B9%5D%0A%20%20D%20--%3E%20E%5B%E6%A8%A1%E5%9E%8B%E8%BD%AC%E6%8D%A2%E3%80%81%E5%B9%B6%E8%A1%8C%E5%B8%83%E5%B1%80%E3%80%81%E6%95%B0%E5%80%BC%E4%B8%80%E8%87%B4%E6%80%A7%E6%A3%80%E6%9F%A5%5D%0A%20%20E%20--%3E%20F%5B%E6%8E%A8%E7%90%86%E7%94%9F%E6%88%90%E4%B8%8E%E7%8E%AF%E5%A2%83%E4%BA%A4%E4%BA%92%5D%0A%20%20F%20--%3E%20G%5B%E8%AF%84%E5%88%86%E3%80%81%E9%94%99%E8%AF%AF%E5%88%86%E7%B1%BB%E3%80%81%E8%BD%A8%E8%BF%B9%E8%BF%87%E6%BB%A4%E3%80%81group%20%E6%9E%84%E9%80%A0%5D%0A%20%20G%20--%3E%20H%5B%E4%BC%98%E5%8A%BF%E8%AE%A1%E7%AE%97%E3%80%81mask%E3%80%81packing%E3%80%81logprob%20%E4%B8%8E%20loss%5D%0A%20%20H%20--%3E%20I%5B%E5%88%86%E5%B8%83%E5%BC%8F%E5%8F%8D%E5%90%91%E3%80%81%E4%BC%98%E5%8C%96%E5%99%A8%E6%9B%B4%E6%96%B0%5D%0A%20%20I%20--%3E%20J%5B%E7%89%88%E6%9C%AC%E5%8C%96%E6%9D%83%E9%87%8D%E5%90%8C%E6%AD%A5%E4%B8%8E%E9%87%87%E6%A0%B7%E9%98%9F%E5%88%97%E7%AE%A1%E7%90%86%5D%0A%20%20J%20--%3E%20F%0A%20%20I%20--%3E%20K%5Bcheckpoint%20%E4%B8%8E%E6%81%A2%E5%A4%8D%E7%8A%B6%E6%80%81%5D%0A%20%20K%20--%3E%20L%5B%E7%8B%AC%E7%AB%8B%20benchmark%20%E5%92%8C%E8%A1%8C%E4%B8%BA%E5%9B%9E%E5%BD%92%5D%0A%20%20L%20--%3E%20M%5B%E9%80%89%E6%8B%A9%20checkpoint%E3%80%81%E5%8F%91%E5%B8%83%E4%B8%8E%E7%BA%BF%E4%B8%8A%E8%A7%82%E5%AF%9F%5D%0A%20%20M%20--%3E%20N%5B%E7%9C%9F%E5%AE%9E%E5%8F%8D%E9%A6%88%E3%80%81%E6%A0%B7%E6%9C%AC%E5%9B%9E%E6%94%BE%E3%80%81%E5%A5%96%E5%8A%B1%E6%88%96%E8%92%B8%E9%A6%8F%E4%BF%AE%E5%A4%8D%5D%0A%20%20N%20--%3E%20B%0A%20%20N%20--%3E%20D%0A"></Mermaid>
+      </template>
+        <!-- loading state via #fallback slot -->
+        <template #fallback>
+          Loading...
+        </template>
+      </Suspense><p>每一条箭头都有接口契约。数据字段、模型版本、token IDs、评分状态或 mask 中任一环错了，训练可能仍正常运行，却优化了错误对象。</p>
+</section>
+<section class="document-section">
+<h2 id="_2-每个阶段应留下什么" tabindex="-1">2. 每个阶段应留下什么 <a class="header-anchor" href="#_2-每个阶段应留下什么" aria-label="Permalink to &quot;2. 每个阶段应留下什么&quot;">&ZeroWidthSpace;</a></h2>
+<p>以下是整理建议，可作为工程交接表。不要把“进程已启动”当成阶段完成。</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>阶段</th>
+<th>输入</th>
+<th>输出与记录</th>
+<th>验收问题</th>
+<th>对应材料</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>目标与评测</td>
+<td>业务场景、能力缺口</td>
+<td>固定任务、harness、采样与统计协议</td>
+<td>改变的是能力还是测试方式？</td>
+<td><a href="/papers/engineering/evaluation-and-feedback">评测闭环</a></td>
+</tr>
+<tr>
+<td>数据构建</td>
+<td>代码、问题、测试、示范或偏好</td>
+<td>task ID、来源 revision、train/val/test 边界</td>
+<td>原实现能通过测试，题目是否泄漏答案？</td>
+<td><a href="/papers/engineering/data-and-environments">数据与环境</a></td>
+</tr>
+<tr>
+<td>环境与 grader</td>
+<td>镜像、依赖、工具接口、rubric</td>
+<td>冷启动/复用测试、grader 版本、错误分类</td>
+<td>环境故障会被误记为模型失败吗？</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>SFT 起点</td>
+<td>高质量示范轨迹</td>
+<td>tokenizer/template、loss mask、模型权重</td>
+<td>assistant/tool/observation 的训练边界是否正确？</td>
+<td><a href="/papers/engineering/rewards-and-algorithms">奖励与算法</a></td>
+</tr>
+<tr>
+<td>启动配置</td>
+<td>硬件、训练/推理模型格式、并行度</td>
+<td>resolved config、提交 SHA、资源映射</td>
+<td>所有节点看见同一环境和共享路径吗？</td>
+<td><a href="/papers/engineering/operations-and-recovery">运行检查</a></td>
+</tr>
+<tr>
+<td>rollout</td>
+<td>task、harness、policy version</td>
+<td>trajectory ID、token IDs、行为 logprob、工具返回</td>
+<td>提示/响应/分支截断是否一致？</td>
+<td><a href="/papers/engineering/async-and-consistency">异步与一致性</a></td>
+</tr>
+<tr>
+<td>评分与 group</td>
+<td>原始产物与执行日志</td>
+<td>raw reward、penalty、infra status、group ID</td>
+<td>成功、失败、不可评分是否分开？</td>
+<td><a href="/papers/engineering/rewards-and-algorithms">奖励与算法</a></td>
+</tr>
+<tr>
+<td>算法与训练</td>
+<td>轨迹、优势、mask、行为概率</td>
+<td>loss、梯度、clip、token 分布、optimizer step</td>
+<td>是否在实际采样动作上计算更新？</td>
+<td><a href="/papers/projects/mimo-v2-6/loss-and-metrics">训练指标</a></td>
+</tr>
+<tr>
+<td>权重同步</td>
+<td>当前训练状态、目标推理布局</td>
+<td>权重版本、转换校验、传输耗时</td>
+<td>版本已确认加载，还是只有文件写入？</td>
+<td><a href="/papers/engineering/distributed-performance">分布式性能</a></td>
+</tr>
+<tr>
+<td>容错恢复</td>
+<td>checkpoint、队列、数据源游标</td>
+<td>恢复边界和重放记录</td>
+<td>重复训练与丢样本是否可识别？</td>
+<td><a href="/papers/engineering/operations-and-recovery">恢复</a></td>
+</tr>
+<tr>
+<td>checkpoint 选择</td>
+<td>固定 benchmark、真实行为回归</td>
+<td>每步得分、协议、时延与成本</td>
+<td>最后一步是否优于较早 checkpoint？</td>
+<td><a href="/papers/engineering/evaluation-and-feedback">benchmark</a></td>
+</tr>
+<tr>
+<td>上线与修复</td>
+<td>用户请求、失败样本</td>
+<td>API 权重时间、修复实验、回归结果</td>
+<td>修复重复调用后正常多工具行为是否退化？</td>
+<td><a href="/papers/projects/mimo-v2-6/">小米案例</a></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section class="document-section">
+<h2 id="_3-三个关键分离" tabindex="-1">3. 三个关键分离 <a class="header-anchor" href="#_3-三个关键分离" aria-label="Permalink to &quot;3. 三个关键分离&quot;">&ZeroWidthSpace;</a></h2>
+<p><strong>任务数据与执行环境分离。</strong> 一个 prompt 不是完整 agent 训练样本。代码任务还需要仓库 revision、镜像、工具、测试、评分和清理策略。MiMo 的开源连接由 mimoagent 承担环境/harness，Code 另经 Uni-Agent 捕获轨迹。<a href="https://github.com/XiaomiMiMo/verl/tree/mimo-oss" target="_blank" rel="noreferrer">MiMo 代码入口</a></p>
+<p><strong>采样与优化分离。</strong> rollout 受长尾任务和外部工具影响；trainer 受 packing、并行和数值计算影响。异步队列提升重叠度，也引入旧策略数据，因此要记录实际行为策略版本和概率。<a href="https://github.com/PrimeIntellect-ai/prime-rl/blob/main/docs/overview.md" target="_blank" rel="noreferrer">prime-rl 架构</a></p>
+<p><strong>能力证据与优化诊断分离。</strong> benchmark 判断是否泛化；reward 判断采样任务表现；loss、entropy、KL、gradient norm 判断更新过程。三者有关联，不能互相替代。小米的公开 archive 同时保存这些指标，见 <a href="/papers/projects/mimo-v2-6/dashboard-guide">指标指南</a>。</p>
+</section>
+<section class="document-section">
+<h2 id="_4-阅读术语" tabindex="-1">4. 阅读术语 <a class="header-anchor" href="#_4-阅读术语" aria-label="Permalink to &quot;4. 阅读术语&quot;">&ZeroWidthSpace;</a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>词</th>
+<th>在本资料中的含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>task / prompt</td>
+<td>一道任务及其输入；可能附带镜像、工作目录和评分元数据</td>
+</tr>
+<tr>
+<td>trajectory / rollout</td>
+<td>一次完整或截断的模型与环境交互尝试</td>
+</tr>
+<tr>
+<td>group</td>
+<td>同题多次尝试形成的相对比较单位；不等于随意混合的 microbatch</td>
+</tr>
+<tr>
+<td>harness</td>
+<td>管理提示、工具、上下文、停止条件等交互规则的代理程序</td>
+</tr>
+<tr>
+<td>grader / verifier</td>
+<td>判断任务成果的服务或执行程序，可能用测试、规则或模型 rubric</td>
+</tr>
+<tr>
+<td>behavior policy</td>
+<td>产生该 token/轨迹时实际使用的策略，异步训练中可能早于当前权重</td>
+</tr>
+<tr>
+<td>staleness</td>
+<td>采样到训练间的策略版本差；具体计法随框架不同</td>
+</tr>
+<tr>
+<td>microbatch</td>
+<td>单次计算的小批次，主要影响显存和吞吐</td>
+</tr>
+<tr>
+<td>global batch</td>
+<td>一次 optimizer 更新使用的总训练量，影响算法语义</td>
+</tr>
+<tr>
+<td>TP/PP/CP/EP/DP</td>
+<td>张量/流水线/上下文/专家/数据并行；不能把所有数直接相乘推卡数</td>
+</tr>
+<tr>
+<td>OPD / MOPD</td>
+<td>在模型自身生成分布上进行教师指导的蒸馏路线；具体损失依实现</td>
+</tr>
+</tbody>
+</table>
+<p>本文保留必要英文名，是为了能直接对应源码与看板；没有源码定义的内部指标不强行解释。</p>
+</section>
+</article>

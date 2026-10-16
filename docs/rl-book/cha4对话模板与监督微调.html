@@ -1,0 +1,32 @@
+<article class="native-document format-lab" data-format="lab" aria-label="对话模板与监督微调">
+<header class="document-intro">
+<h1 id="对话模板与监督微调" tabindex="-1">对话模板与监督微调 <a class="header-anchor" href="#对话模板与监督微调" aria-label="Permalink to &quot;对话模板与监督微调&quot;">&ZeroWidthSpace;</a></h1>
+<div class="info custom-block"><p class="custom-block-title">原书与章节</p>
+<p>本节对应 Nathan Lambert《Reinforcement Learning from Human Feedback》第 4 章。<a href="https://arxiv.org/abs/2504.12501" target="_blank" rel="noreferrer">阅读原书</a>。</p>
+</div>
+</header>
+<section class="document-section">
+<h2 id="指令微调" tabindex="-1">指令微调 <a class="header-anchor" href="#指令微调" aria-label="Permalink to &quot;指令微调&quot;">&ZeroWidthSpace;</a></h2>
+<p>指令微调IFT，即监督微调SFT。本质上是基于统一框架的问答指令集对预训练模型进行监督学习，从而获得对类似问答集的泛化能力，通常作为RL的前置工作。</p>
+<h3 id="对话模板与指令结构" tabindex="-1">对话模板与指令结构 <a class="header-anchor" href="#对话模板与指令结构" aria-label="Permalink to &quot;对话模板与指令结构&quot;">&ZeroWidthSpace;</a></h3>
+<h4 id="对话模板chat-template" tabindex="-1">对话模板Chat Template <a class="header-anchor" href="#对话模板chat-template" aria-label="Permalink to &quot;对话模板Chat Template&quot;">&ZeroWidthSpace;</a></h4>
+<p>负责处理与用户交互结构的工具即为对话模板。</p>
+<p>开源生态中，Jinja代码是定义对话模板最常用的工具，如<code>transformers</code>将聊天模板定义为分词器中<code>chat_template</code>属性中的Jinja模板。</p>
+<p>具体来说，对话模板将格式化的信息（如字典）转换为带有特殊标记的一维语句。</p>
+<h4 id="最佳实践" tabindex="-1">最佳实践 <a class="header-anchor" href="#最佳实践" aria-label="Permalink to &quot;最佳实践&quot;">&ZeroWidthSpace;</a></h4>
+<ul>
+<li>高质量数据是关键。相比起提示，模型从补全的内容中学习</li>
+<li>大约1M个提示即可训练出用于承接RLHF等后训练任务的模型</li>
+<li>提示最好与下游任务的分布相近</li>
+<li>指令微调的噪声可以在后续任务中恢复，关注整体的优化流程而非单一任务</li>
+</ul>
+<h4 id="实现细节" tabindex="-1">实现细节 <a class="header-anchor" href="#实现细节" aria-label="Permalink to &quot;实现细节&quot;">&ZeroWidthSpace;</a></h4>
+<ul>
+<li><strong>更小的batch size</strong>：相比预训练，监督微调的批次大小要小很多，且序列通常不会占满上下文。因此使用的GPU也要更少。</li>
+<li><strong>提示掩码</strong>：提示部分的词元会做掩码处理，从而只关心对回答的预测。</li>
+<li><strong>多轮对话掩码</strong>：<strong>策略一</strong>，只训练最后一轮回答（即assistant），前面的上下文全部掩码。长样本展开时（U1:A1:U2:A2:--&gt;U1:A1:+U1:A1:U2:A2:），也是依次只训练当前轮次的最后一轮回答，其余的都做掩码。<strong>策略二</strong>，只对用户做掩码，训练所有回答。展开时，中间的回答会被训练多次。</li>
+<li><strong>损失函数同预训练一致</strong></li>
+<li><strong>学习率</strong>：通常比预训练学习率低一个数量级。所谓<strong>线性缩放法则</strong>，即更大批次--&gt;梯度估计更小的方差--&gt;更大的学习率。此外，对于学习率的搜索，可以做短期训练，通过预留的评估套件来选择最佳的学习率。</li>
+</ul>
+</section>
+</article>

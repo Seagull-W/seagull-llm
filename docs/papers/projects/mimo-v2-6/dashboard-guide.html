@@ -1,0 +1,282 @@
+<article class="native-document format-paper" data-format="paper" aria-label="小米公开看板：指标字典与数据阅读指南">
+<header class="document-intro">
+<h1 id="小米公开看板-指标字典与数据阅读指南" tabindex="-1">小米公开看板：指标字典与数据阅读指南 <a class="header-anchor" href="#小米公开看板-指标字典与数据阅读指南" aria-label="Permalink to &quot;小米公开看板：指标字典与数据阅读指南&quot;">&ZeroWidthSpace;</a></h1>
+<blockquote>
+<p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
+</blockquote>
+</header>
+<section class="document-section">
+<h2 id="_1-文件与统计总体" tabindex="-1">1. 文件与统计总体 <a class="header-anchor" href="#_1-文件与统计总体" aria-label="Permalink to &quot;1. 文件与统计总体&quot;">&ZeroWidthSpace;</a></h2>
+<p>看板地址：<a href="https://mimo.xiaomi.com/rl/" target="_blank" rel="noreferrer">mimo.xiaomi.com/rl</a>。读取页面公开 script 引用后，定位到版本化静态数据目录 <code>data.04135c89/</code>，按公开文件链接保存。现在两次运行状态均为 ended；没有读取私有接口或登录数据。</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>文件</th>
+<th>内容</th>
+<th>范围限制</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>runs.json</code></td>
+<td>标签、描述、默认 pin、任务族/harness 元数据</td>
+<td>有描述的指标较少，不定义全部内部 tag</td>
+</tr>
+<tr>
+<td><code>notices.json</code></td>
+<td>六条团队公告</td>
+<td>公告时间不等于故障开始时间</td>
+</tr>
+<tr>
+<td><code>status-{run}.json</code></td>
+<td>运行时段、计数、最后一步、末尾事件窗口</td>
+<td>不包含全部历史重启事件</td>
+</tr>
+<tr>
+<td><code>series-{run}.json</code></td>
+<td>最终保留 step 1–30 的逐步指标</td>
+<td>已替换尝试不在这份序列中</td>
+</tr>
+<tr>
+<td><code>tags-{run}.json</code></td>
+<td>可用 tag 索引</td>
+<td>指标名不保证每步非空</td>
+</tr>
+<tr>
+<td><code>live-{run}.json</code></td>
+<td>最后采样状态及有限进度窗口</td>
+<td>不是从开始到结束的完整日志</td>
+</tr>
+<tr>
+<td><code>benchmarks.json</code></td>
+<td>三组离线评测</td>
+<td>缺失步数保留缺失</td>
+</tr>
+</tbody>
+</table>
+<p>原始文件、来源 URL、大小与 SHA-256 见 <a href="/papers/projects/mimo-v2-6/evidence/manifest.json">manifest</a>。原始 <code>t/wall/start/end</code> 是 Unix 时间，派生 CSV 用 UTC+8 转换，没有改写原始 JSON。</p>
+</section>
+<section class="document-section">
+<h2 id="_2-先看这几个指标" tabindex="-1">2. 先看这几个指标 <a class="header-anchor" href="#_2-先看这几个指标" aria-label="Permalink to &quot;2. 先看这几个指标&quot;">&ZeroWidthSpace;</a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>指标</th>
+<th>看板描述或可确认口径</th>
+<th>不能自动推出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dynsam/avg@n</code></td>
+<td>每题 n 次尝试的成功比例，再对题目平均</td>
+<td>pass@n、固定任务的能力提升</td>
+</tr>
+<tr>
+<td><code>critic/rewards/mean</code></td>
+<td>已训练轨迹的平均数值 reward</td>
+<td>原始测试 pass rate、critic 模型存在</td>
+</tr>
+<tr>
+<td><code>actor/pg_loss</code></td>
+<td>policy gradient loss 记录值</td>
+<td>值小必然能力强、与另一模型可直接比较</td>
+</tr>
+<tr>
+<td><code>actor/entropy_loss</code></td>
+<td>看板解释为平均 token entropy</td>
+<td>已使用 entropy 正则，或更高一定更好</td>
+</tr>
+<tr>
+<td><code>actor/grad_norm</code></td>
+<td>clipping 前全局梯度范数</td>
+<td>所有 rank 均衡、没有局部异常</td>
+</tr>
+<tr>
+<td><code>train_infer_diff/new_infer/kl</code></td>
+<td>相同 token 上 inference/trainer logprob 差异</td>
+<td>所有差异都来自路由、等于 reference KL</td>
+</tr>
+<tr>
+<td><code>ctx_total_length/mean</code></td>
+<td>prompt+response 总上下文长度</td>
+<td>仅模型输出长度</td>
+</tr>
+<tr>
+<td><code>ctx_response_length/mean</code></td>
+<td>轨迹响应长度统计</td>
+<td>全部都是被训练的 loss token</td>
+</tr>
+<tr>
+<td><code>perf/total_num_tokens</code></td>
+<td>本步训练 token 总量</td>
+<td>全部生成 token、累计生成成本</td>
+</tr>
+<tr>
+<td><code>timing_s/step</code></td>
+<td>本步整体时间</td>
+<td>有效 GPU 利用率</td>
+</tr>
+<tr>
+<td><code>timing_s/outer_gen</code></td>
+<td>rollout 时间</td>
+<td>纯 GPU decode 时间</td>
+</tr>
+<tr>
+<td><code>timing_s/trainer_ops</code></td>
+<td>trainer 操作用时</td>
+<td>可与其他阶段简单相加为端到端时间</td>
+</tr>
+<tr>
+<td><code>partial/avg_staleness</code></td>
+<td>采样到训练的平均策略版本差</td>
+<td>p95/max 也小、所有任务族一致</td>
+</tr>
+<tr>
+<td><code>dynsam/infra_error/seq_rate</code></td>
+<td>sequence 级 infra error 统计</td>
+<td>所有 infra 错误都已正确识别</td>
+</tr>
+<tr>
+<td><code>dynsam/passrate/zero</code>、<code>one</code></td>
+<td>group 全失败/全成功相关统计</td>
+<td>单次 trajectory 成功率</td>
+</tr>
+<tr>
+<td><code>dynsam/num_measurable</code></td>
+<td>可测量 pass rate 的 prompt 量</td>
+<td>全部已请求 prompt 数</td>
+</tr>
+</tbody>
+</table>
+<p>描述依据：<a href="https://mimo.xiaomi.com/rl/data.04135c89/runs.json" target="_blank" rel="noreferrer">runs.json</a>。<code>one/zero</code> 等字段需结合原配置才能确定过滤前后阶段；未公开的细节没有补写。</p>
+</section>
+<section class="document-section">
+<h2 id="_3-全量指标按-namespace-找" tabindex="-1">3. 全量指标按 namespace 找 <a class="header-anchor" href="#_3-全量指标按-namespace-找" aria-label="Permalink to &quot;3. 全量指标按 namespace 找&quot;">&ZeroWidthSpace;</a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Namespace</th>
+<th style="text-align:right">Flash tag 数</th>
+<th style="text-align:right">Pro tag 数</th>
+<th>阅读用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>actor</code></td>
+<td style="text-align:right">256</td>
+<td style="text-align:right">257</td>
+<td>loss、entropy、clip、LR、梯度、更新状态及任务子统计</td>
+</tr>
+<tr>
+<td><code>critic</code></td>
+<td style="text-align:right">324</td>
+<td style="text-align:right">324</td>
+<td>reward、score、advantage、return 与分组统计</td>
+</tr>
+<tr>
+<td><code>ctx_prompt_length</code></td>
+<td style="text-align:right">81</td>
+<td style="text-align:right">81</td>
+<td>prompt 长度</td>
+</tr>
+<tr>
+<td><code>ctx_response_length</code></td>
+<td style="text-align:right">81</td>
+<td style="text-align:right">81</td>
+<td>response 长度</td>
+</tr>
+<tr>
+<td><code>ctx_total_length</code></td>
+<td style="text-align:right">108</td>
+<td style="text-align:right">108</td>
+<td>总上下文长度</td>
+</tr>
+<tr>
+<td><code>dynsam</code></td>
+<td style="text-align:right">83</td>
+<td style="text-align:right">83</td>
+<td>动态采样、成功率、infra 与可测量任务数</td>
+</tr>
+<tr>
+<td><code>env</code></td>
+<td style="text-align:right">15</td>
+<td style="text-align:right">15</td>
+<td>环境计数与活动状态</td>
+</tr>
+<tr>
+<td><code>partial</code></td>
+<td style="text-align:right">385</td>
+<td style="text-align:right">337</td>
+<td>partial/staleness 与任务/harness 分布</td>
+</tr>
+<tr>
+<td><code>penalty</code></td>
+<td style="text-align:right">521</td>
+<td style="text-align:right">535</td>
+<td>行为/符号惩罚、stage credit group 等内部统计</td>
+</tr>
+<tr>
+<td><code>perf</code></td>
+<td style="text-align:right">1</td>
+<td style="text-align:right">1</td>
+<td>本步训练 token 总量</td>
+</tr>
+<tr>
+<td><code>timing_s</code></td>
+<td style="text-align:right">3</td>
+<td style="text-align:right">3</td>
+<td>时间分解</td>
+</tr>
+<tr>
+<td><code>train</code></td>
+<td style="text-align:right">191</td>
+<td style="text-align:right">191</td>
+<td>优势与惩罚前后统计</td>
+</tr>
+<tr>
+<td><code>train_infer_diff</code></td>
+<td style="text-align:right">11</td>
+<td style="text-align:right">11</td>
+<td>训练推理差异</td>
+</tr>
+<tr>
+<td><code>training</code></td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">2</td>
+<td>global step 与 optimizer step</td>
+</tr>
+<tr>
+<td>合计</td>
+<td style="text-align:right"><strong>2,062</strong></td>
+<td style="text-align:right"><strong>2,029</strong></td>
+<td>每模型各 30 步</td>
+</tr>
+</tbody>
+</table>
+<p>这里是按 tag 前缀归类的观测索引，阅读用途并非对所有内部计算公式的验证。匿名 <code>dataset-xxxx</code> 和 <code>harness-A/B/...</code> 不应随意映射成公开任务名称。</p>
+</section>
+<section class="document-section">
+<h2 id="_4-派生-csv-怎么用" tabindex="-1">4. 派生 CSV 怎么用 <a class="header-anchor" href="#_4-派生-csv-怎么用" aria-label="Permalink to &quot;4. 派生 CSV 怎么用&quot;">&ZeroWidthSpace;</a></h2>
+<ul>
+<li><a href="/papers/projects/mimo-v2-6/evidence/%E5%85%B3%E9%94%AE%E6%8C%87%E6%A0%87%E9%80%90%E6%AD%A5.csv">关键指标逐步.csv</a>：60 行，模型/步数/时间 + 43 个核心指标，适合 Excel 和初步分析。</li>
+<li><a href="/papers/projects/mimo-v2-6/evidence/%E5%85%A8%E9%87%8F%E6%8C%87%E6%A0%87%E9%95%BF%E8%A1%A8.csv">全量指标长表.csv</a>：122,730 个槽位，列为 <code>run, step, wall_time_Asia_Shanghai, metric, value</code>；value 为空表示原 JSON 为 null，不是 0。</li>
+<li><a href="/papers/projects/mimo-v2-6/evidence/%E6%8C%87%E6%A0%87%E7%B4%A2%E5%BC%95.csv">指标索引.csv</a>：4,091 个“模型-tag”组合，包含前缀与非空步数，先筛想读的 task/harness/namespace。</li>
+<li><a href="/papers/projects/mimo-v2-6/evidence/%E7%A6%BB%E7%BA%BF%E8%AF%84%E6%B5%8B.csv">离线评测.csv</a>：只展开原文件存在的评测点。</li>
+<li><a href="/papers/projects/mimo-v2-6/evidence/%E5%9B%A2%E9%98%9F%E5%85%AC%E5%91%8A%E5%8E%9F%E6%96%87.csv">团队公告原文.csv</a>：保留原文与转换时间；人类阅读优先看案例中的归纳表。</li>
+<li><a href="/papers/projects/mimo-v2-6/evidence/%E6%9C%AB%E5%B0%BE%E4%BA%8B%E4%BB%B6%E7%AA%97%E5%8F%A3.csv">末尾事件窗口.csv</a>：原事件 JSON，包含可见的 redo；不冒充完整重启日志。</li>
+<li><a href="/papers/projects/mimo-v2-6/evidence/derived-summary.json">derived-summary.json</a>：关键指标首末/min/max、模型状态与 namespace 计数。</li>
+</ul>
+<p>导出程序：<a href="/papers/evidence/scripts/export_dashboard.py.txt">export_dashboard.py 源码快照</a>。它只处理保存的公开数据，没有训练或推理操作。图表程序使用 ReportLab LinePlot、MuPDF 渲染：<a href="/papers/evidence/scripts/chart_dashboard.py.txt">chart_dashboard.py 源码快照</a>。两份源码以文本提供，保留原资料目录约定；在其他目录运行时需调整输入、输出路径。</p>
+</section>
+<section class="document-section">
+<h2 id="_5-配套图" tabindex="-1">5. 配套图 <a class="header-anchor" href="#_5-配套图" aria-label="Permalink to &quot;5. 配套图&quot;">&ZeroWidthSpace;</a></h2>
+<p><img src="/papers/projects/mimo-v2-6/evidence/训练与评测.png" alt="运行概览"></p>
+<p>更细的 <a href="/papers/projects/mimo-v2-6/loss-and-metrics">训练损失分析</a>含六个面板；<a href="/papers/engineering/evaluation-and-feedback">benchmark 章节</a>含三组评测曲线。图表没有把缺失值替换成 0，也没有为未公开点插值。</p>
+</section>
+<section class="document-section">
+<h2 id="_6-统计核验" tabindex="-1">6. 统计核验 <a class="header-anchor" href="#_6-统计核验" aria-label="Permalink to &quot;6. 统计核验&quot;">&ZeroWidthSpace;</a></h2>
+<p>原归档核验中，每模型 step 均为 1–30；每个 tag 对应 30 个位置。最终保留序列的 token 求和与各自 status 中 <code>tokens_cum</code> 一致。末尾 trained trajectories 为 25,088，30 步累计 752,640；六条公告时间按 UTC+8 排序。</p>
+</section>
+</article>

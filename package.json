@@ -4,6 +4,7 @@
   "description": "大语言模型介绍文档",
   "scripts": {
     "tags": "node scripts/generate-content-tags.mjs",
+    "test:content": "node scripts/test-native-html.mjs && node scripts/test-public-content.mjs && node scripts/test-paper-project-content.mjs && node scripts/test-markdown-math.mjs",
     "predev": "npm run tags",
     "prebuild": "npm run tags",
     "dev": "vitepress dev docs",

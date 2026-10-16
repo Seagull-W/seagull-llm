@@ -16,7 +16,7 @@ const isHome = computed(() => route.path === '/')
 // Source paths work with base URLs, encoded routes, and client-side navigation.
 const sectionClass = computed(() => {
   const section = page.value.relativePath?.split('/')[0]
-  return ['research', 'llm-book', 'papers', 'rl-book', 'westlake-rl', 'rust-notes', 'videos'].includes(section)
+  return ['research', 'llm-book', 'papers', 'rl-book', 'westlake-rl', 'rust-notes', 'linux-notes', 'videos'].includes(section)
     ? `section-${section}` : ''
 })
 

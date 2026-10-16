@@ -1,16 +1,14 @@
 ---
-tags: ["强化学习","动态规划"]
+tags:
+  - 强化学习
+  - 动态规划
 layout: doc
 title: 第 4 讲：值迭代与策略迭代
 outline: false
 aside: false
 pdf: true
+description: 第 4 讲：值迭代与策略迭代
+contentFormat: html
 ---
 
-<script setup>
-import PdfViewer from '../../.vitepress/components/PdfViewer.vue'
-import pdfUrl from './值迭代与策略迭代.pdf?url'
-import outline from './目录.json'
-</script>
-
-<PdfViewer :src="pdfUrl" title="值迭代与策略迭代" :outline="outline" />
+<!--@include: ./index.html-->

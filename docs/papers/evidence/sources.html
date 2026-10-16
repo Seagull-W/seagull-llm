@@ -1,0 +1,304 @@
+<article class="native-document format-paper" data-format="paper" aria-label="后训练项目来源与版本定位">
+<header class="document-intro">
+<h1 id="后训练项目来源与版本定位" tabindex="-1">后训练项目来源与版本定位 <a class="header-anchor" href="#后训练项目来源与版本定位" aria-label="Permalink to &quot;后训练项目来源与版本定位&quot;">&ZeroWidthSpace;</a></h1>
+<blockquote>
+<p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
+</blockquote>
+<p>本页先列人类阅读入口。全部已保存 HTTP 来源与状态、大小、hash 见 <a href="/papers/evidence/%E6%9D%A5%E6%BA%90%E6%B8%85%E5%8D%95.csv">来源清单 CSV</a>和 <a href="/papers/evidence/%E6%9D%A5%E6%BA%90%E6%B8%85%E5%8D%95.json">机器可读清单</a>。引用优先用官方/作者材料；社交平台转载只用于发现线索。</p>
+<p>各项目的连续阅读入口见 <a href="/papers/projects/coverage">项目目录</a>，benchmark/loss 的取得状态见 <a href="/papers/evidence/project-metrics">指标证据索引</a>。下面按材料类型列来源，不表示项目主次。</p>
+</header>
+<section class="document-section">
+<h2 id="_1-小米真实运行与反馈" tabindex="-1">1. 小米真实运行与反馈 <a class="header-anchor" href="#_1-小米真实运行与反馈" aria-label="Permalink to &quot;1. 小米真实运行与反馈&quot;">&ZeroWidthSpace;</a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>来源</th>
+<th>类型/时间</th>
+<th>最适合核验什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://mimo.xiaomi.com/rl/" target="_blank" rel="noreferrer">MiMo-V2.6 RL 看板</a></td>
+<td>官方运行归档，2026-09</td>
+<td>训练事件、指标和成本口径</td>
+</tr>
+<tr>
+<td><a href="https://mimo.mi.com/docs/en-US/news/latest/v2-6" target="_blank" rel="noreferrer">官方发布</a></td>
+<td>团队说明，2026-09-22</td>
+<td>发布对象与公开运行对应关系</td>
+</tr>
+<tr>
+<td><a href="https://x.com/_LuoFuli/status/2100296686719610932" target="_blank" rel="noreferrer">罗福莉原帖</a></td>
+<td>社交入口，访问 403</td>
+<td>已定位链接，全文未直接核验</td>
+</tr>
+<tr>
+<td><a href="https://mimo.xiaomi.com/rl/data.04135c89/runs.json" target="_blank" rel="noreferrer">runs.json</a></td>
+<td>公开数据</td>
+<td>指标定义和任务/harness 分组</td>
+</tr>
+<tr>
+<td><a href="https://mimo.xiaomi.com/rl/data.04135c89/notices.json" target="_blank" rel="noreferrer">notices.json</a></td>
+<td>团队公告</td>
+<td>OOM、网络、回滚、课程变更</td>
+</tr>
+<tr>
+<td><a href="https://mimo.xiaomi.com/rl/data.04135c89/status-flash.json" target="_blank" rel="noreferrer">Flash 状态</a>、<a href="https://mimo.xiaomi.com/rl/data.04135c89/status-pro.json" target="_blank" rel="noreferrer">Pro 状态</a></td>
+<td>原始数据</td>
+<td>起止、重启计数、末尾事件</td>
+</tr>
+<tr>
+<td><a href="https://mimo.xiaomi.com/rl/data.04135c89/series-flash.json" target="_blank" rel="noreferrer">Flash 序列</a>、<a href="https://mimo.xiaomi.com/rl/data.04135c89/series-pro.json" target="_blank" rel="noreferrer">Pro 序列</a></td>
+<td>原始数据</td>
+<td>全部公开逐步 loss/reward/系统指标</td>
+</tr>
+<tr>
+<td><a href="https://mimo.xiaomi.com/rl/data.04135c89/benchmarks.json" target="_blank" rel="noreferrer">benchmarks.json</a></td>
+<td>原始数据</td>
+<td>三组评测、协议标签和缺失点</td>
+</tr>
+<tr>
+<td><a href="https://mimo.xiaomi.com/blog/mimo-v2-6-tool-call-repetition" target="_blank" rel="noreferrer">重复调用诊断</a></td>
+<td>官方修复复盘，2026-09-27</td>
+<td>行为定义、局部实验、MOPD 与 API 更新</td>
+</tr>
+<tr>
+<td><a href="https://github.com/XiaomiMiMo/MiMo/issues/98" target="_blank" rel="noreferrer">Issue #98</a>、<a href="https://github.com/XiaomiMiMo/MiMo/issues/102" target="_blank" rel="noreferrer">Issue #102</a></td>
+<td>用户反馈，2026-09</td>
+<td>循环调用、修复后的可能回归</td>
+</tr>
+</tbody>
+</table>
+<p><code>live</code> 和 <code>tags</code> 文件一并保存，完整 URL 见 <a href="/papers/projects/mimo-v2-6/evidence/manifest.json">归档 manifest</a>。</p>
+</section>
+<section class="document-section">
+<h2 id="_2-小米开源复现" tabindex="-1">2. 小米开源复现 <a class="header-anchor" href="#_2-小米开源复现" aria-label="Permalink to &quot;2. 小米开源复现&quot;">&ZeroWidthSpace;</a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>来源</th>
+<th>版本定位</th>
+<th>读什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/XiaomiMiMo/verl/tree/mimo-oss" target="_blank" rel="noreferrer">verl 复现分支</a></td>
+<td>本次头 SHA：<code>a2ad9f6160b03ff2d47e59832bfb6b289f37c917</code></td>
+<td>五类任务入口与组件关系</td>
+</tr>
+<tr>
+<td><a href="https://huggingface.co/datasets/XiaomiMiMo/MiMo-V2.6-RL-oss" target="_blank" rel="noreferrer">公开数据集</a></td>
+<td>2026-10-11 页面快照</td>
+<td>任务与元数据字段；不是全部生产轨迹</td>
+</tr>
+<tr>
+<td><a href="https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B" target="_blank" rel="noreferrer">9B SFT 起点</a></td>
+<td>model card 快照</td>
+<td>起点来源与后续 RL 定位</td>
+</tr>
+<tr>
+<td><a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/code/train.sh" target="_blank" rel="noreferrer">Code 启动器</a></td>
+<td>固定 SHA</td>
+<td>9B 训练默认参数</td>
+</tr>
+<tr>
+<td><a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/code/env.example" target="_blank" rel="noreferrer">Code 环境</a></td>
+<td>固定 SHA</td>
+<td>task Pod、服务与 harness 设置</td>
+</tr>
+<tr>
+<td><a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/recipes/code/run_train.sh" target="_blank" rel="noreferrer">Code 主脚本</a></td>
+<td>固定 SHA</td>
+<td>loss/queue/off-policy/resume/预检</td>
+</tr>
+<tr>
+<td><a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/recipes/code/mimoagent_runner.py" target="_blank" rel="noreferrer">桥接代码</a></td>
+<td>固定 SHA</td>
+<td>gateway、轨迹、环境与 reward</td>
+</tr>
+<tr>
+<td><a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/recipes/general/agent_loop.py" target="_blank" rel="noreferrer">General AgentLoop</a></td>
+<td>固定 SHA</td>
+<td>infra 分类与 sentinel</td>
+</tr>
+<tr>
+<td><a href="https://github.com/XiaomiMiMo/mimoagent/tree/mimo-oss" target="_blank" rel="noreferrer">mimoagent</a></td>
+<td><code>mimo-oss</code>；页面头 <code>467f0a19016f0ac4d63b8d17a1f0da9ba07f232c</code></td>
+<td>原生/CLI harness、环境、日志格式</td>
+</tr>
+<tr>
+<td><a href="https://github.com/XiaomiMiMo/uni-agent/tree/mimo-oss" target="_blank" rel="noreferrer">uni-agent</a></td>
+<td>训练分支；非 main 通用文档</td>
+<td>Code 的模型 gateway 和 capture</td>
+</tr>
+</tbody>
+</table>
+<p><code>.gitmodules</code> 中的 <code>MiMo-Agent</code> 旧名在本次 HTTP 访问重定向为 <code>mimoagent</code>；不是另一个已证明缺失的依赖。submodule 精确 revision 仍应取父仓库 gitlink，不能直接用子仓库当前头替代。</p>
+</section>
+<section class="document-section">
+<h2 id="_3-mimo-报告与机制定位" tabindex="-1">3. MiMo 报告与机制定位 <a class="header-anchor" href="#_3-mimo-报告与机制定位" aria-label="Permalink to &quot;3. MiMo 报告与机制定位&quot;">&ZeroWidthSpace;</a></h2>
+<p><a href="https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Pro-RL/blob/main/MiMo_V2_6_technical_report.pdf" target="_blank" rel="noreferrer">MiMo-V2.6 技术报告</a>共 44 页，已提取相关段落并查看架构/实验页。下表页码为 PDF 从 1 开始的页序；用于回到原文，避免把设计说明当成事故日志。</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>PDF 页序</th>
+<th>阅读主题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>21</td>
+<td>策略更新、精度与 router 相关训练方法</td>
+</tr>
+<tr>
+<td>27–28</td>
+<td>轨迹层次、mask 与 RL 系统架构图</td>
+</tr>
+<tr>
+<td>29–32</td>
+<td>任务混合、启动/回放、数据面、推理训练一致性</td>
+</tr>
+<tr>
+<td>34</td>
+<td>开源小模型 SFT 与训练数据规模表</td>
+</tr>
+<tr>
+<td>35</td>
+<td>单域 RL 结果，独立 checkpoint 的比较</td>
+</tr>
+<tr>
+<td>36</td>
+<td>跨 harness 结果</td>
+</tr>
+</tbody>
+</table>
+<p><a href="/papers/projects/codemidas/">CodeMidas</a>另有独立档案，使用其报告全文与训练/评测附录；不将两个项目的数据 manifest 或运行配置合并。</p>
+</section>
+<section class="document-section">
+<h2 id="_4-各项目运行、报告与-benchmark" tabindex="-1">4. 各项目运行、报告与 benchmark <a class="header-anchor" href="#_4-各项目运行、报告与-benchmark" aria-label="Permalink to &quot;4. 各项目运行、报告与 benchmark&quot;">&ZeroWidthSpace;</a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>来源</th>
+<th>日期/状态</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/datacurve-ai/deep-swe" target="_blank" rel="noreferrer">DeepSWE benchmark 官方仓库</a></td>
+<td>当前 main 快照</td>
+<td>v1.1 隔离 verifier、任务与评分输出</td>
+</tr>
+<tr>
+<td><a href="https://www.lmsys.org/blog/2026-08-18-miles-v0-1/" target="_blank" rel="noreferrer">Miles v0.1 工程文章</a></td>
+<td>2026-08-18 页面、可能持续更新</td>
+<td>744B 参考运行与端到端框架</td>
+</tr>
+<tr>
+<td><a href="https://github.com/radixark/miles/tree/main/examples/experimental/openenv/glm52_tbench2" target="_blank" rel="noreferrer">GLM-5.2 recipe</a></td>
+<td>当前 main</td>
+<td>实际布局、KV、routing、disk optimizer 与 replay</td>
+</tr>
+<tr>
+<td><a href="https://www.lmsys.org/blog/2026-05-13-no-token-left-behind/" target="_blank" rel="noreferrer">TITO</a></td>
+<td>URL 日期与页面展示日期不完全相同</td>
+<td>token-faithful 多轮轨迹</td>
+</tr>
+<tr>
+<td><a href="https://www.lmsys.org/blog/2026-04-29-p2p-update/" target="_blank" rel="noreferrer">P2P 权重传输</a></td>
+<td>2026 工程文章</td>
+<td>目标分片、传输流程与硬件依赖</td>
+</tr>
+<tr>
+<td><a href="https://www.primeintellect.one/blog/intellect-3" target="_blank" rel="noreferrer">INTELLECT-3 作者博客</a></td>
+<td>2025-11-26</td>
+<td>SFT/RL、512 H200 集群与环境生态</td>
+</tr>
+<tr>
+<td><a href="https://arxiv.org/abs/2512.16144" target="_blank" rel="noreferrer">INTELLECT-3 报告入口</a></td>
+<td>2025-12-18</td>
+<td>报告日期与项目机制补充</td>
+</tr>
+<tr>
+<td><a href="https://arxiv.org/html/2512.16144v1" target="_blank" rel="noreferrer">INTELLECT-3 全文 v1</a></td>
+<td>已保存正文快照与 hash</td>
+<td>两阶段 SFT、实际 RL 分配、IcePop、loss/评测图与失败尝试</td>
+</tr>
+<tr>
+<td><a href="https://huggingface.co/PrimeIntellect/INTELLECT-3" target="_blank" rel="noreferrer">INTELLECT-3 模型卡</a></td>
+<td>已保存 raw README</td>
+<td>最终评测表、权重/服务与工具解析协议</td>
+</tr>
+<tr>
+<td><a href="https://www.together.ai/blog/deepswe" target="_blank" rel="noreferrer">DeepSWE-Preview 作者文章</a></td>
+<td>2025-07-02</td>
+<td>64 H100 训练与多种评测口径</td>
+</tr>
+<tr>
+<td><a href="https://github.com/agentica-project/rllm/tree/main/examples/swe" target="_blank" rel="noreferrer">rLLM SWE 入口</a></td>
+<td>当前 main</td>
+<td>数据/代码/W&amp;B/eval archive 链接</td>
+</tr>
+<tr>
+<td><a href="https://github.com/agentica-project/R2E-Gym/blob/master/reproduction/DEEPSWE_REPRODUCTION.MD" target="_blank" rel="noreferrer">评测复现指南</a></td>
+<td>当前 master</td>
+<td>模型服务、轨迹转换与官方评测</td>
+</tr>
+<tr>
+<td><a href="https://arxiv.org/abs/2609.22068" target="_blank" rel="noreferrer">CodeMidas 摘要</a>及<a href="https://arxiv.org/html/2609.22068v1" target="_blank" rel="noreferrer">全文 v1</a></td>
+<td>2026-09-18；全文已保存</td>
+<td>环境生产/过滤、GRPO 配置、benchmark 与行为分析</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section class="document-section">
+<h2 id="_5-框架工程与实际报错" tabindex="-1">5. 框架工程与实际报错 <a class="header-anchor" href="#_5-框架工程与实际报错" aria-label="Permalink to &quot;5. 框架工程与实际报错&quot;">&ZeroWidthSpace;</a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>来源</th>
+<th>用途/状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/verl-project/verl/blob/main/docs/preparation/prepare_data.rst" target="_blank" rel="noreferrer">verl 数据</a>、<a href="https://github.com/verl-project/verl/blob/main/docs/preparation/reward_function.rst" target="_blank" rel="noreferrer">reward</a>、<a href="https://verl.readthedocs.io/en/latest/perf/perf_tuning.html" target="_blank" rel="noreferrer">性能</a></td>
+<td>数据接口、评分接口、显存与吞吐</td>
+</tr>
+<tr>
+<td><a href="https://github.com/PrimeIntellect-ai/prime-rl/tree/main/docs" target="_blank" rel="noreferrer">prime-rl docs</a></td>
+<td>SFT/RL、算法、推理、Slurm、配置、评测；当前实现</td>
+</tr>
+<tr>
+<td><a href="https://github.com/THUDM/slime/blob/main/docs/en/developer_guide/debug.md" target="_blank" rel="noreferrer">slime debug</a>、<a href="https://github.com/THUDM/slime/blob/main/docs/en/get_started/qa.md" target="_blank" rel="noreferrer">QA</a></td>
+<td>分离调试、logprob/权重映射、常见失败</td>
+</tr>
+<tr>
+<td><a href="https://github.com/THUDM/slime/blob/main/docs/en/developer_guide/trace.md" target="_blank" rel="noreferrer">slime trace</a>、<a href="https://github.com/THUDM/slime/blob/main/docs/en/developer_guide/profiling.md" target="_blank" rel="noreferrer">profiling</a></td>
+<td>rollout/reward/model call 与内核定位</td>
+</tr>
+<tr>
+<td><a href="https://github.com/THUDM/slime/blob/main/docs/en/advanced/fault-tolerance.md" target="_blank" rel="noreferrer">slime 容错</a></td>
+<td>保留 serving 与 batch replay；有前提限制</td>
+</tr>
+<tr>
+<td><a href="https://github.com/THUDM/slime/issues/2384" target="_blank" rel="noreferrer">#2384</a>、<a href="https://github.com/THUDM/slime/pull/2385" target="_blank" rel="noreferrer">#2385</a></td>
+<td>routing replay 主机内存；候选 PR Open</td>
+</tr>
+<tr>
+<td><a href="https://github.com/THUDM/slime/issues/1523" target="_blank" rel="noreferrer">#1523</a></td>
+<td>entropy 长序列 OOM；未核验合并修复</td>
+</tr>
+<tr>
+<td><a href="https://github.com/THUDM/slime/issues/1851" target="_blank" rel="noreferrer">#1851</a></td>
+<td>CPU offload 后 RAM 耗尽；Closed 不等于确认修复</td>
+</tr>
+</tbody>
+</table>
+<p>全部源码只作阅读，没有执行远程训练代码。可读 HTTP 页面也不意味着动态图表/完整日志成功获取，具体状态在机器清单和检索记录中说明。</p>
+</section>
+</article>

@@ -11,7 +11,6 @@ hero:
     - theme: alt
       text: 看科普视频
       link: /videos/
-
 features:
   - title: Nathan Lambert RL BOOK 学习笔记
     details: 学习 Nathan Lambert 强化学习专著的读书笔记，聚焦 RLHF、PPO、DPO 等核心技术
@@ -30,4 +29,9 @@ features:
   - title: linux学习笔记
     details: 记录 Linux 系统概念与实践，从 Namespace、cgroups 和 seccomp 隔离机制开始
     link: /linux-notes/
+title: seagull学习主页
+description: seagull学习主页
+contentFormat: html
 ---
+
+<!--@include: ./index.html-->

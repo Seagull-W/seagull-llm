@@ -1,36 +1,12 @@
 ---
 title: 各项目 benchmark、loss 与运行指标证据索引
 description: 区分各项目已取得的数值、报告曲线、最终表和未取得日志。
-tags: ["论文与项目随谈","后训练","模型评估","训练实验"]
+tags:
+  - 论文与项目随谈
+  - 后训练
+  - 模型评估
+  - 训练实验
+contentFormat: html
 ---
 
-# 各项目 benchmark、loss 与运行指标证据索引
-
-> 资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。
-
-更新：2026-10-11。指标是每个项目的必查项。此页记录目前取得的证据形态，具体值与解释放在项目档案；原始数据和来源入口分别保留。
-
-| 项目 | benchmark | 训练 loss / 稳定性 | 系统与反馈指标 | 阅读入口 |
-|---|---|---|---|---|
-| MiMo-V2.6 | 三组逐步离线数值、明确缺失点和 avg@3 | Pro/Flash policy loss、entropy、gradient、KL/TIS 等公开序列已保存 | 长度、错误、耗时、token、重启、成本计数等 | [案例](/papers/projects/mimo-v2-6/)、[原始与 CSV 指南](/papers/projects/mimo-v2-6/dashboard-guide) |
-| Miles GLM-5.2 | held-out 协议可读；逐步结果未取得 | 日志/保存路径可读；原 loss/gradient/KL 序列未取得 | 作者性能值、截断/KV/routing 反馈；墙钟口径有待解释 | [案例](/papers/projects/miles-glm-5-2/) |
-| INTELLECT-3 | 最终分数表、在线评测曲线与协议附录 | SFT loss 图；原始 SFT/RL 数值序列未取得 | 实际 RL 卡数/分配/step time、失败尝试说明 | [案例](/papers/projects/intellect-3/) |
-| DeepSWE-Preview | 最终分数与 eval harness；原评测包未完整解析 | W&B 链接可见，当前页面未提供可复核序列 | 资源说明、Docker 事故与算法消融反馈 | [案例](/papers/projects/deepswe-preview/) |
-| CodeMidas | 五项协议、正文部分精确分数、Val/消融图 | 有验证成功率/长度图；训练 loss 原序列未取得 | 任务规模与行为统计；GPU 性能日志未知 | [案例](/papers/projects/codemidas/) |
-
-## 取得数值时必须一起保存什么
-
-每条记录至少连接项目、run/attempt、checkpoint 或实际更新步、任务集/版本、harness、采样参数、预算、分数定义、来源位置及缺失状态。百分制数值、0–1 reward、Pass@1、Pass@k、avg@k、候选选择后的 best@k 不混用。
-
-loss 必须同时记录目标函数、归约方式、mask、有效 token、优势、importance ratio 与更新是否成功。仅有 `lr`、clip 等参数不能当作 loss 观测；一幅作者曲线也不等于取得原始序列。
-
-## 后续各项目统一追踪的数值
-
-- 能力：训练内验证、固定 benchmark、每任务/每题结果、重复评测与不确定性。
-- 学习：SFT loss、policy loss、reward、advantage、KL、entropy、clip/TIS、梯度、LR、跳过更新。
-- 数据/行为：任务混合、全成功/全失败、过滤/截断、长度、turns、infra error、重复工具调用。
-- 性能/恢复：rollout/trainer/grader/权重同步耗时、队列/版本滞后、显存/RAM、吞吐、checkpoint、重启/回滚。
-
-这些是统一检索要求；没有取得的字段仍保留缺口。不能为了跨项目比较而填补不存在的观测。
-
-返回：[同等项目目录](/papers/projects/coverage)、[损失分析方法](/papers/projects/mimo-v2-6/loss-and-metrics)、[来源清单](/papers/evidence/sources)。
+<!--@include: ./project-metrics.html-->

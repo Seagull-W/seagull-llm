@@ -1,5 +1,7 @@
 ---
-tags: ["大语言模型","模型评估"]
+tags:
+  - 大语言模型
+  - 模型评估
 status: draft
 prev: false
 next: false
@@ -8,39 +10,11 @@ head:
   - - meta
     - name: robots
       content: noindex
+title: 第 12 章 模型评估
+description: >-
+  第 12 章 模型评估 &ZeroWidthSpace; 本章导引 &ZeroWidthSpace;
+  如何判断一个大模型&quot;好不好&quot;？本章介绍常见的评估指标和评估方法，以及当前评估体系面临的挑战。 12
+contentFormat: html
 ---
 
-# 第 12 章 模型评估
-
-## 本章导引
-
-> 如何判断一个大模型"好不好"？本章介绍常见的评估指标和评估方法，以及当前评估体系面临的挑战。
-
----
-
-## 12.1〔深入·可选〕困惑度（Perplexity）
-
-[待撰写]
-
-## 12.2 Benchmark 评估
-
-[待撰写]
-
-## 12.3 人类评估与竞技场
-
-[待撰写]
-
-## 12.4 评估的挑战
-
-[待撰写]
-
-## 本章小结
-
-- 困惑度衡量语言建模能力，但不直接反映任务表现
-- Benchmark（MMLU、HumanEval 等）提供标准化的能力评估
-- 人类评估（如 Chatbot Arena）更贴近真实体验但成本高
-- 数据污染和 Benchmark 过拟合是当前评估体系的主要挑战
-
-## 参考文献
-
-[待补充]
+<!--@include: ./ch12-evaluation.html-->

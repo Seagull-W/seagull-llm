@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 import { createMarkdownRenderer } from 'vitepress'
 import texDelimiters from '../docs/.vitepress/markdown/tex-delimiters.mjs'
+import { readContent } from './content-source.mjs'
+import nativeHtml from '../docs/.vitepress/markdown/native-html.mjs'
 
 const md = await createMarkdownRenderer(process.cwd(), {
   math: true,
-  config(md) { md.use(texDelimiters) }
+  config(md) { md.use(texDelimiters); md.use(nativeHtml) }
 })
 const countMath = html => (html.match(/<mjx-container/g) || []).length
 
@@ -61,14 +62,13 @@ test('inline formulas work inside tables and emphasis', () => {
   assert.match(html, /<strong>/)
 })
 
-test('actual GRPO chapter renders every complete LaTeX formula', async () => {
-  const source = await readFile('docs/rl-book/cha6强化学习.md', 'utf8')
-  const html = md.render(source)
-  const expected = (source.match(/^\s*\\\[/gm) || []).length +
-    (source.match(/(?<!\\)\\\(/g) || []).length
-  const parsed = md.parse(source, {})
-  const tokens = parsed.flatMap(token => [token, ...(token.children || [])])
-  assert.equal(tokens.filter(token => token.markup === '\\[' || token.markup === '\\(').length, expected)
+test('actual GRPO HTML chapter retains readable math and SVG output', () => {
+  const { source, content } = readContent('docs/rl-book/cha6强化学习.md')
+  const expected = (content.match(/class="math-(?:inline|block)"/g) ?? []).length
+  const html = md.render(source.replace(/<!--@include:[\s\S]*?-->/, content))
   assert.doesNotMatch(html, /data-mjx-error/)
-  assert.ok(countMath(html) >= expected)
+  assert.ok(countMath(html) > 100, 'the real chapter must contain its equations')
+  assert.equal(countMath(html), expected)
+  assert.match(html, /<mjx-container[^>]*>[\s\S]*?<svg/)
+  assert.match(html, /GRPO/)
 })

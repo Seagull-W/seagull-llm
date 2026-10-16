@@ -1,0 +1,62 @@
+/* Native HTML shares the site's single document and scroll position. */
+.native-document { min-width: 0; }
+.native-document .document-intro { margin-bottom: 32px; }
+.native-document .document-intro > p { color: var(--vp-c-text-2); font-size: 17px; }
+.native-document :where(h2, h3, h4, h5, h6) { scroll-margin-top: calc(var(--vp-nav-height) + 32px); }
+.native-document .document-section { min-width: 0; }
+.native-document :where(pre, table, mjx-container[display='true']) { max-width: 100%; overflow-x: auto; }
+
+/* Book: a chapter opening and distinct guided reading passages. */
+.VPDoc .format-book .document-intro { padding-bottom: 24px; border-bottom: 2px solid var(--section-accent, var(--vp-c-brand-1)); }
+.VPDoc .format-book .document-section > h2 { margin-top: 48px; }
+.VPDoc .format-book .document-section > blockquote { font-size: 16px; }
+
+/* Papers: source-led introduction and consistent method/analysis sections. */
+.VPDoc .format-paper .document-intro > blockquote { border-left: 0; padding: 16px 20px; background: var(--section-tint); }
+.VPDoc .format-paper .document-section > h2 { padding-bottom: 12px; border-bottom: 1px solid var(--vp-c-divider); }
+.VPDoc .format-paper :where(figure, img) { margin-inline: auto; }
+
+/* Experiments: configuration and results need wider, aligned columns. */
+.Layout:has(.format-lab) .VPDoc .content-container { max-width: 860px !important; }
+.VPDoc .format-lab .document-section > h2 { border-left: 3px solid var(--section-accent); padding-left: 14px; }
+.VPDoc .format-lab table { font-variant-numeric: tabular-nums; }
+
+/* Course: keep proofs and equations in an uninterrupted reading flow. */
+.VPDoc .format-course { line-height: 1.95; }
+.VPDoc .format-course mjx-container[display='true'] { margin-block: 30px; }
+.VPDoc .format-course .document-section + .document-section { margin-top: 48px; }
+
+/* Programming: separate API explanations from executable examples. */
+.VPDoc .format-code .document-section > h2 { padding-bottom: 12px; border-bottom: 1px solid var(--vp-c-divider); }
+.VPDoc .format-code div[class*='language-'] { border-top: 3px solid var(--section-accent); }
+
+/* Linux: preserve the original mechanism diagrams and section panels. */
+.section-linux-notes { --section-accent: #2563eb; --section-tint: var(--vp-c-bg-soft); }
+.Layout:has(.format-system) .VPDoc .content-container { max-width: 940px !important; }
+.VPDoc .format-system .linux-note-content { padding: 0; max-width: none; background: transparent; }
+.VPDoc .format-system .linux-note-content .hero h1 { color: #fff; -webkit-text-fill-color: #fff; font-size: clamp(26px, 3vw, 36px); }
+.VPDoc .format-system .linux-note-content .hero p { color: #d8e5f7; }
+.VPDoc .format-system .linux-note-content table { width: 100%; max-width: 100%; }
+.VPDoc .format-system .linux-note-content :where(th, td) { white-space: normal; }
+.VPDoc .format-system .linux-note-content h2 { margin-top: 0; padding-top: 0; }
+.VPDoc .format-system .linux-note-content .header-anchor { font-size: 0; }
+.dark .format-system .linux-note-content {
+  --bg: var(--vp-c-bg); --paper: var(--vp-c-bg-alt); --ink: var(--vp-c-text-1);
+  --muted: var(--vp-c-text-2); --line: var(--vp-c-divider); --shadow: none;
+}
+.dark .VPDoc .format-system .linux-note-content :where(.node, .pane, th, code, .figure, .note) {
+  background: var(--vp-c-bg-soft); color: var(--vp-c-text-1); border-color: var(--vp-c-border);
+}
+.dark .VPDoc .format-system .linux-note-content .pane[style] { background: var(--vp-c-bg-soft) !important; }
+.dark .VPDoc .format-system .linux-note-content pre { background: #152033; }
+.dark .VPDoc .format-system .linux-note-content pre code { background: transparent; color: #e7f1ff; }
+
+@media (max-width: 640px) {
+  .native-document .document-intro { margin-bottom: 24px; }
+  .VPDoc .format-system .linux-note-content .hero { padding: 26px 20px; }
+  .VPDoc .format-system .linux-note-content article section { padding: 22px 16px; }
+}
+@media print {
+  .native-document .document-section { break-inside: auto; }
+  .native-document :where(figure, pre, blockquote) { break-inside: avoid; }
+}

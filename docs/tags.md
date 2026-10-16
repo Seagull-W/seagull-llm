@@ -6,10 +6,7 @@ sidebar: false
 aside: false
 prev: false
 next: false
+contentFormat: html
 ---
 
-# 标签索引
-
-从一个主题出发，找到不同栏目中的相关笔记。选择标签，或输入关键词缩小范围。
-
-<TagsIndex />
+<!--@include: ./tags.html-->

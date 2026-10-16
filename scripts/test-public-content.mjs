@@ -17,7 +17,7 @@ test('published articles and PDF lectures remain discoverable', () => {
     '/papers/projects/mimo-v2-6/', '/papers/projects/miles-glm-5-2/',
     '/papers/projects/intellect-3/', '/papers/projects/deepswe-preview/',
     '/papers/projects/codemidas/', '/papers/engineering/failure-handbook',
-    '/papers/evidence/gaps']) {
+    '/papers/evidence/gaps', '/linux-notes/linux-isolation']) {
     assert.equal(isPublicContent(path, {}), true, path)
   }
 })

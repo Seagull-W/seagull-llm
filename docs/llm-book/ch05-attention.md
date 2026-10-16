@@ -1,5 +1,7 @@
 ---
-tags: ["大语言模型","Transformer"]
+tags:
+  - 大语言模型
+  - Transformer
 status: draft
 prev: false
 next: false
@@ -8,47 +10,11 @@ head:
   - - meta
     - name: robots
       content: noindex
+title: 第 5 章 注意力机制
+description: >-
+  第 5 章 注意力机制 &ZeroWidthSpace; 本章导引 &ZeroWidthSpace; 注意力机制是 Transformer
+  的核心创新。本章介绍自注意力的工作原理、Q/K/V 三个矩阵的角色、缩放点积注意
+contentFormat: html
 ---
 
-# 第 5 章 注意力机制
-
-## 本章导引
-
-> 注意力机制是 Transformer 的核心创新。本章介绍自注意力的工作原理、Q/K/V 三个矩阵的角色、缩放点积注意力的计算方式，以及多头注意力机制。本章包含全文档最关键的可视化演示。
-
----
-
-## 5.1 注意力机制的核心思想
-
-[待撰写]
-
-## 5.2 查询、键、值：Q/K/V
-
-[待撰写]
-
-## 5.3〔深入·可选〕缩放点积注意力
-
-[待撰写]
-
-<ClientOnly>
-  <AttentionViz />
-</ClientOnly>
-
-## 5.4 多头注意力
-
-[待撰写]
-
-## 5.5 掩码自注意力
-
-[待撰写]
-
-## 本章小结
-
-- 注意力机制通过 Q/K/V 三个矩阵计算词与词之间的关联权重
-- 缩放点积公式：softmax(QK^T/√dk)V 是注意力机制的核心运算
-- 多头注意力允许模型同时捕捉多种语义关系
-- 掩码自注意力保证了自回归生成的因果性
-
-## 参考文献
-
-[待补充]
+<!--@include: ./ch05-attention.html-->
