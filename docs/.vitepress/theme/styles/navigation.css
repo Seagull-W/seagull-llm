@@ -1,0 +1,24 @@
+/* Keep the brand and actions fixed while only the section links scroll. */
+.VPNavBar .wrapper { padding: 0 20px !important; }
+.VPNavBar .container { max-width: 1440px !important; gap: 12px; }
+.VPNavBar .container > .title { position: static !important; width: 44px !important; padding: 0 !important; flex: 0 0 44px; }
+.VPNavBarTitle .title { border-bottom: 0 !important; }
+.VPNavBarTitle .logo { width: 36px; height: 36px; margin-right: 0; }
+.VPNavBar .container > .content { min-width: 0; padding: 0 !important; }
+.VPNavBar .content-body { min-width: 0; background: transparent !important; }
+.VPNavBar .VPNavBarSearch { flex: none; padding-left: 0; margin-right: 12px; }
+.VPNavBar .VPNavBarMenu { display: flex; flex: 1 1 0; min-width: 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--vp-c-border-hover) transparent; }
+.VPNavBarMenu > a { flex: none; }
+.VPNavBar .VPNavBarAppearance,
+.VPNavBar .VPNavBarSocialLinks,
+.VPNavBar .VPNavBarExtra,
+.VPNavBar .VPNavBarHamburger { display: none !important; }
+@media (max-width: 767px) {
+  .VPNavBar .wrapper { padding-inline: 12px !important; }
+  .VPNavBar .container { gap: 6px; }
+  .VPNavBar .content-body { column-gap: 0; }
+  .VPNavBar .VPNavBarSearch { margin-right: 4px; }
+}
+@media (min-width: 960px) {
+  .VPNavBarSearch .DocSearch-Button { padding-inline: 10px; }
+}

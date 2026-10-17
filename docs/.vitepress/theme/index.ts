@@ -42,3 +42,5 @@ export default {
     app.component('HilbertQuote', HilbertQuote)
   }
 }
+
+import './styles/navigation.css'

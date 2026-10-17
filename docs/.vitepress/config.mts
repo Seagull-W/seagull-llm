@@ -218,7 +218,7 @@ const config = withMermaid({
   // ===== 主题配置 =====
   themeConfig: {
     // --- 站点 Logo（海鸥） ---
-    logo: '/logo.svg',
+    logo: { src: '/logo.svg', alt: 'seagull 首页' },
 
     // --- 导航栏标题（false = 只显示 logo，不显示文字） ---
     siteTitle: false,

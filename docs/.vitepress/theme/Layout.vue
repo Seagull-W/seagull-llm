@@ -5,8 +5,7 @@ import { useData, useRoute, withBase } from 'vitepress'
 import SeagullLens from '../components/SeagullLens.vue'
 import ReadingProgress from '../components/ReadingProgress.vue'
 import ChapterTag from '../components/ChapterTag.vue'
-import HilbertQuote from '../components/HilbertQuote.vue'
-import VideoGallery from '../components/VideoGallery.vue'
+import NavActions from '../components/NavActions.vue'
 import { isPublicContent } from '../public-content'
 
 const { Layout } = DefaultTheme
@@ -27,6 +26,14 @@ let isResizing = false
 let activePointerId = -1
 let resizeRafId = 0
 let pendingWidth = 0
+let navMenu: HTMLElement | null = null
+
+function scrollNav(e: WheelEvent) {
+  if (!navMenu || e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
+  const before = navMenu.scrollLeft
+  navMenu.scrollLeft += e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? navMenu.clientWidth : 1)
+  if (navMenu.scrollLeft !== before) e.preventDefault()
+}
 const MIN_SIDEBAR_WIDTH = 200
 const MAX_SIDEBAR_WIDTH = 500
 const DEFAULT_SIDEBAR_WIDTH = 272
@@ -145,6 +152,8 @@ function resetWidth() {
 }
 
 onMounted(() => {
+  navMenu = document.querySelector('.VPNavBarMenu')
+  navMenu?.addEventListener('wheel', scrollNav, { passive: false })
   loadState()
   applyWidth()
   applyVisibility()
@@ -155,6 +164,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  navMenu?.removeEventListener('wheel', scrollNav)
   finishResize()
   if (resizeRafId !== 0) cancelAnimationFrame(resizeRafId)
   document.removeEventListener('pointermove', onPointerMove)
@@ -189,7 +199,11 @@ onUnmounted(() => {
           @dblclick="resetWidth"
           @keydown="onResizeKeydown"
         ></div>
-        <!-- 折叠/展开按钮 -->
+      </template>
+    </template>
+    <template #nav-bar-content-before>
+      <template v-if="!isHome && frontmatter.layout !== 'page' && frontmatter.sidebar !== false">
+        <!-- 目录按钮在导航中保留独立位置，不覆盖本页目录。 -->
         <button
           class="vp-sidebar-toggle"
           :class="{ collapsed: !sidebarVisible }"
@@ -225,6 +239,7 @@ onUnmounted(() => {
         </button>
       </template>
     </template>
+    <template #nav-bar-content-after><NavActions /></template>
     <template #home-hero-image>
       <SeagullLens />
     </template>
@@ -234,12 +249,6 @@ onUnmounted(() => {
         <span class="seagull-hero-title">{{ frontmatter.hero.text }}</span>
       </h1>
       <p class="seagull-hero-tagline">{{ frontmatter.hero.tagline }}</p>
-    </template>
-    <template #home-features-after>
-      <VideoGallery preview />
-      <ClientOnly>
-        <HilbertQuote />
-      </ClientOnly>
     </template>
     <template #doc-before>
       <div v-if="sectionClass === 'section-research' && frontmatter.date" class="research-issue">
@@ -310,10 +319,9 @@ onUnmounted(() => {
 
 /* ===== 折叠/展开按钮 ===== */
 .vp-sidebar-toggle {
-  position: fixed;
-  top: calc(var(--vp-nav-height) + 10px);
-  left: calc(var(--vp-sidebar-width) - 16px);
-  z-index: 41;
+  position: relative;
+  flex: 0 0 32px;
+  margin-right: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -325,7 +333,7 @@ onUnmounted(() => {
   backdrop-filter: var(--glass-blur);
   color: var(--vp-c-text-2);
   cursor: pointer;
-  transition: left 0.25s ease, color 0.15s, border-color 0.15s, box-shadow 0.2s;
+  transition: color 0.15s, border-color 0.15s;
   box-shadow: 0 2px 10px rgba(99, 102, 241, 0.1);
 }
 
@@ -335,9 +343,6 @@ onUnmounted(() => {
   box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
 }
 
-.vp-sidebar-toggle.collapsed {
-  left: 10px;
-}
 
 @media (prefers-reduced-motion: reduce) {
   .vp-sidebar-toggle,
@@ -348,15 +353,18 @@ onUnmounted(() => {
 }
 
 /* ===== 侧边栏折叠状态 ===== */
-.vp-sidebar-collapsed .VPSidebar {
-  transform: translateX(-100%);
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
+@media (min-width: 960px) {
+  .vp-sidebar-collapsed .VPSidebar {
+    transform: translateX(-100%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
 
-.vp-sidebar-collapsed {
-  --vp-sidebar-width: 0px;
+  .vp-sidebar-collapsed .VPContent,
+  .vp-sidebar-collapsed .VPLocalNav {
+    --vp-sidebar-width: 0px;
+  }
 }
 
 /* 平滑过渡 */
