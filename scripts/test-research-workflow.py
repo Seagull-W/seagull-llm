@@ -11,6 +11,18 @@ spec.loader.exec_module(w)
 
 
 class WorkflowTests(unittest.TestCase):
+    def test_local_skill_is_loaded_as_utf8_and_missing_skill_is_not_silenced(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            guide = root / '.agents/skills/seagull-research/SKILL.md'
+            with patch.object(w, 'ROOT', root):
+                with self.assertRaises(FileNotFoundError):
+                    w.read_research_guide()
+                guide.parent.mkdir(parents=True)
+                expected = '# 本机调研技能\n检索、阅读和试读。\n'
+                guide.write_text(expected, encoding='utf-8')
+                self.assertEqual(w.read_research_guide(), expected)
+
     def bundle(self):
         return {'items': [{'id': 'S1'}, {'id': 'S2'}, {'id': 'S3'}]}
 

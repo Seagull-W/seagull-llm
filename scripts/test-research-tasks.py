@@ -18,6 +18,10 @@ class TaskTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.run = Path(self.temp.name)
+        # Local operator skills are intentionally excluded from Git checkouts.
+        guide = patch.object(w, 'read_research_guide', return_value='# Offline task guide\n')
+        guide.start()
+        self.addCleanup(guide.stop)
         self.engine = w.task_engine()
         self.day = date(2026, 10, 16)
 

@@ -381,7 +381,7 @@ class DeliveryContract:
                'requirements': bundle['task']['delivery']['requirements'],
                'known_issues': bundle.get('delivery', {}).get('issues', [])}
         self.w.write_json(run / 'acceptance-brief.json', out)
-        guide = (self.w.ROOT / '.agents/skills/seagull-research/SKILL.md').read_text(encoding='utf-8')
+        guide = self.w.read_research_guide()
         self.w.write_text(run / 'acceptance-prompt.md', guide + '\n\n## 本次具体约定\n\n' +
                           json.dumps(out, ensure_ascii=False, indent=2) + '\n')
 
@@ -464,7 +464,7 @@ class DeliveryContract:
         if path.exists() and self.w.read_json(path)['task_sha256'] != manifest['task_sha256']:
             raise ValueError('Assignment already frozen; use a new slug/run for a changed task')
         self.w.write_json(path, manifest)
-        guide = (self.w.ROOT / '.agents/skills/seagull-research/SKILL.md').read_text(encoding='utf-8')
+        guide = self.w.read_research_guide()
         out = guide + '\n\n# 本次调研分派与交付约定\n\n原始问题：' + task['question'] + '\n\n'
         out += '本次已选择结构化交接。assignment.json 保留完整 task；文件接口见 .agents/skills/seagull-research/references/task-pipeline.md，目录型任务另读 references/delivery-contract.md（相对 skill 目录）。\n\n'
         out += '## 必须交付\n\n'

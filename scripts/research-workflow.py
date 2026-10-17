@@ -26,6 +26,11 @@ ATOM = {'a': 'http://www.w3.org/2005/Atom'}
 GROUPS = ['paper', 'research-blog', 'release', 'manual', 'systematic']
 
 
+def read_research_guide():
+    """Load the operator's local skill; offline tests provide their own guide."""
+    return (ROOT / '.agents/skills/seagull-research/SKILL.md').read_text(encoding='utf-8')
+
+
 def task_engine():
     # Loaded by path so CLI and importlib-based tests use the same task engine.
     import importlib.util

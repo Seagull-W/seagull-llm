@@ -19,6 +19,11 @@ class DeliveryTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.run = Path(self.temp.name)
+        # Assert prompt wiring without depending on the operator's local skill.
+        guide = patch.object(w, 'read_research_guide', return_value=(
+            '# Offline delivery guide\n浏览器搜索摘要只作线索；原文摘录才作为证据。\n'))
+        guide.start()
+        self.addCleanup(guide.stop)
         self.e = w.task_engine()
         self.d = w.delivery_engine()
         self.task = self.e.normalize(self.e.plan('逐个介绍数据集和具体数据形式', 'custom', 'catalog-test',
@@ -247,7 +252,7 @@ class DeliveryTests(unittest.TestCase):
     def test_editorial_prompts_are_in_the_actual_runtime_handoffs(self):
         bundle, _, _ = self.report()
         self.d.handoff(self.task, self.run)
-        guide = (w.ROOT / '.agents/skills/seagull-research/SKILL.md').read_text(encoding='utf-8')
+        guide = w.read_research_guide()
         self.assertTrue((self.run / 'handoff.md').read_text().startswith(guide))
         prompt = self.e.prompt(self.run, bundle)
         self.assertTrue(prompt.startswith(guide))

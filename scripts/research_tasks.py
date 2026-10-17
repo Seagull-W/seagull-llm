@@ -314,7 +314,7 @@ class TaskWorkflow:
         print(f"Discovery: {len(discovery['candidates'])} candidates; agent search brief: {run / 'search-brief.md'}")
 
     def brief(self, task, run):
-        skill_guide = (self.w.ROOT / '.agents/skills/seagull-research/SKILL.md').read_text(encoding='utf-8')
+        skill_guide = self.w.read_research_guide()
         return f'''# 本次调研的检索与阅读任务
 
 问题：{task['question']}
@@ -535,7 +535,7 @@ class TaskWorkflow:
         catalog = task.get('delivery', {}).get('profile') in ('dataset-catalog', 'object-catalog')
         schema_name = 'catalog-article.schema.json' if catalog else 'task-article.schema.json'
         schema = (self.w.ROOT / ('research/' + schema_name)).read_text(encoding='utf-8')
-        writer_guide = (self.w.ROOT / '.agents/skills/seagull-research/SKILL.md').read_text(encoding='utf-8')
+        writer_guide = self.w.read_research_guide()
         instructions = writer_guide + f'''\n\n# 本次任务与工具输出约定\n\n你是中文调研作者。本次问题：{task['question']}。任务模式：{task['mode']}。
 根据 task 的读者、范围和知识轴写能回答问题的报告，不套用每日新闻清单。
 按 scope/audience/delivery.requirements 选择 skill 中的交付目的，不由 mode 强制章节结构。篇幅随问题与证据变化。
