@@ -1,9 +1,20 @@
-<div class="native-document format-directory" data-format="directory" aria-label="Nathan Lambert RL BOOK 学习笔记">
-<header class="document-intro">
-<h1 id="nathan-lambert-rl-book-学习笔记" tabindex="-1">Nathan Lambert RL BOOK 学习笔记 <a class="header-anchor" href="#nathan-lambert-rl-book-学习笔记" aria-label="Permalink to &quot;Nathan Lambert RL BOOK 学习笔记&quot;">&ZeroWidthSpace;</a></h1>
-<p>学习 Nathan Lambert 强化学习（RL）专著的读书笔记，聚焦大模型时代的 RLHF、PPO、DPO 等核心技术。</p>
+<div class="native-document format-directory" data-format="directory" aria-label="Nathan Lambert RL BOOK 学习笔记" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">RL 学习笔记<span>从算法到训练实践</span></p>
+  <h1 id="nathan-lambert-rl-book-学习笔记" tabindex="-1">Nathan Lambert RL BOOK 学习笔记 <a class="header-anchor" href="#nathan-lambert-rl-book-学习笔记" aria-label="Permalink to &quot;Nathan Lambert RL BOOK 学习笔记&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">从对话模板与监督微调走向奖励建模和强化学习，结合训练实验理解 RLHF 的完整学习路径。</p>
+  <div class="note-chips"><span>RLHF</span><span>训练实验</span><span>监督微调</span><span>对话模板</span></div>
 </header>
-<section class="document-section">
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#阅读章节"><span>01</span>阅读章节</a>
+<a href="#训练实践"><span>02</span>训练实践</a>
+</nav>
+
+<details class="note-context-details" id="reading-context"><summary>栏目说明与资料范围</summary><div>
+<p>学习 Nathan Lambert 强化学习（RL）专著的读书笔记，聚焦大模型时代的 RLHF、PPO、DPO 等核心技术。</p>
+</div></details>
+
+<section class="document-section note-panel" aria-labelledby="阅读章节">
 <h2 id="阅读章节" tabindex="-1">阅读章节 <a class="header-anchor" href="#阅读章节" aria-label="Permalink to &quot;阅读章节&quot;">&ZeroWidthSpace;</a></h2>
 <ChapterCards :items="[
   { label: '第 4 章', title: '对话模板与监督微调', link: '/rl-book/cha4对话模板与监督微调', description: '从对话模板与指令结构出发，理解 IFT / SFT 的数据组织与训练细节。' },
@@ -11,7 +22,8 @@
   { label: '第 6 章', title: '强化学习', link: '/rl-book/cha6强化学习', description: '梳理策略梯度与 RLHF 训练循环，连接奖励、策略与优化目标。' }
 ]" />
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="训练实践">
 <h2 id="训练实践" tabindex="-1">训练实践 <a class="header-anchor" href="#训练实践" aria-label="Permalink to &quot;训练实践&quot;">&ZeroWidthSpace;</a></h2>
 <ChapterCards :items="[
   { label: '奖励模型实验', title: '奖励模型训练实验与分析', link: '/rl-book/奖励模型训练实验', description: '对照 bf16 与 f32 两次训练，观察损失、偏好准确率和奖励分数的变化。' },

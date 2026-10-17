@@ -1,11 +1,33 @@
-<article class="native-document format-paper" data-format="paper" aria-label="各项目 benchmark、loss 与运行指标证据索引">
-<header class="document-intro">
-<h1 id="各项目-benchmark、loss-与运行指标证据索引" tabindex="-1">各项目 benchmark、loss 与运行指标证据索引 <a class="header-anchor" href="#各项目-benchmark、loss-与运行指标证据索引" aria-label="Permalink to &quot;各项目 benchmark、loss 与运行指标证据索引&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-paper" data-format="paper" aria-label="各项目 benchmark、loss 与运行指标证据索引" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
+  <h1 id="各项目-benchmark、loss-与运行指标证据索引" tabindex="-1">各项目 benchmark、loss 与运行指标证据索引 <a class="header-anchor" href="#各项目-benchmark、loss-与运行指标证据索引" aria-label="Permalink to &quot;各项目 benchmark、loss 与运行指标证据索引&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">区分各项目已取得的数值、报告曲线、最终表和未取得日志。</p>
+  <div class="note-chips"><span>论文与项目随谈</span><span>后训练</span><span>模型评估</span><span>训练实验</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#取得数值时必须一起保存什么"><span>02</span>取得数值时必须一起保存什么</a>
+<a href="#后续各项目统一追踪的数值"><span>03</span>后续各项目统一追踪的数值</a>
+</nav>
+<figure class="note-diagram" aria-label="读指标前先核对身份">
+  <p class="note-diagram-title">读指标前先核对身份</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>指标定义</strong><span>计算什么</span></div>
+    <div class="note-flow-step tone-1"><strong>运行身份</strong><span>哪次实验与 checkpoint</span></div>
+    <div class="note-flow-step tone-2"><strong>统计口径</strong><span>样本与聚合方法</span></div>
+    <div class="note-flow-step tone-0"><strong>证据状态</strong><span>数值、曲线或缺失记录</span></div>
+  </div>
+  <figcaption>不同运行、任务分布和统计口径下的数值，不能直接混为同一条比较。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <blockquote>
 <p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
 </blockquote>
 <p>更新：2026-10-11。指标是每个项目的必查项。此页记录目前取得的证据形态，具体值与解释放在项目档案；原始数据和来源入口分别保留。</p>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="阅读起点表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>项目</th>
@@ -52,14 +74,16 @@
 <td><a href="/papers/projects/codemidas/">案例</a></td>
 </tr>
 </tbody>
-</table>
-</header>
-<section class="document-section">
+</table></div>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="取得数值时必须一起保存什么">
 <h2 id="取得数值时必须一起保存什么" tabindex="-1">取得数值时必须一起保存什么 <a class="header-anchor" href="#取得数值时必须一起保存什么" aria-label="Permalink to &quot;取得数值时必须一起保存什么&quot;">&ZeroWidthSpace;</a></h2>
 <p>每条记录至少连接项目、run/attempt、checkpoint 或实际更新步、任务集/版本、harness、采样参数、预算、分数定义、来源位置及缺失状态。百分制数值、0–1 reward、Pass@1、Pass@k、avg@k、候选选择后的 best@k 不混用。</p>
 <p>loss 必须同时记录目标函数、归约方式、mask、有效 token、优势、importance ratio 与更新是否成功。仅有 <code>lr</code>、clip 等参数不能当作 loss 观测；一幅作者曲线也不等于取得原始序列。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="后续各项目统一追踪的数值">
 <h2 id="后续各项目统一追踪的数值" tabindex="-1">后续各项目统一追踪的数值 <a class="header-anchor" href="#后续各项目统一追踪的数值" aria-label="Permalink to &quot;后续各项目统一追踪的数值&quot;">&ZeroWidthSpace;</a></h2>
 <ul>
 <li>能力：训练内验证、固定 benchmark、每任务/每题结果、重复评测与不确定性。</li>

@@ -1,6 +1,24 @@
-<article class="native-document format-course" data-format="course" aria-label="价值函数">
-<header class="document-intro">
-<h1 id="article-title" tabindex="-1">价值函数 <a class="header-anchor" href="#article-title" aria-label="文章链接">&#8203;</a></h1>
+<article class="native-document format-course" data-format="course" aria-label="价值函数" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">西湖 RL 笔记<span>概念、推导与算法</span></p>
+  <h1 id="article-title" tabindex="-1">价值函数 <a class="header-anchor" href="#article-title" aria-label="文章链接">&#8203;</a></h1>
+  <p class="note-deck">楔子：用连续的函数代替离散的状态价值表。 计算简便，且可能具有更好的泛化性，当然会不可避免地损失部分信息。 可以用梯度下降求解最优的价值函数。这里可以对状态的分布做不同的假设（如均匀分布，马尔科夫链的平稳分布）。进一步去</p>
+  <div class="note-chips"><span>强化学习</span><span>价值函数</span><span>时序差分</span></div>
+</header>
+
+<figure class="note-diagram" aria-label="用函数代替价值表">
+  <p class="note-diagram-title">用函数代替价值表</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>状态特征</strong><span>把状态映射为输入</span></div>
+    <div class="note-flow-step tone-1"><strong>价值近似</strong><span>线性函数或神经网络</span></div>
+    <div class="note-flow-step tone-2"><strong>学习目标</strong><span>MC / TD 形成估计</span></div>
+    <div class="note-flow-step tone-0"><strong>参数更新</strong><span>用梯度方法修正近似</span></div>
+  </div>
+  <figcaption>表示能力、计算开销与状态特征共同决定近似方法的取舍。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <p>楔子：用连续的函数代替离散的状态价值表。</p>
 <p>计算简便，且可能具有更好的泛化性，当然会不可避免地损失部分信息。</p>
 <p>可以用梯度下降求解最优的价值函数。这里可以对状态的分布做不同的假设（如均匀分布，马尔科夫链的平稳分布）。进一步去掉期望化为随机梯度下降。然后可以通过MC或者TD算法进行求解。</p>
@@ -8,5 +26,5 @@
 <p>TD-linear以及Least Squared TD</p>
 <p>可以对Sarsa和Q-learning做修改以直接估计动作价值函数</p>
 <p><strong>深度Q-learning</strong>，即DQN。</p>
-</header>
+</section>
 </article>

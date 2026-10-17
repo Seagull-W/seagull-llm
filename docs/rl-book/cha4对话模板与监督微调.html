@@ -1,11 +1,32 @@
-<article class="native-document format-lab" data-format="lab" aria-label="对话模板与监督微调">
-<header class="document-intro">
-<h1 id="对话模板与监督微调" tabindex="-1">对话模板与监督微调 <a class="header-anchor" href="#对话模板与监督微调" aria-label="Permalink to &quot;对话模板与监督微调&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-lab" data-format="lab" aria-label="对话模板与监督微调" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">RL 学习笔记<span>从算法到训练实践</span></p>
+  <h1 id="对话模板与监督微调" tabindex="-1">对话模板与监督微调 <a class="header-anchor" href="#对话模板与监督微调" aria-label="Permalink to &quot;对话模板与监督微调&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">Nathan Lambert RL Book 第 4 章学习笔记，涵盖指令微调与对话模板。</p>
+  <div class="note-chips"><span>RLHF</span><span>监督微调</span><span>对话模板</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#指令微调"><span>02</span>指令微调</a>
+</nav>
+<figure class="note-diagram" aria-label="一条样本怎样进入监督微调">
+  <p class="note-diagram-title">一条样本怎样进入监督微调</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>结构化对话</strong><span>角色、消息与轮次</span></div>
+    <div class="note-flow-step tone-1"><strong>对话模板</strong><span>转换为词元序列</span></div>
+    <div class="note-flow-step tone-2"><strong>监督目标</strong><span>确定哪些回答位置参与损失</span></div>
+  </div>
+  <figcaption>将数据组织、模板转换与训练目标分开理解。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <div class="info custom-block"><p class="custom-block-title">原书与章节</p>
 <p>本节对应 Nathan Lambert《Reinforcement Learning from Human Feedback》第 4 章。<a href="https://arxiv.org/abs/2504.12501" target="_blank" rel="noreferrer">阅读原书</a>。</p>
 </div>
-</header>
-<section class="document-section">
+</section>
+
+<section class="document-section note-panel" aria-labelledby="指令微调">
 <h2 id="指令微调" tabindex="-1">指令微调 <a class="header-anchor" href="#指令微调" aria-label="Permalink to &quot;指令微调&quot;">&ZeroWidthSpace;</a></h2>
 <p>指令微调IFT，即监督微调SFT。本质上是基于统一框架的问答指令集对预训练模型进行监督学习，从而获得对类似问答集的泛化能力，通常作为RL的前置工作。</p>
 <h3 id="对话模板与指令结构" tabindex="-1">对话模板与指令结构 <a class="header-anchor" href="#对话模板与指令结构" aria-label="Permalink to &quot;对话模板与指令结构&quot;">&ZeroWidthSpace;</a></h3>

@@ -2,6 +2,25 @@
 
 2026-10-16 起，除每日调研外的读者内容以 HTML 为正文主文件。每日调研、仓库指导文件和 ADR 保留 Markdown。站点继续使用 VitePress 提供导航、侧边栏、本页目录、标签、搜索、翻页、主题切换和阅读进度。
 
+## 2026-10-17 阅读设计修订
+
+笔记页面充分沿用 Linux 隔离机制笔记的视觉语言，而不只是把 Markdown 标签换成 HTML：深蓝渐变的 `note-hero` 开篇、主题 chips、可跳转的 `note-jump` 阅读导航、白色 `note-panel` 分节、蓝／绿／橙的机制图和对照块、独立的公式与图片区域。正文左对齐，段落保持连续阅读；仅在概念、步骤或结果需要比较时使用网格，不把每段文字都拆成卡片。
+
+HTML 源文件使用 `data-design="linux-notebook"` 标记，页内按实际内容维护以下元素：
+
+- `header.note-hero`：真实栏目名、一个 h1、人工编写的摘要和主题标签。
+- `nav.note-jump`：链接到已有小节 ID，长目录用原生 details 展开，右侧目录仍保留。
+- `figure.note-diagram`：根据当前文章绘制机制、数据路径或阅读地图，并注明简化范围；不把比较关系画成实际的因果流水线。
+- `section.note-panel`：按 h2 组织正文，保留稳定的标题 ID；原先从 h3 起步的页面应校正标题层级。
+- `div.note-comparison`：偏好对、算法差异等并列概念的对照。
+- `figure.note-figure`：原有配图、替代文本与可读图注。
+- `div.note-table`：可键盘聚焦的横向滚动区域，宽表不撑开页面。
+- `details.note-details`：可展开长代码与配置，保留复制与高亮；解释和标题放在折叠区域外。
+
+共用视觉由 `docs/.vitepress/theme/styles/notebook-design.css` 维护，样式限定在上述页面标记内，不改变调研页面。设计必须实际查看桌面、窄屏和暗色模式；构建通过不能替代视觉检查。
+
+LLM 科普书目前整体撤下：源文件保留，但不参与站点构建、导航、首页、卡片、标签、全文搜索与翻页。未经用户明确要求，不重新添加入口。此状态优先于下方保留的科普书格式约定。
+
 ## 文件与路由
 
 每个页面由两个相邻文件组成：`name.html` 保存唯一正文，`name.md` 保存 title、description、tags、发布状态及 `contentFormat: html`，正文只有 `<!--@include: ./name.html-->`。目录式页面使用 `index.html` 和 `index.md`。不维护两份正文，不自动从旧 Markdown 覆盖现有 HTML。路由保持 `/section/name` 或 `/section/`。

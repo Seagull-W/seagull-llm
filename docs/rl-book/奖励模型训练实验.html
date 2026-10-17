@@ -1,9 +1,32 @@
-<article class="native-document format-lab" data-format="lab" aria-label="奖励模型训练实验与分析">
-<header class="document-intro">
-<h1 id="奖励模型训练实验与分析" tabindex="-1">奖励模型训练实验与分析 <a class="header-anchor" href="#奖励模型训练实验与分析" aria-label="Permalink to &quot;奖励模型训练实验与分析&quot;">&ZeroWidthSpace;</a></h1>
-<p>这里对照两次云端训练，观察 Bradley–Terry 偏好奖励模型的损失、偏好准确率与奖励分数变化。模型原理见<a href="./cha5奖励建模">奖励建模</a>。</p>
+<article class="native-document format-lab" data-format="lab" aria-label="奖励模型训练实验与分析" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">RL 学习笔记<span>从算法到训练实践</span></p>
+  <h1 id="奖励模型训练实验与分析" tabindex="-1">奖励模型训练实验与分析 <a class="header-anchor" href="#奖励模型训练实验与分析" aria-label="Permalink to &quot;奖励模型训练实验与分析&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">对照 bf16 与 f32 两次偏好奖励模型训练，通过交互曲线和验证结果观察损失、准确率与奖励分数。</p>
+  <div class="note-chips"><span>RLHF</span><span>奖励建模</span><span>训练实验</span></div>
 </header>
-<section class="document-section">
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#bf16-与-f32-交互对比"><span>02</span>bf16 与 f32 交互对比</a>
+<a href="#结果分析"><span>03</span>结果分析</a>
+</nav>
+<figure class="note-diagram" aria-label="对照实验怎样读">
+  <p class="note-diagram-title">对照实验怎样读</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>运行条件</strong><span>bf16 与 f32</span></div>
+    <div class="note-flow-step tone-1"><strong>同一指标</strong><span>损失、准确率、奖励分数</span></div>
+    <div class="note-flow-step tone-2"><strong>对齐记录</strong><span>比较 step 与变化趋势</span></div>
+    <div class="note-flow-step tone-0"><strong>解释边界</strong><span>区分观测与归因</span></div>
+  </div>
+  <figcaption>先统一指标与 step，再观察精度差异；曲线与表格保留原始记录口径。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
+<p>这里对照两次云端训练，观察 Bradley–Terry 偏好奖励模型的损失、偏好准确率与奖励分数变化。模型原理见<a href="./cha5奖励建模">奖励建模</a>。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="bf16-与-f32-交互对比">
 <h2 id="bf16-与-f32-交互对比" tabindex="-1">bf16 与 f32 交互对比 <a class="header-anchor" href="#bf16-与-f32-交互对比" aria-label="Permalink to &quot;bf16 与 f32 交互对比&quot;">&ZeroWidthSpace;</a></h2>
 <p>下方展示两次运行的 11 项训练/验证指标：每次运行的训练指标各有 524 个记录点，验证指标各有 22 个记录点。绿色对应 f32，红色对应 bf16。</p>
 <p>切换指标、勾选运行，或移动鼠标查看记录点的 Step 与数值。</p>
@@ -11,11 +34,12 @@
   <RewardTrainingResults />
 </ClientOnly>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="结果分析">
 <h2 id="结果分析" tabindex="-1">结果分析 <a class="header-anchor" href="#结果分析" aria-label="Permalink to &quot;结果分析&quot;">&ZeroWidthSpace;</a></h2>
 <h3 id="最后一次验证" tabindex="-1">最后一次验证 <a class="header-anchor" href="#最后一次验证" aria-label="Permalink to &quot;最后一次验证&quot;">&ZeroWidthSpace;</a></h3>
 <p>两次运行的最后一次验证都在 Step 524。下表比较同一步的结果，准确率表示 chosen 的得分高于 rejected 的比例。</p>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="结果分析表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>指标（Step 524）</th>
@@ -40,7 +64,7 @@
 <td style="text-align:right">2.6220</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>bf16 的验证损失更低，但偏好准确率也略低。这并不矛盾：准确率只检查排序是否正确，损失还受每对回答的分数差大小影响。因此，两项指标应结合观察，不能仅凭损失判断哪个运行更好。</p>
 <h3 id="最后一步不一定是最佳检查点" tabindex="-1">最后一步不一定是最佳检查点 <a class="header-anchor" href="#最后一步不一定是最佳检查点" aria-label="Permalink to &quot;最后一步不一定是最佳检查点&quot;">&ZeroWidthSpace;</a></h3>
 <p>f32 的最低验证损失出现在 <strong>Step 200（0.4559）</strong>，bf16 则在 <strong>Step 275（0.4232）</strong>；两者最后一步的验证损失都高于各自的最低值。若按验证损失选择模型，应关注这些较早的步骤，而不是默认使用最后一次更新。</p>

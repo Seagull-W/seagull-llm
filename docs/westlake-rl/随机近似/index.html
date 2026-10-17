@@ -1,15 +1,38 @@
-<article class="native-document format-course" data-format="course" aria-label="随机近似">
-<header class="document-intro">
-<h1 id="article-title" tabindex="-1">随机近似 <a class="header-anchor" href="#article-title" aria-label="文章链接">&#8203;</a></h1>
+<article class="native-document format-course" data-format="course" aria-label="随机近似" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">西湖 RL 笔记<span>概念、推导与算法</span></p>
+  <h1 id="article-title" tabindex="-1">随机近似 <a class="header-anchor" href="#article-title" aria-label="文章链接">&#8203;</a></h1>
+  <p class="note-deck">从均值估计出发，理解 Robbins–Monro 算法、增量式更新与收敛条件。</p>
+  <div class="note-chips"><span>强化学习</span><span>随机近似</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#均值估计——动机"><span>01</span>均值估计——动机</a>
+<a href="#robbins-monro-算法"><span>02</span>Robbins-Monro 算法</a>
+</nav>
+<figure class="note-diagram" aria-label="从均值估计走向随机近似">
+  <p class="note-diagram-title">从均值估计走向随机近似</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>目标</strong><span>求期望或函数的根</span></div>
+    <div class="note-flow-step tone-1"><strong>观测</strong><span>带噪声的样本</span></div>
+    <div class="note-flow-step tone-2"><strong>递推</strong><span>用步长控制每次修正</span></div>
+    <div class="note-flow-step tone-0"><strong>收敛</strong><span>检验条件与误差</span></div>
+  </div>
+  <figcaption>用可获得的随机观测替代不可直接求出的期望，再讨论迭代的收敛条件。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="均值估计——动机">
 <h2 id="均值估计——动机" tabindex="-1">均值估计——动机 <a class="header-anchor" href="#均值估计——动机" aria-label="Permalink to &quot;均值估计——动机&quot;">&ZeroWidthSpace;</a></h2>
 <p>有增量式更新如下：</p>
 <div class="math-block" data-tex="w_{k+1} = w_k - \frac{1}{k}(w_k - x_k)
-"></div><p>更一般的，</p>
+"></div>
+<p>更一般的，</p>
 <div class="math-block" data-tex="w_{k+1} = w_k - \alpha_k(w_k - x_k)
-"></div><p>可以称 <span class="math-inline" data-tex="w_k - x_k"></span> 为新息（<em>innovation</em>），顾名思义，新的数据带来的新的信息。</p>
+"></div>
+<p>可以称 <span class="math-inline" data-tex="w_k - x_k"></span> 为新息（<em>innovation</em>），顾名思义，新的数据带来的新的信息。</p>
 <p><span class="math-inline" data-tex="\alpha_k"></span> 为步长，代表新信息对估计产出多大程度影响。</p>
-</header>
-<section class="document-section">
+</section>
+
+<section class="document-section note-panel" aria-labelledby="robbins-monro-算法">
 <h2 id="robbins-monro-算法" tabindex="-1">Robbins-Monro 算法 <a class="header-anchor" href="#robbins-monro-算法" aria-label="Permalink to &quot;Robbins-Monro 算法&quot;">&ZeroWidthSpace;</a></h2>
 <blockquote>
 <p>Robbins-Monro (RM) 算法是随机近似领域的开创性工作。著名的随机梯度下降算法是 RM 算法的一种特殊形式。</p>
@@ -30,7 +53,8 @@
 </blockquote>
 <p>给出求解 <span class="math-inline" data-tex="g(w) = 0"></span> 的 <strong>RM 算法</strong>形式为：</p>
 <div class="math-block" data-tex="w_{k+1} = w_k - a_k \tilde{g}(w_k, \eta_k), \quad k = 1, 2, 3, \dots \tag{*}
-"></div><p>其中 <span class="math-inline" data-tex="w_k"></span> 是对根的第 <span class="math-inline" data-tex="k"></span> 次估计，<span class="math-inline" data-tex="\tilde{g}(w_k, \eta_k)"></span> 是第 <span class="math-inline" data-tex="k"></span> 次带噪观测，<span class="math-inline" data-tex="a_k"></span> 是正系数步长。可以看出，RM 算法不需要函数的任何信息，只需要输入和输出。</p>
+"></div>
+<p>其中 <span class="math-inline" data-tex="w_k"></span> 是对根的第 <span class="math-inline" data-tex="k"></span> 次估计，<span class="math-inline" data-tex="\tilde{g}(w_k, \eta_k)"></span> 是第 <span class="math-inline" data-tex="k"></span> 次带噪观测，<span class="math-inline" data-tex="a_k"></span> 是正系数步长。可以看出，RM 算法不需要函数的任何信息，只需要输入和输出。</p>
 <h3 id="收敛性" tabindex="-1">收敛性 <a class="header-anchor" href="#收敛性" aria-label="Permalink to &quot;收敛性&quot;">&ZeroWidthSpace;</a></h3>
 <p>在 RM 算法 (*) 中，若以下条件成立：</p>
 <ol>

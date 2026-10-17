@@ -1,18 +1,46 @@
-<article class="native-document format-paper" data-format="paper" aria-label="Benchmark、checkpoint 选择与上线反馈">
-<header class="document-intro">
-<h1 id="benchmark、checkpoint-选择与上线反馈" tabindex="-1">Benchmark、checkpoint 选择与上线反馈 <a class="header-anchor" href="#benchmark、checkpoint-选择与上线反馈" aria-label="Permalink to &quot;Benchmark、checkpoint 选择与上线反馈&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-paper" data-format="paper" aria-label="Benchmark、checkpoint 选择与上线反馈" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
+  <h1 id="benchmark、checkpoint-选择与上线反馈" tabindex="-1">Benchmark、checkpoint 选择与上线反馈 <a class="header-anchor" href="#benchmark、checkpoint-选择与上线反馈" aria-label="Permalink to &quot;Benchmark、checkpoint 选择与上线反馈&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">统一评测协议，关联 checkpoint、行为回归与上线修复记录。</p>
+  <div class="note-chips"><span>论文与项目随谈</span><span>后训练</span><span>模型评估</span><span>MiMo</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#_1-一条得分需要哪些信息"><span>02</span>1. 一条得分需要哪些信息</a>
+<a href="#_2-小米公开-archive-的三组结果"><span>03</span>2. 小米公开 archive 的三组结果</a>
+<a href="#_3-异步评测的对应关系"><span>04</span>3. 异步评测的对应关系</a>
+<a href="#_4-泛化评测与行为回归应并行"><span>05</span>4. 泛化评测与行为回归应并行</a>
+<a href="#_5-区分两个叫-deepswe-的对象"><span>06</span>5. 区分两个叫 DeepSWE 的对象</a>
+<a href="#_6-发布记录为什么还需要时间"><span>07</span>6. 发布记录为什么还需要时间</a>
+</nav>
+<figure class="note-diagram" aria-label="让一个分数有完整语境">
+  <p class="note-diagram-title">让一个分数有完整语境</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>评测协议</strong><span>数据、环境与采样设置</span></div>
+    <div class="note-flow-step tone-1"><strong>模型版本</strong><span>对应 checkpoint</span></div>
+    <div class="note-flow-step tone-2"><strong>结果比较</strong><span>benchmark 与行为回归</span></div>
+    <div class="note-flow-step tone-0"><strong>上线反馈</strong><span>推动核验与修复</span></div>
+  </div>
+  <figcaption>分数与模型版本、评测协议、checkpoint 和行为变化一起解释。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <blockquote>
 <p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
 </blockquote>
-</header>
-<section class="document-section">
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_1-一条得分需要哪些信息">
 <h2 id="_1-一条得分需要哪些信息" tabindex="-1">1. 一条得分需要哪些信息 <a class="header-anchor" href="#_1-一条得分需要哪些信息" aria-label="Permalink to &quot;1. 一条得分需要哪些信息&quot;">&ZeroWidthSpace;</a></h2>
 <p>以下是建议的评测记录结构：benchmark 名称与 revision、数据 split、checkpoint/hash、harness 与工具版本、thinking 设置、上下文和轮次预算、temperature/top-p、尝试次数、聚合口径、infra 处理、每题结果与统计不确定性。</p>
 <p>如果这些不同，排行榜数字不能直接横比。参数固定也不等于没有随机波动；小规模评测尤其要保留每题结果和重复实验。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_2-小米公开-archive-的三组结果">
 <h2 id="_2-小米公开-archive-的三组结果" tabindex="-1">2. 小米公开 archive 的三组结果 <a class="header-anchor" href="#_2-小米公开-archive-的三组结果" aria-label="Permalink to &quot;2. 小米公开 archive 的三组结果&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="2. 小米公开 archive 的三组结果表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>Benchmark</th>
@@ -41,13 +69,14 @@
 <td>step 1: 45.20 → step 29: 53.10</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>来源：<a href="https://mimo.xiaomi.com/rl/data.04135c89/benchmarks.json" target="_blank" rel="noreferrer">benchmarks.json</a>。表中差值属于“第一条已公开训练步结果到最后公开点”，不能直接当成未训练模型到最终模型的收益。保留 <code>avg@3</code> 标签，不改写成 <code>pass@3</code>。</p>
-<p><img src="/papers/projects/mimo-v2-6/evidence/三组benchmark.png" alt="三组 benchmark 逐步结果"></p>
+<figure class="note-figure"><img src="/papers/projects/mimo-v2-6/evidence/三组benchmark.png" alt="三组 benchmark 逐步结果"><figcaption>三组 benchmark 逐步结果</figcaption></figure>
 <p>曲线只连接已有观测，未填写缺失评测。完整数值：<a href="/papers/projects/mimo-v2-6/evidence/%E7%A6%BB%E7%BA%BF%E8%AF%84%E6%B5%8B.csv">离线评测 CSV</a>。</p>
 <p>Flash DeepSWE 的最高公开点为 step 28 的 67.86，step 30 为 65.68。只用最后一个 checkpoint 报告结果会忽略早期峰值；只挑最高点也应说明选择流程，避免对测试集反复选择。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_3-异步评测的对应关系">
 <h2 id="_3-异步评测的对应关系" tabindex="-1">3. 异步评测的对应关系 <a class="header-anchor" href="#_3-异步评测的对应关系" aria-label="Permalink to &quot;3. 异步评测的对应关系&quot;">&ZeroWidthSpace;</a></h2>
 <h3 id="benchmark-本身也有工程版本" tabindex="-1">Benchmark 本身也有工程版本 <a class="header-anchor" href="#benchmark-本身也有工程版本" aria-label="Permalink to &quot;Benchmark 本身也有工程版本&quot;">&ZeroWidthSpace;</a></h3>
 <p>DeepSWE 当前官方仓库公开 113 个原创长程任务，采用 Harbor task 格式：任务元数据、指令、环境、测试和参考解分开。v1.1 使用独立 verifier 环境，把 agent 提交的改动提取为 patch，应用到干净容器中评分；返回 reward、机器可读测试报告和原始输出。<a href="https://github.com/datacurve-ai/deep-swe" target="_blank" rel="noreferrer">benchmark 官方说明</a></p>
@@ -55,9 +84,10 @@
 <p>小米公告明确提到离线评测结果陆续回填。<a href="https://mimo.xiaomi.com/rl/data.04135c89/notices.json" target="_blank" rel="noreferrer">公告</a> 评测完成时间不等于权重生成时间。建议每条结果绑定产生它的 checkpoint 和训练步，额外记录 evaluate_start/end 和队列等待。</p>
 <p>Miles 文档提供共享推理、独立推理集群和外部评测三种模式。共享推理会暂停部分生成，独立集群增加资源成本，外部服务增加版本交接；框架强调结果与对应 checkpoint 绑定。<a href="https://www.lmsys.org/blog/2026-08-18-miles-v0-1/" target="_blank" rel="noreferrer">Miles 评测说明</a></p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_4-泛化评测与行为回归应并行">
 <h2 id="_4-泛化评测与行为回归应并行" tabindex="-1">4. 泛化评测与行为回归应并行 <a class="header-anchor" href="#_4-泛化评测与行为回归应并行" aria-label="Permalink to &quot;4. 泛化评测与行为回归应并行&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="4. 泛化评测与行为回归应并行表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>类型</th>
@@ -92,14 +122,16 @@
 <td>token 长度、时延、infra error、任务成功成本</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>后四项作为整理建议。MiMo 的修复说明与 Issue 反馈显示，仅关注榜单不足以覆盖工具行为质量，见 <a href="/papers/projects/mimo-v2-6/">MiMo 项目档案</a>。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_5-区分两个叫-deepswe-的对象">
 <h2 id="_5-区分两个叫-deepswe-的对象" tabindex="-1">5. 区分两个叫 DeepSWE 的对象 <a class="header-anchor" href="#_5-区分两个叫-deepswe-的对象" aria-label="Permalink to &quot;5. 区分两个叫 DeepSWE 的对象&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>DeepSWE-Preview</strong> 是 Agentica/Together 于 2025 年发布的 RL 编程模型，公开训练及评测入口；<strong>DeepSWE v1.1</strong> 是 MiMo 2026 看板使用的 benchmark 名称。不能把前者 SWE-Bench Verified 的 Pass@1/Pass@16 当成后者 avg@3 的同一指标。<a href="https://www.together.ai/blog/deepswe" target="_blank" rel="noreferrer">DeepSWE-Preview 作者文章</a>、<a href="https://mimo.xiaomi.com/rl/data.04135c89/benchmarks.json" target="_blank" rel="noreferrer">MiMo benchmark 元数据</a></p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_6-发布记录为什么还需要时间">
 <h2 id="_6-发布记录为什么还需要时间" tabindex="-1">6. 发布记录为什么还需要时间 <a class="header-anchor" href="#_6-发布记录为什么还需要时间" aria-label="Permalink to &quot;6. 发布记录为什么还需要时间&quot;">&ZeroWidthSpace;</a></h2>
 <p>MiMo 修复后 API 名称保持一致，模型行为版本只能结合更新时点定位。<a href="https://mimo.xiaomi.com/blog/mimo-v2-6-tool-call-repetition" target="_blank" rel="noreferrer">官方修复记录</a> 建议保存请求时间、provider、模型名、返回元信息、thinking/采样设置，以及部署权重 revision；本地开源模型则保存具体 checkpoint hash。</p>
 <p>反馈闭环的建议顺序：收集原请求与工具 schema → 固定 harness 回放 → 比较多个 checkpoint → 设计局部训练/奖励/教师修复 → 检查固定 benchmark 与正常行为对照 → 记录新部署时点。没有受控回放就不要急于给用户反馈贴“模型问题”或“harness 问题”的根因标签。</p>

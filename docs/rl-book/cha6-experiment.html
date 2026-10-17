@@ -1,9 +1,34 @@
-<article class="native-document format-lab" data-format="lab" aria-label="强化学习训练实验与分析">
-<header class="document-intro">
-<h1 id="强化学习训练实验与分析" tabindex="-1">强化学习训练实验与分析 <a class="header-anchor" href="#强化学习训练实验与分析" aria-label="Permalink to &quot;强化学习训练实验与分析&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-lab" data-format="lab" aria-label="强化学习训练实验与分析" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">RL 学习笔记<span>从算法到训练实践</span></p>
+  <h1 id="强化学习训练实验与分析" tabindex="-1">强化学习训练实验与分析 <a class="header-anchor" href="#强化学习训练实验与分析" aria-label="Permalink to &quot;强化学习训练实验与分析&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">结合 GRPO 配置与训练源码，分析数据加载、rollout、策略更新和显存占用。</p>
+  <div class="note-chips"><span>RLHF</span><span>GRPO</span><span>训练实验</span><span>策略梯度</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#一、grpo"><span>02</span>一、GRPO</a>
+</nav>
+<figure class="note-diagram" aria-label="沿数据流阅读 GRPO 实验">
+  <p class="note-diagram-title">沿数据流阅读 GRPO 实验</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>Prompt 批次</strong><span>prompts_per_step</span></div>
+    <div class="note-flow-step tone-1"><strong>组内采样</strong><span>num_rollouts 个回答</span></div>
+    <div class="note-flow-step tone-2"><strong>奖励与优势</strong><span>同一问题内比较</span></div>
+    <div class="note-flow-step tone-0"><strong>策略更新</strong><span>裁剪目标与梯度累积</span></div>
+  </div>
+  <figcaption>先追踪一轮训练的输入输出，再进入配置、源码与显存分析。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <p>写在前面，所有的任务都只是出于训练的方便出发的，实际这些任务可能完全不用RL后训练，这里只是出于方便进行实际训练的考量。</p>
-<h3 id="一、grpo" tabindex="-1">一、GRPO <a class="header-anchor" href="#一、grpo" aria-label="Permalink to &quot;一、GRPO&quot;">&ZeroWidthSpace;</a></h3>
-<h4 id="_1-1-grpo-yaml" tabindex="-1">1.1 grpo.yaml <a class="header-anchor" href="#_1-1-grpo-yaml" aria-label="Permalink to &quot;1.1 grpo.yaml&quot;">&ZeroWidthSpace;</a></h4>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="一、grpo">
+<h2 id="一、grpo" tabindex="-1">一、GRPO <a class="header-anchor" href="#一、grpo" aria-label="Permalink to &quot;一、GRPO&quot;">&ZeroWidthSpace;</a></h2>
+<h3 id="_1-1-grpo-yaml" tabindex="-1">1.1 grpo.yaml <a class="header-anchor" href="#_1-1-grpo-yaml" aria-label="Permalink to &quot;1.1 grpo.yaml&quot;">&ZeroWidthSpace;</a></h3>
+<details class="note-details"><summary>展开代码与配置 <span>30 行</span></summary>
 <div class="language-yaml vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">yaml</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">data</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
 <span class="line"><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">  size</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">3000</span></span>
 <span class="line"><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">  specs</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
@@ -34,7 +59,9 @@
 <span class="line"><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">model_device_id</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">0</span></span>
 <span class="line"><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">wandb_project</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">rlhf-book</span></span>
 <span class="line"><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">wandb_run_name</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">grpo_spell_backwards</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br></div></div><p>数据描述为：3000个数据，类型名词为<code>spell_backward</code>(该任务的目标是训练模型对反向输出单词的指令遵循)，此类型的数据占比为1，单词允许的最小和最大长度为3和10。</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br></div></div>
+</details>
+<p>数据描述为：3000个数据，类型名词为<code>spell_backward</code>(该任务的目标是训练模型对反向输出单词的指令遵循)，此类型的数据占比为1，单词允许的最小和最大长度为3和10。</p>
 <p>使用的模型为Qwen3-1 7B，每次rollout对<code>prompts_per_step=4</code>个问题进行采样，每个问题采样<code>num_rollouts=8</code>个回答，每个回答的长度不超过512个tokens，损失为grpo损失，不设置KL惩罚（kl1/kl2/kl3是不同的KL惩罚近似方法）。</p>
 <div class="math-block" data-tex="J_{\mathrm{GRPO}}(\theta)
 =
@@ -55,15 +82,17 @@
 \right)A_i
 \right)
 -\beta D_{\mathrm{KL}}
-\right]"></div><p>设置<span class="math-inline" data-tex="\epsilon_{\mathrm{lo}}=\epsilon_{\mathrm{hi}}=0.2"></span>。</p>
+\right]"></div>
+<p>设置<span class="math-inline" data-tex="\epsilon_{\mathrm{lo}}=\epsilon_{\mathrm{hi}}=0.2"></span>。</p>
 <p><code>train_batch_size</code>和<code>batch_acc</code>代表单次梯度计算的批次大小以及批次累积次数，故一次参数更新的有效批次大小为8。</p>
 <p>梯度裁剪参数设为1。</p>
-<h4 id="_1-2-train-py" tabindex="-1">1.2 train.py <a class="header-anchor" href="#_1-2-train-py" aria-label="Permalink to &quot;1.2 train\.py&quot;">&ZeroWidthSpace;</a></h4>
+<h3 id="_1-2-train-py" tabindex="-1">1.2 train.py <a class="header-anchor" href="#_1-2-train-py" aria-label="Permalink to &quot;1.2 train\.py&quot;">&ZeroWidthSpace;</a></h3>
 <p>设置随机数，设备编号（model/ref_model用于KL散度计算/val_model价值模型）。</p>
 <p>通过<code>reasoning gym</code>的<code>rg.create_dataset()</code>按照配置文件的数据描述创建数据集。</p>
 <p>加载模型(<code>AutoModelForCausalLM</code>)与<code>RolloutEngine</code>。</p>
 <p><code>get_loss_objective</code>初始化损失类，通过<code>.forward(self, log_probs: torch.Tensor, experience: Experience, **kwargs)</code>返回损失值。</p>
 <p>进入<code>rollout_engine</code>的迭代，代码细节如下：</p>
+<details class="note-details"><summary>展开代码与配置 <span>33 行</span></summary>
 <div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">with</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> progress_bar() </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">as</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> progress:</span></span>
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    task </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> progress.add_task(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"Training"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">total</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">len</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(experience_sampler))</span></span>
 <span class="line"></span>
@@ -97,9 +126,11 @@
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">            accumulated_loss </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 0.0</span></span>
 <span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">        else</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">            progress.update(task, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">advance</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br></div></div><h4 id="_1-3-rollout-py" tabindex="-1">1.3 rollout.py <a class="header-anchor" href="#_1-3-rollout-py" aria-label="Permalink to &quot;1.3 rollout\.py&quot;">&ZeroWidthSpace;</a></h4>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br></div></div>
+</details>
+<h3 id="_1-3-rollout-py" tabindex="-1">1.3 rollout.py <a class="header-anchor" href="#_1-3-rollout-py" aria-label="Permalink to &quot;1.3 rollout\.py&quot;">&ZeroWidthSpace;</a></h3>
 <p><code>RolloutEngine</code> <strong>每次迭代输出一个 <code>ReplayBuffer</code>，里面存放本轮生成的训练经验</strong>，不是直接返回生成文本或 loss。</p>
-<h5 id="_1-各层返回什么" tabindex="-1">1. 各层返回什么 <a class="header-anchor" href="#_1-各层返回什么" aria-label="Permalink to &quot;1\. 各层返回什么&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="_1-各层返回什么" tabindex="-1">1. 各层返回什么 <a class="header-anchor" href="#_1-各层返回什么" aria-label="Permalink to &quot;1\. 各层返回什么&quot;">&ZeroWidthSpace;</a></h4>
 <p>调用关系如下：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>_generate_experience(一道题)</span></span>
 <span class="line"><span>    → Experience：同题 K 个回答的批量经验</span></span>
@@ -112,13 +143,14 @@
 <span class="line"><span></span></span>
 <span class="line"><span>__iter__()</span></span>
 <span class="line"><span>    → yield ReplayBuffer：交给训练循环</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br></div></div><p>对应代码：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br></div></div>
+<p>对应代码：</p>
 <ul>
 <li><code>policy_gradients/rollout.py:104</code>：生成一组经验。</li>
 <li><code>policy_gradients/rollout.py:85</code>：收集当前轮的 buffer。</li>
 <li><code>policy_gradients/rollout.py:72</code>：通过 <code>yield</code> 逐轮输出 buffer。</li>
 </ul>
-<h5 id="_2-experience-包含哪些数据" tabindex="-1">2. <code>Experience</code> 包含哪些数据 <a class="header-anchor" href="#_2-experience-包含哪些数据" aria-label="Permalink to &quot;2\. `Experience` 包含哪些数据&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="_2-experience-包含哪些数据" tabindex="-1">2. <code>Experience</code> 包含哪些数据 <a class="header-anchor" href="#_2-experience-包含哪些数据" aria-label="Permalink to &quot;2\. `Experience` 包含哪些数据&quot;">&ZeroWidthSpace;</a></h4>
 <p><code>_generate_experience()</code> 返回：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>Experience(</span></span>
 <span class="line"><span>    sequence_ids=sequence_ids,</span></span>
@@ -130,8 +162,9 @@
 <span class="line"><span>    values_old=values_old,</span></span>
 <span class="line"><span>    advantages=advantages,</span></span>
 <span class="line"><span>).to(self.cpu_device)</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br></div></div><p>设同题生成 <code>K=num_rollouts</code> 个回答，完整序列长度为 <code>T</code>：</p>
-<table tabindex="0">
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br></div></div>
+<p>设同题生成 <code>K=num_rollouts</code> 个回答，完整序列长度为 <code>T</code>：</p>
+<div class="note-table" role="region" aria-label="一、GRPO表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>字段</th>
@@ -181,35 +214,40 @@
 <td>加权策略梯度</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>这些数据在 <code>no_grad()</code> 中计算，最后移到 <strong>CPU</strong>，不会保留采样计算图。</p>
-<h5 id="_3-最终-replaybuffer-如何组织" tabindex="-1">3. 最终 <code>ReplayBuffer</code> 如何组织 <a class="header-anchor" href="#_3-最终-replaybuffer-如何组织" aria-label="Permalink to &quot;3\. 最终 `ReplayBuffer` 如何组织&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="_3-最终-replaybuffer-如何组织" tabindex="-1">3. 最终 <code>ReplayBuffer</code> 如何组织 <a class="header-anchor" href="#_3-最终-replaybuffer-如何组织" aria-label="Permalink to &quot;3\. 最终 `ReplayBuffer` 如何组织&quot;">&ZeroWidthSpace;</a></h4>
 <p>例如：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>prompts_per_step: 4</span></span>
 <span class="line"><span>num_rollouts: 8</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div><p>正常情况下，一轮包含：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div>
+<p>正常情况下，一轮包含：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>4 道题 × 每题 8 个回答 = 32 条经验</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br></div></div><p>注意，<code>ReplayBuffer.add()</code> 会把组内批量 <code>Experience</code> <strong>拆成单回答经验</strong>，见 <code>policy_gradients/buffer.py:106</code>：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br></div></div>
+<p>注意，<code>ReplayBuffer.add()</code> 会把组内批量 <code>Experience</code> <strong>拆成单回答经验</strong>，见 <code>policy_gradients/buffer.py:106</code>：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>ReplayBuffer.buffer</span></span>
 <span class="line"><span>├── Experience：题目1的回答1</span></span>
 <span class="line"><span>├── Experience：题目1的回答2</span></span>
 <span class="line"><span>├── ...</span></span>
 <span class="line"><span>└── Experience：题目4的回答8</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br></div></div><p>所以：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br></div></div>
+<p>所以：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>len(replay_buffer)              # 通常为 32</span></span>
 <span class="line"><span>replay_buffer.buffer[0]         # 一个回答的 Experience</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div><p>组内优势在拆开前已经算好，因此后面可以打乱这些回答进行训练。</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div>
+<p>组内优势在拆开前已经算好，因此后面可以打乱这些回答进行训练。</p>
 <p>DAPO 可能过滤题目组，再继续采样补满；数据耗尽时可能返回不足 32 条的 buffer。空 buffer 不会被 <code>yield</code>，而是直接结束迭代。</p>
-<h5 id="_4-训练代码如何接收" tabindex="-1">4. 训练代码如何接收 <a class="header-anchor" href="#_4-训练代码如何接收" aria-label="Permalink to &quot;4\. 训练代码如何接收&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="_4-训练代码如何接收" tabindex="-1">4. 训练代码如何接收 <a class="header-anchor" href="#_4-训练代码如何接收" aria-label="Permalink to &quot;4\. 训练代码如何接收&quot;">&ZeroWidthSpace;</a></h4>
 <p><code>policy_gradients/train.py:91</code>：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>for replay_buffer in rollout_engine:</span></span>
 <span class="line"><span>    ...</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div><p>每次循环拿到一个 buffer，再由训练 DataLoader 把单回答经验拼成 batch，重新计算<strong>当前模型</strong>的概率，计算 loss 并更新参数。</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div>
+<p>每次循环拿到一个 buffer，再由训练 DataLoader 把单回答经验拼成 batch，重新计算<strong>当前模型</strong>的概率，计算 loss 并更新参数。</p>
 <p><strong>一句话总结：<code>RolloutEngine</code> 输出的是“生成结果 + 奖励 + 优势 + 旧概率”等固定训练数据；loss 和参数更新由 <code>train.py</code> 完成</strong></p>
-<h4 id="_1-4-dataloader" tabindex="-1">1.4 dataloader <a class="header-anchor" href="#_1-4-dataloader" aria-label="Permalink to &quot;1.4 dataloader&quot;">&ZeroWidthSpace;</a></h4>
+<h3 id="_1-4-dataloader" tabindex="-1">1.4 dataloader <a class="header-anchor" href="#_1-4-dataloader" aria-label="Permalink to &quot;1.4 dataloader&quot;">&ZeroWidthSpace;</a></h3>
 <p><code>DataLoader</code> 是 PyTorch 的<strong>数据迭代与组批工具</strong>：从数据集取样，按指定大小组成 batch，供循环使用。它本身不生成回答、不计算 loss，也不更新参数。</p>
 <p>结合本项目，需要区分两个 DataLoader。</p>
-<h5 id="_1-核心工作机制" tabindex="-1">1. 核心工作机制 <a class="header-anchor" href="#_1-核心工作机制" aria-label="Permalink to &quot;1\. 核心工作机制&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="_1-核心工作机制" tabindex="-1">1. 核心工作机制 <a class="header-anchor" href="#_1-核心工作机制" aria-label="Permalink to &quot;1\. 核心工作机制&quot;">&ZeroWidthSpace;</a></h4>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>Dataset：提供单条数据</span></span>
 <span class="line"><span>    ↓</span></span>
 <span class="line"><span>Sampler：决定取哪些索引、什么顺序</span></span>
@@ -221,19 +259,22 @@
 <span class="line"><span>collate_fn：把多条数据拼成一个 batch</span></span>
 <span class="line"><span>    ↓</span></span>
 <span class="line"><span>for batch in dataloader：逐批消费</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br></div></div><p>例如数据集有 10 条数据：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br></div></div>
+<p>例如数据集有 10 条数据：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>loader = DataLoader(</span></span>
 <span class="line"><span>    dataset,</span></span>
 <span class="line"><span>    batch_size=4,</span></span>
 <span class="line"><span>    shuffle=False,</span></span>
 <span class="line"><span>    drop_last=False,</span></span>
 <span class="line"><span>)</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br></div></div><p>每次迭代分别取得：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br></div></div>
+<p>每次迭代分别取得：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>第1批：索引 [0,1,2,3]</span></span>
 <span class="line"><span>第2批：索引 [4,5,6,7]</span></span>
 <span class="line"><span>第3批：索引 [8,9]</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div><p>设置 <code>drop_last=True</code> 后，最后不足 4 条的一批会被丢弃。</p>
-<h5 id="_2-rollout-阶段的-dataloader" tabindex="-1">2. Rollout 阶段的 DataLoader <a class="header-anchor" href="#_2-rollout-阶段的-dataloader" aria-label="Permalink to &quot;2\. Rollout 阶段的 DataLoader&quot;">&ZeroWidthSpace;</a></h5>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div>
+<p>设置 <code>drop_last=True</code> 后，最后不足 4 条的一批会被丢弃。</p>
+<h4 id="_2-rollout-阶段的-dataloader" tabindex="-1">2. Rollout 阶段的 DataLoader <a class="header-anchor" href="#_2-rollout-阶段的-dataloader" aria-label="Permalink to &quot;2\. Rollout 阶段的 DataLoader&quot;">&ZeroWidthSpace;</a></h4>
 <p><code>RolloutEngine</code> 中：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>self._dataloader = DataLoader(</span></span>
 <span class="line"><span>    dataset=dataset,</span></span>
@@ -243,8 +284,9 @@
 <span class="line"><span>    drop_last=True,</span></span>
 <span class="line"><span>    collate_fn=lambda x: x,</span></span>
 <span class="line"><span>)</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br></div></div><p>它负责<strong>取题目</strong>：</p>
-<table tabindex="0">
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br></div></div>
+<p>它负责<strong>取题目</strong>：</p>
+<div class="note-table" role="region" aria-label="一、GRPO表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>参数</th>
@@ -277,27 +319,30 @@
 <td>不将输出放入 CPU 锁页内存</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>假设每条数据是：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>{</span></span>
 <span class="line"><span>    "question": "把 apple 倒着写",</span></span>
 <span class="line"><span>    "answer": "elppa",</span></span>
 <span class="line"><span>    ...</span></span>
 <span class="line"><span>}</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br></div></div><p>那么一个 batch 是：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br></div></div>
+<p>那么一个 batch 是：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>[</span></span>
 <span class="line"><span>    {"question": "...", "answer": "...", ...},</span></span>
 <span class="line"><span>    {"question": "...", "answer": "...", ...},</span></span>
 <span class="line"><span>]</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br></div></div><p><strong>为什么用 <code>lambda x: x</code>？</strong></p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br></div></div>
+<p><strong>为什么用 <code>lambda x: x</code>？</strong></p>
 <p>因为默认 <code>collate_fn</code> 会尝试重组字典、堆叠数值等，而这里希望每道题保留为完整、独立的字典。</p>
 <p>随后代码又把题目批次展开：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>for batch in self._dataloader:</span></span>
 <span class="line"><span>    for entry in batch:</span></span>
 <span class="line"><span>        self._consumed += 1</span></span>
 <span class="line"><span>        yield entry</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br></div></div><p>所以最终仍是<strong>逐题生成</strong>，不是同时对 <code>prompts_per_step</code> 道不同题目进行生成。每题的 <code>num_rollouts</code> 个回答由后面的 <code>generate()</code> 产生，与此处 DataLoader 的 batch size 不同。</p>
-<h5 id="_3-训练阶段的-dataloader" tabindex="-1">3. 训练阶段的 DataLoader <a class="header-anchor" href="#_3-训练阶段的-dataloader" aria-label="Permalink to &quot;3\. 训练阶段的 DataLoader&quot;">&ZeroWidthSpace;</a></h5>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br></div></div>
+<p>所以最终仍是<strong>逐题生成</strong>，不是同时对 <code>prompts_per_step</code> 道不同题目进行生成。每题的 <code>num_rollouts</code> 个回答由后面的 <code>generate()</code> 产生，与此处 DataLoader 的 batch size 不同。</p>
+<h4 id="_3-训练阶段的-dataloader" tabindex="-1">3. 训练阶段的 DataLoader <a class="header-anchor" href="#_3-训练阶段的-dataloader" aria-label="Permalink to &quot;3\. 训练阶段的 DataLoader&quot;">&ZeroWidthSpace;</a></h4>
 <p><code>train.py</code> 中：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>experience_sampler = DataLoader(</span></span>
 <span class="line"><span>    dataset=replay_buffer.buffer,</span></span>
@@ -307,37 +352,45 @@
 <span class="line"><span>    drop_last=True,</span></span>
 <span class="line"><span>    collate_fn=join_experiences_batch,</span></span>
 <span class="line"><span>)</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br></div></div><p>它负责<strong>取回答经验、拼训练 batch</strong>。</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br></div></div>
+<p>它负责<strong>取回答经验、拼训练 batch</strong>。</p>
 <p>这里 <code>dataset</code> 是 Python 列表：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>replay_buffer.buffer</span></span>
 <span class="line"><span>    → 单回答 Experience</span></span>
 <span class="line"><span>    → 单回答 Experience</span></span>
 <span class="line"><span>    → ...</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br></div></div><p>列表支持 <code>len()</code> 和按索引取元素，因此也可以交给 DataLoader。</p>
-<h6 id="collate-fn-在这里尤其关键" tabindex="-1"><code>collate_fn</code> 在这里尤其关键 <a class="header-anchor" href="#collate-fn-在这里尤其关键" aria-label="Permalink to &quot;`collate_fn` 在这里尤其关键&quot;">&ZeroWidthSpace;</a></h6>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br></div></div>
+<p>列表支持 <code>len()</code> 和按索引取元素，因此也可以交给 DataLoader。</p>
+<h5 id="collate-fn-在这里尤其关键" tabindex="-1"><code>collate_fn</code> 在这里尤其关键 <a class="header-anchor" href="#collate-fn-在这里尤其关键" aria-label="Permalink to &quot;`collate_fn` 在这里尤其关键&quot;">&ZeroWidthSpace;</a></h5>
 <p>单回答的 token 序列长度可能不同：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>回答1：完整序列长度 100</span></span>
 <span class="line"><span>回答2：完整序列长度 120</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div><p>默认堆叠无法直接处理不等长张量，所以使用：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div>
+<p>默认堆叠无法直接处理不等长张量，所以使用：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>collate_fn=join_experiences_batch</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br></div></div><p>该函数将多个 <code>Experience</code> 的对应字段左补齐、堆叠，最终返回<strong>一个批量 Experience</strong>：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br></div></div>
+<p>该函数将多个 <code>Experience</code> 的对应字段左补齐、堆叠，最终返回<strong>一个批量 Experience</strong>：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>输入：list[Experience]</span></span>
 <span class="line"><span>输出：Experience</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div><p>例如：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div>
+<p>例如：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>sequence_ids   → [2,120]</span></span>
 <span class="line"><span>attention_mask → [2,120]</span></span>
 <span class="line"><span>action_mask    → [2,119]</span></span>
 <span class="line"><span>advantages    → [2,1]      # 非 PPO</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br></div></div><p>因此训练循环中：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br></div></div>
+<p>因此训练循环中：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>for idx, exp in enumerate(experience_sampler):</span></span>
 <span class="line"><span>    exp = exp.to(model.device)</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div><p><code>exp</code> 不是列表，而是已经组好 batch 的 <code>Experience</code> 对象。</p>
-<h5 id="_4-batch-size-与梯度累积的关系" tabindex="-1">4. batch size 与梯度累积的关系 <a class="header-anchor" href="#_4-batch-size-与梯度累积的关系" aria-label="Permalink to &quot;4\. batch size 与梯度累积的关系&quot;">&ZeroWidthSpace;</a></h5>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div>
+<p><code>exp</code> 不是列表，而是已经组好 batch 的 <code>Experience</code> 对象。</p>
+<h4 id="_4-batch-size-与梯度累积的关系" tabindex="-1">4. batch size 与梯度累积的关系 <a class="header-anchor" href="#_4-batch-size-与梯度累积的关系" aria-label="Permalink to &quot;4\. batch size 与梯度累积的关系&quot;">&ZeroWidthSpace;</a></h4>
 <p>假设：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>buffer 有 32 个回答</span></span>
 <span class="line"><span>train_batch_size = 2</span></span>
 <span class="line"><span>batch_acc = 4</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div><p>则：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div>
+<p>则：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>DataLoader 每次输出 2 个回答</span></span>
 <span class="line"><span>    ↓</span></span>
 <span class="line"><span>总共输出 16 个 microbatch</span></span>
@@ -345,20 +398,22 @@
 <span class="line"><span>每处理 4 个 microbatch 更新一次参数</span></span>
 <span class="line"><span>    ↓</span></span>
 <span class="line"><span>每次更新通常累计 8 个回答，总计更新 4 次</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br></div></div><p><strong>DataLoader 只管理 microbatch；梯度累积由训练循环负责。</strong></p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br></div></div>
+<p><strong>DataLoader 只管理 microbatch；梯度累积由训练循环负责。</strong></p>
 <p>另外：</p>
 <div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>len(experience_sampler)</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br></div></div><p>返回的是 <strong>batch 数量</strong>，不是回答数量。这里为 <code>32 // 2 = 16</code>，也就是进度条的总数。</p>
-<h5 id="_5-两个常见误解" tabindex="-1">5. 两个常见误解 <a class="header-anchor" href="#_5-两个常见误解" aria-label="Permalink to &quot;5\. 两个常见误解&quot;">&ZeroWidthSpace;</a></h5>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br></div></div>
+<p>返回的是 <strong>batch 数量</strong>，不是回答数量。这里为 <code>32 // 2 = 16</code>，也就是进度条的总数。</p>
+<h4 id="_5-两个常见误解" tabindex="-1">5. 两个常见误解 <a class="header-anchor" href="#_5-两个常见误解" aria-label="Permalink to &quot;5\. 两个常见误解&quot;">&ZeroWidthSpace;</a></h4>
 <ul>
 <li><code>shuffle=True</code> <strong>只改变取样顺序，不改变内容</strong>。组内优势已经提前算好，训练时打乱回答不会重新计算优势。</li>
 <li>本项目没有设置 <code>num_workers</code>，所以使用默认值 <code>0</code>，数据读取与组批在主进程完成；不是后台多进程加载。</li>
 </ul>
 <p><strong>总结：rollout DataLoader 组织“题目”，训练 DataLoader 组织“回答经验”；<code>collate_fn</code> 决定它们每次迭代最终输出什么结构</strong></p>
-<h4 id="_1-5-显存占用分析" tabindex="-1">1.5 显存占用分析 <a class="header-anchor" href="#_1-5-显存占用分析" aria-label="Permalink to &quot;1.5 显存占用分析&quot;">&ZeroWidthSpace;</a></h4>
+<h3 id="_1-5-显存占用分析" tabindex="-1">1.5 显存占用分析 <a class="header-anchor" href="#_1-5-显存占用分析" aria-label="Permalink to &quot;1.5 显存占用分析&quot;">&ZeroWidthSpace;</a></h3>
 <p>以下分析对应 1.1 的 GRPO 配置和当前源码，是理论内存账本与峰值风险分析，<strong>不是已经运行得到的显存实测值</strong>。单位采用 GiB（1 GiB = 2^30 字节），参数量暂按约 1.7×10^9 估算；实际值取决于加载后的参数数量、PyTorch/Transformers 版本、实际 token 长度和 CUDA 后端。</p>
-<h5 id="_1-当前有哪些模型驻留显存" tabindex="-1">1. 当前有哪些模型驻留显存 <a class="header-anchor" href="#_1-当前有哪些模型驻留显存" aria-label="Permalink to &quot;1. 当前有哪些模型驻留显存&quot;">&ZeroWidthSpace;</a></h5>
-<table tabindex="0">
+<h4 id="_1-当前有哪些模型驻留显存" tabindex="-1">1. 当前有哪些模型驻留显存 <a class="header-anchor" href="#_1-当前有哪些模型驻留显存" aria-label="Permalink to &quot;1. 当前有哪些模型驻留显存&quot;">&ZeroWidthSpace;</a></h4>
+<div class="note-table" role="region" aria-label="一、GRPO表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>设置</th>
@@ -399,11 +454,11 @@
 <td>当前轮 32 个回答的经验不全部常驻 GPU</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>这里没有 LoRA、量化、参数分片或 optimizer offload。<code>log_probs_old</code> 是保存的旧概率张量，<strong>并不是额外复制一份 old policy 模型</strong>。</p>
-<h5 id="_2-模型、梯度和-adam-状态-基础内存账本" tabindex="-1">2. 模型、梯度和 Adam 状态：基础内存账本 <a class="header-anchor" href="#_2-模型、梯度和-adam-状态-基础内存账本" aria-label="Permalink to &quot;2. 模型、梯度和 Adam 状态：基础内存账本&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="_2-模型、梯度和-adam-状态-基础内存账本" tabindex="-1">2. 模型、梯度和 Adam 状态：基础内存账本 <a class="header-anchor" href="#_2-模型、梯度和-adam-状态-基础内存账本" aria-label="Permalink to &quot;2. 模型、梯度和 Adam 状态：基础内存账本&quot;">&ZeroWidthSpace;</a></h4>
 <p>当前代码直接用 BF16 参数创建 <code>torch.optim.Adam</code>，没有显式建立 FP32 master weights。普通 PyTorch Adam 的两个动量状态按参数的 dtype 创建，因此不能直接套用“权重 BF16、梯度 FP32、Adam 状态 FP32”的通用混合精度估算。此行为可见 <a href="https://raw.githubusercontent.com/pytorch/pytorch/v2.6.0/torch/optim/adam.py" target="_blank" rel="noreferrer">PyTorch 2.6 Adam 源码</a>，实际环境仍应核对 state dtype。</p>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="一、GRPO表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>项目</th>
@@ -438,18 +493,19 @@
 <td style="text-align:right"><strong>12.67 GiB</strong></td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>这只是参数级账本，还没有计入激活、logits、概率计算、optimizer 临时量、CUDA 上下文和缓存。</p>
 <p>Adam 状态在第一次有效 <code>optimizer.step()</code> 时才分配；因此不能只观察模型刚加载或第一轮生成后的显存就判断长期峰值。<code>zero_grad(set_to_none=True)</code> 后梯度通常可以释放，但两份 Adam 状态仍存在，后续 rollout 的参数级基础占用约为 <strong>9.50 GiB（权重 + 两份动量）</strong>，而不是最初的 3.17 GiB。</p>
 <p>CUDA 上 Adam 还可能选用 foreach 路径，产生额外的参数量级临时张量。实际实现若将部分参数或状态改为 FP32，上表必须随之修正；低精度 Adam 状态是否满足数值稳定性要求也是另一个问题，不能仅以省显存判断好坏。</p>
-<h5 id="_3-最容易忽略的大项-compute-log-probs-的全词表张量" tabindex="-1">3. 最容易忽略的大项：<code>compute_log_probs()</code> 的全词表张量 <a class="header-anchor" href="#_3-最容易忽略的大项-compute-log-probs-的全词表张量" aria-label="Permalink to &quot;3. 最容易忽略的大项：`compute_log_probs()` 的全词表张量&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="_3-最容易忽略的大项-compute-log-probs-的全词表张量" tabindex="-1">3. 最容易忽略的大项：<code>compute_log_probs()</code> 的全词表张量 <a class="header-anchor" href="#_3-最容易忽略的大项-compute-log-probs-的全词表张量" aria-label="Permalink to &quot;3. 最容易忽略的大项：`compute_log_probs()` 的全词表张量&quot;">&ZeroWidthSpace;</a></h4>
 <p>代码虽然最终只返回 <code>[B,T-1]</code> 的目标 token 概率，但计算过程中先构建全词表 logits 和 log probabilities：</p>
 <div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">logits </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> output.logits[:, :</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">-</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, :].to(torch.float32)</span></span>
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">log_probs </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> F.log_softmax(logits, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">dim</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=-</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span></span>
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">target_log_probs </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> torch.gather(log_probs, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">dim</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=-</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">index</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">targets).squeeze(</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">-</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div><p>因此显存规模与 <code>B × T × V</code> 相关，不只是最终返回张量的大小。Qwen3-1.7B 官方配置的词表大小 V=151936，详见 <a href="https://huggingface.co/Qwen/Qwen3-1.7B/blob/main/config.json" target="_blank" rel="noreferrer">模型 config.json</a>。</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div>
+<p>因此显存规模与 <code>B × T × V</code> 相关，不只是最终返回张量的大小。Qwen3-1.7B 官方配置的词表大小 V=151936，详见 <a href="https://huggingface.co/Qwen/Qwen3-1.7B/blob/main/config.json" target="_blank" rel="noreferrer">模型 config.json</a>。</p>
 <p>T 是 <strong>prompt + completion 的补齐长度</strong>，不是 <code>max_new_tokens</code>。以 prompt 128 token、生成 512 token，即 T≈640 为示例假设（没有实际 tokenize 测量）：</p>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="一、GRPO表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>全词表张量</th>
@@ -479,28 +535,30 @@
 <td style="text-align:right"><strong>7.24 GiB</strong></td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>以上是可能重叠的张量量级，不是所有版本都必然相加：有的模型实现本身返回 FP32 logits；分配生命周期、autograd 保存和算子工作区也会改变峰值。训练反向还可能出现同量级的词表维梯度临时量。</p>
 <p>尤其要注意：<code>torch.no_grad()</code> 只是不保存反向传播图，<strong>不会免除 rollout 的完整前向、FP32 转换和全词表 log_softmax 内存</strong>。当前代码一次对 8 个回答重算 old log probability，这个阶段可能比 B=2 的训练前向更容易触发峰值。</p>
-<h5 id="_4-生成-kv-cache-与训练激活" tabindex="-1">4. 生成 KV cache 与训练激活 <a class="header-anchor" href="#_4-生成-kv-cache-与训练激活" aria-label="Permalink to &quot;4. 生成 KV cache 与训练激活&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="_4-生成-kv-cache-与训练激活" tabindex="-1">4. 生成 KV cache 与训练激活 <a class="header-anchor" href="#_4-生成-kv-cache-与训练激活" aria-label="Permalink to &quot;4. 生成 KV cache 与训练激活&quot;">&ZeroWidthSpace;</a></h4>
 <p>生成阶段在模型默认启用缓存的情况下保留 KV cache。其估算公式为：</p>
 <div class="language-text vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">text</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>KV bytes ≈ 2(K与V) × 层数 × 生成batch × 总序列长度</span></span>
 <span class="line"><span>           × KV头数 × head_dim × 每元素字节数</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div><p>按该模型配置的 28 层、8 个 KV 头、head_dim=128，以及 BF16、B=8、T=640 估算，KV cache 约 <strong>0.55 GiB</strong>；实际值随输出提前结束、缓存实现和长度变化。上述结构参数同样来自模型官方 config。</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div>
+<p>按该模型配置的 28 层、8 个 KV 头、head_dim=128，以及 BF16、B=8、T=640 估算，KV cache 约 <strong>0.55 GiB</strong>；实际值随输出提前结束、缓存实现和长度变化。上述结构参数同样来自模型官方 config。</p>
 <p>KV cache 主要在 generate 阶段，不能直接把它和后续概率重算的所有临时张量一概相加。<code>compute_log_probs()</code> 显式设置 <code>use_cache=False</code>，不会为其前向额外保留生成式 KV cache。</p>
 <p>训练阶段则需要中间激活和反向工作区；gradient checkpointing 会减少激活保存，但不能消除所有激活，也不能消除完整词表投影与概率张量。实际 attention 后端若回退到非融合实现，显存还可能上升。</p>
 <p>梯度累积 4 次不会保留 4 份完整计算图：每次 <code>backward()</code> 后该次图通常释放，梯度在相同 <code>.grad</code> 上相加。但代码中的 <code>loss</code>、<code>log_probs</code>、<code>exp</code> 等 Python 变量在新值覆盖前仍可能持有上一批的部分张量引用，因此实际峰值也受对象生命周期影响。</p>
-<h5 id="_5-当前配置的整体判断" tabindex="-1">5. 当前配置的整体判断 <a class="header-anchor" href="#_5-当前配置的整体判断" aria-label="Permalink to &quot;5. 当前配置的整体判断&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="_5-当前配置的整体判断" tabindex="-1">5. 当前配置的整体判断 <a class="header-anchor" href="#_5-当前配置的整体判断" aria-label="Permalink to &quot;5. 当前配置的整体判断&quot;">&ZeroWidthSpace;</a></h4>
 <p>显存峰值应取各阶段的最大值，而不是把所有阶段的独立峰值直接相加：</p>
 <div class="language-text vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">text</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>首次加载：       权重</span></span>
 <span class="line"><span>首次 rollout：  权重 + 生成/旧概率重算工作集</span></span>
 <span class="line"><span>稳定训练阶段：  权重 + Adam状态 + 梯度 + 激活/概率/反向工作区</span></span>
 <span class="line"><span>后续 rollout：  权重 + Adam状态 + 生成或旧概率重算工作集</span></span>
 <span class="line"><span>optimizer step：权重 + Adam状态 + 梯度 + optimizer临时量</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br></div></div><p>以 T≈640 的假设计算，后续 rollout 的“参数 + Adam 状态 + 三份全词表张量”账本就约为 <strong>9.50+7.24=16.74 GiB</strong>，还没有完整包含该阶段隐藏状态与工作区。因此 <strong>不能根据“1.7B 权重仅约 3 GiB”得出当前训练只需几 GiB 的结论，也不能承诺 16 GiB 显卡一定可运行</strong>。</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br></div></div>
+<p>以 T≈640 的假设计算，后续 rollout 的“参数 + Adam 状态 + 三份全词表张量”账本就约为 <strong>9.50+7.24=16.74 GiB</strong>，还没有完整包含该阶段隐藏状态与工作区。因此 <strong>不能根据“1.7B 权重仅约 3 GiB”得出当前训练只需几 GiB 的结论，也不能承诺 16 GiB 显卡一定可运行</strong>。</p>
 <p>此配置可先把 <strong>约 16～24 GiB 或更高</strong> 看作需要验证的峰值预算范围，而不是实测结果或硬上限。24 GiB 卡也需预留显示进程、其他任务、上下文和碎片空间；prompt 更长、FP32 输出/状态更多、后端不同或临时量重叠都可能突破预算。更短回答则可能明显降低实际占用。</p>
 <p><code>torch.cuda.empty_cache()</code> 只释放 allocator 中未被活跃张量使用的缓存，<strong>不会释放模型参数、Adam 状态或仍有引用的张量</strong>，不能靠它解决活跃工作集本身过大的 OOM。<code>accumulated_loss</code> 是 Python 数字，几乎不占显存；梯度裁剪不会额外存一份完整 old model。</p>
-<h5 id="_6-如何实测、如何降低峰值" tabindex="-1">6. 如何实测、如何降低峰值 <a class="header-anchor" href="#_6-如何实测、如何降低峰值" aria-label="Permalink to &quot;6. 如何实测、如何降低峰值&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="_6-如何实测、如何降低峰值" tabindex="-1">6. 如何实测、如何降低峰值 <a class="header-anchor" href="#_6-如何实测、如何降低峰值" aria-label="Permalink to &quot;6. 如何实测、如何降低峰值&quot;">&ZeroWidthSpace;</a></h4>
 <p>建议覆盖至少两个完整 rollout/训练周期，并记录第一次 optimizer step、后续 rollout 旧概率重算和训练反向的峰值。只有首轮记录不足以覆盖 Adam 状态已经驻留后的情况。</p>
 <p>可在阶段边界同步 GPU 后使用如下诊断调用（下面是建议，不是已加入训练源码的功能）：</p>
 <div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">torch.cuda.synchronize(model.device)</span></span>
@@ -509,7 +567,8 @@
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">torch.cuda.synchronize(model.device)</span></span>
 <span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">print</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(torch.cuda.max_memory_allocated(model.device) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">/</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 2</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">**</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">30</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span></span>
 <span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">print</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(torch.cuda.max_memory_reserved(model.device) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">/</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 2</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">**</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">30</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br></div></div><p><code>allocated</code> 反映 PyTorch 活跃张量的分配，<code>reserved</code> 包含 allocator 保留空间；还应结合 <code>nvidia-smi</code> 的进程占用，区分上下文等非张量开销。记录真实 T、参数/梯度/Adam dtype，以及 attention 后端，才能解释结果。</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br></div></div>
+<p><code>allocated</code> 反映 PyTorch 活跃张量的分配，<code>reserved</code> 包含 allocator 保留空间；还应结合 <code>nvidia-smi</code> 的进程占用，区分上下文等非张量开销。记录真实 T、参数/梯度/Adam dtype，以及 attention 后端，才能解释结果。</p>
 <p>若显存不足，按对应阶段处理：</p>
 <ul>
 <li>训练反向峰值高：降低 <code>train_batch_size</code>；可增大 <code>batch_acc</code> 保持有效 batch，但它不降低参数和 Adam 状态的开销。</li>
@@ -519,5 +578,5 @@
 <li>仅降低 <code>prompts_per_step</code>：主要减少每轮 CPU buffer 和训练批次数，不会直接降低“每题 8 回答”的生成/旧概率峰值。</li>
 </ul>
 <p><strong>结论：当前 GRPO 虽省去了 reference/value 模型，但仍是 BF16 全参数 Adam 训练；显存压力主要来自约 12.67 GiB 的训练参数级账本，以及 rollout B=8 时的全词表 FP32 概率计算。需要按阶段实测，不能用权重大小或有效 batch=8 单独推断总显存。</strong></p>
-</header>
+</section>
 </article>

@@ -245,9 +245,9 @@ onUnmounted(() => {
       <div v-if="sectionClass === 'section-research' && frontmatter.date" class="research-issue">
         <span>每日调研</span><time :datetime="String(frontmatter.date)">{{ frontmatter.date }}</time>
       </div>
-      <ChapterTag v-else-if="!frontmatter.pdf" />
+      <ChapterTag v-else-if="!frontmatter.pdf && frontmatter.contentFormat !== 'html'" />
       <div v-if="frontmatter.status === 'draft'" class="draft-notice">
-        本章仍在写作中，内容尚未完成。<a :href="withBase('/llm-book/')">查看已发布章节</a>
+        本文仍在写作中，内容尚未完成。
       </div>
     </template>
     <template #doc-footer-before>

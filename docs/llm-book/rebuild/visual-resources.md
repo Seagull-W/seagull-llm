@@ -13,11 +13,13 @@ next: false
 head:
   - - meta
     - name: robots
-      content: noindex
+      content: 'noindex, nofollow'
 description: >-
   图与动画的来源及范围 &ZeroWidthSpace; 核验日期：2026-10-09。每项资源说明其教学作用、数据身份与采用方式；具体图旁也提供简短署名。
   已引入的网络图 &ZeroWidthSpace; Distil
 contentFormat: html
+hidden: true
+sidebar: false
 ---
 
 <!--@include: ./visual-resources.html-->

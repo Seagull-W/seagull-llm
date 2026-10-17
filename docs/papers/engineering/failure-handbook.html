@@ -1,14 +1,55 @@
-<article class="native-document format-paper" data-format="paper" aria-label="实际故障与反馈手册">
-<header class="document-intro">
-<h1 id="实际故障与反馈手册" tabindex="-1">实际故障与反馈手册 <a class="header-anchor" href="#实际故障与反馈手册" aria-label="Permalink to &quot;实际故障与反馈手册&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-paper" data-format="paper" aria-label="实际故障与反馈手册" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
+  <h1 id="实际故障与反馈手册" tabindex="-1">实际故障与反馈手册 <a class="header-anchor" href="#实际故障与反馈手册" aria-label="Permalink to &quot;实际故障与反馈手册&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">按症状查找奖励、显存、调度、路由、恢复和容器故障的公开证据。</p>
+  <div class="note-chips"><span>论文与项目随谈</span><span>后训练</span><span>故障恢复</span><span>分布式训练</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#快速定位"><span>02</span>快速定位</a>
+<a href="#f01-music-评分依赖缺失-静默零奖励"><span>03</span>F01：Music 评分依赖缺失，静默零奖励</a>
+<a href="#f02-基础设施错误漏检-错误反馈参与训练"><span>04</span>F02：基础设施错误漏检，错误反馈参与训练</a>
+<a href="#f03-训练集群与-grader-连接异常"><span>05</span>F03：训练集群与 grader 连接异常</a>
+<a href="#f04-训练成功率变化-其实来自任务分布调整"><span>06</span>F04：训练成功率变化，其实来自任务分布调整</a>
+<a href="#f05-moe-专家负载不均引起-gpu-oom"><span>07</span>F05：MoE 专家负载不均引起 GPU OOM</a>
+<a href="#f06-长序列最后一个-pp-stage-的-entropy-oom"><span>08</span>F06：长序列最后一个 PP stage 的 entropy OOM</a>
+<details><summary>其余 13 节</summary><div><a href="#f07-单节点-vram-问题-根因不详"><span>09</span>F07：单节点 VRAM 问题，根因不详</a>
+<a href="#f08-router-replay-payload-广播造成主机-ram-峰值"><span>10</span>F08：Router replay payload 广播造成主机 RAM 峰值</a>
+<a href="#f09-cpu-optimizer-offload-后-ray-因-ram-耗尽杀-worker"><span>11</span>F09：CPU optimizer offload 后 Ray 因 RAM 耗尽杀 worker</a>
+<a href="#f10-ray-gpu-资源调度-pending"><span>12</span>F10：Ray GPU 资源调度 pending</a>
+<a href="#f11-kv-budget-太小-长轨迹硬失败-路由不感知-dp"><span>13</span>F11：KV budget 太小，长轨迹硬失败；路由不感知 DP</a>
+<a href="#f12-生成乱码或初始-logprob-对不上"><span>14</span>F12：生成乱码或初始 logprob 对不上</a>
+<a href="#f13-重复工具调用与修复后的过度抑制"><span>15</span>F13：重复工具调用与修复后的过度抑制</a>
+<a href="#f14-重启后采样器、optimizer-和-checkpoint-边界不一致"><span>16</span>F14：重启后采样器、optimizer 和 checkpoint 边界不一致</a>
+<a href="#f15-异步-activation-offload-的-cuda-stream-内存泄漏"><span>17</span>F15：异步 activation offload 的 CUDA-stream 内存泄漏</a>
+<a href="#f16-数百容器并发使-dockerd-崩溃"><span>18</span>F16：数百容器并发使 dockerd 崩溃</a>
+<a href="#f17-ray-启动选错网络地址-或-worker-过早加入"><span>19</span>F17：Ray 启动选错网络地址，或 worker 过早加入</a>
+<a href="#f18-高-off-policy-下-reward-崩塌-或-cp-扩展导致精度下降"><span>20</span>F18：高 off-policy 下 reward 崩塌，或 CP 扩展导致精度下降</a>
+<a href="#未整理成已证实根因的现象"><span>21</span>未整理成已证实根因的现象</a></div></details>
+</nav>
+<figure class="note-diagram" aria-label="沿故障影响路径定位">
+  <p class="note-diagram-title">沿故障影响路径定位</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>症状</strong><span>异常奖励、吞吐或行为</span></div>
+    <div class="note-flow-step tone-1"><strong>阶段</strong><span>数据 / 环境 / 训练 / 评测</span></div>
+    <div class="note-flow-step tone-2"><strong>证据</strong><span>日志、配置与原始反馈</span></div>
+    <div class="note-flow-step tone-0"><strong>处置</strong><span>修复、恢复与回归验证</span></div>
+  </div>
+  <figcaption>先识别症状所在阶段，再回到来源、修复动作和证据边界。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <blockquote>
 <p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
 </blockquote>
 <p>本手册按症状组织。每项区分来源中的观察、提出的解释、修复状态和建议验证。Issue 的标题或关闭状态不能替代修复 commit；本次未在对应 GPU 集群复现。</p>
-</header>
-<section class="document-section">
+</section>
+
+<section class="document-section note-panel" aria-labelledby="快速定位">
 <h2 id="快速定位" tabindex="-1">快速定位 <a class="header-anchor" href="#快速定位" aria-label="Permalink to &quot;快速定位&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="快速定位表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>症状</th>
@@ -57,100 +98,119 @@
 <td>F14</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f01-music-评分依赖缺失-静默零奖励">
 <h2 id="f01-music-评分依赖缺失-静默零奖励" tabindex="-1">F01：Music 评分依赖缺失，静默零奖励 <a class="header-anchor" href="#f01-music-评分依赖缺失-静默零奖励" aria-label="Permalink to &quot;F01：Music 评分依赖缺失，静默零奖励&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>可见证据：</strong> MiMo Music 环境说明指出，缺少 <code>abc2midi</code> 会让 scorer 跳过样本并返回 0，看起来像健康运行。启动器在 worker 上探测该程序，防止静默启动。<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/design/music.env.example" target="_blank" rel="noreferrer">环境说明</a></p>
 <p><strong>处理与验证：</strong> 在实际 worker 镜像中检查依赖，运行已知可评分的音乐样本，确认不仅进程成功，而且产生有效非零分数。不能靠 driver 上安装依赖证明所有 worker 可用。来源给出预检机制，本次未执行。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f02-基础设施错误漏检-错误反馈参与训练">
 <h2 id="f02-基础设施错误漏检-错误反馈参与训练" tabindex="-1">F02：基础设施错误漏检，错误反馈参与训练 <a class="header-anchor" href="#f02-基础设施错误漏检-错误反馈参与训练" aria-label="Permalink to &quot;F02：基础设施错误漏检，错误反馈参与训练&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>运行事实：</strong> 小米 Flash 公告称某数据集约三小时内有一类 infra error 未正确检测，随后从 step 15 重启。末尾事件窗口保留 step 16、17 的重做。<a href="https://mimo.xiaomi.com/rl/data.04135c89/notices.json" target="_blank" rel="noreferrer">公告</a>、<a href="https://mimo.xiaomi.com/rl/data.04135c89/status-flash.json" target="_blank" rel="noreferrer">事件</a></p>
 <p><strong>建议排查：</strong> 对照错误分类、原始 grader 输出与 batch 接受记录，确定受影响的更新区间；修分类规则后回放代表性成功/失败/infra 样本。错误类型和补丁未公开，不能直接复制一份“官方修复”。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f03-训练集群与-grader-连接异常">
 <h2 id="f03-训练集群与-grader-连接异常" tabindex="-1">F03：训练集群与 grader 连接异常 <a class="header-anchor" href="#f03-训练集群与-grader-连接异常" aria-label="Permalink to &quot;F03：训练集群与 grader 连接异常&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>运行事实：</strong> Pro 官方公告明确网络连接异常并重启，同次说明还移除了 cyber 数据。<a href="https://mimo.xiaomi.com/rl/data.04135c89/notices.json" target="_blank" rel="noreferrer">公告</a></p>
 <p><strong>建议排查：</strong> 从实际执行节点验证 grader 连通、超时、认证、服务负载与响应 schema；分别看 inference、tool、judge 延迟。不能因同一公告提到两个行动，就断言网络错误导致了 cyber 的不良 rollout 行为。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f04-训练成功率变化-其实来自任务分布调整">
 <h2 id="f04-训练成功率变化-其实来自任务分布调整" tabindex="-1">F04：训练成功率变化，其实来自任务分布调整 <a class="header-anchor" href="#f04-训练成功率变化-其实来自任务分布调整" aria-label="Permalink to &quot;F04：训练成功率变化，其实来自任务分布调整&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>运行事实：</strong> Pro 后期筛去了相对简单的任务；公开任务混合也有调整。<a href="https://mimo.xiaomi.com/rl/data.04135c89/notices.json" target="_blank" rel="noreferrer">公告</a></p>
 <p><strong>建议验证：</strong> 对比数据 manifest、任务配额、每任务族指标和固定 benchmark。总体 avg@n 变化不构成能力单独变化的证据。原始筛选清单和阈值未公开。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f05-moe-专家负载不均引起-gpu-oom">
 <h2 id="f05-moe-专家负载不均引起-gpu-oom" tabindex="-1">F05：MoE 专家负载不均引起 GPU OOM <a class="header-anchor" href="#f05-moe-专家负载不均引起-gpu-oom" aria-label="Permalink to &quot;F05：MoE 专家负载不均引起 GPU OOM&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>团队说明：</strong> 小米 Pro 在 step 17 重启，公告将 OOM 归因于 expert load imbalance，并称调整了训练并行策略。<a href="https://mimo.xiaomi.com/rl/data.04135c89/notices.json" target="_blank" rel="noreferrer">公告</a></p>
 <p><strong>建议排查：</strong> 收集最早失败 rank、具体层、token 长度、expert token 分布与 dispatch 峰值，固定同批轨迹比较并行布局。新布局数值未公开，不能声称官方只是提高了 EP 或 CP。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f06-长序列最后一个-pp-stage-的-entropy-oom">
 <h2 id="f06-长序列最后一个-pp-stage-的-entropy-oom" tabindex="-1">F06：长序列最后一个 PP stage 的 entropy OOM <a class="header-anchor" href="#f06-长序列最后一个-pp-stage-的-entropy-oom" aria-label="Permalink to &quot;F06：长序列最后一个 PP stage 的 entropy OOM&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>用户反馈：</strong> slime #1523 报告 H200、TP4/PP4/CP2、超过约 30k token 时在 entropy 路径 OOM，entropy 系数为 0 仍保留 backward 中间张量；建议把仅监控的 entropy 与训练反向分开。<a href="https://github.com/THUDM/slime/issues/1523" target="_blank" rel="noreferrer">Issue #1523</a></p>
 <p><strong>状态与验证：</strong> 有维护者讨论，但本次没有核验到已合并、覆盖该版本的修复。应对实际版本 profile logits/entropy 保存张量、peak memory 和梯度语义；不能仅关掉监控就宣称损失实现正确。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f07-单节点-vram-问题-根因不详">
 <h2 id="f07-单节点-vram-问题-根因不详" tabindex="-1">F07：单节点 VRAM 问题，根因不详 <a class="header-anchor" href="#f07-单节点-vram-问题-根因不详" aria-label="Permalink to &quot;F07：单节点 VRAM 问题，根因不详&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>运行事实：</strong> 小米 Pro 公告记录某节点 VRAM 问题并重启，没有提供硬件日志或具体栈。<a href="https://mimo.xiaomi.com/rl/data.04135c89/notices.json" target="_blank" rel="noreferrer">公告</a></p>
 <p><strong>建议排查：</strong> 区分显存峰值、残留进程、碎片、allocator 行为和硬件异常；比较该节点与健康节点。不要把这一条与后来的 expert load OOM 自动合并成同一事故。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f08-router-replay-payload-广播造成主机-ram-峰值">
 <h2 id="f08-router-replay-payload-广播造成主机-ram-峰值" tabindex="-1">F08：Router replay payload 广播造成主机 RAM 峰值 <a class="header-anchor" href="#f08-router-replay-payload-广播造成主机-ram-峰值" aria-label="Permalink to &quot;F08：Router replay payload 广播造成主机 RAM 峰值&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>用户反馈：</strong> slime #2384 描述大量 <code>[tokens, MoE layers, top-k]</code> 路由 metadata 被广播给不需要完整数据的 rank，主机 RAM 迅速增长。<a href="https://github.com/THUDM/slime/issues/2384" target="_blank" rel="noreferrer">Issue #2384</a></p>
 <p><strong>候选修复：</strong> #2385 提议按接收 actor 的 CP/TP/DP 数据需求分片，仅获取对应 payload。作者报告 memory spikes 消失，但 PR 截至 2026-10-11 仍为 <strong>Open</strong>，不能写成上游已经修复。<a href="https://github.com/THUDM/slime/pull/2385" target="_blank" rel="noreferrer">PR #2385</a></p>
 <p><strong>建议验证：</strong> 同样 token/group/并行布局比较每 rank RAM 与传输字节，同时核对 replay token/expert 索引一致性。GPU 显存正常不能排除此问题。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f09-cpu-optimizer-offload-后-ray-因-ram-耗尽杀-worker">
 <h2 id="f09-cpu-optimizer-offload-后-ray-因-ram-耗尽杀-worker" tabindex="-1">F09：CPU optimizer offload 后 Ray 因 RAM 耗尽杀 worker <a class="header-anchor" href="#f09-cpu-optimizer-offload-后-ray-因-ram-耗尽杀-worker" aria-label="Permalink to &quot;F09：CPU optimizer offload 后 Ray 因 RAM 耗尽杀 worker&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>用户反馈：</strong> slime #1851 的 Qwen3-30B-A3B、8×H100 配置，在约 1TB 主机上出现多个训练 actor 各约 102GB 的 RAM 占用，Ray 在总 RAM 超阈值时杀 worker。<a href="https://github.com/THUDM/slime/issues/1851" target="_blank" rel="noreferrer">Issue #1851</a></p>
 <p><strong>状态与建议：</strong> Issue 为 Closed，不代表已证明固定根因或合并修复。统计 optimizer/master/gradient、初始化副本和 object store，比较 per-process 与总 RAM。调高 Ray 阈值不增加物理内存，不能当作容量修复。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f10-ray-gpu-资源调度-pending">
 <h2 id="f10-ray-gpu-资源调度-pending" tabindex="-1">F10：Ray GPU 资源调度 pending <a class="header-anchor" href="#f10-ray-gpu-资源调度-pending" aria-label="Permalink to &quot;F10：Ray GPU 资源调度 pending&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>文档线索：</strong> slime QA 说明共置与分离部署需要不同的资源规划；分离模式不能仅申请 trainer GPU 数。<a href="https://github.com/THUDM/slime/blob/main/docs/en/get_started/qa.md" target="_blank" rel="noreferrer">QA</a></p>
 <p><strong>建议验证：</strong> 比较 cluster 可见 GPU、trainer/rollout 请求、placement group 与每节点布局；确认没有残留作业占用。资源不匹配应先解决，不能用无限等待掩盖。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f11-kv-budget-太小-长轨迹硬失败-路由不感知-dp">
 <h2 id="f11-kv-budget-太小-长轨迹硬失败-路由不感知-dp" tabindex="-1">F11：KV budget 太小，长轨迹硬失败；路由不感知 DP <a class="header-anchor" href="#f11-kv-budget-太小-长轨迹硬失败-路由不感知-dp" aria-label="Permalink to &quot;F11：KV budget 太小，长轨迹硬失败；路由不感知 DP&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>作者工程记录：</strong> Miles GLM-5.2 参考 recipe 的 README 描述，旧 KV 设置只剩约 26k token pool，长输入硬失败、截断率达 84%；当前说明采用更大的缓存预算。另指出缺少 DP-aware routing 会把请求集中到单个 DP rank，其余 rank 空闲。<a href="https://github.com/radixark/miles/blob/main/examples/experimental/openenv/glm52_tbench2/README.md" target="_blank" rel="noreferrer">参考运行 README</a></p>
 <p><strong>建议验证：</strong> 在同一模型精度/布局下检查真实 KV tokens、最长会话、截断原因、各 rank 并发和 prefix-cache 命中。文档中的内存比例值只适用于该配置；不能从 0.75→0.85 推导通用提升比例。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f12-生成乱码或初始-logprob-对不上">
 <h2 id="f12-生成乱码或初始-logprob-对不上" tabindex="-1">F12：生成乱码或初始 logprob 对不上 <a class="header-anchor" href="#f12-生成乱码或初始-logprob-对不上" aria-label="Permalink to &quot;F12：生成乱码或初始 logprob 对不上&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>文档线索：</strong> slime debug 提示检查 Megatron→SGLang 权重转换、PP 层索引和 buffer；QA 还列出 checkpoint 路径、stop token 和端口/编译缓存等问题。<a href="https://github.com/THUDM/slime/blob/main/docs/en/developer_guide/debug.md" target="_blank" rel="noreferrer">debug</a>、<a href="https://github.com/THUDM/slime/blob/main/docs/en/get_started/qa.md" target="_blank" rel="noreferrer">QA</a></p>
 <p><strong>建议验证：</strong> 固定 token 上下文、权重、精度与采样协议比较 logprob，再逐层检查映射与内核。不要把禁用 NaN 检查视为修好数值错误；查出首次非有限值的计算才有根因证据。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f13-重复工具调用与修复后的过度抑制">
 <h2 id="f13-重复工具调用与修复后的过度抑制" tabindex="-1">F13：重复工具调用与修复后的过度抑制 <a class="header-anchor" href="#f13-重复工具调用与修复后的过度抑制" aria-label="Permalink to &quot;F13：重复工具调用与修复后的过度抑制&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>实际材料：</strong> MiMo #98 是重复调用反馈；官方后来发布阈值、checkpoint 回放和教师修复说明；#102 报告修复后可能抑制有效第三次工具调用。<a href="https://github.com/XiaomiMiMo/MiMo/issues/98" target="_blank" rel="noreferrer">#98</a>、<a href="https://mimo.xiaomi.com/blog/mimo-v2-6-tool-call-repetition" target="_blank" rel="noreferrer">官方修复</a>、<a href="https://github.com/XiaomiMiMo/MiMo/issues/102" target="_blank" rel="noreferrer">#102</a></p>
 <p><strong>证据边界：</strong> 官方选定实验样本的重复率不是所有线上请求比例；#102 是用户报告。建议固定 tools/harness/request，对多个权重版本测试重复、正常多工具调用和工具异常后的恢复能力。不能只测“重复下降”。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f14-重启后采样器、optimizer-和-checkpoint-边界不一致">
 <h2 id="f14-重启后采样器、optimizer-和-checkpoint-边界不一致" tabindex="-1">F14：重启后采样器、optimizer 和 checkpoint 边界不一致 <a class="header-anchor" href="#f14-重启后采样器、optimizer-和-checkpoint-边界不一致" aria-label="Permalink to &quot;F14：重启后采样器、optimizer 和 checkpoint 边界不一致&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>代码与文档：</strong> MiMo Code 开源默认禁用 resume；slime 当前文档支持 checkpoint 后已保存 batch 重放，且要求保留 serving/session 与相关状态。<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/recipes/code/run_train.sh" target="_blank" rel="noreferrer">MiMo 训练脚本</a>、<a href="https://github.com/THUDM/slime/blob/main/docs/en/advanced/fault-tolerance.md" target="_blank" rel="noreferrer">slime 恢复文档</a></p>
 <p><strong>建议验证：</strong> 对照 attempt ID、实际 optimizer step、已提交 checkpoint、队列 receipt、数据源游标与推理权重版本。重启后的曲线连续不证明无重复/丢样本。保留服务的恢复路径不能随意重建整个 Ray 集群。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f15-异步-activation-offload-的-cuda-stream-内存泄漏">
 <h2 id="f15-异步-activation-offload-的-cuda-stream-内存泄漏" tabindex="-1">F15：异步 activation offload 的 CUDA-stream 内存泄漏 <a class="header-anchor" href="#f15-异步-activation-offload-的-cuda-stream-内存泄漏" aria-label="Permalink to &quot;F15：异步 activation offload 的 CUDA-stream 内存泄漏&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>作者实验反馈：</strong> INTELLECT-3 报告说明异步 offload 实现出现内存泄漏，因此采用同步变体。<a href="https://arxiv.org/html/2512.16144v1" target="_blank" rel="noreferrer">报告 §2.1.6</a></p>
 <p><strong>状态与建议：</strong> 尚未取得原始栈、最小复现或修复 commit。建议固定 batch 比较分配/释放、stream 生命周期与长时间内存曲线，并确认梯度一致性。不能将作者采用同步实现等同于当前上游所有版本已修好异步实现。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f16-数百容器并发使-dockerd-崩溃">
 <h2 id="f16-数百容器并发使-dockerd-崩溃" tabindex="-1">F16：数百容器并发使 dockerd 崩溃 <a class="header-anchor" href="#f16-数百容器并发使-dockerd-崩溃" aria-label="Permalink to &quot;F16：数百容器并发使 dockerd 崩溃&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>作者运行反馈：</strong> DeepSWE-Preview 的作者说明，大量并发环境过载 Docker API，随后引入 Kubernetes 分摊调度并预置镜像。<a href="https://www.together.ai/blog/deepswe" target="_blank" rel="noreferrer">作者文章</a></p>
 <p><strong>状态与建议：</strong> 原始 daemon 日志和事故时间线尚未取得。建议区分容器创建/清理、镜像拉取、CPU/磁盘和 API 延迟；GPU 空闲时先检查环境供给。架构调整的说明不自动证明任意 Kubernetes 布局能够满足相同并发。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f17-ray-启动选错网络地址-或-worker-过早加入">
 <h2 id="f17-ray-启动选错网络地址-或-worker-过早加入" tabindex="-1">F17：Ray 启动选错网络地址，或 worker 过早加入 <a class="header-anchor" href="#f17-ray-启动选错网络地址-或-worker-过早加入" aria-label="Permalink to &quot;F17：Ray 启动选错网络地址，或 worker 过早加入&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>代码线索：</strong> Miles Slurm launcher 按 compute-fabric 前缀选择 head IP，并说明管理网地址不可跨节点路由；worker 首次连接可能早于 head GCS 就绪，因此包含重试。<a href="https://github.com/radixark/miles/blob/main/examples/experimental/openenv/glm52_tbench2/launch_16node_slurm.sh" target="_blank" rel="noreferrer">launcher</a></p>
 <p><strong>建议验证：</strong> 从实际节点核对所选 IP、路由、端口和 head readiness，再检查 Ray 注册资源。此处有明确代码/注释，尚无对应原 run 的完整故障日志。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="f18-高-off-policy-下-reward-崩塌-或-cp-扩展导致精度下降">
 <h2 id="f18-高-off-policy-下-reward-崩塌-或-cp-扩展导致精度下降" tabindex="-1">F18：高 off-policy 下 reward 崩塌，或 CP 扩展导致精度下降 <a class="header-anchor" href="#f18-高-off-policy-下-reward-崩塌-或-cp-扩展导致精度下降" aria-label="Permalink to &quot;F18：高 off-policy 下 reward 崩塌，或 CP 扩展导致精度下降&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>作者实验反馈：</strong> INTELLECT-3 记录了 async-8 算法消融中的 GSPO 指标崩塌，以及长上下文 CP 尝试的精度下降；最终配方和生产路径未直接沿用失败尝试。<a href="https://arxiv.org/html/2512.16144v1" target="_blank" rel="noreferrer">报告 §2.1.6/§3.3</a></p>
 <p><strong>证据边界与建议：</strong> 两个现象有不同触发条件，不合并为同一根因。建议分别固定 rollout/概率版本检查 loss 与 mask，以及固定 tokens 检查 CP 前后 logprob/梯度；本轮未取得原始失败 batch，也未复测该结论。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="未整理成已证实根因的现象">
 <h2 id="未整理成已证实根因的现象" tabindex="-1">未整理成已证实根因的现象 <a class="header-anchor" href="#未整理成已证实根因的现象" aria-label="Permalink to &quot;未整理成已证实根因的现象&quot;">&ZeroWidthSpace;</a></h2>
 <p>端口冲突、compile cache 解析错误、stop token 配置错误有文档线索，但本轮没有完整公开事故时间线；只作为进一步检索/调试入口。NCCL timeout、训练 NaN、模型崩溃也不能凭错误字符串直接认定某一固定根因。</p>
 </section>

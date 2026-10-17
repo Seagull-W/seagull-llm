@@ -1,11 +1,37 @@
-<article class="native-document format-paper" data-format="paper" aria-label="数据、环境与可验证任务">
-<header class="document-intro">
-<h1 id="数据、环境与可验证任务" tabindex="-1">数据、环境与可验证任务 <a class="header-anchor" href="#数据、环境与可验证任务" aria-label="Permalink to &quot;数据、环境与可验证任务&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-paper" data-format="paper" aria-label="数据、环境与可验证任务" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
+  <h1 id="数据、环境与可验证任务" tabindex="-1">数据、环境与可验证任务 <a class="header-anchor" href="#数据、环境与可验证任务" aria-label="Permalink to &quot;数据、环境与可验证任务&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">检查任务来源、数据切分、执行环境与 verifier 的可靠性。</p>
+  <div class="note-chips"><span>论文与项目随谈</span><span>后训练</span><span>训练数据</span><span>代码智能体</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#_1-可执行任务的最小结构"><span>02</span>1. 可执行任务的最小结构</a>
+<a href="#_2-任务怎么生成与验证"><span>03</span>2. 任务怎么生成与验证</a>
+<a href="#_3-五类-mimo-开源任务如何落地"><span>04</span>3. 五类 MiMo 开源任务如何落地</a>
+<a href="#_4-环境本身就是资源集群"><span>05</span>4. 环境本身就是资源集群</a>
+<a href="#_5-数据课程变化怎样记录"><span>06</span>5. 数据课程变化怎样记录</a>
+</nav>
+<figure class="note-diagram" aria-label="一个可验证任务的组成">
+  <p class="note-diagram-title">一个可验证任务的组成</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>任务来源</strong><span>生成或收集任务</span></div>
+    <div class="note-flow-step tone-1"><strong>执行环境</strong><span>依赖、状态与资源</span></div>
+    <div class="note-flow-step tone-2"><strong>验证反馈</strong><span>区分成功与失败类型</span></div>
+    <div class="note-flow-step tone-0"><strong>数据过滤</strong><span>保留可解释的训练信号</span></div>
+  </div>
+  <figcaption>任务文本、可执行环境和判定器要一起进入检查范围。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <blockquote>
 <p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
 </blockquote>
-</header>
-<section class="document-section">
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_1-可执行任务的最小结构">
 <h2 id="_1-可执行任务的最小结构" tabindex="-1">1. 可执行任务的最小结构 <a class="header-anchor" href="#_1-可执行任务的最小结构" aria-label="Permalink to &quot;1. 可执行任务的最小结构&quot;">&ZeroWidthSpace;</a></h2>
 <p>下面是整理建议的逻辑结构，不是某项目的数据 schema：</p>
 <div class="language-text vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">text</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>task_id + source_revision + split</span></span>
@@ -14,18 +40,21 @@
 <span class="line"><span>harness version + tool schema + context and stopping rules</span></span>
 <span class="line"><span>hidden tests or rubric + grader version</span></span>
 <span class="line"><span>expected valid outcomes + infra error categories</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br></div></div><p>MiMo Code 数据预览可见 prompt、reward_model、extra_info 等字段，环境信息藏在 instance 元数据内。<a href="https://huggingface.co/datasets/XiaomiMiMo/MiMo-V2.6-RL-oss" target="_blank" rel="noreferrer">公开数据集</a>；verl 通用数据准备文档说明如何把不同来源的数据整理为带 source 与 reward 元信息的 Parquet。<a href="https://github.com/verl-project/verl/blob/main/docs/preparation/prepare_data.rst" target="_blank" rel="noreferrer">verl 数据格式</a></p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br></div></div>
+<p>MiMo Code 数据预览可见 prompt、reward_model、extra_info 等字段，环境信息藏在 instance 元数据内。<a href="https://huggingface.co/datasets/XiaomiMiMo/MiMo-V2.6-RL-oss" target="_blank" rel="noreferrer">公开数据集</a>；verl 通用数据准备文档说明如何把不同来源的数据整理为带 source 与 reward 元信息的 Parquet。<a href="https://github.com/verl-project/verl/blob/main/docs/preparation/prepare_data.rst" target="_blank" rel="noreferrer">verl 数据格式</a></p>
 <p>建议保存原始内容、清洗后内容和执行产物三层，避免只留下最后 prompt 而无法回溯测试、镜像或评分变更。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_2-任务怎么生成与验证">
 <h2 id="_2-任务怎么生成与验证" tabindex="-1">2. 任务怎么生成与验证 <a class="header-anchor" href="#_2-任务怎么生成与验证" aria-label="Permalink to &quot;2. 任务怎么生成与验证&quot;">&ZeroWidthSpace;</a></h2>
 <p>CodeMidas 提供了一个相关的数据构建路线：从实现了功能的源码出发，探索行为、形成规格、构建测试，再通过原实现执行检查与多次求解筛选任务。公开摘要报告 5,545 题、3,185 个仓库、23 种语言、15 个领域。<a href="https://arxiv.org/abs/2609.22068" target="_blank" rel="noreferrer">CodeMidas 原文摘要</a></p>
 <p>CodeMidas 已作为独立项目整理，全文还给出 MiMo-V2.5 RL 配置与 benchmark，见 <a href="/papers/projects/codemidas/">项目档案</a>。不能因为标题或第三方项目使用 CodeMidas 名称，就认定那个仓库是小米原始数据管线。当前整理未定位到足以核验完整原始生成代码的官方入口。</p>
 <p>执行任务构建时可检验四件事，属于整理建议：原始正确实现通过；空实现/错误实现失败；评分产物不直接暴露给 learner；题目具有实际求解空间而非靠固定字符串过关。对污染风险，应按仓库/任务来源和近似内容做切分，不仅按最终 prompt 行号随机切分。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_3-五类-mimo-开源任务如何落地">
 <h2 id="_3-五类-mimo-开源任务如何落地" tabindex="-1">3. 五类 MiMo 开源任务如何落地 <a class="header-anchor" href="#_3-五类-mimo-开源任务如何落地" aria-label="Permalink to &quot;3. 五类 MiMo 开源任务如何落地&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="3. 五类 MiMo 开源任务如何落地表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>领域</th>
@@ -66,13 +95,14 @@
 <td><code>abc2midi</code> 依赖、CPU scorer、绝对评分</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>这些属于 9B 开源复现路径。实际 Pro/Flash 生产混合里出现的匿名 dataset ID，不能逐个映射到上述公开文件，除非获得映射表。</p>
 <h3 id="两个能影响训练信号的具体差异" tabindex="-1">两个能影响训练信号的具体差异 <a class="header-anchor" href="#两个能影响训练信号的具体差异" aria-label="Permalink to &quot;两个能影响训练信号的具体差异&quot;">&ZeroWidthSpace;</a></h3>
 <p>Visual 启动器区分 <code>WEBDEV_MODE=train/eval</code>。训练需要 design grader，评测需要另一组 judge 设置；启用 <code>DROP_INFRA_FROM_GROUP</code>，意味着除了错误标记还要查看 group 后处理。各领域的环境变量并非通用参数，可见同名设置在不同 arm 的含义与默认值不同。<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/design/webdev.sh" target="_blank" rel="noreferrer">Visual 启动器</a></p>
 <p>Music 的 <code>abc2midi</code> 缺失会导致样本被跳过而报告 0 分，整次运行可能“看起来正常”但没有学习信号。环境示例明确指出启动脚本会在 worker 上探测依赖，避免静默零奖励。<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/design/music.env.example" target="_blank" rel="noreferrer">Music 环境说明</a></p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_4-环境本身就是资源集群">
 <h2 id="_4-环境本身就是资源集群" tabindex="-1">4. 环境本身就是资源集群 <a class="header-anchor" href="#_4-环境本身就是资源集群" aria-label="Permalink to &quot;4. 环境本身就是资源集群&quot;">&ZeroWidthSpace;</a></h2>
 <p>mimoagent 的训练相关分支是 <code>mimo-oss</code>，不要仅下载上游继承的 <code>main</code> README。其框架将 agent、model protocol、environment、dataset/grader 分层组合；每实例可保存 <code>instance.log</code>、<code>traj.json</code>、消息及 <code>reward_extra_info.json</code>，适合连接失败样本与评分。<a href="https://github.com/XiaomiMiMo/mimoagent/tree/mimo-oss" target="_blank" rel="noreferrer">mimoagent 训练分支</a></p>
 <p>该分支说明了 native 与 black-box CLI harness，以及 Docker/Kubernetes 等后端。black-box 初始化需要安装固定版本的 CLI，离线/镜像环境可预构建 harness payload；长会话用 detached 执行避免 exec websocket 生命周期限制。这些是具体启动依赖，应该先在实际 task 镜像验证。<a href="https://github.com/XiaomiMiMo/mimoagent/blob/mimo-oss/README.md" target="_blank" rel="noreferrer">训练分支 README</a></p>
@@ -80,7 +110,8 @@
 <p>DeepSWE 工程需要大量 Docker 镜像与并发容器；作者的复现入口说明至少 64 GPU、512 个并行容器，K8 节点还需大 CPU 和磁盘资源。可以据此理解为什么 agent RL 的成本包含 CPU、镜像存储与控制面压力。<a href="https://github.com/agentica-project/rllm/tree/main/examples/swe" target="_blank" rel="noreferrer">rLLM SWE 入口</a></p>
 <p>建议每次小规模验证同时测量镜像获取、环境创建、工具执行、grader 排队和删除耗时。若只看生成 token/s，环境慢会被误认为模型推理慢。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_5-数据课程变化怎样记录">
 <h2 id="_5-数据课程变化怎样记录" tabindex="-1">5. 数据课程变化怎样记录 <a class="header-anchor" href="#_5-数据课程变化怎样记录" aria-label="Permalink to &quot;5. 数据课程变化怎样记录&quot;">&ZeroWidthSpace;</a></h2>
 <p>小米公开公告包含“移除 cyber”和“筛去简单任务”，这使训练目标随时间变化。<a href="https://mimo.xiaomi.com/rl/data.04135c89/notices.json" target="_blank" rel="noreferrer">公告</a> 建议每次变更保存：生效 step、数据 manifest、权重/配额、筛选规则版本、样本数量及原统计口径。固定 held-out benchmark 可以帮助区分任务变容易与模型变强。</p>
 <p>继续阅读：<a href="/papers/engineering/rewards-and-algorithms">奖励与算法</a>、<a href="/papers/engineering/distributed-performance">分布式调度</a>。</p>

@@ -1,14 +1,40 @@
-<article class="native-document format-paper" data-format="paper" aria-label="公开后训练项目阅读导引">
-<header class="document-intro">
-<h1 id="公开后训练项目阅读导引" tabindex="-1">公开后训练项目阅读导引 <a class="header-anchor" href="#公开后训练项目阅读导引" aria-label="Permalink to &quot;公开后训练项目阅读导引&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-paper" data-format="paper" aria-label="公开后训练项目阅读导引" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
+  <h1 id="公开后训练项目阅读导引" tabindex="-1">公开后训练项目阅读导引 <a class="header-anchor" href="#公开后训练项目阅读导引" aria-label="Permalink to &quot;公开后训练项目阅读导引&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">按项目查阅公开后训练运行、工程专题、指标与证据边界。</p>
+  <div class="note-chips"><span>论文与项目随谈</span><span>后训练</span><span>项目实践</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#选择一个项目开始读"><span>02</span>选择一个项目开始读</a>
+<a href="#从哪里开始读"><span>03</span>从哪里开始读</a>
+<a href="#当前整理到的证据"><span>04</span>当前整理到的证据</a>
+<a href="#如何识别证据强度"><span>05</span>如何识别证据强度</a>
+<a href="#数据文件"><span>06</span>数据文件</a>
+</nav>
+<figure class="note-diagram" aria-label="带着问题进入项目">
+  <p class="note-diagram-title">带着问题进入项目</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>选项目</strong><span>先明确对象与版本</span></div>
+    <div class="note-flow-step tone-1"><strong>走全链路</strong><span>数据、训练、评测与上线</span></div>
+    <div class="note-flow-step tone-2"><strong>查工程</strong><span>围绕实际问题交叉阅读</span></div>
+    <div class="note-flow-step tone-0"><strong>回到证据</strong><span>核对原始材料与缺口</span></div>
+  </div>
+  <figcaption>项目记录、工程专题和证据索引提供三个互补的阅读入口。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <blockquote>
 <p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
 </blockquote>
 <p>检索截止：2026-10-11。<strong>每个合适的项目都是独立、同等重要的研究目标</strong>，按数据、环境、奖励、算法、训练、分布式、监控、故障恢复、benchmark 和发布反馈的完整路径整理。来源包括作者社交帖子及回复、公开训练看板、团队公告、代码、配置、Issue、PR、评测、修复记录和报告附录。每个项目保留自己的证据与检索缺口。</p>
-</header>
-<section class="document-section">
+</section>
+
+<section class="document-section note-panel" aria-labelledby="选择一个项目开始读">
 <h2 id="选择一个项目开始读" tabindex="-1">选择一个项目开始读 <a class="header-anchor" href="#选择一个项目开始读" aria-label="Permalink to &quot;选择一个项目开始读&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="选择一个项目开始读表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>项目</th>
@@ -37,12 +63,13 @@
 <td><a href="/papers/projects/codemidas/">源码到环境的生产管线与 MiMo-V2.5 RL 实验</a></td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p><a href="/papers/projects/coverage">项目目录与全链路覆盖</a>列出统一检查项、各项目开放程度与继续检索的问题。表格顺序不表示研究优先级；后续发现合适项目时继续独立建档。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="从哪里开始读">
 <h2 id="从哪里开始读" tabindex="-1">从哪里开始读 <a class="header-anchor" href="#从哪里开始读" aria-label="Permalink to &quot;从哪里开始读&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="从哪里开始读表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>你的目的</th>
@@ -102,10 +129,11 @@
 <td>每个数字的口径、出处、版本及访问限制是什么？</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>可以从任意项目档案连续阅读，也可以先读全链路地图，再按工程问题查专题。遇到具体报错时直接查故障手册。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="当前整理到的证据">
 <h2 id="当前整理到的证据" tabindex="-1">当前整理到的证据 <a class="header-anchor" href="#当前整理到的证据" aria-label="Permalink to &quot;当前整理到的证据&quot;">&ZeroWidthSpace;</a></h2>
 <ul>
 <li>小米两个模型各 30 个最终保留训练步；Flash 2,062 个指标名、Pro 2,029 个。公开序列展开为 <strong>122,730 个记录槽位</strong>，包含原始缺失值，并非每个槽位都有观测。</li>
@@ -119,9 +147,10 @@
 <li>跨项目工程专题，以及 slime 等框架的真实 Issue、候选修复与恢复文档。</li>
 </ul>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="如何识别证据强度">
 <h2 id="如何识别证据强度" tabindex="-1">如何识别证据强度 <a class="header-anchor" href="#如何识别证据强度" aria-label="Permalink to &quot;如何识别证据强度&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="如何识别证据强度表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>标记</th>
@@ -156,11 +185,12 @@
 <td>保留缺口，不补写 GPU 拓扑、日志或修复结果</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>罗福莉的 <a href="https://x.com/_LuoFuli/status/2100296686719610932" target="_blank" rel="noreferrer">X 原帖链接</a>已定位，直接访问返回 403，全文未直接核验。原帖与这次运行的对应关系有转载线索；训练本身则由<a href="https://mimo.xiaomi.com/rl/" target="_blank" rel="noreferrer">小米官方看板</a>和<a href="https://mimo.mi.com/docs/en-US/news/latest/v2-6" target="_blank" rel="noreferrer">官方发布</a>确认。现在看板已是静态归档，不能把页面上的 <code>live</code> 标签当成训练仍在进行。</p>
 <p>没有在本机启动 GPU 训练、部署沙箱或调用评分模型。本次验证的是资料、代码可见行为、公开数值和整理文件的一致性。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="数据文件">
 <h2 id="数据文件" tabindex="-1">数据文件 <a class="header-anchor" href="#数据文件" aria-label="Permalink to &quot;数据文件&quot;">&ZeroWidthSpace;</a></h2>
 <p><a href="/papers/projects/mimo-v2-6/evidence/manifest.json">小米看板归档目录</a>包含原始 JSON、SHA-256、逐步关键指标、全量指标长表、公告时间转换和离线评测 CSV。<a href="/papers/evidence/gaps">检索记录与缺口</a>说明哪些方向已经找到可用证据，哪些仍缺原始日志或社交平台全文。</p>
 <p>当前材料是截至 2026-10-11 的阶段性整理；各项目的证据缺口分别追踪。</p>

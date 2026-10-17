@@ -1,19 +1,48 @@
-<article class="native-document format-paper" data-format="paper" aria-label="INTELLECT-3：SFT、异步 RL 与多节点工程">
-<header class="document-intro">
-<h1 id="intellect-3-sft、异步-rl-与多节点工程" tabindex="-1">INTELLECT-3：SFT、异步 RL 与多节点工程 <a class="header-anchor" href="#intellect-3-sft、异步-rl-与多节点工程" aria-label="Permalink to &quot;INTELLECT-3：SFT、异步 RL 与多节点工程&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-paper" data-format="paper" aria-label="INTELLECT-3：SFT、异步 RL 与多节点工程" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
+  <h1 id="intellect-3-sft、异步-rl-与多节点工程" tabindex="-1">INTELLECT-3：SFT、异步 RL 与多节点工程 <a class="header-anchor" href="#intellect-3-sft、异步-rl-与多节点工程" aria-label="Permalink to &quot;INTELLECT-3：SFT、异步 RL 与多节点工程&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">追踪两阶段 SFT、异步 RL、资源分配、评测与失败尝试。</p>
+  <div class="note-chips"><span>论文与项目随谈</span><span>INTELLECT-3</span><span>监督微调</span><span>异步训练</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#_1-对象与证据版本"><span>02</span>1. 对象与证据版本</a>
+<a href="#_2-数据、环境与训练阶段"><span>03</span>2. 数据、环境与训练阶段</a>
+<a href="#_3-算法、更新与-rollout"><span>04</span>3. 算法、更新与 rollout</a>
+<a href="#_4-资源、调度与性能口径"><span>05</span>4. 资源、调度与性能口径</a>
+<a href="#_5-训练-loss-与-benchmark"><span>06</span>5. 训练 loss 与 benchmark</a>
+<a href="#_6-失败尝试、修复与恢复"><span>07</span>6. 失败尝试、修复与恢复</a>
+<a href="#_7-发布产物与独立检索缺口"><span>08</span>7. 发布产物与独立检索缺口</a>
+</nav>
+<figure class="note-diagram" aria-label="训练阶段与工程运行一起读">
+  <p class="note-diagram-title">训练阶段与工程运行一起读</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>SFT 阶段</strong><span>数据与监督训练</span></div>
+    <div class="note-flow-step tone-1"><strong>异步 RL</strong><span>采样与策略更新</span></div>
+    <div class="note-flow-step tone-2"><strong>多节点系统</strong><span>资源与调度</span></div>
+    <div class="note-flow-step tone-0"><strong>评测与反馈</strong><span>结果、故障和边界</span></div>
+  </div>
+  <figcaption>将两阶段 SFT、异步 RL、资源和评测放在对应阶段解释。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <blockquote>
 <p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
 </blockquote>
-</header>
-<section class="document-section">
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_1-对象与证据版本">
 <h2 id="_1-对象与证据版本" tabindex="-1">1. 对象与证据版本 <a class="header-anchor" href="#_1-对象与证据版本" aria-label="Permalink to &quot;1. 对象与证据版本&quot;">&ZeroWidthSpace;</a></h2>
 <p>INTELLECT-3 是从 GLM-4.5-Air-Base 后训练的 106B-A12B MoE。团队于 2025-11-26 发布，2025-12-18 提交报告。研究对象包括模型训练、prime-rl、verifiers/环境生态和集群运维。<a href="https://www.primeintellect.one/blog/intellect-3" target="_blank" rel="noreferrer">作者博客</a>、<a href="https://huggingface.co/PrimeIntellect/INTELLECT-3" target="_blank" rel="noreferrer">模型卡</a>、<a href="https://arxiv.org/html/2512.16144v1" target="_blank" rel="noreferrer">报告 v1</a></p>
 <p>本轮已读取报告全文、模型卡以及当前 prime-rl 文档并保存快照。报告对应当年实验；当前 main 文档是另一个版本证据，原 run 的精确仓库 SHA 与 resolved config 尚未核验。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_2-数据、环境与训练阶段">
 <h2 id="_2-数据、环境与训练阶段" tabindex="-1">2. 数据、环境与训练阶段 <a class="header-anchor" href="#_2-数据、环境与训练阶段" aria-label="Permalink to &quot;2. 数据、环境与训练阶段&quot;">&ZeroWidthSpace;</a></h2>
 <p>实际路径为 Base → 通用推理 SFT → Agent SFT → 混合环境 RL。SFT 来源表列出 Nemotron 与 AM 蒸馏数据，以及工具/软件工程和环境生成轨迹；RL 覆盖数学、代码、科学、逻辑、研究与软件工程。环境统一连接 verifiers，代码/SWE 执行依赖沙箱；报告说明 sandbox 失败会屏蔽相应 completion。<a href="https://arxiv.org/html/2512.16144v1" target="_blank" rel="noreferrer">报告 §3.1–3.3</a></p>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="2. 数据、环境与训练阶段表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>阶段</th>
@@ -34,18 +63,20 @@
 <td>256 prompts×16 rollouts、context 65,536；Muon LR 1e-6、最大 off-policy steps 8</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>出处：<a href="https://arxiv.org/html/2512.16144v1" target="_blank" rel="noreferrer">报告 §3.2–3.3</a>。这些是不同阶段的参数，不能将 SFT 的 CP/context 或 LR 拼进 RL 配方。独立偏好优化阶段本轮未核验。</p>
 <p>环境发布为可以固定版本的 Python 模块，使 task、评分与评测实现能够单独更新。需要同时固定环境包、数据 split、工具定义和 sandbox 镜像。<a href="https://www.primeintellect.one/blog/intellect-3" target="_blank" rel="noreferrer">作者博客</a> 当前框架关于 prompt/completion、messages 和 loss mask 的接口说明见 <a href="https://github.com/PrimeIntellect-ai/prime-rl/blob/main/docs/training.md" target="_blank" rel="noreferrer">training</a>，其默认值不能直接套到 2025 年实验。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_3-算法、更新与-rollout">
 <h2 id="_3-算法、更新与-rollout" tabindex="-1">3. 算法、更新与 rollout <a class="header-anchor" href="#_3-算法、更新与-rollout" aria-label="Permalink to &quot;3. 算法、更新与 rollout&quot;">&ZeroWidthSpace;</a></h2>
 <p>报告给出 RL batch 为 256 prompts×16 rollouts，context 65,536，最大 off-policy steps 为 8，Muon LR 为 1e-6。算法采用 IcePop 的 token 重要性比值双侧 mask（0.5–5）和组内去均值优势；极低 token ratio 还会触发轨迹屏蔽。在线难度筛选用于维持学习信号。<a href="https://arxiv.org/html/2512.16144v1" target="_blank" rel="noreferrer">报告 §3.3</a></p>
 <p>框架由 CPU orchestrator、FSDP2 trainer 与 vLLM inference 分工：环境生成/评分，orchestrator 构建批次，trainer 更新模型，推理服务接收权重。持续采样和在途更新允许轨迹跨权重版本，必须记录生成概率与版本滞后。<a href="https://github.com/PrimeIntellect-ai/prime-rl/blob/main/docs/overview.md" target="_blank" rel="noreferrer">当前 overview</a>、<a href="https://github.com/PrimeIntellect-ai/prime-rl/blob/main/docs/algorithms.md" target="_blank" rel="noreferrer">algorithms</a></p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_4-资源、调度与性能口径">
 <h2 id="_4-资源、调度与性能口径" tabindex="-1">4. 资源、调度与性能口径 <a class="header-anchor" href="#_4-资源、调度与性能口径" aria-label="Permalink to &quot;4. 资源、调度与性能口径&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="4. 资源、调度与性能口径表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>来源对象</th>
@@ -70,15 +101,16 @@
 <td>作者实验条件下的观测，尚无原始分项日志</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>来源：<a href="https://www.primeintellect.one/blog/intellect-3" target="_blank" rel="noreferrer">作者博客</a>、<a href="https://arxiv.org/html/2512.16144v1" target="_blank" rel="noreferrer">报告 §3.3</a>。集群使用 Ansible 硬件发现/IB 预检、Slurm+Cgroup v2 清理、Lustre 与 NVMe-backed NFS、DCGM/Prometheus 节点监控。沙箱供给与模型 GPU 调度是分别需要维护的资源层。<a href="https://www.primeintellect.one/blog/intellect-3" target="_blank" rel="noreferrer">博客</a></p>
 <p>当前部署和配置接口可读 <a href="https://github.com/PrimeIntellect-ai/prime-rl/blob/main/docs/scaling.md" target="_blank" rel="noreferrer">scaling</a>、<a href="https://github.com/PrimeIntellect-ai/prime-rl/blob/main/docs/configuration.md" target="_blank" rel="noreferrer">configuration</a>。它们适合查运行步骤，不能据框架“1000+ GPU”能力宣称扩大本项目实际规模。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_5-训练-loss-与-benchmark">
 <h2 id="_5-训练-loss-与-benchmark" tabindex="-1">5. 训练 loss 与 benchmark <a class="header-anchor" href="#_5-训练-loss-与-benchmark" aria-label="Permalink to &quot;5. 训练 loss 与 benchmark&quot;">&ZeroWidthSpace;</a></h2>
 <p>报告 Figure 8 给出两阶段 SFT loss，Figure 9 给出每 15 步的推理评测，Figure 10 为算法稳定性消融。<strong>本轮读取到图表说明与报告内容，尚未取得这些图的原始逐点序列</strong>；没有将图像估读值包装成训练 CSV。<a href="https://arxiv.org/html/2512.16144v1" target="_blank" rel="noreferrer">报告</a></p>
 <p>模型卡与报告提供以下最终值；比较列是 GLM-4.5-Air 成品模型，不能当作本项目 RL 开始前的同 checkpoint 基线。</p>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="5. 训练 loss 与 benchmark表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>benchmark</th>
@@ -131,15 +163,17 @@
 <td>约 12k 题，Avg@1，答案精确匹配</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>最终表来源：<a href="https://huggingface.co/PrimeIntellect/INTELLECT-3" target="_blank" rel="noreferrer">模型卡</a>，版本和协议来源：<a href="https://arxiv.org/html/2512.16144v1" target="_blank" rel="noreferrer">报告 §4/Appendix A</a>。模型卡与报告的某些<strong>第三方比较模型</strong>分数存在差异，不能合并为同一次 eval。模型卡也没有提供这张表的全部 request 参数或逐题输出，仍需评测 config 和样本。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_6-失败尝试、修复与恢复">
 <h2 id="_6-失败尝试、修复与恢复" tabindex="-1">6. 失败尝试、修复与恢复 <a class="header-anchor" href="#_6-失败尝试、修复与恢复" aria-label="Permalink to &quot;6. 失败尝试、修复与恢复&quot;">&ZeroWidthSpace;</a></h2>
 <p>报告记录了三类实际反馈：异步 activation offload 的 CUDA-stream 内存泄漏，改用同步实现；长上下文 CP 尝试出现精度问题而未用于生产；高 off-policy 消融中 GSPO 出现 reward/指标崩塌。这些是作者实验反馈，不是本轮集群复测结论。<a href="https://arxiv.org/html/2512.16144v1" target="_blank" rel="noreferrer">报告 §2.1.6/§3.3</a></p>
 <p>原始泄漏栈、失败 batch、修复 commit 和各次重启状态未取得。当前框架的 checkpoint、恢复和日志用法可查 <a href="https://github.com/PrimeIntellect-ai/prime-rl/blob/main/docs/training.md" target="_blank" rel="noreferrer">training</a>、<a href="https://github.com/PrimeIntellect-ai/prime-rl/blob/main/docs/advanced.md" target="_blank" rel="noreferrer">advanced</a>。读取当前恢复说明只能确认功能接口；还不能证明原 run 恢复了 queue、RNG、environment 与所有在途轨迹。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_7-发布产物与独立检索缺口">
 <h2 id="_7-发布产物与独立检索缺口" tabindex="-1">7. 发布产物与独立检索缺口 <a class="header-anchor" href="#_7-发布产物与独立检索缺口" aria-label="Permalink to &quot;7. 发布产物与独立检索缺口&quot;">&ZeroWidthSpace;</a></h2>
 <p>公开产物包括 <a href="https://huggingface.co/PrimeIntellect/INTELLECT-3" target="_blank" rel="noreferrer">INTELLECT-3 权重</a>、FP8 版本、prime-rl、verifiers 和 Environments Hub；服务端 tool/reasoning parser 也是复现协议的一部分。<a href="https://huggingface.co/PrimeIntellect/INTELLECT-3" target="_blank" rel="noreferrer">模型卡</a></p>
 <p>下一步需要：历史训练 recipe/版本；每阶段数据/环境 manifest；SFT/RL loss、reward、entropy、KL、梯度和在线评测原序列；480 卡布局下性能分解；失败与重启日志；最终 checkpoint 对应的 eval 输出和发布后回归反馈。框架的完整公开并不自动等于某次运行全部状态公开。</p>

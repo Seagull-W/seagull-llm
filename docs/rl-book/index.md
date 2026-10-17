@@ -8,9 +8,7 @@ layout: doc
 title: Nathan Lambert RL BOOK 学习笔记
 pageClass: chapter-index
 aside: false
-description: >-
-  Nathan Lambert RL BOOK 学习笔记 &ZeroWidthSpace; 学习 Nathan Lambert
-  强化学习（RL）专著的读书笔记，聚焦大模型时代的 RLHF、PPO、DPO 等核心技术。 阅读
+description: 从对话模板与监督微调走向奖励建模和强化学习，结合训练实验理解 RLHF 的完整学习路径。
 contentFormat: html
 ---
 

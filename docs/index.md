@@ -15,8 +15,6 @@ features:
   - title: Nathan Lambert RL BOOK 学习笔记
     details: 学习 Nathan Lambert 强化学习专著的读书笔记，聚焦 RLHF、PPO、DPO 等核心技术
     link: /rl-book/
-  - title: 所有人都能看懂的大语言模型科普及实践书
-    details: 从"预测下一个词"出发建立直觉；尚在撰写，暂未完成
   - title: 论文与项目随谈
     details: 汇集论文精读与后训练项目记录，按项目整理算法、系统、指标与工程反馈
     link: /papers/

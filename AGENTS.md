@@ -15,6 +15,7 @@
 执行前阅读 [新增内容.md](./新增内容.md)，按其中的发布流程完成整套接入；只新增 Markdown 文件不算完成。
 
 - 每日调研继续使用 Markdown；其他读者页面使用相邻 `.html` 作为正文主文件，`.md` 仅保留元数据和 HTML include。格式遵循 [HTML_FORMATS.md](./HTML_FORMATS.md)，禁止用 iframe 或运行时 HTML 注入包装文章。栏目卡片在 `index.html` 维护。
+- 笔记设计参考 Linux 隔离机制笔记，维护真实的导读、机制图、分节面板、对照、图注和折叠详解，不能只把 Markdown 转成 HTML。LLM 科普书当前整体撤下，源文件保留；未经用户明确要求，不恢复其构建、导航、首页、标签、搜索或翻页入口。
 
 - 公开文章必须同步登记 `docs/.vitepress/sidebar.ts` 和对应栏目首页的 `ChapterCards` 卡片，保持标题、摘要和路由一致。用户明确要求展示的文章应补齐入口，不能仅因原先未登记侧边栏就将其当作隐藏内容。
 - 每篇文章设置准确的 `title`、`description` 和主题 `tags`。运行 `npm run tags` 自动补充缺失标签后，检查并修正标签；脚本不会覆盖已有标签。

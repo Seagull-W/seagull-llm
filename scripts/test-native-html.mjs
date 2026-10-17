@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readdirSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { test } from 'node:test'
 import { createMarkdownRenderer } from 'vitepress'
@@ -64,4 +64,27 @@ test('editable HTML formulas compile to accessible static math', () => {
   assert.equal((html.match(/<mjx-container/g) ?? []).length, 2)
   assert.doesNotMatch(html, /data-mjx-error|data-tex=/)
   assert.match(html, /<mjx-assistive-mml/)
+})
+
+test('visible notebooks have editorial structure, usable anchors and clean summaries', () => {
+  let diagrams = 0
+  let disclosures = 0
+  for (const file of files.filter(file => /[/\\](?:papers|rl-book|westlake-rl|rust-notes|linux-notes)[/\\]/.test(file))) {
+    const { data, content } = readContent(file)
+    if (content.includes('format-system')) continue // bespoke Linux reference
+    assert.match(content, /data-design="linux-notebook"/, file)
+    assert.match(content, /class="document-intro note-hero"/, file)
+    assert.match(content, /class="document-section note-panel"/, file)
+    assert.doesNotMatch(data.description, /ZeroWidthSpace/, file)
+    const ids = [...content.matchAll(/<h[1-6]\b[^>]*id="([^"]+)"/g)].map(match => match[1])
+    assert.equal(ids.length, new Set(ids).size, file)
+    for (const match of content.matchAll(/<section class="document-section note-panel" aria-labelledby="([^"]+)"/g)) {
+      assert.ok(ids.includes(match[1]), `${file}: ${match[1]}`)
+    }
+    for (const match of content.matchAll(/href="#([^"]+)"/g)) assert.ok(ids.includes(match[1]), `${file}: ${match[1]}`)
+    diagrams += (content.match(/<figure class="note-diagram/g) ?? []).length
+    disclosures += (content.match(/<details class="note-details"/g) ?? []).length
+  }
+  assert.ok(diagrams >= 33, 'article-specific concept maps')
+  assert.ok(disclosures >= 14, 'long implementations remain available through native details')
 })

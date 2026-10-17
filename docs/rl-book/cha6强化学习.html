@@ -1,8 +1,34 @@
-<article class="native-document format-lab" data-format="lab" aria-label="强化学习">
-<header class="document-intro">
-<h1 id="强化学习" tabindex="-1">强化学习 <a class="header-anchor" href="#强化学习" aria-label="Permalink to &quot;强化学习&quot;">&ZeroWidthSpace;</a></h1>
-<p><img src="./figures/RLHF训练循环.png" alt="RLHF 训练循环"></p>
-<h3 id="策略梯度算法" tabindex="-1">策略梯度算法 <a class="header-anchor" href="#策略梯度算法" aria-label="Permalink to &quot;策略梯度算法&quot;">&ZeroWidthSpace;</a></h3>
+<article class="native-document format-lab" data-format="lab" aria-label="强化学习" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">RL 学习笔记<span>从算法到训练实践</span></p>
+  <h1 id="强化学习" tabindex="-1">强化学习 <a class="header-anchor" href="#强化学习" aria-label="Permalink to &quot;强化学习&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">梳理策略梯度、PPO 与 GRPO，理解 RLHF 训练循环中的奖励、策略和优化目标。</p>
+  <div class="note-chips"><span>RLHF</span><span>策略梯度</span><span>PPO</span><span>GRPO</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#策略梯度算法"><span>02</span>策略梯度算法</a>
+<a href="#算法实现"><span>03</span>算法实现</a>
+<a href="#辅助方法"><span>04</span>辅助方法</a>
+</nav>
+<figure class="note-diagram" aria-label="把强化学习放回训练闭环">
+  <p class="note-diagram-title">把强化学习放回训练闭环</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>采样轨迹</strong><span>策略生成回答</span></div>
+    <div class="note-flow-step tone-1"><strong>评价与优势</strong><span>把回报变为学习信号</span></div>
+    <div class="note-flow-step tone-2"><strong>策略更新</strong><span>在约束下优化目标</span></div>
+    <div class="note-flow-step tone-0"><strong>再次采样</strong><span>使用更新后的策略</span></div>
+  </div>
+  <figcaption>奖励提供评价，优势决定相对方向，策略梯度负责更新。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
+<figure class="note-figure"><img src="./figures/RLHF训练循环.png" alt="RLHF 训练循环"><figcaption>RLHF 训练循环</figcaption></figure>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="策略梯度算法">
+<h2 id="策略梯度算法" tabindex="-1">策略梯度算法 <a class="header-anchor" href="#策略梯度算法" aria-label="Permalink to &quot;策略梯度算法&quot;">&ZeroWidthSpace;</a></h2>
 <blockquote>
 <p>强化学习中策略梯度优化是指，通过优化策略函数的参数来寻求最优策略的一类方法。</p>
 </blockquote>
@@ -14,17 +40,21 @@
 <blockquote>
 <p>在将词元作为最小生成来作MDP推演时，一般将折扣因子设为1，因为我们关注的目标是生成整体。</p>
 </blockquote>
-<h4 id="策略梯度的推导" tabindex="-1">策略梯度的推导 <a class="header-anchor" href="#策略梯度的推导" aria-label="Permalink to &quot;策略梯度的推导&quot;">&ZeroWidthSpace;</a></h4>
+<h3 id="策略梯度的推导" tabindex="-1">策略梯度的推导 <a class="header-anchor" href="#策略梯度的推导" aria-label="Permalink to &quot;策略梯度的推导&quot;">&ZeroWidthSpace;</a></h3>
 <p>令<span class="math-inline" data-tex="p_{\theta}(\tau)"></span>表示初始状态分布、策略以及环境共同诱导出的轨迹的概率分布（注意此处的<span class="math-inline" data-tex="\tau"></span>吸收了前述初始状态<span class="math-inline" data-tex="s"></span>的随机），从而有：</p>
 <div class="math-block" data-tex="J(\theta)=\mathbb{E}_{\tau \sim p_{\theta}}[R(\tau)]
-"></div><p>有<span class="math-inline" data-tex="p_{\theta}(\tau)=d_0(s_0)\prod_{t=0}^{\infty}\pi_{\theta}(a_t|s_t)p(s_{t+1}|a_t,s_t)"></span></p>
+"></div>
+<p>有<span class="math-inline" data-tex="p_{\theta}(\tau)=d_0(s_0)\prod_{t=0}^{\infty}\pi_{\theta}(a_t|s_t)p(s_{t+1}|a_t,s_t)"></span></p>
 <p>使用<span class="math-inline" data-tex="\nabla f=f\nabla \text{log}f"></span>的技巧，得到：</p>
 <div class="math-block" data-tex="\nabla_{\theta}J(\theta)=\mathbb{E}_{\tau \sim p_{\theta}}[R(\tau)\nabla_{\theta} \text{log}p_{\theta}(\tau)]
-"></div><p>简化中间过程，大致是<span class="math-inline" data-tex="p"></span>中只有<span class="math-inline" data-tex="\pi"></span>是含参的，化简之后得到：</p>
+"></div>
+<p>简化中间过程，大致是<span class="math-inline" data-tex="p"></span>中只有<span class="math-inline" data-tex="\pi"></span>是含参的，化简之后得到：</p>
 <div class="math-block" data-tex="\nabla_{\theta}J(\theta)=\mathbb{E}_{\tau \sim p_{\theta}}[\Sigma_{t=0}^{\infty}R(\tau)\nabla_{\theta} \text{log}\pi_{\theta}(a_t|s_t)]
-"></div><p>，稍加推广得到:</p>
+"></div>
+<p>，稍加推广得到:</p>
 <div class="math-block" data-tex="\nabla_{\theta}J(\theta)=\mathbb{E}_{\tau \sim p_{\theta}}[\Sigma_{t=0}^{\infty}\Psi_t\nabla_{\theta} \text{log}\pi_{\theta}(a_t|s_t)]
-"></div><p>其中，<span class="math-inline" data-tex="\Psi_t"></span> 表示用于策略梯度估计的回报信号；有些奖励均采用折扣因子 <span class="math-inline" data-tex="\gamma"></span>。常见选择依次为：</p>
+"></div>
+<p>其中，<span class="math-inline" data-tex="\Psi_t"></span> 表示用于策略梯度估计的回报信号；有些奖励均采用折扣因子 <span class="math-inline" data-tex="\gamma"></span>。常见选择依次为：</p>
 <ol>
 <li>
 <p><strong>轨迹总回报</strong></p>
@@ -59,18 +89,22 @@
 </ol>
 <p>其中，</p>
 <div class="math-block" data-tex="V^\pi(s_t)=\mathbb{E}_{a_t\sim\pi(\cdot\mid s_t)}[Q^\pi(s_t,a_t)]
-"></div><p>是状态价值，表示在 <span class="math-inline" data-tex="s_t"></span> 下遵循策略 <span class="math-inline" data-tex="\pi"></span> 的期望回报；而</p>
+"></div>
+<p>是状态价值，表示在 <span class="math-inline" data-tex="s_t"></span> 下遵循策略 <span class="math-inline" data-tex="\pi"></span> 的期望回报；而</p>
 <div class="math-block" data-tex="Q^\pi(s_t,a_t)=\mathbb{E}[r_t+\gamma V^\pi(s_{t+1})\mid s_t,a_t]
-"></div><p>是状态—动作价值。于是，优势函数可写为</p>
+"></div>
+<p>是状态—动作价值。于是，优势函数可写为</p>
 <div class="math-block" data-tex="A^\pi(s_t,a_t)=r_t+\gamma V^\pi(s_{t+1})-V^\pi(s_t),
-"></div><p>即一步 TD 残差。<em>这是因为在确定性环境中，上式不再需要对状态转移取期望</em>。</p>
-<h4 id="朴素策略梯度" tabindex="-1">朴素策略梯度 <a class="header-anchor" href="#朴素策略梯度" aria-label="Permalink to &quot;朴素策略梯度&quot;">&ZeroWidthSpace;</a></h4>
+"></div>
+<p>即一步 TD 残差。<em>这是因为在确定性环境中，上式不再需要对状态转移取期望</em>。</p>
+<h3 id="朴素策略梯度" tabindex="-1">朴素策略梯度 <a class="header-anchor" href="#朴素策略梯度" aria-label="Permalink to &quot;朴素策略梯度&quot;">&ZeroWidthSpace;</a></h3>
 <p>一个关于时刻t的简单版本为：</p>
 <div class="math-block" data-tex="\nabla_{\theta}J(\theta)=\mathbb{E}_{\tau \sim p_{\theta}}[\Sigma_{t=0}^{T}G_t\nabla_{\theta} \text{log}\pi_{\theta}(a_t|s_t)]
-"></div><p>简单地用当前轨迹的生成token来进行计算，即<span class="math-inline" data-tex="G_t=\Sigma_{k=t}^{T_i}\gamma^{k-1}r_{i,k}"></span>。这里每个token的分数取决于怎么将RM的分数分配到每个分数上（比如中间token置0，只分配给最后的token）。</p>
+"></div>
+<p>简单地用当前轨迹的生成token来进行计算，即<span class="math-inline" data-tex="G_t=\Sigma_{k=t}^{T_i}\gamma^{k-1}r_{i,k}"></span>。这里每个token的分数取决于怎么将RM的分数分配到每个分数上（比如中间token置0，只分配给最后的token）。</p>
 <p>一个众所周知的问题，由于缺少基线，朴素策略梯度的方差极大，缓解的方式有优势函数（PPO），组平均值（GRPO）等。</p>
-<h4 id="reinforce" tabindex="-1">REINFORCE <a class="header-anchor" href="#reinforce" aria-label="Permalink to &quot;REINFORCE&quot;">&ZeroWidthSpace;</a></h4>
-<h5 id="核心思想" tabindex="-1">核心思想 <a class="header-anchor" href="#核心思想" aria-label="Permalink to &quot;核心思想&quot;">&ZeroWidthSpace;</a></h5>
+<h3 id="reinforce" tabindex="-1">REINFORCE <a class="header-anchor" href="#reinforce" aria-label="Permalink to &quot;REINFORCE&quot;">&ZeroWidthSpace;</a></h3>
+<h4 id="核心思想" tabindex="-1">核心思想 <a class="header-anchor" href="#核心思想" aria-label="Permalink to &quot;核心思想&quot;">&ZeroWidthSpace;</a></h4>
 <p>REINFORCE 是最基本的策略梯度方法之一，其核心思想是：</p>
 <blockquote>
 <p><strong>提高获得高于预期回报的动作的概率，降低获得低于预期回报的动作的概率。</strong></p>
@@ -79,14 +113,15 @@
 <div class="math-block" data-tex="\Delta \theta
 =
 \alpha (r-b)e
-"></div><p>其中：</p>
+"></div>
+<p>其中：</p>
 <ul>
 <li><span class="math-inline" data-tex="\alpha"></span>：学习率；</li>
 <li><span class="math-inline" data-tex="b"></span>：基线（baseline），用于降低梯度估计的方差；</li>
 <li><span class="math-inline" data-tex="r-b"></span>：奖励相对于基线的增量；</li>
 <li><span class="math-inline" data-tex="e"></span>：资格迹（eligibility），表示奖励应归因于哪些参数。</li>
 </ul>
-<h5 id="现代策略梯度形式" tabindex="-1">现代策略梯度形式 <a class="header-anchor" href="#现代策略梯度形式" aria-label="Permalink to &quot;现代策略梯度形式&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="现代策略梯度形式" tabindex="-1">现代策略梯度形式 <a class="header-anchor" href="#现代策略梯度形式" aria-label="Permalink to &quot;现代策略梯度形式&quot;">&ZeroWidthSpace;</a></h4>
 <p>对于策略 <span class="math-inline" data-tex="\pi_\theta(a_t\mid s_t)"></span>，使用从时刻 <span class="math-inline" data-tex="t"></span> 开始的回报 <span class="math-inline" data-tex="G_t"></span>，REINFORCE 的策略梯度为：</p>
 <div class="math-block" data-tex="\boxed{
 \nabla_\theta J(\theta)
@@ -99,16 +134,18 @@
 \log\pi_\theta(a_t\mid s_t)
 \right]
 }
-"></div><p>其中：</p>
+"></div>
+<p>其中：</p>
 <ul>
 <li><span class="math-inline" data-tex="G_t"></span>：动作 <span class="math-inline" data-tex="a_t"></span> 之后获得的累计回报；</li>
 <li><span class="math-inline" data-tex="b(s_t)"></span>：状态相关的 baseline；</li>
 <li><span class="math-inline" data-tex="\nabla_\theta\log\pi_\theta(a_t\mid s_t)"></span>：调整该动作概率的方向。</li>
 </ul>
-<h5 id="使用优势函数表示" tabindex="-1">使用优势函数表示 <a class="header-anchor" href="#使用优势函数表示" aria-label="Permalink to &quot;使用优势函数表示&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="使用优势函数表示" tabindex="-1">使用优势函数表示 <a class="header-anchor" href="#使用优势函数表示" aria-label="Permalink to &quot;使用优势函数表示&quot;">&ZeroWidthSpace;</a></h4>
 <p>定义优势：</p>
 <div class="math-block" data-tex="A_t=G_t-b(s_t),
-"></div><p>则 REINFORCE 可以简写为：</p>
+"></div>
+<p>则 REINFORCE 可以简写为：</p>
 <div class="math-block" data-tex="\boxed{
 \nabla_\theta J(\theta)
 =
@@ -120,22 +157,26 @@ A_t
 \log\pi_\theta(a_t\mid s_t)
 \right]
 }
-"></div><p>因此：</p>
+"></div>
+<p>因此：</p>
 <div class="math-block" data-tex="A_t>0
 \quad\Rightarrow\quad
 \text{提高 }a_t\text{ 的概率},
-"></div><div class="math-block" data-tex="A_t&lt;0
+"></div>
+<div class="math-block" data-tex="A_t&lt;0
 \quad\Rightarrow\quad
 \text{降低 }a_t\text{ 的概率}.
-"></div><p>REINFORCE 的核心可以概括为：</p>
+"></div>
+<p>REINFORCE 的核心可以概括为：</p>
 <div class="math-block" data-tex="\boxed{
 \text{优势 }A_t
 \times
 \text{对数策略梯度 }
 \nabla_\theta\log\pi_\theta(a_t\mid s_t)
 }
-"></div><p>即用优势决定动作应该被<strong>鼓励还是抑制以及更新强度</strong>，再通过对数策略梯度更新模型参数。</p>
-<h4 id="reinforce留一法-rloo" tabindex="-1">REINFORCE留一法（RLOO） <a class="header-anchor" href="#reinforce留一法-rloo" aria-label="Permalink to &quot;REINFORCE留一法（RLOO）&quot;">&ZeroWidthSpace;</a></h4>
+"></div>
+<p>即用优势决定动作应该被<strong>鼓励还是抑制以及更新强度</strong>，再通过对数策略梯度更新模型参数。</p>
+<h3 id="reinforce留一法-rloo" tabindex="-1">REINFORCE留一法（RLOO） <a class="header-anchor" href="#reinforce留一法-rloo" aria-label="Permalink to &quot;REINFORCE留一法（RLOO）&quot;">&ZeroWidthSpace;</a></h3>
 <p>优势<span class="math-inline" data-tex="A_t=G_t-b(s_t)"></span></p>
 <p>留一法的前提是：对一个提示生成了多条轨迹。</p>
 <p>显然，即利用其余轨迹的均值作为当前轨迹return的基线。</p>
@@ -143,8 +184,8 @@ A_t
 <p>优势通过整个生成的奖励来计算，具体分不分配到token上是单纯的处理。一般会将并入KL惩罚后得到的优势广播到每个token</p>
 </blockquote>
 <p>值得注意的是，RLOO以及传统的策略梯度将KL惩罚加到奖励上，而GRPO则在损失层面施加KL惩罚。</p>
-<h4 id="ppo近端策略优化" tabindex="-1">PPO近端策略优化 <a class="header-anchor" href="#ppo近端策略优化" aria-label="Permalink to &quot;PPO近端策略优化&quot;">&ZeroWidthSpace;</a></h4>
-<p><img src="./figures/PPO.png" alt="PPO 架构"></p>
+<h3 id="ppo近端策略优化" tabindex="-1">PPO近端策略优化 <a class="header-anchor" href="#ppo近端策略优化" aria-label="Permalink to &quot;PPO近端策略优化&quot;">&ZeroWidthSpace;</a></h3>
+<figure class="note-figure"><img src="./figures/PPO.png" alt="PPO 架构"><figcaption>PPO 架构</figcaption></figure>
 <p>PPO 的裁剪代理目标为：</p>
 <div class="math-block" data-tex="J(\theta)
 =
@@ -155,12 +196,14 @@ A_t
 \operatorname{clip}\big(\rho_t(\theta),1-\epsilon,1+\epsilon\big)A_t
 \right)
 \right],
-"></div><p>其中</p>
+"></div>
+<p>其中</p>
 <div class="math-block" data-tex="\rho_t(\theta)
 =
 \frac{\pi_\theta(a_t\mid s_t)}
 {\pi_{\theta_{\mathrm{old}}}(a_t\mid s_t)}.
-"></div><ul>
+"></div>
+<ul>
 <li><span class="math-inline" data-tex="\pi_{\theta_{\mathrm{old}}}"></span>：采集当前这批数据时的旧策略；</li>
 <li><span class="math-inline" data-tex="\pi_\theta"></span>：正在更新的当前策略；</li>
 <li><span class="math-inline" data-tex="A_t"></span>：优势函数；</li>
@@ -168,19 +211,23 @@ A_t
 </ul>
 <p><span class="math-inline" data-tex="\rho_t"></span> 的作用是修正<strong>采样分布偏差</strong>。数据来自旧策略：</p>
 <div class="math-block" data-tex="a_t\sim\pi_{\theta_{\mathrm{old}}}(\cdot\mid s_t),
-"></div><p>但我们希望优化当前策略 <span class="math-inline" data-tex="\pi_\theta"></span>。由于</p>
+"></div>
+<p>但我们希望优化当前策略 <span class="math-inline" data-tex="\pi_\theta"></span>。由于</p>
 <div class="math-block" data-tex="\pi_\theta\neq\pi_{\theta_{\mathrm{old}}},
-"></div><p>旧数据的采样分布与当前策略不一致。因此使用重要性采样比率</p>
+"></div>
+<p>旧数据的采样分布与当前策略不一致。因此使用重要性采样比率</p>
 <div class="math-block" data-tex="\rho_t
 =
 \frac{\pi_\theta(a_t\mid s_t)}
 {\pi_{\theta_{\mathrm{old}}}(a_t\mid s_t)}
-"></div><p>重新调整旧样本的权重，使其可以用于估计当前策略的目标。</p>
+"></div>
+<p>重新调整旧样本的权重，使其可以用于估计当前策略的目标。</p>
 <p>需要注意，<strong><span class="math-inline" data-tex="\rho_t"></span> 修正的是旧数据的统计权重，而不是消除新旧策略之间的差异</strong>。事实上，<span class="math-inline" data-tex="\rho_t"></span> 本身也反映了这种差异：</p>
 <div class="math-block" data-tex="\rho_t\approx1
 \quad\Rightarrow\quad
 \text{新旧策略接近},
-"></div><p>而 <span class="math-inline" data-tex="\rho_t"></span> 明显偏离 <span class="math-inline" data-tex="1"></span>，说明当前策略已经明显偏离采样时的旧策略。</p>
+"></div>
+<p>而 <span class="math-inline" data-tex="\rho_t"></span> 明显偏离 <span class="math-inline" data-tex="1"></span>，说明当前策略已经明显偏离采样时的旧策略。</p>
 <p>PPO 通常会对<strong>同一批轨迹进行多次梯度更新</strong>，主要目的是提高样本利用率，因为强化学习中的环境采样通常比对已有数据进行梯度计算更加昂贵。</p>
 <p>一批数据由 <span class="math-inline" data-tex="\pi_{\theta_{\mathrm{old}}}"></span> 采集后，在若干次更新中保持旧策略不变：</p>
 <div class="math-block" data-tex="\theta^{(0)}=\theta_{\mathrm{old}}
@@ -190,26 +237,31 @@ A_t
 \theta^{(2)}
 \rightarrow
 \cdots
-"></div><p>每次都计算</p>
+"></div>
+<p>每次都计算</p>
 <div class="math-block" data-tex="\rho_t^{(k)}
 =
 \frac{\pi_{\theta^{(k)}}(a_t\mid s_t)}
 {\pi_{\theta_{\mathrm{old}}}(a_t\mid s_t)}.
-"></div><p>第一次更新前：</p>
+"></div>
+<p>第一次更新前：</p>
 <div class="math-block" data-tex="\rho_t^{(0)}=1.
-"></div><p>随着多次梯度更新，<span class="math-inline" data-tex="\pi_{\theta^{(k)}}"></span> 会逐渐偏离 <span class="math-inline" data-tex="\pi_{\theta_{\mathrm{old}}}"></span>，因此 <span class="math-inline" data-tex="\rho_t"></span> 也逐渐偏离 <span class="math-inline" data-tex="1"></span>。</p>
+"></div>
+<p>随着多次梯度更新，<span class="math-inline" data-tex="\pi_{\theta^{(k)}}"></span> 会逐渐偏离 <span class="math-inline" data-tex="\pi_{\theta_{\mathrm{old}}}"></span>，因此 <span class="math-inline" data-tex="\rho_t"></span> 也逐渐偏离 <span class="math-inline" data-tex="1"></span>。</p>
 <p>虽然重要性采样可以修正这种分布差异，但当新旧策略相差过大时，<span class="math-inline" data-tex="\rho_t"></span> 可能非常大或非常小，使估计方差增大、训练不稳定。因此 PPO 使用裁剪：</p>
 <div class="math-block" data-tex="\operatorname{clip}(\rho_t,1-\epsilon,1+\epsilon)
-"></div><p>限制旧数据推动策略继续变化的程度。</p>
-<p><img src="./figures/ppo-clip-viz.png" alt=""></p>
+"></div>
+<p>限制旧数据推动策略继续变化的程度。</p>
+<figure class="note-figure"><img src="./figures/ppo-clip-viz.png" alt="策略梯度算法配图"><figcaption>策略梯度算法 · 原文配图</figcaption></figure>
 <ul>
 <li>正优势 <span class="math-inline" data-tex="A_t>0"></span>：该动作比平均水平好，因此希望提高其概率，即推动 <span class="math-inline" data-tex="\rho_t"></span> 增大。但当<div class="math-block" data-tex="\rho_t>1+\epsilon"></div>时，说明该动作的概率已经提高得足够多，目标函数变平、梯度变为 <span class="math-inline" data-tex="0"></span>，不再继续强化。</li>
 <li>负优势 <span class="math-inline" data-tex="A_t&lt;0"></span>：该动作比平均水平差，因此希望降低其概率，即推动 <span class="math-inline" data-tex="\rho_t"></span> 减小。但当<div class="math-block" data-tex="\rho_t&lt;1-\epsilon"></div>时，说明该动作的概率已经降低得足够多，目标函数同样变平、梯度变为 <span class="math-inline" data-tex="0"></span>，不再继续抑制。
 因此图中倾斜部分表示梯度正常传播，推动策略朝改善方向更新；水平部分表示裁剪生效，该样本不再提供进一步推动策略远离旧策略的梯度。
 需要注意，PPO 并不是强制要求</li>
 </ul>
-<div class="math-block" data-tex="1-\epsilon\le \rho_t\le1+\epsilon,"></div><p>而是当策略已经沿着有利方向变化过大时停止该样本的进一步激励。因此，<span class="math-inline" data-tex="[1-\epsilon,1+\epsilon]"></span> 更准确地说是一个软性的更新限制区域，而不是对策略比值施加的硬约束。</p>
-<h5 id="价值函数-critic-network" tabindex="-1">价值函数/critic network <a class="header-anchor" href="#价值函数-critic-network" aria-label="Permalink to &quot;价值函数/critic network&quot;">&ZeroWidthSpace;</a></h5>
+<div class="math-block" data-tex="1-\epsilon\le \rho_t\le1+\epsilon,"></div>
+<p>而是当策略已经沿着有利方向变化过大时停止该样本的进一步激励。因此，<span class="math-inline" data-tex="[1-\epsilon,1+\epsilon]"></span> 更准确地说是一个软性的更新限制区域，而不是对策略比值施加的硬约束。</p>
+<h4 id="价值函数-critic-network" tabindex="-1">价值函数/critic network <a class="header-anchor" href="#价值函数-critic-network" aria-label="Permalink to &quot;价值函数/critic network&quot;">&ZeroWidthSpace;</a></h4>
 <p>PPO 中的价值函数（Critic）用于预测从当前状态 <span class="math-inline" data-tex="s_t"></span> 出发，在当前策略下未来能够获得的期望累计回报：</p>
 <div class="math-block" data-tex="V^\pi(s_t)
 =
@@ -218,38 +270,45 @@ A_t
 \sum_{k=t}^{T}\gamma^{k-t}r_k
 \mid s_t
 \right].
-"></div><p>对于语言模型，<span class="math-inline" data-tex="s_t"></span> 表示当前已经生成的 token 序列，因此 Critic 会为每个 token 位置预测一个标量 <span class="math-inline" data-tex="V_\phi(s_t)"></span>。</p>
+"></div>
+<p>对于语言模型，<span class="math-inline" data-tex="s_t"></span> 表示当前已经生成的 token 序列，因此 Critic 会为每个 token 位置预测一个标量 <span class="math-inline" data-tex="V_\phi(s_t)"></span>。</p>
 <p>价值函数主要作为策略梯度的<strong>基线（baseline）</strong>。实际回报相对于价值预测的差异形成优势：</p>
 <div class="math-block" data-tex="A_t \approx Q(s_t,a_t)-V(s_t),
-"></div><p>其中 <span class="math-inline" data-tex="A_t>0"></span> 表示该动作的表现好于预期，<span class="math-inline" data-tex="A_t&lt;0"></span> 表示差于预期，从而指导 Actor 更新策略。</p>
-<h6 id="critic-的训练" tabindex="-1">Critic 的训练 <a class="header-anchor" href="#critic-的训练" aria-label="Permalink to &quot;Critic 的训练&quot;">&ZeroWidthSpace;</a></h6>
+"></div>
+<p>其中 <span class="math-inline" data-tex="A_t>0"></span> 表示该动作的表现好于预期，<span class="math-inline" data-tex="A_t&lt;0"></span> 表示差于预期，从而指导 Actor 更新策略。</p>
+<h5 id="critic-的训练" tabindex="-1">Critic 的训练 <a class="header-anchor" href="#critic-的训练" aria-label="Permalink to &quot;Critic 的训练&quot;">&ZeroWidthSpace;</a></h5>
 <p>最简单的方法是使用实际累计回报（Monte Carlo Return）作为训练目标：</p>
 <div class="math-block" data-tex="G_t
 =
 r_t+\gamma r_{t+1}+\gamma^2r_{t+2}+\cdots,
-"></div><p>并通过回归训练：</p>
+"></div>
+<p>并通过回归训练：</p>
 <div class="math-block" data-tex="L_V
 =
 \frac12\left(V_\phi(s_t)-G_t\right)^2.
-"></div><p>但 Monte Carlo Return 方差较大，因此主流 PPO 通常结合 <strong>GAE</strong> 构造更加稳定的训练目标。</p>
+"></div>
+<p>但 Monte Carlo Return 方差较大，因此主流 PPO 通常结合 <strong>GAE</strong> 构造更加稳定的训练目标。</p>
 <p>首先根据 rollout 时保存的旧价值预测计算 TD 误差：</p>
 <div class="math-block" data-tex="\delta_t
 =
 r_t+\gamma V_{\text{old}}(s_{t+1})
 -
 V_{\text{old}}(s_t).
-"></div><p>GAE 将多个未来 TD 误差加权：</p>
+"></div>
+<p>GAE 将多个未来 TD 误差加权：</p>
 <div class="math-block" data-tex="\hat A_t
 =
 \delta_t+\gamma\lambda\delta_{t+1}
 +(\gamma\lambda)^2\delta_{t+2}+\cdots.
-"></div><p>随后利用优势构造 Critic 的训练目标：</p>
+"></div>
+<p>随后利用优势构造 Critic 的训练目标：</p>
 <div class="math-block" data-tex="\boxed{
 \hat V_t
 =
 V_{\text{old}}(s_t)+\hat A_t
 }
-"></div><p>并训练当前 Critic：</p>
+"></div>
+<p>并训练当前 Critic：</p>
 <div class="math-block" data-tex="\boxed{
 L_V
 =
@@ -258,13 +317,15 @@ L_V
 V_\phi(s_t)-\hat V_t
 \right)^2
 }
-"></div><p>因此，同一个 GAE 结果有两个主要用途：</p>
+"></div>
+<p>因此，同一个 GAE 结果有两个主要用途：</p>
 <div class="math-block" data-tex="\hat A_t
 \begin{cases}
 \rightarrow \text{Actor：用于 PPO 策略梯度更新},\\
 \rightarrow \hat V_t=V_{\text{old}}+\hat A_t：用于训练 Critic.
 \end{cases}
-"></div><p>其中 <span class="math-inline" data-tex="\lambda"></span> 控制 TD 与 Monte Carlo 之间的折中：</p>
+"></div>
+<p>其中 <span class="math-inline" data-tex="\lambda"></span> 控制 TD 与 Monte Carlo 之间的折中：</p>
 <ul>
 <li><span class="math-inline" data-tex="\lambda=0"></span>：接近一步 TD，方差较小但更依赖 Critic 的估计；</li>
 <li><span class="math-inline" data-tex="\lambda\to1"></span>：更加接近 Monte Carlo Return，使用更多真实的未来奖励信息。</li>
@@ -282,22 +343,25 @@ V_{\text{old}}
 \hat V_t \rightarrow \text{训练 Critic}.
 \end{cases}
 }
-"></div><p>通常在一批 rollout 上先计算并固定 <span class="math-inline" data-tex="V_{\text{old}}"></span>、<span class="math-inline" data-tex="\hat A_t"></span> 和 <span class="math-inline" data-tex="\hat V_t"></span>，随后使用多个 minibatch/epoch 分别更新 Actor 和 Critic；下一轮再使用更新后的策略重新 rollout 并计算新的训练目标。</p>
-<h4 id="grpo-group-relative-policy-optimization" tabindex="-1">GRPO：Group Relative Policy Optimization <a class="header-anchor" href="#grpo-group-relative-policy-optimization" aria-label="Permalink to &quot;GRPO：Group Relative Policy Optimization&quot;">&ZeroWidthSpace;</a></h4>
-<p><img src="./figures/grpo_tikz.png" alt=""></p>
+"></div>
+<p>通常在一批 rollout 上先计算并固定 <span class="math-inline" data-tex="V_{\text{old}}"></span>、<span class="math-inline" data-tex="\hat A_t"></span> 和 <span class="math-inline" data-tex="\hat V_t"></span>，随后使用多个 minibatch/epoch 分别更新 Actor 和 Critic；下一轮再使用更新后的策略重新 rollout 并计算新的训练目标。</p>
+<h3 id="grpo-group-relative-policy-optimization" tabindex="-1">GRPO：Group Relative Policy Optimization <a class="header-anchor" href="#grpo-group-relative-policy-optimization" aria-label="Permalink to &quot;GRPO：Group Relative Policy Optimization&quot;">&ZeroWidthSpace;</a></h3>
+<figure class="note-figure"><img src="./figures/grpo_tikz.png" alt="策略梯度算法配图"><figcaption>策略梯度算法 · 原文配图</figcaption></figure>
 <p>GRPO（Group Relative Policy Optimization，组相对策略优化）的核心思想可以概括为：</p>
 <blockquote>
 <p><strong>对于同一个 prompt 一次采样多个回答，让这些回答在组内相互比较，用“相对于组内其他回答好多少”来构造优势，而不再像 PPO 那样额外训练一个 Critic / Value Model 来估计价值函数。</strong></p>
 </blockquote>
 <p>对于一个提示 <span class="math-inline" data-tex="q"></span>，旧策略一次生成 <span class="math-inline" data-tex="G"></span> 个回答：</p>
-<div class="math-block" data-tex="\{o_1,o_2,\ldots,o_G\}\sim \pi_{\theta_{\mathrm{old}}}(\cdot|q)"></div><p>奖励模型或可验证奖励函数分别给这些回答打分。GRPO 使用组内奖励构造优势：<strong>高于组内平均水平的回答得到正优势，低于平均水平的回答得到负优势</strong>，然后使用类似 PPO 的 clipped objective 更新策略。</p>
+<div class="math-block" data-tex="\{o_1,o_2,\ldots,o_G\}\sim \pi_{\theta_{\mathrm{old}}}(\cdot|q)"></div>
+<p>奖励模型或可验证奖励函数分别给这些回答打分。GRPO 使用组内奖励构造优势：<strong>高于组内平均水平的回答得到正优势，低于平均水平的回答得到负优势</strong>，然后使用类似 PPO 的 clipped objective 更新策略。</p>
 <p>与 PPO 相比，最关键的变化是：</p>
 <div class="math-block" data-tex="\boxed{
 \text{PPO：通过 Critic 估计 baseline}
 \qquad\longrightarrow\qquad
 \text{GRPO：通过同组其他回答构造 baseline}
-}"></div><p>因此 GRPO 不需要单独训练一个与策略模型规模相近的价值模型。</p>
-<h5 id="grpo-的目标函数" tabindex="-1">GRPO 的目标函数 <a class="header-anchor" href="#grpo-的目标函数" aria-label="Permalink to &quot;GRPO 的目标函数&quot;">&ZeroWidthSpace;</a></h5>
+}"></div>
+<p>因此 GRPO 不需要单独训练一个与策略模型规模相近的价值模型。</p>
+<h4 id="grpo-的目标函数" tabindex="-1">GRPO 的目标函数 <a class="header-anchor" href="#grpo-的目标函数" aria-label="Permalink to &quot;GRPO 的目标函数&quot;">&ZeroWidthSpace;</a></h4>
 <p>对于第 <span class="math-inline" data-tex="i"></span> 个回答的第 <span class="math-inline" data-tex="t"></span> 个 token，定义新旧策略的概率比：</p>
 <div class="math-block" data-tex="\rho_{i,t}(\theta)
 =
@@ -305,7 +369,8 @@ V_{\text{old}}
 \pi_\theta(o_{i,t}\mid q,o_{i,&lt;t})
 }{
 \pi_{\theta_{\mathrm{old}}}(o_{i,t}\mid q,o_{i,&lt;t})
-}."></div><p>GRPO 的目标函数为：</p>
+}."></div>
+<p>GRPO 的目标函数为：</p>
 <div class="math-block" data-tex="\boxed{
 J_{\mathrm{GRPO}}(\theta)
 =
@@ -328,85 +393,102 @@ J_{\mathrm{GRPO}}(\theta)
 \right]
 \right)
 \right].
-}"></div><p>其中前半部分基本沿用了 PPO 的 clipping 机制：</p>
+}"></div>
+<p>其中前半部分基本沿用了 PPO 的 clipping 机制：</p>
 <div class="math-block" data-tex="\min
 \left(
 \rho_{i,t}\hat A_{i,t},
 \operatorname{clip}(\rho_{i,t},1-\epsilon,1+\epsilon)\hat A_{i,t}
-\right),"></div><p>限制策略一次更新不能偏离旧策略太远；KL 项</p>
-<div class="math-block" data-tex="\beta D_{\mathrm{KL}}[\pi_\theta\|\pi_{\mathrm{ref}}]"></div><p>则约束当前策略不要过度偏离参考模型。</p>
+\right),"></div>
+<p>限制策略一次更新不能偏离旧策略太远；KL 项</p>
+<div class="math-block" data-tex="\beta D_{\mathrm{KL}}[\pi_\theta\|\pi_{\mathrm{ref}}]"></div>
+<p>则约束当前策略不要过度偏离参考模型。</p>
 <p>因此 GRPO 和 PPO 的一个核心区别并不在 clipping，而在于 <strong><span class="math-inline" data-tex="\hat A_{i,t}"></span> 如何得到</strong>。</p>
-<h5 id="grpo-的优势计算" tabindex="-1">GRPO 的优势计算 <a class="header-anchor" href="#grpo-的优势计算" aria-label="Permalink to &quot;GRPO 的优势计算&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="grpo-的优势计算" tabindex="-1">GRPO 的优势计算 <a class="header-anchor" href="#grpo-的优势计算" aria-label="Permalink to &quot;GRPO 的优势计算&quot;">&ZeroWidthSpace;</a></h4>
 <p>最基本的 GRPO 优势来自<strong>组内相对奖励</strong>。</p>
 <p>假设同一个 prompt 生成 <span class="math-inline" data-tex="G"></span> 个回答，其奖励为</p>
-<div class="math-block" data-tex="r_1,r_2,\ldots,r_G."></div><p>首先计算组内均值和标准差：</p>
+<div class="math-block" data-tex="r_1,r_2,\ldots,r_G."></div>
+<p>首先计算组内均值和标准差：</p>
 <div class="math-block" data-tex="\mu
 =
 \frac{1}{G}\sum_{j=1}^{G}r_j,
 \qquad
 \sigma
 =
-\operatorname{std}(r_1,\ldots,r_G)."></div><p>然后将第 <span class="math-inline" data-tex="i"></span> 个回答的奖励标准化：</p>
+\operatorname{std}(r_1,\ldots,r_G)."></div>
+<p>然后将第 <span class="math-inline" data-tex="i"></span> 个回答的奖励标准化：</p>
 <div class="math-block" data-tex="\boxed{
 \tilde r_i
 =
 \frac{r_i-\mu}{\sigma}
-}"></div><p>它表达的就是：</p>
-<div class="math-block" data-tex="\text{第 }i\text{ 个回答相对于同一问题下其他回答好多少。}"></div><p>因此 GRPO 不需要学习 <span class="math-inline" data-tex="V(s)"></span>，而是直接利用同组回答作为相对比较基准。</p>
-<h5 id="结果监督与过程监督" tabindex="-1">结果监督与过程监督 <a class="header-anchor" href="#结果监督与过程监督" aria-label="Permalink to &quot;结果监督与过程监督&quot;">&ZeroWidthSpace;</a></h5>
+}"></div>
+<p>它表达的就是：</p>
+<div class="math-block" data-tex="\text{第 }i\text{ 个回答相对于同一问题下其他回答好多少。}"></div>
+<p>因此 GRPO 不需要学习 <span class="math-inline" data-tex="V(s)"></span>，而是直接利用同组回答作为相对比较基准。</p>
+<h4 id="结果监督与过程监督" tabindex="-1">结果监督与过程监督 <a class="header-anchor" href="#结果监督与过程监督" aria-label="Permalink to &quot;结果监督与过程监督&quot;">&ZeroWidthSpace;</a></h4>
 <p>GRPO 可以使用两种不同粒度的奖励：<strong>结果监督（Outcome Supervision）<strong>和</strong>过程监督（Process Supervision）</strong>。两者的根本区别在于奖励落在什么位置。</p>
 <p><strong>结果监督</strong>只评价整个回答最终是否好，例如数学题只判断最终答案是否正确：</p>
 <div class="math-block" data-tex="\text{回答 }o_i
 =
 (x_{i,1},x_{i,2},\ldots,x_{i,T})
-\longrightarrow r_i."></div><p>因此一个回答只有一个最终奖励。将组内奖励标准化：</p>
+\longrightarrow r_i."></div>
+<p>因此一个回答只有一个最终奖励。将组内奖励标准化：</p>
 <div class="math-block" data-tex="\tilde r_i
 =
 \frac{
 r_i-\operatorname{mean}(r_1,\ldots,r_G)
 }{
 \operatorname{std}(r_1,\ldots,r_G)
-},"></div><p>然后把这个值直接赋给该回答的<strong>所有 token</strong>：</p>
+},"></div>
+<p>然后把这个值直接赋给该回答的<strong>所有 token</strong>：</p>
 <div class="math-block" data-tex="\boxed{
 \hat A_{i,t}=\tilde r_i,
 \qquad
 t=1,\ldots,|o_i|
-}"></div><p>也就是说，同一个回答中的所有 token 共用相同的优势。例如：</p>
+}"></div>
+<p>也就是说，同一个回答中的所有 token 共用相同的优势。例如：</p>
 <div class="math-block" data-tex="o_i:
 \quad
-x_1\rightarrow x_2\rightarrow x_3\rightarrow x_4"></div><p>若最终标准化奖励为 <span class="math-inline" data-tex="0.8"></span>，则</p>
+x_1\rightarrow x_2\rightarrow x_3\rightarrow x_4"></div>
+<p>若最终标准化奖励为 <span class="math-inline" data-tex="0.8"></span>，则</p>
 <div class="math-block" data-tex="(A_1,A_2,A_3,A_4)
 =
-(0.8,0.8,0.8,0.8)."></div><p>它的优点是简单，而且最终正确性通常容易验证；缺点是<strong>无法判断一个长推理过程中究竟哪一步做得好、哪一步出现了错误</strong>。</p>
+(0.8,0.8,0.8,0.8)."></div>
+<p>它的优点是简单，而且最终正确性通常容易验证；缺点是<strong>无法判断一个长推理过程中究竟哪一步做得好、哪一步出现了错误</strong>。</p>
 <p><strong>过程监督</strong>则进一步评价推理过程中的各个步骤。例如：</p>
 <div class="math-block" data-tex="\underbrace{x_1,x_2}_{\text{step 1}}
 \rightarrow
 \underbrace{x_3,x_4}_{\text{step 2}}
 \rightarrow
-\underbrace{x_5,x_6}_{\text{step 3}}."></div><p>过程奖励模型分别在每一步结束时产生奖励：</p>
+\underbrace{x_5,x_6}_{\text{step 3}}."></div>
+<p>过程奖励模型分别在每一步结束时产生奖励：</p>
 <div class="math-block" data-tex="r_i^{\operatorname{index}(1)},
 \quad
 r_i^{\operatorname{index}(2)},
 \quad
 \ldots,
 \quad
-r_i^{\operatorname{index}(K_i)}."></div><p>这些过程奖励同样先进行标准化：</p>
+r_i^{\operatorname{index}(K_i)}."></div>
+<p>这些过程奖励同样先进行标准化：</p>
 <div class="math-block" data-tex="\tilde r_i^{\operatorname{index}(j)}
 =
 \frac{
 r_i^{\operatorname{index}(j)}-\operatorname{mean}(R)
 }{
 \operatorname{std}(R)
-}."></div><p>对于回答 <span class="math-inline" data-tex="i"></span> 中的 token <span class="math-inline" data-tex="t"></span>，其优势定义为<strong>从当前位置开始，后续所有步骤的标准化奖励之和</strong>：</p>
+}."></div>
+<p>对于回答 <span class="math-inline" data-tex="i"></span> 中的 token <span class="math-inline" data-tex="t"></span>，其优势定义为<strong>从当前位置开始，后续所有步骤的标准化奖励之和</strong>：</p>
 <div class="math-block" data-tex="\boxed{
 \hat A_{i,t}
 =
 \sum_{\operatorname{index}(j)\ge t}
 \tilde r_i^{\operatorname{index}(j)}
-}"></div><p>因此不同位置的 token 可以具有不同的 advantage。例如三个步骤的标准化奖励为</p>
+}"></div>
+<p>因此不同位置的 token 可以具有不同的 advantage。例如三个步骤的标准化奖励为</p>
 <div class="math-block" data-tex="(\tilde r^1,\tilde r^2,\tilde r^3)
 =
-(0.2,-0.5,1.0),"></div><p>那么位于不同步骤中的 token 大致会获得：</p>
+(0.2,-0.5,1.0),"></div>
+<p>那么位于不同步骤中的 token 大致会获得：</p>
 <div class="math-block" data-tex="\begin{aligned}
 \text{step 1中的 token}:&amp;\quad
 A=0.2-0.5+1.0=0.7,\\
@@ -414,7 +496,8 @@ A=0.2-0.5+1.0=0.7,\\
 A=-0.5+1.0=0.5,\\
 \text{step 3中的 token}:&amp;\quad
 A=1.0.
-\end{aligned}"></div><p>所以两种监督方式最直观的区别就是：</p>
+\end{aligned}"></div>
+<p>所以两种监督方式最直观的区别就是：</p>
 <div class="math-block" data-tex="\boxed{
 \begin{aligned}
 \text{结果监督：}&amp;\quad
@@ -425,24 +508,28 @@ A=1.0.
 \text{每个推理步骤都有 reward}
 \Rightarrow
 \text{不同位置可以得到不同 advantage}.
-\end{aligned}}"></div><p>过程监督的 credit assignment 更细，可以告诉模型“哪部分推理值得强化”；结果监督则只告诉模型“整个答案最终好不好”。</p>
-<h5 id="与-rloo-的关系" tabindex="-1">与 RLOO 的关系 <a class="header-anchor" href="#与-rloo-的关系" aria-label="Permalink to &quot;与 RLOO 的关系&quot;">&ZeroWidthSpace;</a></h5>
+\end{aligned}}"></div>
+<p>过程监督的 credit assignment 更细，可以告诉模型“哪部分推理值得强化”；结果监督则只告诉模型“整个答案最终好不好”。</p>
+<h4 id="与-rloo-的关系" tabindex="-1">与 RLOO 的关系 <a class="header-anchor" href="#与-rloo-的关系" aria-label="Permalink to &quot;与 RLOO 的关系&quot;">&ZeroWidthSpace;</a></h4>
 <p>如果进一步去掉 GRPO 中的标准差归一化，就得到常见的 <strong>Dr. GRPO</strong> 形式：</p>
 <div class="math-block" data-tex="\tilde A_i
 =
-r_i-\frac{1}{G}\sum_{j=1}^{G}r_j."></div><p>而 RLOO（REINFORCE Leave-One-Out）使用<strong>除自己以外其他 <span class="math-inline" data-tex="G-1"></span> 个样本的平均奖励</strong>作为 baseline：</p>
+r_i-\frac{1}{G}\sum_{j=1}^{G}r_j."></div>
+<p>而 RLOO（REINFORCE Leave-One-Out）使用<strong>除自己以外其他 <span class="math-inline" data-tex="G-1"></span> 个样本的平均奖励</strong>作为 baseline：</p>
 <div class="math-block" data-tex="A_i^{\mathrm{RLOO}}
 =
 r_i-
 \frac{1}{G-1}
-\sum_{j\ne i}r_j."></div><p>两者满足简单的缩放关系：</p>
+\sum_{j\ne i}r_j."></div>
+<p>两者满足简单的缩放关系：</p>
 <div class="math-block" data-tex="\boxed{
 A_i^{\mathrm{RLOO}}
 =
 \frac{G}{G-1}\tilde A_i
-}"></div><p>因此在忽略这个常数缩放（实践中通常可被学习率等吸收）后，<strong>Dr. GRPO 的优势估计与 RLOO 的 leave-one-out 优势估计本质上非常接近。</strong></p>
-<h4 id="组序列策略优化-gspo" tabindex="-1">组序列策略优化（GSPO） <a class="header-anchor" href="#组序列策略优化-gspo" aria-label="Permalink to &quot;组序列策略优化（GSPO）&quot;">&ZeroWidthSpace;</a></h4>
-<h5 id="动机" tabindex="-1">动机 <a class="header-anchor" href="#动机" aria-label="Permalink to &quot;动机&quot;">&ZeroWidthSpace;</a></h5>
+}"></div>
+<p>因此在忽略这个常数缩放（实践中通常可被学习率等吸收）后，<strong>Dr. GRPO 的优势估计与 RLOO 的 leave-one-out 优势估计本质上非常接近。</strong></p>
+<h3 id="组序列策略优化-gspo" tabindex="-1">组序列策略优化（GSPO） <a class="header-anchor" href="#组序列策略优化-gspo" aria-label="Permalink to &quot;组序列策略优化（GSPO）&quot;">&ZeroWidthSpace;</a></h3>
+<h4 id="动机" tabindex="-1">动机 <a class="header-anchor" href="#动机" aria-label="Permalink to &quot;动机&quot;">&ZeroWidthSpace;</a></h4>
 <p>在 PPO、GRPO 等策略梯度方法中，训练样本通常由旧策略 <span class="math-inline" data-tex="\pi_{\theta_{\mathrm{old}}}"></span> 生成，而我们希望优化当前策略 <span class="math-inline" data-tex="\pi_\theta"></span>。因此需要通过重要性采样修正两个策略之间的分布差异：</p>
 <div class="math-block" data-tex="\mathbb{E}_{p}[f(x)]
 =
@@ -450,10 +537,12 @@ A_i^{\mathrm{RLOO}}
 \left[
 f(x)\frac{p(x)}{q(x)}
 \right].
-"></div><p>其中 <span class="math-inline" data-tex="\frac{p(x)}{q(x)}"></span> 为重要性权重。在策略优化中：</p>
+"></div>
+<p>其中 <span class="math-inline" data-tex="\frac{p(x)}{q(x)}"></span> 为重要性权重。在策略优化中：</p>
 <div class="math-block" data-tex="p=\pi_\theta,\qquad
 q=\pi_{\theta_{\mathrm{old}}}.
-"></div><p>GRPO 在 <strong>token 级别</strong>计算重要性比率：</p>
+"></div>
+<p>GRPO 在 <strong>token 级别</strong>计算重要性比率：</p>
 <div class="math-block" data-tex="r_{i,t}(\theta)
 =
 \frac{
@@ -461,28 +550,33 @@ q=\pi_{\theta_{\mathrm{old}}}.
 }{
 \pi_{\theta_{\mathrm{old}}}(a_{i,t}\mid s,a_{i,&lt;t})
 }.
-"></div><p>然后分别对每个 token 的重要性比率进行裁剪。</p>
+"></div>
+<p>然后分别对每个 token 的重要性比率进行裁剪。</p>
 <p>但 GRPO 的奖励和优势通常是在<strong>完整回答级别</strong>计算的，即同一个回答 <span class="math-inline" data-tex="a_i"></span> 中的 token 通常共享回答级优势 <span class="math-inline" data-tex="A_i"></span>。因此存在粒度上的不一致：</p>
 <div class="math-block" data-tex="\underbrace{A_i}_{\text{序列级优势}}
 \qquad+\qquad
 \underbrace{r_{i,t}}_{\text{token 级重要性比率}}.
-"></div><p>对于长序列、大模型或 MoE 模型，个别 token 的重要性比率还可能发生较大波动，使一次回答内部不同 token 的更新强度不一致。</p>
+"></div>
+<p>对于长序列、大模型或 MoE 模型，个别 token 的重要性比率还可能发生较大波动，使一次回答内部不同 token 的更新强度不一致。</p>
 <p>GSPO（Group Sequence Policy Optimization）的核心思想就是将重要性采样从 <strong>token 级提升到序列级</strong>：</p>
 <div class="math-block" data-tex="\boxed{
 \text{token-level importance ratio}
 \quad\longrightarrow\quad
 \text{sequence-level importance ratio}
 }
-"></div><p>使重要性采样的粒度与回答级奖励、优势的粒度保持一致。</p>
-<h5 id="序列概率" tabindex="-1">序列概率 <a class="header-anchor" href="#序列概率" aria-label="Permalink to &quot;序列概率&quot;">&ZeroWidthSpace;</a></h5>
+"></div>
+<p>使重要性采样的粒度与回答级奖励、优势的粒度保持一致。</p>
+<h4 id="序列概率" tabindex="-1">序列概率 <a class="header-anchor" href="#序列概率" aria-label="Permalink to &quot;序列概率&quot;">&ZeroWidthSpace;</a></h4>
 <p>对于输入 <span class="math-inline" data-tex="s"></span>，设模型生成回答</p>
 <div class="math-block" data-tex="a_i=(a_{i,1},a_{i,2},\cdots,a_{i,|a_i|}).
-"></div><p>由于语言模型采用自回归生成，整个回答的概率可以分解为：</p>
+"></div>
+<p>由于语言模型采用自回归生成，整个回答的概率可以分解为：</p>
 <div class="math-block" data-tex="\pi_\theta(a_i\mid s)
 =
 \prod_{t=1}^{|a_i|}
 \pi_\theta(a_{i,t}\mid s,a_{i,&lt;t}).
-"></div><p>因此，当前策略与旧策略之间的序列级重要性比率可以写为：</p>
+"></div>
+<p>因此，当前策略与旧策略之间的序列级重要性比率可以写为：</p>
 <div class="math-block" data-tex="\frac{
 \pi_\theta(a_i\mid s)
 }{
@@ -495,8 +589,9 @@ q=\pi_{\theta_{\mathrm{old}}}.
 }{
 \pi_{\theta_{\mathrm{old}}}(a_{i,t}\mid s,a_{i,&lt;t})
 }.
-"></div><p>直接使用这一乘积会使重要性比率强烈依赖序列长度：即使每个 token 的概率只发生很小变化，长序列累乘后也可能得到非常大或非常小的比率。</p>
-<h5 id="长度归一化的序列级重要性比率" tabindex="-1">长度归一化的序列级重要性比率 <a class="header-anchor" href="#长度归一化的序列级重要性比率" aria-label="Permalink to &quot;长度归一化的序列级重要性比率&quot;">&ZeroWidthSpace;</a></h5>
+"></div>
+<p>直接使用这一乘积会使重要性比率强烈依赖序列长度：即使每个 token 的概率只发生很小变化，长序列累乘后也可能得到非常大或非常小的比率。</p>
+<h4 id="长度归一化的序列级重要性比率" tabindex="-1">长度归一化的序列级重要性比率 <a class="header-anchor" href="#长度归一化的序列级重要性比率" aria-label="Permalink to &quot;长度归一化的序列级重要性比率&quot;">&ZeroWidthSpace;</a></h4>
 <p>为消除序列长度带来的尺度问题，GSPO 对完整序列的重要性比率进行长度归一化：</p>
 <div class="math-block" data-tex="\boxed{
 \rho_i(\theta)
@@ -509,7 +604,8 @@ q=\pi_{\theta_{\mathrm{old}}}.
 }
 \right)^{\frac{1}{|a_i|}}
 }
-"></div><p>将自回归概率分解代入：</p>
+"></div>
+<p>将自回归概率分解代入：</p>
 <div class="math-block" data-tex="\rho_i(\theta)
 =
 \left[
@@ -520,7 +616,8 @@ q=\pi_{\theta_{\mathrm{old}}}.
 \pi_{\theta_{\mathrm{old}}}(a_{i,t}\mid s,a_{i,&lt;t})
 }
 \right]^{\frac{1}{|a_i|}}.
-"></div><p>为了避免长序列概率连乘导致的数值不稳定，实际计算通常转换到对数空间：</p>
+"></div>
+<p>为了避免长序列概率连乘导致的数值不稳定，实际计算通常转换到对数空间：</p>
 <div class="math-block" data-tex="\boxed{
 \rho_i(\theta)
 =
@@ -536,16 +633,19 @@ q=\pi_{\theta_{\mathrm{old}}}.
 }
 \right)
 }
-"></div><p>因此，<span class="math-inline" data-tex="\rho_i(\theta)"></span> 本质上是一个回答中所有 <strong>token 重要性比率的几何平均值</strong>。</p>
+"></div>
+<p>因此，<span class="math-inline" data-tex="\rho_i(\theta)"></span> 本质上是一个回答中所有 <strong>token 重要性比率的几何平均值</strong>。</p>
 <p>经过长度归一化后，不同长度回答的重要性比率具有更加可比的尺度，同时一个回答中的所有 token 共享同一个序列级重要性权重 <span class="math-inline" data-tex="\rho_i"></span>。</p>
-<h5 id="gspo-的优势计算" tabindex="-1">GSPO 的优势计算 <a class="header-anchor" href="#gspo-的优势计算" aria-label="Permalink to &quot;GSPO 的优势计算&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="gspo-的优势计算" tabindex="-1">GSPO 的优势计算 <a class="header-anchor" href="#gspo-的优势计算" aria-label="Permalink to &quot;GSPO 的优势计算&quot;">&ZeroWidthSpace;</a></h4>
 <p>GSPO 的优势计算与 GRPO 基本相同。对于同一个输入 <span class="math-inline" data-tex="s"></span>，从旧策略中采样 <span class="math-inline" data-tex="G"></span> 个回答：</p>
 <div class="math-block" data-tex="a_1,a_2,\cdots,a_G
 \sim
 \pi_{\theta_{\mathrm{old}}}(\cdot\mid s),
-"></div><p>并获得对应奖励：</p>
+"></div>
+<p>并获得对应奖励：</p>
 <div class="math-block" data-tex="R_1,R_2,\cdots,R_G.
-"></div><p>通过组内奖励的均值和标准差进行标准化，可以得到：</p>
+"></div>
+<p>通过组内奖励的均值和标准差进行标准化，可以得到：</p>
 <div class="math-block" data-tex="\boxed{
 A_i
 =
@@ -555,7 +655,8 @@ R_i-\operatorname{mean}(R_1,\cdots,R_G)
 \operatorname{std}(R_1,\cdots,R_G)+\delta
 }
 }
-"></div><p>其中 <span class="math-inline" data-tex="A_i"></span> 是整个回答 <span class="math-inline" data-tex="a_i"></span> 的序列级优势：</p>
+"></div>
+<p>其中 <span class="math-inline" data-tex="A_i"></span> 是整个回答 <span class="math-inline" data-tex="a_i"></span> 的序列级优势：</p>
 <ul>
 <li><span class="math-inline" data-tex="A_i>0"></span>：该回答优于组内平均水平，应提高其生成概率；</li>
 <li><span class="math-inline" data-tex="A_i&lt;0"></span>：该回答劣于组内平均水平，应降低其生成概率。</li>
@@ -566,7 +667,8 @@ a_i
 \quad\longrightarrow\quad
 \left(\rho_i(\theta),A_i\right)
 }
-"></div><h5 id="gspo-的优化目标" tabindex="-1">GSPO 的优化目标 <a class="header-anchor" href="#gspo-的优化目标" aria-label="Permalink to &quot;GSPO 的优化目标&quot;">&ZeroWidthSpace;</a></h5>
+"></div>
+<h4 id="gspo-的优化目标" tabindex="-1">GSPO 的优化目标 <a class="header-anchor" href="#gspo-的优化目标" aria-label="Permalink to &quot;GSPO 的优化目标&quot;">&ZeroWidthSpace;</a></h4>
 <p>GSPO 保留了与 GRPO 类似的 PPO-style clipped objective，但将 token 级重要性比率替换为序列级重要性比率(此处省略KL散度)：</p>
 <div class="math-block" data-tex="\boxed{
 J_{\mathrm{GSPO}}(\theta)
@@ -587,7 +689,8 @@ J_{\mathrm{GSPO}}(\theta)
 \right)
 \right]
 }
-"></div><p>其中：</p>
+"></div>
+<p>其中：</p>
 <div class="math-block" data-tex="\rho_i(\theta)
 =
 \exp
@@ -601,39 +704,45 @@ J_{\mathrm{GSPO}}(\theta)
 \pi_{\theta_{\mathrm{old}}}(a_{i,t}\mid s,a_{i,&lt;t})
 }
 \right).
-"></div><p>与 GRPO 最核心的区别可以概括为：</p>
+"></div>
+<p>与 GRPO 最核心的区别可以概括为：</p>
 <div class="math-block" data-tex="\boxed{
 r_{i,t}(\theta)
 \quad\longrightarrow\quad
 \rho_i(\theta)
 }
-"></div><p>即 GRPO 对每个 token 分别计算和裁剪重要性比率，而 GSPO 首先将整个回答的策略变化聚合为一个长度归一化的序列级比率，再对整个回答统一进行重要性采样校正和裁剪。</p>
+"></div>
+<p>即 GRPO 对每个 token 分别计算和裁剪重要性比率，而 GSPO 首先将整个回答的策略变化聚合为一个长度归一化的序列级比率，再对整个回答统一进行重要性采样校正和裁剪。</p>
 <p>因此，GSPO 可以概括为：</p>
 <div class="math-block" data-tex="\boxed{
 \text{GSPO}
 =
 \text{使用序列级重要性比率的 GRPO}
 }
-"></div><p>其核心目的在于使</p>
+"></div>
+<p>其核心目的在于使</p>
 <div class="math-block" data-tex="\underbrace{\text{序列级奖励与优势}}_{A_i}
 \qquad\text{与}\qquad
 \underbrace{\text{序列级重要性采样}}_{\rho_i}
-"></div><p>处于相同的优化粒度，从而提高长序列以及大规模模型训练时策略更新的稳定性。</p>
-<h4 id="裁剪重要性采样策略优化-cispo" tabindex="-1">裁剪重要性采样策略优化（CISPO） <a class="header-anchor" href="#裁剪重要性采样策略优化-cispo" aria-label="Permalink to &quot;裁剪重要性采样策略优化（CISPO）&quot;">&ZeroWidthSpace;</a></h4>
-<h5 id="动机-1" tabindex="-1">动机 <a class="header-anchor" href="#动机-1" aria-label="Permalink to &quot;动机&quot;">&ZeroWidthSpace;</a></h5>
+"></div>
+<p>处于相同的优化粒度，从而提高长序列以及大规模模型训练时策略更新的稳定性。</p>
+<h3 id="裁剪重要性采样策略优化-cispo" tabindex="-1">裁剪重要性采样策略优化（CISPO） <a class="header-anchor" href="#裁剪重要性采样策略优化-cispo" aria-label="Permalink to &quot;裁剪重要性采样策略优化（CISPO）&quot;">&ZeroWidthSpace;</a></h3>
+<h4 id="动机-1" tabindex="-1">动机 <a class="header-anchor" href="#动机-1" aria-label="Permalink to &quot;动机&quot;">&ZeroWidthSpace;</a></h4>
 <p>PPO / GRPO 的做法是对<strong>代理目标函数进行裁剪</strong>：</p>
 <div class="math-block" data-tex="\min
 \left(
 \rho_{i,t}A_{i,t},
 \operatorname{clip}(\rho_{i,t},1-\epsilon,1+\epsilon)A_{i,t}
 \right).
-"></div><p>这种方式在重要性比率超出裁剪范围后，可能使对应 token 的梯度直接变为 0，即出现“丢弃 token 梯度”的现象。</p>
+"></div>
+<p>这种方式在重要性比率超出裁剪范围后，可能使对应 token 的梯度直接变为 0，即出现“丢弃 token 梯度”的现象。</p>
 <p>CISPO（Clipped Importance Sampling Policy Optimization）的核心思想是：</p>
 <div class="math-block" data-tex="\boxed{
 \text{不裁剪目标函数，而只裁剪重要性采样权重}
 }
-"></div><p>这样即使某个 token 的重要性比率过大或过小，它仍然可以产生策略梯度，只是其梯度的权重受到限制。</p>
-<h5 id="裁剪重要性采样权重" tabindex="-1">裁剪重要性采样权重 <a class="header-anchor" href="#裁剪重要性采样权重" aria-label="Permalink to &quot;裁剪重要性采样权重&quot;">&ZeroWidthSpace;</a></h5>
+"></div>
+<p>这样即使某个 token 的重要性比率过大或过小，它仍然可以产生策略梯度，只是其梯度的权重受到限制。</p>
+<h4 id="裁剪重要性采样权重" tabindex="-1">裁剪重要性采样权重 <a class="header-anchor" href="#裁剪重要性采样权重" aria-label="Permalink to &quot;裁剪重要性采样权重&quot;">&ZeroWidthSpace;</a></h4>
 <p>首先计算 token 级重要性比率：</p>
 <div class="math-block" data-tex="\rho_{i,t}(\theta)
 =
@@ -642,7 +751,8 @@ r_{i,t}(\theta)
 }{
 \pi_{\theta_{\mathrm{old}}}(a_{i,t}\mid s,a_{i,&lt;t})
 }.
-"></div><p>然后直接对重要性比率进行裁剪：</p>
+"></div>
+<p>然后直接对重要性比率进行裁剪：</p>
 <div class="math-block" data-tex="\boxed{
 \hat{\rho}_{i,t}(\theta)
 =
@@ -653,24 +763,29 @@ r_{i,t}(\theta)
 1+\epsilon_{\mathrm{high}}
 \right)
 }
-"></div><p>其中可以使用非对称裁剪：</p>
+"></div>
+<p>其中可以使用非对称裁剪：</p>
 <div class="math-block" data-tex="\epsilon_{\mathrm{low}}
 \neq
 \epsilon_{\mathrm{high}}.
-"></div><p>例如增大 <span class="math-inline" data-tex="\epsilon_{\mathrm{high}}"></span>，可以允许模型对希望提高概率的 token 进行更大幅度的更新。</p>
-<h5 id="停止梯度" tabindex="-1">停止梯度 <a class="header-anchor" href="#停止梯度" aria-label="Permalink to &quot;停止梯度&quot;">&ZeroWidthSpace;</a></h5>
+"></div>
+<p>例如增大 <span class="math-inline" data-tex="\epsilon_{\mathrm{high}}"></span>，可以允许模型对希望提高概率的 token 进行更大幅度的更新。</p>
+<h4 id="停止梯度" tabindex="-1">停止梯度 <a class="header-anchor" href="#停止梯度" aria-label="Permalink to &quot;停止梯度&quot;">&ZeroWidthSpace;</a></h4>
 <p>CISPO 对裁剪后的重要性权重使用停止梯度：</p>
 <div class="math-block" data-tex="\operatorname{sg}
 \left(
 \hat{\rho}_{i,t}(\theta)
 \right).
-"></div><p><span class="math-inline" data-tex="\operatorname{sg}(\cdot)"></span> 表示该值参与前向计算，但反向传播时：</p>
+"></div>
+<p><span class="math-inline" data-tex="\operatorname{sg}(\cdot)"></span> 表示该值参与前向计算，但反向传播时：</p>
 <div class="math-block" data-tex="\frac{\partial\,\operatorname{sg}(\hat{\rho})}
 {\partial\theta}
 =0.
-"></div><p>因此 <span class="math-inline" data-tex="\hat{\rho}_{i,t}"></span> 只作为<strong>梯度的权重</strong>，真正产生梯度的是：</p>
+"></div>
+<p>因此 <span class="math-inline" data-tex="\hat{\rho}_{i,t}"></span> 只作为<strong>梯度的权重</strong>，真正产生梯度的是：</p>
 <div class="math-block" data-tex="\log\pi_\theta(a_{i,t}\mid s,a_{i,&lt;t}).
-"></div><h5 id="cispo-目标函数" tabindex="-1">CISPO 目标函数 <a class="header-anchor" href="#cispo-目标函数" aria-label="Permalink to &quot;CISPO 目标函数&quot;">&ZeroWidthSpace;</a></h5>
+"></div>
+<h4 id="cispo-目标函数" tabindex="-1">CISPO 目标函数 <a class="header-anchor" href="#cispo-目标函数" aria-label="Permalink to &quot;CISPO 目标函数&quot;">&ZeroWidthSpace;</a></h4>
 <p>CISPO 采用类似 REINFORCE 的目标：</p>
 <div class="math-block" data-tex="\boxed{
 J_{\mathrm{CISPO}}(\theta)
@@ -689,25 +804,29 @@ A_{i,t}
 \pi_\theta(a_{i,t}\mid s,a_{i,&lt;t})
 \right]
 }
-"></div><p>因此单个 token 对参数产生的梯度近似为：</p>
+"></div>
+<p>因此单个 token 对参数产生的梯度近似为：</p>
 <div class="math-block" data-tex="\nabla_\theta J
 \propto
 \hat{\rho}_{i,t}
 A_{i,t}
 \nabla_\theta
 \log\pi_\theta(a_{i,t}\mid s,a_{i,&lt;t}).
-"></div><p>这里 <span class="math-inline" data-tex="\hat{\rho}_{i,t}"></span> 控制<strong>梯度大小</strong>，<span class="math-inline" data-tex="A_{i,t}"></span> 控制<strong>更新方向及强度</strong>。</p>
-<h5 id="与-ppo-grpo-的核心区别" tabindex="-1">与 PPO / GRPO 的核心区别 <a class="header-anchor" href="#与-ppo-grpo-的核心区别" aria-label="Permalink to &quot;与 PPO / GRPO 的核心区别&quot;">&ZeroWidthSpace;</a></h5>
+"></div>
+<p>这里 <span class="math-inline" data-tex="\hat{\rho}_{i,t}"></span> 控制<strong>梯度大小</strong>，<span class="math-inline" data-tex="A_{i,t}"></span> 控制<strong>更新方向及强度</strong>。</p>
+<h4 id="与-ppo-grpo-的核心区别" tabindex="-1">与 PPO / GRPO 的核心区别 <a class="header-anchor" href="#与-ppo-grpo-的核心区别" aria-label="Permalink to &quot;与 PPO / GRPO 的核心区别&quot;">&ZeroWidthSpace;</a></h4>
 <p>PPO / GRPO：</p>
 <div class="math-block" data-tex="\boxed{
 \text{裁剪代理目标}
 }
-"></div><p>当重要性比率超出一定范围时，部分 token 可能进入目标函数的平坦区域，从而不再提供策略梯度。</p>
+"></div>
+<p>当重要性比率超出一定范围时，部分 token 可能进入目标函数的平坦区域，从而不再提供策略梯度。</p>
 <p>CISPO：</p>
 <div class="math-block" data-tex="\boxed{
 \text{裁剪重要性权重，但保留策略梯度}
 }
-"></div><p>即：</p>
+"></div>
+<p>即：</p>
 <div class="math-block" data-tex="\rho_{i,t}
 \rightarrow
 \hat{\rho}_{i,t}
@@ -715,15 +834,20 @@ A_{i,t}
 \operatorname{sg}(\hat{\rho}_{i,t})
 A_{i,t}
 \nabla_\theta\log\pi_\theta.
-"></div><p>因此 CISPO 的核心可以概括为：</p>
+"></div>
+<p>因此 CISPO 的核心可以概括为：</p>
 <div class="math-block" data-tex="\boxed{
 \text{保留所有 token 的梯度}
 +
 \text{通过裁剪重要性权重限制梯度幅度}
 }
-"></div><p>这种方法允许重要性采样裁剪引入一定偏差，以换取更低的梯度方差和更稳定的训练。</p>
-<h3 id="算法实现" tabindex="-1">算法实现 <a class="header-anchor" href="#算法实现" aria-label="Permalink to &quot;算法实现&quot;">&ZeroWidthSpace;</a></h3>
-<h4 id="_1-eos-trick-为什么-没有生成-eos-不能直接拿截断文本去评分" tabindex="-1">1. EOS trick 为什么“没有生成 EOS”不能直接拿截断文本去评分？ <a class="header-anchor" href="#_1-eos-trick-为什么-没有生成-eos-不能直接拿截断文本去评分" aria-label="Permalink to &quot;1. EOS trick 为什么“没有生成 EOS”不能直接拿截断文本去评分？&quot;">&ZeroWidthSpace;</a></h4>
+"></div>
+<p>这种方法允许重要性采样裁剪引入一定偏差，以换取更低的梯度方差和更稳定的训练。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="算法实现">
+<h2 id="算法实现" tabindex="-1">算法实现 <a class="header-anchor" href="#算法实现" aria-label="Permalink to &quot;算法实现&quot;">&ZeroWidthSpace;</a></h2>
+<h3 id="_1-eos-trick-为什么-没有生成-eos-不能直接拿截断文本去评分" tabindex="-1">1. EOS trick 为什么“没有生成 EOS”不能直接拿截断文本去评分？ <a class="header-anchor" href="#_1-eos-trick-为什么-没有生成-eos-不能直接拿截断文本去评分" aria-label="Permalink to &quot;1. EOS trick 为什么“没有生成 EOS”不能直接拿截断文本去评分？&quot;">&ZeroWidthSpace;</a></h3>
 <p>RLHF 中比较常见的 token 级奖励形式是</p>
 <div class="math-block" data-tex="r_t=
 \begin{cases}
@@ -736,16 +860,19 @@ R_{\rm RM}(x,y)
 \log \pi_\theta(a_T|s_T)
 -\log \pi_{\rm ref}(a_T|s_T)
 \right), &amp; t=T.
-\end{cases}"></div><p>也就是说，大部分 token 只有 KL penalty，真正的 RM reward 通常只在完整回答末尾加入。InstructGPT 明确采用了这种“最终 RM reward + 每 token KL penalty”的结构。</p>
+\end{cases}"></div>
+<p>也就是说，大部分 token 只有 KL penalty，真正的 RM reward 通常只在完整回答末尾加入。InstructGPT 明确采用了这种“最终 RM reward + 每 token KL penalty”的结构。</p>
 <p>问题在于，如果规定 <code>max_new_tokens=1024</code>，模型可能一直生成到 1024 token 都没有输出 EOS。此时这段文本本质上是<strong>被系统强行截断的未完成回答</strong>。如果仍然把它当完整答案交给 RM，模型可能学会利用这种分布偏差。</p>
 <p>因此早期 TL;DR 实现以及后续复现会使用所谓 <strong>EOS trick</strong>：</p>
-<div class="math-block" data-tex="\text{如果正常 EOS：}\quad R=R_{\rm RM}(x,y),"></div><div class="math-block" data-tex="\text{如果达到长度上限仍无 EOS：}\quad R=R_{\rm penalty}."></div><p>Huang 等人的复现讨论了 <code>-1</code> 惩罚；Ivison 等人的 NeurIPS 2024 实现使用更强的 <code>-10</code> 截断惩罚。</p>
+<div class="math-block" data-tex="\text{如果正常 EOS：}\quad R=R_{\rm RM}(x,y),"></div>
+<div class="math-block" data-tex="\text{如果达到长度上限仍无 EOS：}\quad R=R_{\rm penalty}."></div>
+<p>Huang 等人的复现讨论了 <code>-1</code> 惩罚；Ivison 等人的 NeurIPS 2024 实现使用更强的 <code>-10</code> 截断惩罚。</p>
 <p>所以这里的核心不是“RM 必须在 EOS token 上运行”，更准确地说是：</p>
 <blockquote>
 <p>只有一个完整终止的 response 才应该得到正常的终局 reward；被长度上限截断的 response 通常需要额外惩罚。</p>
 </blockquote>
 <p><strong>当然，这种方法的问题是很明显的，在接近设定的最大长度时，会造成termination bias，对于需要长思考和长推理的大语言模型并不适合。合适的做法应当是对truncated的回答施加更加温和且自适应的reward。</strong></p>
-<h4 id="_2-价值网络初始化-为什么从-reward-model-初始化-critic" tabindex="-1">2. 价值网络初始化：为什么从 Reward Model 初始化 Critic <a class="header-anchor" href="#_2-价值网络初始化-为什么从-reward-model-初始化-critic" aria-label="Permalink to &quot;2. 价值网络初始化：为什么从 Reward Model 初始化 Critic&quot;">&ZeroWidthSpace;</a></h4>
+<h3 id="_2-价值网络初始化-为什么从-reward-model-初始化-critic" tabindex="-1">2. 价值网络初始化：为什么从 Reward Model 初始化 Critic <a class="header-anchor" href="#_2-价值网络初始化-为什么从-reward-model-初始化-critic" aria-label="Permalink to &quot;2. 价值网络初始化：为什么从 Reward Model 初始化 Critic&quot;">&ZeroWidthSpace;</a></h3>
 <p>这一点和前面讨论的 Critic 很有关系。</p>
 <p>PPO 中 Critic 最终要学习的是</p>
 <div class="math-block" data-tex="V_\phi(s_t)
@@ -754,65 +881,83 @@ R_{\rm RM}(x,y)
 \left[
 \sum_{k=t}^{T}\gamma^{k-t}r_k
 \mid s_t
-\right]."></div><p>而 Reward Model 学到的是类似</p>
-<div class="math-block" data-tex="R_\psi(x,y)"></div><p>的“这个回答最终有多好”。</p>
+\right]."></div>
+<p>而 Reward Model 学到的是类似</p>
+<div class="math-block" data-tex="R_\psi(x,y)"></div>
+<p>的“这个回答最终有多好”。</p>
 <p>两者任务并不相同，但 RM 已经学习到了大量与<strong>回答质量</strong>有关的语义表示，因此用 RM 初始化 Critic，比“语言模型 + 随机 value head”更接近 Critic 最终要解决的问题。</p>
 <p>InstructGPT 就是这么做的，而且有一个容易忽略的细节：它对 <strong>1.3B、6B、175B policy 全部使用同一个 6B RM 和 6B value model</strong>，然后 value model 从该 RM 初始化。也就是说，Critic 并不一定要和 Actor 一样大。</p>
 <p>初始化以后，Critic 会继续训练，所以：</p>
-<div class="math-block" data-tex="\boxed{\text{RM initialization}\neq\text{Critic 始终等于 RM}}"></div><p>训练开始后，RM 仍然主要评价完整回答，而 Critic 会逐渐变成一种 <strong>per-token return predictor</strong>：</p>
-<div class="math-block" data-tex="V(s_1),V(s_2),\ldots,V(s_T),"></div><p>预测“从当前 prefix 开始，未来最终能拿多少 reward”。</p>
+<div class="math-block" data-tex="\boxed{\text{RM initialization}\neq\text{Critic 始终等于 RM}}"></div>
+<p>训练开始后，RM 仍然主要评价完整回答，而 Critic 会逐渐变成一种 <strong>per-token return predictor</strong>：</p>
+<div class="math-block" data-tex="V(s_1),V(s_2),\ldots,V(s_T),"></div>
+<p>预测“从当前 prefix 开始，未来最终能拿多少 reward”。</p>
 <p>Huang 等人也特别指出，从 RM warm start 可以明显改善训练初期的 value estimate。</p>
 <p>更有说服力的是 Tülu 3 的 RLVR 实验。它的实际 reward 已经不是 RM，而是数学答案等产生的<strong>可验证二值奖励</strong>，但他们仍比较了：</p>
-<div class="math-block" data-tex="\text{Critic initialized from general RM}"></div><p>和</p>
-<div class="math-block" data-tex="\text{Critic initialized from DPO model}."></div><p>结果 general RM 初始化取得了更高的 GSM8K 测试性能和更好的整体平均性能。也就是说，即使最终 reward 是 verifier，RM 学到的“质量表征”仍然可以作为 Critic 很好的先验。</p>
+<div class="math-block" data-tex="\text{Critic initialized from general RM}"></div>
+<p>和</p>
+<div class="math-block" data-tex="\text{Critic initialized from DPO model}."></div>
+<p>结果 general RM 初始化取得了更高的 GSM8K 测试性能和更好的整体平均性能。也就是说，即使最终 reward 是 verifier，RM 学到的“质量表征”仍然可以作为 Critic 很好的先验。</p>
 <p>这也解释了一个看起来有些反直觉的现象：</p>
-<div class="math-block" data-tex="\boxed{\text{RM 可以只用于初始化 Critic，而完全不参与最终 reward}}"></div><p>Tülu 3 甚至发现，在 verifier reward 上再叠加 RM score 反而会增加噪声。</p>
-<h4 id="_3-reward-normalization、reward-whitening-和-advantage-whitening-其实是三件事" tabindex="-1">3. Reward normalization、reward whitening 和 advantage whitening 其实是三件事 <a class="header-anchor" href="#_3-reward-normalization、reward-whitening-和-advantage-whitening-其实是三件事" aria-label="Permalink to &quot;3. Reward normalization、reward whitening 和 advantage whitening 其实是三件事&quot;">&ZeroWidthSpace;</a></h4>
+<div class="math-block" data-tex="\boxed{\text{RM 可以只用于初始化 Critic，而完全不参与最终 reward}}"></div>
+<p>Tülu 3 甚至发现，在 verifier reward 上再叠加 RM score 反而会增加噪声。</p>
+<h3 id="_3-reward-normalization、reward-whitening-和-advantage-whitening-其实是三件事" tabindex="-1">3. Reward normalization、reward whitening 和 advantage whitening 其实是三件事 <a class="header-anchor" href="#_3-reward-normalization、reward-whitening-和-advantage-whitening-其实是三件事" aria-label="Permalink to &quot;3. Reward normalization、reward whitening 和 advantage whitening 其实是三件事&quot;">&ZeroWidthSpace;</a></h3>
 <p>这里原文说“归一化到 <span class="math-inline" data-tex="0\sim1"></span>”需要特别注意：<strong>这不是 RLHF 中统一的定义。</strong></p>
 <p>OpenAI 早期 Ziegler et al. 的实现，对 RM 输出做的是 affine normalization：</p>
-<div class="math-block" data-tex="R'=gR+b,"></div><p>使参考数据分布上的 reward 满足近似</p>
+<div class="math-block" data-tex="R'=gR+b,"></div>
+<p>使参考数据分布上的 reward 满足近似</p>
 <div class="math-block" data-tex="\mathbb E[R']=0,\qquad
-\operatorname{Var}(R')=1."></div><p>对应</p>
+\operatorname{Var}(R')=1."></div>
+<p>对应</p>
 <div class="math-block" data-tex="g=\frac1{\sigma_R},
 \qquad
-b=-\frac{\mu_R}{\sigma_R}."></div><p>而 InstructGPT 又稍有不同：由于 pairwise RM loss</p>
-<div class="math-block" data-tex="-\log\sigma(R_w-R_l)"></div><p>对整体平移不敏感，因此只通过 bias 把 labeler demonstrations 的平均 reward 调到 0。</p>
+b=-\frac{\mu_R}{\sigma_R}."></div>
+<p>而 InstructGPT 又稍有不同：由于 pairwise RM loss</p>
+<div class="math-block" data-tex="-\log\sigma(R_w-R_l)"></div>
+<p>对整体平移不敏感，因此只通过 bias 把 labeler demonstrations 的平均 reward 调到 0。</p>
 <p>所以“reward normalization = 映射到 <span class="math-inline" data-tex="[0,1]"></span>”并不是标准 RLHF 定义。</p>
 <p>PPO 更新阶段又存在另一层 <strong>reward whitening</strong>。典型形式为</p>
 <div class="math-block" data-tex="\tilde r
 =
 \frac{r-\mu_r}
-{\sqrt{\sigma_r^2+\epsilon}}."></div><p>不过 OpenAI 早期代码对 reward 使用的实现实际上会重新加回原来的均值，因此更接近</p>
+{\sqrt{\sigma_r^2+\epsilon}}."></div>
+<p>不过 OpenAI 早期代码对 reward 使用的实现实际上会重新加回原来的均值，因此更接近</p>
 <div class="math-block" data-tex="\tilde r
 =
-\frac{r-\mu_r}{\sigma_r}+\mu_r,"></div><p>即主要标准化 reward 的<strong>尺度</strong>而不改变平均 reward。</p>
+\frac{r-\mu_r}{\sigma_r}+\mu_r,"></div>
+<p>即主要标准化 reward 的<strong>尺度</strong>而不改变平均 reward。</p>
 <p>而 advantage whitening 通常直接做</p>
 <div class="math-block" data-tex="\boxed{
 \tilde A_t
 =
 \frac{A_t-\mu_A}
 {\sqrt{\sigma_A^2+\epsilon}}
-}"></div><p>使 batch 内 advantage 均值约为 0、标准差约为 1。</p>
+}"></div>
+<p>使 batch 内 advantage 均值约为 0、标准差约为 1。</p>
 <p>它主要解决的是梯度尺度问题：</p>
 <div class="math-block" data-tex="\nabla_\theta L_{\rm PPO}
-\propto A_t."></div><p>如果某个 batch 中 <span class="math-inline" data-tex="A_t"></span> 普遍是几十，而另一个 batch 是 <span class="math-inline" data-tex="0.01"></span>，即使学习率相同，更新量也会差几个数量级。</p>
+\propto A_t."></div>
+<p>如果某个 batch 中 <span class="math-inline" data-tex="A_t"></span> 普遍是几十，而另一个 batch 是 <span class="math-inline" data-tex="0.01"></span>，即使学习率相同，更新量也会差几个数量级。</p>
 <p>值得注意的是，<strong>reward whitening 并不是一定要做</strong>。Huang 等人的 TL;DR 实验发现，reward whitening 会导致生成明显变短，这是因为whining会引入和序列长度有关的偏置项，降低未控制长度情况下的 preference rate；而 Ivison et al. 的实现干脆不做 reward whitening，只做 advantage whitening，训练依然稳定。</p>
 <p>因此现代实践更接近：</p>
 <div class="math-block" data-tex="\boxed{
 \text{reward whitening：可选}
 \qquad
 \text{advantage whitening：非常常见}
-}"></div><h4 id="_4-不同-kl-估计器-具体指什么" tabindex="-1">4. “不同 KL 估计器”具体指什么 <a class="header-anchor" href="#_4-不同-kl-估计器-具体指什么" aria-label="Permalink to &quot;4. “不同 KL 估计器”具体指什么&quot;">&ZeroWidthSpace;</a></h4>
+}"></div>
+<h3 id="_4-不同-kl-估计器-具体指什么" tabindex="-1">4. “不同 KL 估计器”具体指什么 <a class="header-anchor" href="#_4-不同-kl-估计器-具体指什么" aria-label="Permalink to &quot;4. “不同 KL 估计器”具体指什么&quot;">&ZeroWidthSpace;</a></h3>
 <p>首先要把两个很容易混淆的 ratio 分开：</p>
 <div class="math-block" data-tex="\underbrace{
 \rho_t=
 \frac{\pi_\theta(a_t|s_t)}
 {\pi_{\rm old}(a_t|s_t)}
-}_{\text{PPO clipping}}"></div><p>和</p>
+}_{\text{PPO clipping}}"></div>
+<p>和</p>
 <div class="math-block" data-tex="\underbrace{
 D_{\rm KL}
 (\pi_\theta\|\pi_{\rm ref})
-}_{\text{限制 Actor 偏离 SFT/reference}}"></div><p>完全是两件事。</p>
+}_{\text{限制 Actor 偏离 SFT/reference}}"></div>
+<p>完全是两件事。</p>
 <p>其中：</p>
 <ul>
 <li><span class="math-inline" data-tex="\pi_{\rm old}"></span>：产生 rollout 的旧 policy；</li>
@@ -830,35 +975,45 @@ D_{\rm KL}
 \pi_\theta(v|s_t)
 \log
 \frac{\pi_\theta(v|s_t)}
-{\pi_{\rm ref}(v|s_t)}."></div><p>但实际 rollout 已经采样出了</p>
-<div class="math-block" data-tex="a_t\sim \pi_\theta(\cdot|s_t),"></div><p>所以最简单的 Monte-Carlo estimator 是</p>
+{\pi_{\rm ref}(v|s_t)}."></div>
+<p>但实际 rollout 已经采样出了</p>
+<div class="math-block" data-tex="a_t\sim \pi_\theta(\cdot|s_t),"></div>
+<p>所以最简单的 Monte-Carlo estimator 是</p>
 <div class="math-block" data-tex="\boxed{
 k_1=
 \log
 \frac{\pi_\theta(a_t|s_t)}
 {\pi_{\rm ref}(a_t|s_t)}
-}"></div><p>因为</p>
+}"></div>
+<p>因为</p>
 <div class="math-block" data-tex="\mathbb E_{a_t\sim\pi_\theta}[k_1]
 =
-D_{\rm KL}(\pi_\theta\|\pi_{\rm ref})."></div><p>它是无偏的，但一个具体 token 上完全可能出现</p>
-<div class="math-block" data-tex="k_1&lt;0,"></div><p>因此方差比较大。</p>
+D_{\rm KL}(\pi_\theta\|\pi_{\rm ref})."></div>
+<p>它是无偏的，但一个具体 token 上完全可能出现</p>
+<div class="math-block" data-tex="k_1&lt;0,"></div>
+<p>因此方差比较大。</p>
 <p>Schulman 讨论了另外两种常见估计：</p>
 <p>令</p>
 <div class="math-block" data-tex="\ell=
-\log\frac{\pi_\theta}{\pi_{\rm ref}},"></div><p>则</p>
-<div class="math-block" data-tex="k_2=\frac12\ell^2"></div><p>具有较低方差，但只是局部二阶近似，因此有 bias。</p>
+\log\frac{\pi_\theta}{\pi_{\rm ref}},"></div>
+<p>则</p>
+<div class="math-block" data-tex="k_2=\frac12\ell^2"></div>
+<p>具有较低方差，但只是局部二阶近似，因此有 bias。</p>
 <p>还有</p>
 <div class="math-block" data-tex="\boxed{
 k_3
 =
 e^{-\ell}-1+\ell
-}"></div><p>也就是</p>
+}"></div>
+<p>也就是</p>
 <div class="math-block" data-tex="k_3
 =
 \frac{\pi_{\rm ref}}{\pi_\theta}
 -1+
-\log\frac{\pi_\theta}{\pi_{\rm ref}}."></div><p>它利用 control variate，在采样来自 <span class="math-inline" data-tex="\pi_\theta"></span> 时保持无偏，同时由</p>
-<div class="math-block" data-tex="x-1-\log x\ge0"></div><p>保证单样本 KL estimator 非负，通常方差也比 <span class="math-inline" data-tex="k_1"></span> 小。</p>
+\log\frac{\pi_\theta}{\pi_{\rm ref}}."></div>
+<p>它利用 control variate，在采样来自 <span class="math-inline" data-tex="\pi_\theta"></span> 时保持无偏，同时由</p>
+<div class="math-block" data-tex="x-1-\log x\ge0"></div>
+<p>保证单样本 KL estimator 非负，通常方差也比 <span class="math-inline" data-tex="k_1"></span> 小。</p>
 <p>经典 PPO-RLHF 最常见的 reward shaping 仍然是</p>
 <div class="math-block" data-tex="r_t^{\rm KL}
 =
@@ -867,8 +1022,9 @@ e^{-\ell}-1+\ell
 \log\pi_\theta(a_t|s_t)
 -
 \log\pi_{\rm ref}(a_t|s_t)
-\right),"></div><p>也就是直接使用 <span class="math-inline" data-tex="k_1"></span>。Ivison 等人的 PPO 实现同样采用这种 token-level penalty。</p>
-<h4 id="_5-kl-controller-动态调的到底是什么" tabindex="-1">5. KL controller：动态调的到底是什么 <a class="header-anchor" href="#_5-kl-controller-动态调的到底是什么" aria-label="Permalink to &quot;5. KL controller：动态调的到底是什么&quot;">&ZeroWidthSpace;</a></h4>
+\right),"></div>
+<p>也就是直接使用 <span class="math-inline" data-tex="k_1"></span>。Ivison 等人的 PPO 实现同样采用这种 token-level penalty。</p>
+<h3 id="_5-kl-controller-动态调的到底是什么" tabindex="-1">5. KL controller：动态调的到底是什么 <a class="header-anchor" href="#_5-kl-controller-动态调的到底是什么" aria-label="Permalink to &quot;5. KL controller：动态调的到底是什么&quot;">&ZeroWidthSpace;</a></h3>
 <p>RLHF 的总体目标可以写成</p>
 <div class="math-block" data-tex="J(\theta)
 =
@@ -876,8 +1032,10 @@ e^{-\ell}-1+\ell
 -
 \beta
 D_{\rm KL}
-(\pi_\theta\|\pi_{\rm ref})."></div><p>其中真正控制“模型能偏离 reference 多远”的是</p>
-<div class="math-block" data-tex="\boxed{\beta}"></div><p>而不是 PPO 的 clip 参数 <span class="math-inline" data-tex="\epsilon"></span>。</p>
+(\pi_\theta\|\pi_{\rm ref})."></div>
+<p>其中真正控制“模型能偏离 reference 多远”的是</p>
+<div class="math-block" data-tex="\boxed{\beta}"></div>
+<p>而不是 PPO 的 clip 参数 <span class="math-inline" data-tex="\epsilon"></span>。</p>
 <p>早期 OpenAI 实现使用 adaptive KL controller。其核心更新为</p>
 <div class="math-block" data-tex="e=
 \operatorname{clip}
@@ -886,7 +1044,8 @@ D_{\rm KL}
 {D_{\rm KL}^{\rm target}}
 -1,
 -0.2,0.2
-\right),"></div><p>然后</p>
+\right),"></div>
+<p>然后</p>
 <div class="math-block" data-tex="\boxed{
 \beta
 \leftarrow
@@ -895,7 +1054,8 @@ D_{\rm KL}
 1+
 e\frac{n_{\rm steps}}{H}
 \right)
-}"></div><p>其中 <span class="math-inline" data-tex="H"></span> 是 <code>horizon</code>。</p>
+}"></div>
+<p>其中 <span class="math-inline" data-tex="H"></span> 是 <code>horizon</code>。</p>
 <p>直观上：</p>
 <div class="math-block" data-tex="D_{\rm KL}>D_{\rm target}
 \Rightarrow
@@ -903,41 +1063,48 @@ e\frac{n_{\rm steps}}{H}
 \Rightarrow
 \text{惩罚增强}
 \Rightarrow
-\pi_\theta\text{被拉回 reference},"></div><p>反之：</p>
+\pi_\theta\text{被拉回 reference},"></div>
+<p>反之：</p>
 <div class="math-block" data-tex="D_{\rm KL}&lt;D_{\rm target}
 \Rightarrow
 \beta\downarrow
 \Rightarrow
-\text{允许 policy 走得更远}."></div><p>但后来的许多实现改为直接固定 <span class="math-inline" data-tex="\beta"></span>。例如 InstructGPT 使用固定</p>
-<div class="math-block" data-tex="\beta=0.02,"></div><p>并通过实验发现 <span class="math-inline" data-tex="0.01\sim0.02"></span> 附近较合适；<span class="math-inline" data-tex="\beta=0"></span> 或过大的值都会降低效果。</p>
+\text{允许 policy 走得更远}."></div>
+<p>但后来的许多实现改为直接固定 <span class="math-inline" data-tex="\beta"></span>。例如 InstructGPT 使用固定</p>
+<div class="math-block" data-tex="\beta=0.02,"></div>
+<p>并通过实验发现 <span class="math-inline" data-tex="0.01\sim0.02"></span> 附近较合适；<span class="math-inline" data-tex="\beta=0"></span> 或过大的值都会降低效果。</p>
 <p>Ivison et al. 的 NeurIPS 2024 PPO 实现同样采用固定 KL coefficient，默认</p>
-<div class="math-block" data-tex="\beta=0.05,"></div><p>使用更大的 70B RM 时则采用约 <span class="math-inline" data-tex="0.0325"></span>。他们还发现 <strong>合适的 <span class="math-inline" data-tex="\beta"></span> 会随 reward model 改变</strong>：更强的 RM 往往能承受更小的 KL penalty，也就是允许 policy 更大胆地优化 reward。</p>
+<div class="math-block" data-tex="\beta=0.05,"></div>
+<p>使用更大的 70B RM 时则采用约 <span class="math-inline" data-tex="0.0325"></span>。他们还发现 <strong>合适的 <span class="math-inline" data-tex="\beta"></span> 会随 reward model 改变</strong>：更强的 RM 往往能承受更小的 KL penalty，也就是允许 policy 更大胆地优化 reward。</p>
 <blockquote>
 <p>需要区分：<strong>PPO clip 限制的是“一批 rollout 被重复优化时，相对 <span class="math-inline" data-tex="\pi_{\rm old}"></span> 的单次更新幅度”；KL penalty 限制的是整个训练过&gt;程中，相对固定 <span class="math-inline" data-tex="\pi_{\rm ref}"></span> 的长期漂移。</strong> 这两个机制虽然都在“限制更新”，限制的对象并不相同。</p>
 </blockquote>
-<h4 id="_6-损失聚合的权衡" tabindex="-1">6. 损失聚合的权衡 <a class="header-anchor" href="#_6-损失聚合的权衡" aria-label="Permalink to &quot;6. 损失聚合的权衡&quot;">&ZeroWidthSpace;</a></h4>
+<h3 id="_6-损失聚合的权衡" tabindex="-1">6. 损失聚合的权衡 <a class="header-anchor" href="#_6-损失聚合的权衡" aria-label="Permalink to &quot;6. 损失聚合的权衡&quot;">&ZeroWidthSpace;</a></h3>
 <p>在语言模型的策略梯度训练中，每个样本包含不同数量的有效 completion token。设第 <span class="math-inline" data-tex="i"></span> 个序列长度为 <span class="math-inline" data-tex="|a_i|"></span>，第 <span class="math-inline" data-tex="t"></span> 个 token 的损失为 <span class="math-inline" data-tex="\ell_{i,t}"></span>，batch 大小为 <span class="math-inline" data-tex="B"></span>。不同的 loss 聚合方式会直接改变不同长度序列对梯度的权重。</p>
-<h5 id="按序列归一化" tabindex="-1">按序列归一化 <a class="header-anchor" href="#按序列归一化" aria-label="Permalink to &quot;按序列归一化&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="按序列归一化" tabindex="-1">按序列归一化 <a class="header-anchor" href="#按序列归一化" aria-label="Permalink to &quot;按序列归一化&quot;">&ZeroWidthSpace;</a></h4>
 <div class="math-block" data-tex="L
 =
 \frac{1}{B}
 \sum_{i=1}^{B}
 \frac{1}{|a_i|}
 \sum_{t=1}^{|a_i|}
-\ell_{i,t}"></div><p>即先对每个序列内部的 token loss 求平均，再对序列求平均。</p>
+\ell_{i,t}"></div>
+<p>即先对每个序列内部的 token loss 求平均，再对序列求平均。</p>
 <p>其特点是：</p>
 <ul>
 <li>每条序列对 batch loss 的总贡献相同；</li>
 <li>序列长度不会改变该序列的整体权重；</li>
 <li>但单个 token 的梯度权重为</li>
 </ul>
-<div class="math-block" data-tex="\frac{1}{B|a_i|}"></div><p>因此短序列中的每个 token 会获得更大的梯度。</p>
+<div class="math-block" data-tex="\frac{1}{B|a_i|}"></div>
+<p>因此短序列中的每个 token 会获得更大的梯度。</p>
 <p>例如长度分别为 <span class="math-inline" data-tex="4"></span> 和 <span class="math-inline" data-tex="7"></span> 时，忽略公共的 <span class="math-inline" data-tex="1/B"></span>：</p>
 <div class="math-block" data-tex="w_{\text{short}}=\frac14=0.25,
 \qquad
-w_{\text{long}}=\frac17\approx0.143."></div><p>因此这种方式虽然实现了“序列公平”，却可能隐式偏向短序列。</p>
+w_{\text{long}}=\frac17\approx0.143."></div>
+<p>因此这种方式虽然实现了“序列公平”，却可能隐式偏向短序列。</p>
 <hr>
-<h5 id="按-token-归一化" tabindex="-1">按 token 归一化 <a class="header-anchor" href="#按-token-归一化" aria-label="Permalink to &quot;按 token 归一化&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="按-token-归一化" tabindex="-1">按 token 归一化 <a class="header-anchor" href="#按-token-归一化" aria-label="Permalink to &quot;按 token 归一化&quot;">&ZeroWidthSpace;</a></h4>
 <div class="math-block" data-tex="L
 =
 \frac{
@@ -946,11 +1113,13 @@ w_{\text{long}}=\frac17\approx0.143."></div><p>因此这种方式虽然实现了
 \ell_{i,t}
 }{
 \sum_{i=1}^{B}|a_i|
-}"></div><p>即把整个 batch 中所有有效 token 放在一起求平均。</p>
+}"></div>
+<p>即把整个 batch 中所有有效 token 放在一起求平均。</p>
 <p>此时每个 token 获得相同的梯度权重：</p>
 <div class="math-block" data-tex="w_{i,t}
 =
-\frac{1}{\sum_i |a_i|}."></div><p>因此：</p>
+\frac{1}{\sum_i |a_i|}."></div>
+<p>因此：</p>
 <ul>
 <li>所有 token 地位相同；</li>
 <li>长序列因为包含更多 token，会产生更大的总梯度；</li>
@@ -958,7 +1127,7 @@ w_{\text{long}}=\frac17\approx0.143."></div><p>因此这种方式虽然实现了
 </ul>
 <p>这种聚合方式常见于 DAPO。</p>
 <hr>
-<h5 id="定长归一化" tabindex="-1">定长归一化 <a class="header-anchor" href="#定长归一化" aria-label="Permalink to &quot;定长归一化&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="定长归一化" tabindex="-1">定长归一化 <a class="header-anchor" href="#定长归一化" aria-label="Permalink to &quot;定长归一化&quot;">&ZeroWidthSpace;</a></h4>
 <p>设生成长度上限为固定常数 <span class="math-inline" data-tex="L_{\max}"></span>：</p>
 <div class="math-block" data-tex="L
 =
@@ -966,24 +1135,29 @@ w_{\text{long}}=\frac17\approx0.143."></div><p>因此这种方式虽然实现了
 \sum_{i=1}^{B}
 \frac1{L_{\max}}
 \sum_{t=1}^{|a_i|}
-\ell_{i,t}."></div><p>所有有效 token 都除以相同的 <span class="math-inline" data-tex="L_{\max}"></span>，因此单个 token 的梯度尺度一致：</p>
+\ell_{i,t}."></div>
+<p>所有有效 token 都除以相同的 <span class="math-inline" data-tex="L_{\max}"></span>，因此单个 token 的梯度尺度一致：</p>
 <div class="math-block" data-tex="w_{i,t}
 =
-\frac{1}{B L_{\max}}."></div><p>与此同时，长序列拥有更多有效 token，因此仍然会贡献更大的总梯度。</p>
+\frac{1}{B L_{\max}}."></div>
+<p>与此同时，长序列拥有更多有效 token，因此仍然会贡献更大的总梯度。</p>
 <p>可以将其看成：</p>
 <div class="math-block" data-tex="\text{每 token 同权}
 +
-\text{按有效 token 数量自然增加序列总权重}."></div><p>Dr. GRPO 使用了这一类思想。</p>
+\text{按有效 token 数量自然增加序列总权重}."></div>
+<p>Dr. GRPO 使用了这一类思想。</p>
 <p>其中 padding / prompt token 通常通过 <code>completion_mask</code> 去除：</p>
 <div class="math-block" data-tex="m_{i,t}
 =
 \begin{cases}
 1,&amp;\text{有效 completion token}\\
 0,&amp;\text{padding 或不参与训练的 token}
-\end{cases}"></div><p>实际求和的是</p>
-<div class="math-block" data-tex="\sum_t m_{i,t}\ell_{i,t}."></div><hr>
-<h5 id="三种聚合方式的核心区别" tabindex="-1">三种聚合方式的核心区别 <a class="header-anchor" href="#三种聚合方式的核心区别" aria-label="Permalink to &quot;三种聚合方式的核心区别&quot;">&ZeroWidthSpace;</a></h5>
-<table tabindex="0">
+\end{cases}"></div>
+<p>实际求和的是</p>
+<div class="math-block" data-tex="\sum_t m_{i,t}\ell_{i,t}."></div>
+<hr>
+<h4 id="三种聚合方式的核心区别" tabindex="-1">三种聚合方式的核心区别 <a class="header-anchor" href="#三种聚合方式的核心区别" aria-label="Permalink to &quot;三种聚合方式的核心区别&quot;">&ZeroWidthSpace;</a></h4>
+<div class="note-table" role="region" aria-label="算法实现表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>聚合方式</th>
@@ -1012,77 +1186,102 @@ w_{\text{long}}=\frac17\approx0.143."></div><p>因此这种方式虽然实现了
 <td>类似按 token，但尺度由固定 <span class="math-inline" data-tex="L_{\max}"></span> 决定</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>因此不存在绝对最优的聚合方式，本质上是在决定：</p>
-<div class="math-block" data-tex="\boxed{\text{一个“训练样本”究竟应该按序列计权，还是按 token 计权}}"></div><p>这在长推理训练中特别重要，因为序列长度本身可能与任务难度、推理深度和奖励相关。</p>
-<h5 id="mdp-与-bandit-为什么这与-loss-聚合有关" tabindex="-1">MDP 与 Bandit：为什么这与 loss 聚合有关 <a class="header-anchor" href="#mdp-与-bandit-为什么这与-loss-聚合有关" aria-label="Permalink to &quot;MDP 与 Bandit：为什么这与 loss 聚合有关&quot;">&ZeroWidthSpace;</a></h5>
+<div class="math-block" data-tex="\boxed{\text{一个“训练样本”究竟应该按序列计权，还是按 token 计权}}"></div>
+<p>这在长推理训练中特别重要，因为序列长度本身可能与任务难度、推理深度和奖励相关。</p>
+<h4 id="mdp-与-bandit-为什么这与-loss-聚合有关" tabindex="-1">MDP 与 Bandit：为什么这与 loss 聚合有关 <a class="header-anchor" href="#mdp-与-bandit-为什么这与-loss-聚合有关" aria-label="Permalink to &quot;MDP 与 Bandit：为什么这与 loss 聚合有关&quot;">&ZeroWidthSpace;</a></h4>
 <p>RLHF 中还存在两种不同的建模视角。</p>
-<h6 id="token-level-mdp" tabindex="-1">Token-level MDP <a class="header-anchor" href="#token-level-mdp" aria-label="Permalink to &quot;Token-level MDP&quot;">&ZeroWidthSpace;</a></h6>
+<h5 id="token-level-mdp" tabindex="-1">Token-level MDP <a class="header-anchor" href="#token-level-mdp" aria-label="Permalink to &quot;Token-level MDP&quot;">&ZeroWidthSpace;</a></h5>
 <p>将每个 token 看作一个动作：</p>
 <div class="math-block" data-tex="s_t=(x,a_1,\ldots,a_{t-1}),
 \qquad
-a_t\sim\pi_\theta(\cdot|s_t)."></div><p>Critic 为每个状态估计</p>
-<div class="math-block" data-tex="V(s_t),"></div><p>并利用逐 token reward、TD error 和 GAE 得到不同位置的优势：</p>
+a_t\sim\pi_\theta(\cdot|s_t)."></div>
+<p>Critic 为每个状态估计</p>
+<div class="math-block" data-tex="V(s_t),"></div>
+<p>并利用逐 token reward、TD error 和 GAE 得到不同位置的优势：</p>
 <div class="math-block" data-tex="A_t
 =
 \delta_t
 +
 \gamma\lambda\delta_{t+1}
-+\cdots."></div><p>因此同一序列中通常有</p>
-<div class="math-block" data-tex="A_1\neq A_2\neq\cdots\neq A_T."></div><p>这是传统 PPO 的典型建模方式。</p>
++\cdots."></div>
+<p>因此同一序列中通常有</p>
+<div class="math-block" data-tex="A_1\neq A_2\neq\cdots\neq A_T."></div>
+<p>这是传统 PPO 的典型建模方式。</p>
 <hr>
-<h6 id="sequence-level-bandit" tabindex="-1">Sequence-level Bandit <a class="header-anchor" href="#sequence-level-bandit" aria-label="Permalink to &quot;Sequence-level Bandit&quot;">&ZeroWidthSpace;</a></h6>
+<h5 id="sequence-level-bandit" tabindex="-1">Sequence-level Bandit <a class="header-anchor" href="#sequence-level-bandit" aria-label="Permalink to &quot;Sequence-level Bandit&quot;">&ZeroWidthSpace;</a></h5>
 <p>另一种方式把整个 completion</p>
-<div class="math-block" data-tex="a=(a_1,\ldots,a_T)"></div><p>视为一次完整动作，只得到一个序列级奖励：</p>
-<div class="math-block" data-tex="R(a)."></div><p>由此得到一个序列级优势：</p>
+<div class="math-block" data-tex="a=(a_1,\ldots,a_T)"></div>
+<p>视为一次完整动作，只得到一个序列级奖励：</p>
+<div class="math-block" data-tex="R(a)."></div>
+<p>由此得到一个序列级优势：</p>
 <div class="math-block" data-tex="A_{\text{seq}}
 =
-R(a)-b,"></div><p>随后广播到所有 token：</p>
+R(a)-b,"></div>
+<p>随后广播到所有 token：</p>
 <div class="math-block" data-tex="A_t=A_{\text{seq}},
 \qquad
-t=1,\ldots,T."></div><p>因此同一回答中的所有 token 使用相同的优势。</p>
+t=1,\ldots,T."></div>
+<p>因此同一回答中的所有 token 使用相同的优势。</p>
 <p>RLOO、GRPO 等方法常采用这种序列级思想，例如：</p>
 <div class="math-block" data-tex="A_i
 =
-R_i-\text{baseline},"></div><p>然后</p>
-<div class="math-block" data-tex="A_{i,1}=A_{i,2}=\cdots=A_{i,T_i}=A_i."></div><p>此时 loss 如何在 token 和 sequence 之间聚合就更加关键，因为优势本身已经是序列级的。</p>
+R_i-\text{baseline},"></div>
+<p>然后</p>
+<div class="math-block" data-tex="A_{i,1}=A_{i,2}=\cdots=A_{i,T_i}=A_i."></div>
+<p>此时 loss 如何在 token 和 sequence 之间聚合就更加关键，因为优势本身已经是序列级的。</p>
 <hr>
-<h5 id="为什么-rlhf-中通常取" tabindex="-1">为什么 RLHF 中通常取 <span class="math-inline" data-tex="\gamma=1"></span> <a class="header-anchor" href="#为什么-rlhf-中通常取" aria-label="Permalink to &quot;为什么 RLHF 中通常取 \(\gamma=1\)&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="为什么-rlhf-中通常取" tabindex="-1">为什么 RLHF 中通常取 <span class="math-inline" data-tex="\gamma=1"></span> <a class="header-anchor" href="#为什么-rlhf-中通常取" aria-label="Permalink to &quot;为什么 RLHF 中通常取 \(\gamma=1\)&quot;">&ZeroWidthSpace;</a></h4>
 <p>在一般的多步 MDP 中：</p>
 <div class="math-block" data-tex="G_t
 =
 r_t+\gamma r_{t+1}
-+\gamma^2r_{t+2}+\cdots,"></div><p>通常取</p>
-<div class="math-block" data-tex="\gamma&lt;1"></div><p>来降低遥远未来奖励的权重。</p>
++\gamma^2r_{t+2}+\cdots,"></div>
+<p>通常取</p>
+<div class="math-block" data-tex="\gamma&lt;1"></div>
+<p>来降低遥远未来奖励的权重。</p>
 <p>但 RLHF 有一个特殊性质：主要任务奖励通常只在<strong>整条回答完成之后</strong>得到，例如：</p>
-<div class="math-block" data-tex="R_{\mathrm{RM}}(x,y)"></div><p>或 verifier 给出的最终正确性奖励。</p>
+<div class="math-block" data-tex="R_{\mathrm{RM}}(x,y)"></div>
+<p>或 verifier 给出的最终正确性奖励。</p>
 <p>如果采用</p>
-<div class="math-block" data-tex="\gamma&lt;1,"></div><p>则这个最终奖励传播到较早 token 时会变成</p>
-<div class="math-block" data-tex="\gamma^{T-t}R."></div><p>序列越长，前面的 token 获得的任务奖励就越小。</p>
+<div class="math-block" data-tex="\gamma&lt;1,"></div>
+<p>则这个最终奖励传播到较早 token 时会变成</p>
+<div class="math-block" data-tex="\gamma^{T-t}R."></div>
+<p>序列越长，前面的 token 获得的任务奖励就越小。</p>
 <p>例如：</p>
-<div class="math-block" data-tex="\gamma=0.99,\qquad T-t=500"></div><p>时：</p>
-<div class="math-block" data-tex="\gamma^{500}\approx0.0066."></div><p>这样一个最终奖励几乎无法影响早期推理 token。</p>
+<div class="math-block" data-tex="\gamma=0.99,\qquad T-t=500"></div>
+<p>时：</p>
+<div class="math-block" data-tex="\gamma^{500}\approx0.0066."></div>
+<p>这样一个最终奖励几乎无法影响早期推理 token。</p>
 <p>但对于长推理而言，前面的 token 并不一定比后面的 token “不重要”；它们可能正是完成后续推理所必需的步骤。因此经典 RLHF 通常采用</p>
-<div class="math-block" data-tex="\boxed{\gamma=1}"></div><p>使最终奖励可以完整传播到整个 response：</p>
+<div class="math-block" data-tex="\boxed{\gamma=1}"></div>
+<p>使最终奖励可以完整传播到整个 response：</p>
 <div class="math-block" data-tex="G_t
 =
-\sum_{k=t}^{T}r_k."></div><p>这与一般机器人控制中的 MDP 不同：机器人任务中，未来状态可能对应真实的未来时间和独立决策，因此折扣未来奖励通常具有明确意义；而 RLHF 的一条 completion 更接近一次完整的有限时域决策过程，其最终评分是对整个回答的评价。</p>
+\sum_{k=t}^{T}r_k."></div>
+<p>这与一般机器人控制中的 MDP 不同：机器人任务中，未来状态可能对应真实的未来时间和独立决策，因此折扣未来奖励通常具有明确意义；而 RLHF 的一条 completion 更接近一次完整的有限时域决策过程，其最终评分是对整个回答的评价。</p>
 <p>随着智能体式（agentic）RL 场景日渐成熟——模型在其中执行真正的多步动作，例如工具调用、代码执行和网页浏览——折扣可能会重新变得重要，因为这些场景涉及真正彼此独立的序贯决策，其长期后果各不相同。</p>
-<h5 id="总结" tabindex="-1">总结 <a class="header-anchor" href="#总结" aria-label="Permalink to &quot;总结&quot;">&ZeroWidthSpace;</a></h5>
+<h4 id="总结" tabindex="-1">总结 <a class="header-anchor" href="#总结" aria-label="Permalink to &quot;总结&quot;">&ZeroWidthSpace;</a></h4>
 <p>这一部分实际上涉及两个相互关联的问题：</p>
 <div class="math-block" data-tex="\boxed{\text{优势如何定义}}
 \qquad\text{和}\qquad
-\boxed{\text{token loss 如何聚合}}."></div><p>对于 token-level PPO：</p>
-<div class="math-block" data-tex="A_t\ \text{随位置变化},"></div><p>loss 聚合主要决定不同 token 和不同长度序列的梯度尺度。</p>
+\boxed{\text{token loss 如何聚合}}."></div>
+<p>对于 token-level PPO：</p>
+<div class="math-block" data-tex="A_t\ \text{随位置变化},"></div>
+<p>loss 聚合主要决定不同 token 和不同长度序列的梯度尺度。</p>
 <p>对于 GRPO / RLOO 一类 sequence-level 方法：</p>
-<div class="math-block" data-tex="A_{i,t}=A_i,"></div><p>整个序列共享同一个优势，因此长度归一化方式会直接决定：</p>
-<div class="math-block" data-tex="\boxed{\text{一条长回答究竟应该比一条短回答获得多少梯度权重}}"></div><p>这也是按序列归一化、按 token 归一化和定长归一化之间最本质的区别。</p>
-<h4 id="_7-异步-rl-系统总结" tabindex="-1">7. 异步 RL 系统总结 <a class="header-anchor" href="#_7-异步-rl-系统总结" aria-label="Permalink to &quot;7. 异步 RL 系统总结&quot;">&ZeroWidthSpace;</a></h4>
+<div class="math-block" data-tex="A_{i,t}=A_i,"></div>
+<p>整个序列共享同一个优势，因此长度归一化方式会直接决定：</p>
+<div class="math-block" data-tex="\boxed{\text{一条长回答究竟应该比一条短回答获得多少梯度权重}}"></div>
+<p>这也是按序列归一化、按 token 归一化和定长归一化之间最本质的区别。</p>
+<h3 id="_7-异步-rl-系统总结" tabindex="-1">7. 异步 RL 系统总结 <a class="header-anchor" href="#_7-异步-rl-系统总结" aria-label="Permalink to &quot;7. 异步 RL 系统总结&quot;">&ZeroWidthSpace;</a></h3>
 <p>偏向infra的处理。</p>
 <p>传统策略梯度通常采用严格的 <strong>on-policy 同步训练</strong>：</p>
 <div class="math-block" data-tex="\theta_t \xrightarrow{\text{生成}} y_t
 \xrightarrow{\text{计算梯度}}
-\theta_{t+1}"></div><p>即必须先用当前策略 <span class="math-inline" data-tex="\theta_t"></span> 完成采样，再基于这些样本更新模型。这样理论上最干净，但在大语言模型中会造成严重的系统效率问题，因为<strong>生成和训练必须互相等待</strong>。</p>
+\theta_{t+1}"></div>
+<p>即必须先用当前策略 <span class="math-inline" data-tex="\theta_t"></span> 完成采样，再基于这些样本更新模型。这样理论上最干净，但在大语言模型中会造成严重的系统效率问题，因为<strong>生成和训练必须互相等待</strong>。</p>
 <p>图 23 展示了三种典型组织方式：</p>
 <ol>
 <li>
@@ -1098,8 +1297,10 @@ r_t+\gamma r_{t+1}
 actor 持续生成，learner 同时持续更新参数，使两条流水线重叠：</p>
 </li>
 </ol>
-<div class="math-block" data-tex="\text{Actor: }\theta_t \rightarrow y_t"></div><div class="math-block" data-tex="\text{Learner: }\theta_{t+1}
-\text{ 使用先前生成的 } y_t \text{ 更新}"></div><p>这样 GPU 利用率和整体吞吐量显著提高，但 learner 使用的数据可能来自<strong>旧策略</strong>，因此不再严格 on-policy，需要处理策略滞后带来的 off-policy 问题。</p>
+<div class="math-block" data-tex="\text{Actor: }\theta_t \rightarrow y_t"></div>
+<div class="math-block" data-tex="\text{Learner: }\theta_{t+1}
+\text{ 使用先前生成的 } y_t \text{ 更新}"></div>
+<p>这样 GPU 利用率和整体吞吐量显著提高，但 learner 使用的数据可能来自<strong>旧策略</strong>，因此不再严格 on-policy，需要处理策略滞后带来的 off-policy 问题。</p>
 <hr>
 <p>工程上通常采用 <strong>Actor–Learner 架构</strong>：</p>
 <ul>
@@ -1110,34 +1311,44 @@ actor 持续生成，learner 同时持续更新参数，使两条流水线重叠
 <li>常利用 Ray 等分布式框架组织进程，并使用 vLLM 等推理引擎提高生成吞吐量。</li>
 </ul>
 <p>其核心思想可以概括为：</p>
-<div class="math-block" data-tex="\boxed{\text{将“生成”和“训练”解耦，并尽可能并行执行}}"></div><p>从而把 RL 训练由传统的：</p>
+<div class="math-block" data-tex="\boxed{\text{将“生成”和“训练”解耦，并尽可能并行执行}}"></div>
+<p>从而把 RL 训练由传统的：</p>
 <div class="math-block" data-tex="\text{generate}\rightarrow \text{train}\rightarrow
-\text{generate}\rightarrow \text{train}"></div><p>变成近似的双流水线：</p>
+\text{generate}\rightarrow \text{train}"></div>
+<p>变成近似的双流水线：</p>
 <div class="math-block" data-tex="\begin{aligned}
 \text{Actor:}&amp;\quad \text{generate}\rightarrow\text{generate}\rightarrow\cdots\\
 \text{Learner:}&amp;\quad \text{train}\rightarrow\text{train}\rightarrow\cdots
-\end{aligned}"></div><p>不过异步化会引入两个主要问题：</p>
+\end{aligned}"></div>
+<p>不过异步化会引入两个主要问题：</p>
 <p><strong>样本长度不均衡。</strong> 推理模型的回答可能从几百 token 到数万甚至十万 token。同步 batch 中只要有一个样本特别长，其余 GPU 就必须等待它生成完成，造成大量算力空闲。常见缓解方法是 <strong>sequence-level packing</strong>，即动态地把较短样本组合到同一批次中，使不同 GPU 的 token 工作量更加均衡。</p>
 <p><strong>策略滞后（policy staleness）。</strong> 在完全异步系统中，actor 可能仍在使用旧参数 <span class="math-inline" data-tex="\theta_t"></span> 生成数据，而 learner 已经更新到 <span class="math-inline" data-tex="\theta_{t+k}"></span>：</p>
 <div class="math-block" data-tex="y\sim\pi_{\theta_t},
 \qquad
-\text{但训练时策略已为 }\pi_{\theta_{t+k}}."></div><p>因此，异步 RL 的关键矛盾是：</p>
+\text{但训练时策略已为 }\pi_{\theta_{t+k}}."></div>
+<p>因此，异步 RL 的关键矛盾是：</p>
 <div class="math-block" data-tex="\boxed{
 \text{更高的系统吞吐率}
 \quad\longleftrightarrow\quad
 \text{更大的 actor--learner 策略偏差}
-}"></div><p>所以异步 RL 不只是一个系统优化问题，还要求训练算法能够容忍甚至校正这种 <strong>off-policy / policy lag</strong>。其主要目标是在<strong>GPU 利用率、生成吞吐量和训练稳定性</strong>之间取得平衡。</p>
-<h4 id="_7-截断重要性采样-tis-总结" tabindex="-1">7. 截断重要性采样（TIS）总结 <a class="header-anchor" href="#_7-截断重要性采样-tis-总结" aria-label="Permalink to &quot;7. 截断重要性采样（TIS）总结&quot;">&ZeroWidthSpace;</a></h4>
+}"></div>
+<p>所以异步 RL 不只是一个系统优化问题，还要求训练算法能够容忍甚至校正这种 <strong>off-policy / policy lag</strong>。其主要目标是在<strong>GPU 利用率、生成吞吐量和训练稳定性</strong>之间取得平衡。</p>
+<h3 id="_7-截断重要性采样-tis-总结" tabindex="-1">7. 截断重要性采样（TIS）总结 <a class="header-anchor" href="#_7-截断重要性采样-tis-总结" aria-label="Permalink to &quot;7. 截断重要性采样（TIS）总结&quot;">&ZeroWidthSpace;</a></h3>
 <p>截断重要性采样（Truncated Importance Sampling, TIS）主要用于<strong>异步 RL 中修正采样策略与当前学习策略之间的分布偏差</strong>。</p>
 <p>普通重要性采样使用比率</p>
 <div class="math-block" data-tex="\rho_t=
 \frac{\pi_{\text{target}}(a_t|s_t)}
-{\pi_{\text{behavior}}(a_t|s_t)}"></div><p>将由旧策略采集的数据重新加权，使其近似服从当前策略。但当两个策略差异较大时，<span class="math-inline" data-tex="\rho_t"></span> 可能非常大，导致梯度方差甚至数值不稳定。</p>
+{\pi_{\text{behavior}}(a_t|s_t)}"></div>
+<p>将由旧策略采集的数据重新加权，使其近似服从当前策略。但当两个策略差异较大时，<span class="math-inline" data-tex="\rho_t"></span> 可能非常大，导致梯度方差甚至数值不稳定。</p>
 <p>TIS 对这个比率施加<strong>单侧上限截断</strong>：</p>
-<div class="math-block" data-tex="\tilde{\rho}_t=\min(\rho_t,C),"></div><p>其中 <span class="math-inline" data-tex="C"></span> 是常数，例如 <span class="math-inline" data-tex="C=2"></span>。因此它实际上是在做：</p>
-<div class="math-block" data-tex="\boxed{\text{允许一定程度的 off-policy 修正，但限制极端样本的影响}}"></div><p>需要注意，TIS 与 PPO 的 clip 不完全相同。PPO 通常限制策略更新比例在 <span class="math-inline" data-tex="1-\epsilon"></span> 到 <span class="math-inline" data-tex="1+\epsilon"></span> 附近，而 TIS 主要限制重要性权重的<strong>上界</strong>。因此：</p>
-<div class="math-block" data-tex="\rho_t &lt; 1"></div><p>时通常仍允许其自然下降，而只有</p>
-<div class="math-block" data-tex="\rho_t>C"></div><p>时才截断为 <span class="math-inline" data-tex="C"></span>。</p>
+<div class="math-block" data-tex="\tilde{\rho}_t=\min(\rho_t,C),"></div>
+<p>其中 <span class="math-inline" data-tex="C"></span> 是常数，例如 <span class="math-inline" data-tex="C=2"></span>。因此它实际上是在做：</p>
+<div class="math-block" data-tex="\boxed{\text{允许一定程度的 off-policy 修正，但限制极端样本的影响}}"></div>
+<p>需要注意，TIS 与 PPO 的 clip 不完全相同。PPO 通常限制策略更新比例在 <span class="math-inline" data-tex="1-\epsilon"></span> 到 <span class="math-inline" data-tex="1+\epsilon"></span> 附近，而 TIS 主要限制重要性权重的<strong>上界</strong>。因此：</p>
+<div class="math-block" data-tex="\rho_t &lt; 1"></div>
+<p>时通常仍允许其自然下降，而只有</p>
+<div class="math-block" data-tex="\rho_t>C"></div>
+<p>时才截断为 <span class="math-inline" data-tex="C"></span>。</p>
 <p>在异步 LLM RL 中，需要区分两类不同的策略偏差。</p>
 <p>第一类是<strong>训练阶段内部的策略漂移</strong>。例如 PPO/GRPO 对同一批 rollout 做多次梯度更新时，当前策略 <span class="math-inline" data-tex="\pi_\theta"></span> 会逐渐偏离生成这批数据时的旧策略 <span class="math-inline" data-tex="\pi_{\text{old}}"></span>，对应：</p>
 <div class="math-block" data-tex="\rho_t^{\text{policy}}
@@ -1146,7 +1357,8 @@ actor 持续生成，learner 同时持续更新参数，使两条流水线重叠
 \pi_\theta^{\text{learner}}(a_t|s_t)
 }{
 \pi_{\text{old}}^{\text{learner}}(a_t|s_t)
-}."></div><p>这就是 PPO/GRPO 中原本已经存在的 policy ratio。</p>
+}."></div>
+<p>这就是 PPO/GRPO 中原本已经存在的 policy ratio。</p>
 <p>第二类是<strong>系统层面的 learner–sampler 偏差</strong>。异步训练时，actor / sampler 可能仍用较旧参数生成样本，而 learner 已经更新到新的参数，因此：</p>
 <div class="math-block" data-tex="\rho_t^{\text{learner}}
 =
@@ -1154,17 +1366,21 @@ actor 持续生成，learner 同时持续更新参数，使两条流水线重叠
 \pi_\theta^{\text{learner}}(a_t|s_t)
 }{
 \pi_\theta^{\text{sampler}}(a_t|s_t)
-},"></div><p>并使用</p>
+},"></div>
+<p>并使用</p>
 <div class="math-block" data-tex="\tilde{\rho}_t^{\text{learner}}
 =
 \min\left(
 \rho_t^{\text{learner}},C
-\right)."></div><p>这两个 ratio 的来源不同：</p>
+\right)."></div>
+<p>这两个 ratio 的来源不同：</p>
 <div class="math-block" data-tex="\boxed{
 \text{policy ratio：修正“多次梯度更新”造成的漂移}
-}"></div><div class="math-block" data-tex="\boxed{
+}"></div>
+<div class="math-block" data-tex="\boxed{
 \text{TIS ratio：修正“异步采样”造成的 learner–actor 漂移}
-}"></div><p>二者可以同时存在。</p>
+}"></div>
+<p>二者可以同时存在。</p>
 <p>对于只有<strong>单次梯度更新</strong>的 REINFORCE，不存在 PPO 式的 batch 内策略漂移，此时主要只需要修正 learner 和 sampler 之间的偏差：</p>
 <div class="math-block" data-tex="\nabla_\theta J
 \approx
@@ -1175,7 +1391,8 @@ A_t
 \nabla_\theta
 \log
 \pi_\theta^{\text{learner}}(a_t|s_t)
-\right]."></div><p>而对于 PPO / GRPO，由于既存在异步采样偏差，又存在多步更新导致的策略漂移，因此目标大致可以写成：</p>
+\right]."></div>
+<p>而对于 PPO / GRPO，由于既存在异步采样偏差，又存在多步更新导致的策略漂移，因此目标大致可以写成：</p>
 <div class="math-block" data-tex="J_{\text{PPO+TIS}}(\theta)
 =
 \mathbb E
@@ -1188,22 +1405,27 @@ A_t
 \right)
 \cdot
 \tilde{\rho}_t^{\text{learner}}
-\right]."></div><p>也就是说：</p>
+\right]."></div>
+<p>也就是说：</p>
 <div class="math-block" data-tex="\boxed{
 \text{PPO clip 管训练内部的 policy drift，
 TIS 管系统异步造成的 sampler drift}
-}"></div><p>实际实现通常在 <strong>logprob 空间</strong>计算：</p>
+}"></div>
+<p>实际实现通常在 <strong>logprob 空间</strong>计算：</p>
 <div class="math-block" data-tex="\log \rho_t
 =
 \log \pi_{\text{learner}}
 -
-\log \pi_{\text{sampler}},"></div><p>再计算</p>
+\log \pi_{\text{sampler}},"></div>
+<p>再计算</p>
 <div class="math-block" data-tex="\rho_t
 =
 \exp(\log\rho_t),
 \qquad
-\tilde{\rho}_t=\min(\rho_t,C)."></div><p>工程上通常还会先把 <code>logratio</code> 限制在如 <span class="math-inline" data-tex="[-10,10]"></span> 的区间，但这一操作主要是<strong>数值稳定性保护</strong>；真正的 TIS 是随后对重要性权重执行：</p>
-<div class="math-block" data-tex="\min(\rho_t,C)."></div><p>因此可以把整个 TIS 的作用浓缩为：</p>
+\tilde{\rho}_t=\min(\rho_t,C)."></div>
+<p>工程上通常还会先把 <code>logratio</code> 限制在如 <span class="math-inline" data-tex="[-10,10]"></span> 的区间，但这一操作主要是<strong>数值稳定性保护</strong>；真正的 TIS 是随后对重要性权重执行：</p>
+<div class="math-block" data-tex="\min(\rho_t,C)."></div>
+<p>因此可以把整个 TIS 的作用浓缩为：</p>
 <div class="math-block" data-tex="\boxed{
 \text{异步 RL 提高吞吐量}
 \rightarrow
@@ -1212,19 +1434,25 @@ TIS 管系统异步造成的 sampler drift}
 \text{importance sampling 校正}
 \rightarrow
 \text{TIS 截断极端权重以控制方差}
-}"></div><p>它本质上是在<strong>off-policy 校正能力与梯度稳定性之间做折中</strong>。</p>
-<h3 id="辅助方法" tabindex="-1">辅助方法 <a class="header-anchor" href="#辅助方法" aria-label="Permalink to &quot;辅助方法&quot;">&ZeroWidthSpace;</a></h3>
-<h4 id="广义优势估计gae" tabindex="-1">广义优势估计GAE <a class="header-anchor" href="#广义优势估计gae" aria-label="Permalink to &quot;广义优势估计GAE&quot;">&ZeroWidthSpace;</a></h4>
-<h5 id="_1-步优势估计" tabindex="-1">1. <span class="math-inline" data-tex="k"></span> 步优势估计 <a class="header-anchor" href="#_1-步优势估计" aria-label="Permalink to &quot;1. \(k\) 步优势估计&quot;">&ZeroWidthSpace;</a></h5>
+}"></div>
+<p>它本质上是在<strong>off-policy 校正能力与梯度稳定性之间做折中</strong>。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="辅助方法">
+<h2 id="辅助方法" tabindex="-1">辅助方法 <a class="header-anchor" href="#辅助方法" aria-label="Permalink to &quot;辅助方法&quot;">&ZeroWidthSpace;</a></h2>
+<h3 id="广义优势估计gae" tabindex="-1">广义优势估计GAE <a class="header-anchor" href="#广义优势估计gae" aria-label="Permalink to &quot;广义优势估计GAE&quot;">&ZeroWidthSpace;</a></h3>
+<h4 id="_1-步优势估计" tabindex="-1">1. <span class="math-inline" data-tex="k"></span> 步优势估计 <a class="header-anchor" href="#_1-步优势估计" aria-label="Permalink to &quot;1. \(k\) 步优势估计&quot;">&ZeroWidthSpace;</a></h4>
 <p>一步优势：</p>
 <div class="math-block" data-tex="\hat A_t^{(1)}
 =
 r_t+\gamma V(s_{t+1})-V(s_t)
-"></div><p>两步优势：</p>
+"></div>
+<p>两步优势：</p>
 <div class="math-block" data-tex="\hat A_t^{(2)}
 =
 r_t+\gamma r_{t+1}+\gamma^2V(s_{t+2})-V(s_t)
-"></div><p>一般的 <span class="math-inline" data-tex="k"></span> 步优势：</p>
+"></div>
+<p>一般的 <span class="math-inline" data-tex="k"></span> 步优势：</p>
 <div class="math-block" data-tex="\boxed{
 \hat A_t^{(k)}
 =
@@ -1234,15 +1462,17 @@ r_t+\gamma r_{t+1}+\gamma^2V(s_{t+2})-V(s_t)
 -
 V(s_t)
 }
-"></div><p>其中 <span class="math-inline" data-tex="k"></span> 越大，使用的真实奖励越多、对价值函数 <span class="math-inline" data-tex="V"></span> 的 bootstrap 依赖越少；通常偏差降低，但方差增大。</p>
-<h5 id="_2-用-td-误差表示-步优势" tabindex="-1">2. 用 TD 误差表示 <span class="math-inline" data-tex="k"></span> 步优势 <a class="header-anchor" href="#_2-用-td-误差表示-步优势" aria-label="Permalink to &quot;2. 用 TD 误差表示 \(k\) 步优势&quot;">&ZeroWidthSpace;</a></h5>
+"></div>
+<p>其中 <span class="math-inline" data-tex="k"></span> 越大，使用的真实奖励越多、对价值函数 <span class="math-inline" data-tex="V"></span> 的 bootstrap 依赖越少；通常偏差降低，但方差增大。</p>
+<h4 id="_2-用-td-误差表示-步优势" tabindex="-1">2. 用 TD 误差表示 <span class="math-inline" data-tex="k"></span> 步优势 <a class="header-anchor" href="#_2-用-td-误差表示-步优势" aria-label="Permalink to &quot;2. 用 TD 误差表示 \(k\) 步优势&quot;">&ZeroWidthSpace;</a></h4>
 <p>定义一步 TD 误差：</p>
 <div class="math-block" data-tex="\boxed{
 \delta_t
 =
 r_t+\gamma V(s_{t+1})-V(s_t)
 }
-"></div><p>例如两步：</p>
+"></div>
+<p>例如两步：</p>
 <div class="math-block" data-tex="\begin{aligned}
 \delta_t+\gamma\delta_{t+1}
 &amp;=
@@ -1257,13 +1487,15 @@ r_t+\gamma r_{t+1}
 &amp;=
 \hat A_t^{(2)}
 \end{aligned}
-"></div><p>中间的 <span class="math-inline" data-tex="V(s_{t+1})"></span> 恰好抵消。因此一般有：</p>
+"></div>
+<p>中间的 <span class="math-inline" data-tex="V(s_{t+1})"></span> 恰好抵消。因此一般有：</p>
 <div class="math-block" data-tex="\boxed{
 \hat A_t^{(k)}
 =
 \sum_{i=0}^{k-1}\gamma^i\delta_{t+i}
 }
-"></div><h5 id="_3-gae-的第一种表示-不同-步优势的加权平均" tabindex="-1">3. GAE 的第一种表示：不同 <span class="math-inline" data-tex="k"></span> 步优势的加权平均 <a class="header-anchor" href="#_3-gae-的第一种表示-不同-步优势的加权平均" aria-label="Permalink to &quot;3. GAE 的第一种表示：不同 \(k\) 步优势的加权平均&quot;">&ZeroWidthSpace;</a></h5>
+"></div>
+<h4 id="_3-gae-的第一种表示-不同-步优势的加权平均" tabindex="-1">3. GAE 的第一种表示：不同 <span class="math-inline" data-tex="k"></span> 步优势的加权平均 <a class="header-anchor" href="#_3-gae-的第一种表示-不同-步优势的加权平均" aria-label="Permalink to &quot;3. GAE 的第一种表示：不同 \(k\) 步优势的加权平均&quot;">&ZeroWidthSpace;</a></h4>
 <p>GAE 不选择固定的 <span class="math-inline" data-tex="k"></span>，而是将不同长度的优势估计进行指数加权：</p>
 <div class="math-block" data-tex="\boxed{
 \hat A_t^{GAE(\gamma,\lambda)}
@@ -1276,25 +1508,29 @@ r_t+\gamma r_{t+1}
 +\cdots
 \right)
 }
-"></div><p>即：</p>
+"></div>
+<p>即：</p>
 <div class="math-block" data-tex="\hat A_t^{GAE}
 =
 (1-\lambda)
 \sum_{k=1}^{\infty}
 \lambda^{k-1}\hat A_t^{(k)}
-"></div><h5 id="_4-gae-的第二种表示-td-误差的加权和" tabindex="-1">4. GAE 的第二种表示：TD 误差的加权和 <a class="header-anchor" href="#_4-gae-的第二种表示-td-误差的加权和" aria-label="Permalink to &quot;4. GAE 的第二种表示：TD 误差的加权和&quot;">&ZeroWidthSpace;</a></h5>
+"></div>
+<h4 id="_4-gae-的第二种表示-td-误差的加权和" tabindex="-1">4. GAE 的第二种表示：TD 误差的加权和 <a class="header-anchor" href="#_4-gae-的第二种表示-td-误差的加权和" aria-label="Permalink to &quot;4. GAE 的第二种表示：TD 误差的加权和&quot;">&ZeroWidthSpace;</a></h4>
 <p>将</p>
 <div class="math-block" data-tex="\hat A_t^{(k)}
 =
 \sum_{i=0}^{k-1}\gamma^i\delta_{t+i}
-"></div><p>代入上式并整理，可以得到：</p>
+"></div>
+<p>代入上式并整理，可以得到：</p>
 <div class="math-block" data-tex="\boxed{
 \hat A_t^{GAE(\gamma,\lambda)}
 =
 \sum_{i=0}^{\infty}
 (\gamma\lambda)^i\delta_{t+i}
 }
-"></div><p>也就是：</p>
+"></div>
+<p>也就是：</p>
 <div class="math-block" data-tex="\boxed{
 \hat A_t^{GAE}
 =
@@ -1305,7 +1541,8 @@ r_t+\gamma r_{t+1}
 (\gamma\lambda)^2\delta_{t+2}
 +\cdots
 }
-"></div><p>因此实际计算时还能写成反向递推：</p>
+"></div>
+<p>因此实际计算时还能写成反向递推：</p>
 <div class="math-block" data-tex="\boxed{
 \hat A_t^{GAE}
 =
@@ -1314,28 +1551,33 @@ r_t+\gamma r_{t+1}
 \gamma\lambda
 \hat A_{t+1}^{GAE}
 }
-"></div><h5 id="_5-两个折扣参数的含义" tabindex="-1">5. 两个折扣参数的含义 <a class="header-anchor" href="#_5-两个折扣参数的含义" aria-label="Permalink to &quot;5. 两个折扣参数的含义&quot;">&ZeroWidthSpace;</a></h5>
+"></div>
+<h4 id="_5-两个折扣参数的含义" tabindex="-1">5. 两个折扣参数的含义 <a class="header-anchor" href="#_5-两个折扣参数的含义" aria-label="Permalink to &quot;5. 两个折扣参数的含义&quot;">&ZeroWidthSpace;</a></h4>
 <ul>
 <li><strong><span class="math-inline" data-tex="\gamma"></span>：奖励折扣因子</strong>。控制未来奖励本身的重要程度：</li>
 </ul>
 <div class="math-block" data-tex="r_t+\gamma r_{t+1}+\gamma^2r_{t+2}+\cdots
-"></div><p><span class="math-inline" data-tex="\gamma"></span> 越大，越重视长期奖励；越小，越重视近期奖励。</p>
+"></div>
+<p><span class="math-inline" data-tex="\gamma"></span> 越大，越重视长期奖励；越小，越重视近期奖励。</p>
 <ul>
 <li><strong><span class="math-inline" data-tex="\lambda"></span>：GAE 衰减参数</strong>。控制 Advantage 估计时使用多远的 TD 信息，也控制偏差—方差折中：</li>
 </ul>
 <div class="math-block" data-tex="\lambda=0
 \quad\Longrightarrow\quad
 \hat A_t^{GAE}=\delta_t
-"></div><p>即退化为一步 TD，通常<strong>低方差、高偏差</strong>；而</p>
+"></div>
+<p>即退化为一步 TD，通常<strong>低方差、高偏差</strong>；而</p>
 <div class="math-block" data-tex="\lambda\rightarrow1
-"></div><p>时会纳入更多远期 TD 误差，更接近长步数/Monte Carlo 的优势估计，通常<strong>低偏差、高方差</strong>。</p>
+"></div>
+<p>时会纳入更多远期 TD 误差，更接近长步数/Monte Carlo 的优势估计，通常<strong>低偏差、高方差</strong>。</p>
 <p>所以可以简单记成：</p>
 <div class="math-block" data-tex="\boxed{
 \gamma:\ \text{未来奖励看多远}
 \qquad
 \lambda:\ \text{优势估计看多远}
 }
-"></div><h5 id="_6-gae-的-batch-并行计算示例" tabindex="-1">6. GAE 的 Batch 并行计算示例 <a class="header-anchor" href="#_6-gae-的-batch-并行计算示例" aria-label="Permalink to &quot;6. GAE 的 Batch 并行计算示例&quot;">&ZeroWidthSpace;</a></h5>
+"></div>
+<h4 id="_6-gae-的-batch-并行计算示例" tabindex="-1">6. GAE 的 Batch 并行计算示例 <a class="header-anchor" href="#_6-gae-的-batch-并行计算示例" aria-label="Permalink to &quot;6. GAE 的 Batch 并行计算示例&quot;">&ZeroWidthSpace;</a></h4>
 <p>实际 PPO / RLHF 中通常不会只计算一条轨迹，而是把多条轨迹组成 Batch 并行计算。假设 <code>Batch Size = 2</code>，两条轨迹的有效长度分别为 3 和 2：</p>
 <div class="math-block" data-tex="\begin{aligned}
 \text{轨迹 1: }&amp;
@@ -1355,7 +1597,8 @@ s_1^{(2)}
 \text{终止}
 \rightarrow \text{PAD}
 \end{aligned}
-"></div><p>为了组成相同长度的 Tensor，需要将第二条轨迹 padding 到长度 3：</p>
+"></div>
+<p>为了组成相同长度的 Tensor，需要将第二条轨迹 padding 到长度 3：</p>
 <div class="math-block" data-tex="R=
 \begin{bmatrix}
 1 &amp; 2 &amp; 3\\
@@ -1367,20 +1610,24 @@ V=
 3 &amp; 4 &amp; 2\\
 2 &amp; 2 &amp; 0
 \end{bmatrix}
-"></div><p>定义 <code>valid_mask</code> 表示当前位置是否为有效 token：</p>
+"></div>
+<p>定义 <code>valid_mask</code> 表示当前位置是否为有效 token：</p>
 <div class="math-block" data-tex="M=
 \begin{bmatrix}
 1&amp;1&amp;1\\
 1&amp;1&amp;0
 \end{bmatrix}
-"></div><p>因此数据形状都是：</p>
+"></div>
+<p>因此数据形状都是：</p>
 <div class="math-block" data-tex="(B,L)=(2,3)
-"></div><p>这里最重要的是：<strong>Batch 维度可以完全并行，但时间维度仍然需要从后向前递推。</strong></p>
+"></div>
+<p>这里最重要的是：<strong>Batch 维度可以完全并行，但时间维度仍然需要从后向前递推。</strong></p>
 <p>GAE 的递推公式为：</p>
 <div class="math-block" data-tex="\hat A_t
 =
 \delta_t+\gamma\lambda\hat A_{t+1}
-"></div><p>对于 Batch 中的两条轨迹，可以同时计算：</p>
+"></div>
+<p>对于 Batch 中的两条轨迹，可以同时计算：</p>
 <div class="math-block" data-tex="\begin{bmatrix}
 \hat A_t^{(1)}\\
 \hat A_t^{(2)}
@@ -1396,8 +1643,10 @@ V=
 \hat A_{t+1}^{(1)}\\
 \hat A_{t+1}^{(2)}
 \end{bmatrix}
-"></div><p>也就是说，每次循环处理的不是一个标量，而是一个长度为 <code>B=2</code> 的向量。</p>
+"></div>
+<p>也就是说，每次循环处理的不是一个标量，而是一个长度为 <code>B=2</code> 的向量。</p>
 <p>对应代码：</p>
+<details class="note-details"><summary>展开代码与配置 <span>60 行</span></summary>
 <div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">import</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> torch</span></span>
 <span class="line"></span>
 <span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># shape = (B=2, L=3)</span></span>
@@ -1458,22 +1707,29 @@ V=
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    next_v </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> values[:, t]</span></span>
 <span class="line"></span>
 <span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">print</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(advantages)</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br><span class="line-number">35</span><br><span class="line-number">36</span><br><span class="line-number">37</span><br><span class="line-number">38</span><br><span class="line-number">39</span><br><span class="line-number">40</span><br><span class="line-number">41</span><br><span class="line-number">42</span><br><span class="line-number">43</span><br><span class="line-number">44</span><br><span class="line-number">45</span><br><span class="line-number">46</span><br><span class="line-number">47</span><br><span class="line-number">48</span><br><span class="line-number">49</span><br><span class="line-number">50</span><br><span class="line-number">51</span><br><span class="line-number">52</span><br><span class="line-number">53</span><br><span class="line-number">54</span><br><span class="line-number">55</span><br><span class="line-number">56</span><br><span class="line-number">57</span><br><span class="line-number">58</span><br><span class="line-number">59</span><br><span class="line-number">60</span><br></div></div><p>核心在于：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br><span class="line-number">35</span><br><span class="line-number">36</span><br><span class="line-number">37</span><br><span class="line-number">38</span><br><span class="line-number">39</span><br><span class="line-number">40</span><br><span class="line-number">41</span><br><span class="line-number">42</span><br><span class="line-number">43</span><br><span class="line-number">44</span><br><span class="line-number">45</span><br><span class="line-number">46</span><br><span class="line-number">47</span><br><span class="line-number">48</span><br><span class="line-number">49</span><br><span class="line-number">50</span><br><span class="line-number">51</span><br><span class="line-number">52</span><br><span class="line-number">53</span><br><span class="line-number">54</span><br><span class="line-number">55</span><br><span class="line-number">56</span><br><span class="line-number">57</span><br><span class="line-number">58</span><br><span class="line-number">59</span><br><span class="line-number">60</span><br></div></div>
+</details>
+<p>核心在于：</p>
 <div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">rewards[:, t]</span></span>
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">values[:, t]</span></span>
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">gae</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div><p>它们都不是标量，而是：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div>
+<p>它们都不是标量，而是：</p>
 <div class="math-block" data-tex="\text{shape}=(B,)
-"></div><p>例如在 <span class="math-inline" data-tex="t=1"></span> 时：</p>
+"></div>
+<p>例如在 <span class="math-inline" data-tex="t=1"></span> 时：</p>
 <div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">rewards[:, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">]</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br></div></div><p>得到：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br></div></div>
+<p>得到：</p>
 <div class="math-block" data-tex="\begin{bmatrix}
 2\\
 1
 \end{bmatrix}
-"></div><p>因此 GPU 会同时计算两条轨迹的：</p>
+"></div>
+<p>因此 GPU 会同时计算两条轨迹的：</p>
 <div class="math-block" data-tex="\delta_1^{(1)},\qquad \delta_1^{(2)}
-"></div><p>而不是先完整计算轨迹 1，再计算轨迹 2。</p>
+"></div>
+<p>而不是先完整计算轨迹 1，再计算轨迹 2。</p>
 <p>整个计算结构可以理解为：</p>
 <div class="language-text vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">text</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>             Batch 维：并行</span></span>
 <span class="line"><span>          ↓                 ↓</span></span>
@@ -1486,12 +1742,14 @@ V=
 <span class="line"><span>t=0    [计算]              [计算]      ← 同时计算</span></span>
 <span class="line"><span></span></span>
 <span class="line"><span>        时间维：反向递推</span></span></code></pre>
-<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br></div></div><p>所以 GAE 的并行设计实际上是：</p>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br></div></div>
+<p>所以 GAE 的并行设计实际上是：</p>
 <div class="math-block" data-tex="\boxed{
 \text{时间维 }L\text{：必须反向循环}
 \qquad
 \text{Batch 维 }B\text{：完全向量化并行}
 }
-"></div><p><code>mask</code> 则负责阻止 GAE 穿过轨迹终点或 padding 继续传播。例如第二条轨迹的最后一个位置是 PAD，因此该位置不会产生 advantage，也不会把信息传播回有效轨迹。</p>
-</header>
+"></div>
+<p><code>mask</code> 则负责阻止 GAE 穿过轨迹终点或 padding 继续传播。例如第二条轨迹的最后一个位置是 PAD，因此该位置不会产生 advantage，也不会把信息传播回有效轨迹。</p>
+</section>
 </article>

@@ -1,13 +1,41 @@
-<article class="native-document format-paper" data-format="paper" aria-label="分布式调度、显存与端到端性能">
-<header class="document-intro">
-<h1 id="分布式调度、显存与端到端性能" tabindex="-1">分布式调度、显存与端到端性能 <a class="header-anchor" href="#分布式调度、显存与端到端性能" aria-label="Permalink to &quot;分布式调度、显存与端到端性能&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-paper" data-format="paper" aria-label="分布式调度、显存与端到端性能" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
+  <h1 id="分布式调度、显存与端到端性能" tabindex="-1">分布式调度、显存与端到端性能 <a class="header-anchor" href="#分布式调度、显存与端到端性能" aria-label="Permalink to &quot;分布式调度、显存与端到端性能&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">从资源预算、并行策略、权重传输与集群调度分析训练性能。</p>
+  <div class="note-chips"><span>论文与项目随谈</span><span>后训练</span><span>分布式训练</span><span>显存优化</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#_1-至少有三套资源预算"><span>02</span>1. 至少有三套资源预算</a>
+<a href="#_2-并行策略解决不同的瓶颈"><span>03</span>2. 并行策略解决不同的瓶颈</a>
+<a href="#_3-同卡共置与分离部署"><span>04</span>3. 同卡共置与分离部署</a>
+<a href="#_4-显存排查必须先定位阶段"><span>05</span>4. 显存排查必须先定位阶段</a>
+<a href="#_5-权重传输是训练闭环的一部分"><span>06</span>5. 权重传输是训练闭环的一部分</a>
+<a href="#_6-调度与集群启动"><span>07</span>6. 调度与集群启动</a>
+<a href="#_7-性能实验怎么做才有解释力"><span>08</span>7. 性能实验怎么做才有解释力</a>
+</nav>
+<figure class="note-diagram" aria-label="先分清资源，再谈吞吐">
+  <p class="note-diagram-title">先分清资源，再谈吞吐</p>
+  <div class="note-flow note-flow-options">
+    <div class="note-flow-step tone-0"><strong>训练资源</strong><span>并行、显存与优化器</span></div>
+    <div class="note-flow-step tone-1"><strong>生成资源</strong><span>KV cache 与采样</span></div>
+    <div class="note-flow-step tone-2"><strong>环境资源</strong><span>容器与任务执行</span></div>
+    <div class="note-flow-step tone-0"><strong>端到端</strong><span>调度、传输与等待</span></div>
+  </div>
+  <figcaption>训练、生成、环境执行三套资源预算，共同影响端到端性能。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <blockquote>
 <p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
 </blockquote>
-</header>
-<section class="document-section">
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_1-至少有三套资源预算">
 <h2 id="_1-至少有三套资源预算" tabindex="-1">1. 至少有三套资源预算 <a class="header-anchor" href="#_1-至少有三套资源预算" aria-label="Permalink to &quot;1. 至少有三套资源预算&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="1. 至少有三套资源预算表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>资源</th>
@@ -36,13 +64,14 @@
 <td>冷启动、评分尾延迟、infra error、清理</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>MiMo Code 的最大 session 数受 task Pod quota 限制，而不是 GPU 数。General 另需外部 judge 服务；公开运行真的因训练集群与 grader 的连接问题重启。<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/code/env.example" target="_blank" rel="noreferrer">Code 环境</a>、<a href="https://mimo.xiaomi.com/rl/data.04135c89/notices.json" target="_blank" rel="noreferrer">运行公告</a></p>
 <p>因此容量规划应先构建一个完整 task 的关键路径，再扩大并发。只扩训练卡数，可能只增加等待。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_2-并行策略解决不同的瓶颈">
 <h2 id="_2-并行策略解决不同的瓶颈" tabindex="-1">2. 并行策略解决不同的瓶颈 <a class="header-anchor" href="#_2-并行策略解决不同的瓶颈" aria-label="Permalink to &quot;2. 并行策略解决不同的瓶颈&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="2. 并行策略解决不同的瓶颈表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>策略</th>
@@ -83,16 +112,18 @@
 <td>all-gather、reduce、组间复制</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>表格用于工程理解。EP 常与其他 mesh 共享/重组维度，不能将所有 degree 相乘视为总卡数。应保存实际 process group/rank 映射与框架约束。</p>
 <p>prime-rl 当前 scaling 文档提供 FSDP2、EP、CP、激活重算/offload、LM head chunking 与 Slurm 布局；这些是当前实现能力，不能倒推 2025 年 INTELLECT-3 每个阶段使用相同默认值。<a href="https://github.com/PrimeIntellect-ai/prime-rl/blob/main/docs/scaling.md" target="_blank" rel="noreferrer">scaling 文档</a></p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_3-同卡共置与分离部署">
 <h2 id="_3-同卡共置与分离部署" tabindex="-1">3. 同卡共置与分离部署 <a class="header-anchor" href="#_3-同卡共置与分离部署" aria-label="Permalink to &quot;3. 同卡共置与分离部署&quot;">&ZeroWidthSpace;</a></h2>
 <p>共置可节省常驻权重、减少部分传输需求，但训练、推理的内存切换与时间协调更复杂。分离可以持续 rollout 并同时训练，需要按采样/训练吞吐配置比例并处理权重传输。</p>
 <p>MiMo Code 开源默认 <code>TRAIN_NNODES=8</code>、每节点 8 卡，<code>ROLLOUT_NNODES=0</code> 走 colocate；actor TP8，rollout TP2。General 和 Visual 等路径有自己的默认布局，不应一份 env 文件通用。<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/code/train.sh" target="_blank" rel="noreferrer">Code 启动器</a>、<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/general/general.env.example" target="_blank" rel="noreferrer">General 环境</a></p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_4-显存排查必须先定位阶段">
 <h2 id="_4-显存排查必须先定位阶段" tabindex="-1">4. 显存排查必须先定位阶段 <a class="header-anchor" href="#_4-显存排查必须先定位阶段" aria-label="Permalink to &quot;4. 显存排查必须先定位阶段&quot;">&ZeroWidthSpace;</a></h2>
 <p>整理建议：分别测加载、prefill、decode、logprob、entropy、backward、optimizer、权重同步、checkpoint 保存的峰值。对照样本长度、token budget、expert load 与 rank 分布。</p>
 <ul>
@@ -103,19 +134,22 @@
 </ul>
 <p>verl 性能文档还提示：vLLM 与 SGLang 的 GPU 内存比例参数语义不同；梯度累计减少同步可能提高内存峰值；remove-padding、chunk/recompute 应结合实际路径比较。<a href="https://verl.readthedocs.io/en/latest/perf/perf_tuning.html" target="_blank" rel="noreferrer">verl 性能文档</a></p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_5-权重传输是训练闭环的一部分">
 <h2 id="_5-权重传输是训练闭环的一部分" tabindex="-1">5. 权重传输是训练闭环的一部分 <a class="header-anchor" href="#_5-权重传输是训练闭环的一部分" aria-label="Permalink to &quot;5. 权重传输是训练闭环的一部分&quot;">&ZeroWidthSpace;</a></h2>
 <p>大模型训练与推理布局通常不同。需要把 trainer shards 转成目标 rollout shards，确认接收方完整加载，再推进版本。不能仅记录发送完成。</p>
 <p>Miles 的 P2P 方案按接收 rank 需要的分片规划传输，避免把完整模型广播到每个 rank，并用多个源 rank 并行发送；文章给出的收益依赖其模型、拓扑和链路，不是普遍保证。<a href="https://www.lmsys.org/blog/2026-04-29-p2p-update/" target="_blank" rel="noreferrer">P2P 工程设计</a></p>
 <p>建议保留：payload 字节、重分片时间、传输时间、推理暂停时间、量化/后处理时间、版本确认、失败重试。对低精度 rollout，还要检查训练和推理是否对同一表示计算概率。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_6-调度与集群启动">
 <h2 id="_6-调度与集群启动" tabindex="-1">6. 调度与集群启动 <a class="header-anchor" href="#_6-调度与集群启动" aria-label="Permalink to &quot;6. 调度与集群启动&quot;">&ZeroWidthSpace;</a></h2>
 <p>prime-rl 当前多节点入口通过 Slurm 生成任务布局与 rendezvous。其文档要求代码和 uv 环境放在所有节点可见的共享文件系统，以免节点使用不同依赖。<a href="https://github.com/PrimeIntellect-ai/prime-rl/blob/main/docs/scaling.md#slurm" target="_blank" rel="noreferrer">Slurm 启动说明</a></p>
 <p>INTELLECT-3 团队公开介绍了 Ansible、预运行 InfiniBand 检查、Slurm+Cgroup v2 清理、Lustre/NFS、DCGM+Prometheus 等组合；这是团队说明，而非本次独立测得的集群日志。<a href="https://www.primeintellect.one/blog/intellect-3" target="_blank" rel="noreferrer">INTELLECT-3 工程说明</a></p>
 <p>对 Ray 调度长期 pending，先检查可见资源、placement 与共置/分离配置；对 NCCL 超时，先找最早失败的 rank 和前置异常，避免把所有连带通信错误当成网络根因。后一句为诊断建议。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_7-性能实验怎么做才有解释力">
 <h2 id="_7-性能实验怎么做才有解释力" tabindex="-1">7. 性能实验怎么做才有解释力 <a class="header-anchor" href="#_7-性能实验怎么做才有解释力" aria-label="Permalink to &quot;7. 性能实验怎么做才有解释力&quot;">&ZeroWidthSpace;</a></h2>
 <p>按“trainer 固定样本 → 推理固定请求 → 环境固定任务 → 全链路”逐层做短实验，改变一个变量并保存 resolved config。记录 warmup 和稳态分开，至少检查最长样本、不同任务族、节点尾延迟与实际训练接受率。</p>
 <p>slime 提供 rollout/train 分离调试与 trace/profiling 材料，分别定位生成、reward、model call 与内核耗时。<a href="https://github.com/THUDM/slime/blob/main/docs/en/developer_guide/debug.md" target="_blank" rel="noreferrer">debug</a>、<a href="https://github.com/THUDM/slime/blob/main/docs/en/developer_guide/trace.md" target="_blank" rel="noreferrer">trace</a>、<a href="https://github.com/THUDM/slime/blob/main/docs/en/developer_guide/profiling.md" target="_blank" rel="noreferrer">profiling</a></p>

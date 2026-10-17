@@ -1,14 +1,41 @@
-<article class="native-document format-paper" data-format="paper" aria-label="小米公开看板：指标字典与数据阅读指南">
-<header class="document-intro">
-<h1 id="小米公开看板-指标字典与数据阅读指南" tabindex="-1">小米公开看板：指标字典与数据阅读指南 <a class="header-anchor" href="#小米公开看板-指标字典与数据阅读指南" aria-label="Permalink to &quot;小米公开看板：指标字典与数据阅读指南&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-paper" data-format="paper" aria-label="小米公开看板：指标字典与数据阅读指南" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
+  <h1 id="小米公开看板-指标字典与数据阅读指南" tabindex="-1">小米公开看板：指标字典与数据阅读指南 <a class="header-anchor" href="#小米公开看板-指标字典与数据阅读指南" aria-label="Permalink to &quot;小米公开看板：指标字典与数据阅读指南&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">说明 MiMo 原始 JSON、指标字典、CSV、缺失值和图表的统计口径。</p>
+  <div class="note-chips"><span>论文与项目随谈</span><span>MiMo</span><span>训练实验</span><span>模型评估</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#_1-文件与统计总体"><span>02</span>1. 文件与统计总体</a>
+<a href="#_2-先看这几个指标"><span>03</span>2. 先看这几个指标</a>
+<a href="#_3-全量指标按-namespace-找"><span>04</span>3. 全量指标按 namespace 找</a>
+<a href="#_4-派生-csv-怎么用"><span>05</span>4. 派生 CSV 怎么用</a>
+<a href="#_5-配套图"><span>06</span>5. 配套图</a>
+<a href="#_6-统计核验"><span>07</span>6. 统计核验</a>
+</nav>
+<figure class="note-diagram" aria-label="从原始记录到可解释图表">
+  <p class="note-diagram-title">从原始记录到可解释图表</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>原始 JSON</strong><span>归档的记录点</span></div>
+    <div class="note-flow-step tone-1"><strong>指标字典</strong><span>namespace 与字段</span></div>
+    <div class="note-flow-step tone-2"><strong>派生 CSV</strong><span>说明计算和缺失值</span></div>
+    <div class="note-flow-step tone-0"><strong>配套图表</strong><span>回到记录解释变化</span></div>
+  </div>
+  <figcaption>缺失值、namespace 与派生 CSV 都需要保留原始统计口径。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <blockquote>
 <p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
 </blockquote>
-</header>
-<section class="document-section">
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_1-文件与统计总体">
 <h2 id="_1-文件与统计总体" tabindex="-1">1. 文件与统计总体 <a class="header-anchor" href="#_1-文件与统计总体" aria-label="Permalink to &quot;1. 文件与统计总体&quot;">&ZeroWidthSpace;</a></h2>
 <p>看板地址：<a href="https://mimo.xiaomi.com/rl/" target="_blank" rel="noreferrer">mimo.xiaomi.com/rl</a>。读取页面公开 script 引用后，定位到版本化静态数据目录 <code>data.04135c89/</code>，按公开文件链接保存。现在两次运行状态均为 ended；没有读取私有接口或登录数据。</p>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="1. 文件与统计总体表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>文件</th>
@@ -53,12 +80,13 @@
 <td>缺失步数保留缺失</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>原始文件、来源 URL、大小与 SHA-256 见 <a href="/papers/projects/mimo-v2-6/evidence/manifest.json">manifest</a>。原始 <code>t/wall/start/end</code> 是 Unix 时间，派生 CSV 用 UTC+8 转换，没有改写原始 JSON。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_2-先看这几个指标">
 <h2 id="_2-先看这几个指标" tabindex="-1">2. 先看这几个指标 <a class="header-anchor" href="#_2-先看这几个指标" aria-label="Permalink to &quot;2. 先看这几个指标&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="2. 先看这几个指标表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>指标</th>
@@ -148,12 +176,13 @@
 <td>全部已请求 prompt 数</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>描述依据：<a href="https://mimo.xiaomi.com/rl/data.04135c89/runs.json" target="_blank" rel="noreferrer">runs.json</a>。<code>one/zero</code> 等字段需结合原配置才能确定过滤前后阶段；未公开的细节没有补写。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_3-全量指标按-namespace-找">
 <h2 id="_3-全量指标按-namespace-找" tabindex="-1">3. 全量指标按 namespace 找 <a class="header-anchor" href="#_3-全量指标按-namespace-找" aria-label="Permalink to &quot;3. 全量指标按 namespace 找&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="3. 全量指标按 namespace 找表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>Namespace</th>
@@ -254,10 +283,11 @@
 <td>每模型各 30 步</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>这里是按 tag 前缀归类的观测索引，阅读用途并非对所有内部计算公式的验证。匿名 <code>dataset-xxxx</code> 和 <code>harness-A/B/...</code> 不应随意映射成公开任务名称。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_4-派生-csv-怎么用">
 <h2 id="_4-派生-csv-怎么用" tabindex="-1">4. 派生 CSV 怎么用 <a class="header-anchor" href="#_4-派生-csv-怎么用" aria-label="Permalink to &quot;4. 派生 CSV 怎么用&quot;">&ZeroWidthSpace;</a></h2>
 <ul>
 <li><a href="/papers/projects/mimo-v2-6/evidence/%E5%85%B3%E9%94%AE%E6%8C%87%E6%A0%87%E9%80%90%E6%AD%A5.csv">关键指标逐步.csv</a>：60 行，模型/步数/时间 + 43 个核心指标，适合 Excel 和初步分析。</li>
@@ -270,12 +300,14 @@
 </ul>
 <p>导出程序：<a href="/papers/evidence/scripts/export_dashboard.py.txt">export_dashboard.py 源码快照</a>。它只处理保存的公开数据，没有训练或推理操作。图表程序使用 ReportLab LinePlot、MuPDF 渲染：<a href="/papers/evidence/scripts/chart_dashboard.py.txt">chart_dashboard.py 源码快照</a>。两份源码以文本提供，保留原资料目录约定；在其他目录运行时需调整输入、输出路径。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_5-配套图">
 <h2 id="_5-配套图" tabindex="-1">5. 配套图 <a class="header-anchor" href="#_5-配套图" aria-label="Permalink to &quot;5. 配套图&quot;">&ZeroWidthSpace;</a></h2>
-<p><img src="/papers/projects/mimo-v2-6/evidence/训练与评测.png" alt="运行概览"></p>
+<figure class="note-figure"><img src="/papers/projects/mimo-v2-6/evidence/训练与评测.png" alt="运行概览"><figcaption>运行概览</figcaption></figure>
 <p>更细的 <a href="/papers/projects/mimo-v2-6/loss-and-metrics">训练损失分析</a>含六个面板；<a href="/papers/engineering/evaluation-and-feedback">benchmark 章节</a>含三组评测曲线。图表没有把缺失值替换成 0，也没有为未公开点插值。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_6-统计核验">
 <h2 id="_6-统计核验" tabindex="-1">6. 统计核验 <a class="header-anchor" href="#_6-统计核验" aria-label="Permalink to &quot;6. 统计核验&quot;">&ZeroWidthSpace;</a></h2>
 <p>原归档核验中，每模型 step 均为 1–30；每个 tag 对应 30 个位置。最终保留序列的 token 求和与各自 status 中 <code>tokens_cum</code> 一致。末尾 trained trajectories 为 25,088，30 步累计 752,640；六条公告时间按 UTC+8 排序。</p>
 </section>

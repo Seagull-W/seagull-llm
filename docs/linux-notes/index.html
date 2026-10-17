@@ -1,9 +1,19 @@
-<div class="native-document format-directory" data-format="directory" aria-label="linux学习笔记">
-<header class="document-intro">
-<h1 id="linux学习笔记" tabindex="-1">linux学习笔记 <a class="header-anchor" href="#linux学习笔记" aria-label="Permalink to &quot;linux学习笔记&quot;">&ZeroWidthSpace;</a></h1>
-<p>记录 Linux 系统概念与实践，结合示意图和命令示例理解系统的工作方式。</p>
+<div class="native-document format-directory" data-format="directory" aria-label="linux学习笔记" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">Linux 学习笔记<span>机制图解与命令实践</span></p>
+  <h1 id="linux学习笔记" tabindex="-1">linux学习笔记 <a class="header-anchor" href="#linux学习笔记" aria-label="Permalink to &quot;linux学习笔记&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">记录 Linux 系统概念与实践，从进程、内核与隔离机制开始。</p>
+  <div class="note-chips"><span>Linux</span></div>
 </header>
-<section class="document-section">
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#阅读笔记"><span>01</span>阅读笔记</a>
+</nav>
+
+<details class="note-context-details" id="reading-context"><summary>栏目说明与资料范围</summary><div>
+<p>记录 Linux 系统概念与实践，结合示意图和命令示例理解系统的工作方式。</p>
+</div></details>
+
+<section class="document-section note-panel" aria-labelledby="阅读笔记">
 <h2 id="阅读笔记" tabindex="-1">阅读笔记 <a class="header-anchor" href="#阅读笔记" aria-label="Permalink to &quot;阅读笔记&quot;">&ZeroWidthSpace;</a></h2>
 <ChapterCards :items="[
   { label: '第 1 篇', title: 'Linux 隔离机制：Namespace、cgroups 与 seccomp', link: '/linux-notes/linux-isolation', description: '从进程、内核与系统调用出发，理解容器和沙箱的资源视图、资源限制与系统调用过滤。' }

@@ -8,9 +8,7 @@ layout: doc
 title: 西湖大学强化学习笔记
 pageClass: chapter-index
 aside: false
-description: >-
-  西湖大学强化学习笔记 &ZeroWidthSpace; 学习西湖大学强化学习课程/教材的读书笔记，涵盖强化学习基础、策略梯度、Actor-Critic
-  等核心内容。 概念与算法 &ZeroWidthSpace; 课程讲义
+description: 以概念笔记连接课程讲义，循序理解价值函数、策略梯度、随机近似与强化学习算法。
 contentFormat: html
 ---
 

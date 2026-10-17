@@ -1,15 +1,41 @@
-<article class="native-document format-paper" data-format="paper" aria-label="后训练项目来源与版本定位">
-<header class="document-intro">
-<h1 id="后训练项目来源与版本定位" tabindex="-1">后训练项目来源与版本定位 <a class="header-anchor" href="#后训练项目来源与版本定位" aria-label="Permalink to &quot;后训练项目来源与版本定位&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-paper" data-format="paper" aria-label="后训练项目来源与版本定位" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
+  <h1 id="后训练项目来源与版本定位" tabindex="-1">后训练项目来源与版本定位 <a class="header-anchor" href="#后训练项目来源与版本定位" aria-label="Permalink to &quot;后训练项目来源与版本定位&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">按项目与材料类型定位作者报告、配置、看板、Issue 和固定版本。</p>
+  <div class="note-chips"><span>论文与项目随谈</span><span>后训练</span><span>项目实践</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#_1-小米真实运行与反馈"><span>02</span>1. 小米真实运行与反馈</a>
+<a href="#_2-小米开源复现"><span>03</span>2. 小米开源复现</a>
+<a href="#_3-mimo-报告与机制定位"><span>04</span>3. MiMo 报告与机制定位</a>
+<a href="#_4-各项目运行、报告与-benchmark"><span>05</span>4. 各项目运行、报告与 benchmark</a>
+<a href="#_5-框架工程与实际报错"><span>06</span>5. 框架工程与实际报错</a>
+</nav>
+<figure class="note-diagram" aria-label="顺着证据回到版本">
+  <p class="note-diagram-title">顺着证据回到版本</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>作者材料</strong><span>报告与原始记录</span></div>
+    <div class="note-flow-step tone-1"><strong>实现材料</strong><span>代码与配置</span></div>
+    <div class="note-flow-step tone-2"><strong>运行反馈</strong><span>看板、Issue 与修复</span></div>
+    <div class="note-flow-step tone-0"><strong>版本定位</strong><span>保留链接和提交信息</span></div>
+  </div>
+  <figcaption>资料类型和固定版本共同决定一个结论能够支持到哪里。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <blockquote>
 <p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
 </blockquote>
 <p>本页先列人类阅读入口。全部已保存 HTTP 来源与状态、大小、hash 见 <a href="/papers/evidence/%E6%9D%A5%E6%BA%90%E6%B8%85%E5%8D%95.csv">来源清单 CSV</a>和 <a href="/papers/evidence/%E6%9D%A5%E6%BA%90%E6%B8%85%E5%8D%95.json">机器可读清单</a>。引用优先用官方/作者材料；社交平台转载只用于发现线索。</p>
 <p>各项目的连续阅读入口见 <a href="/papers/projects/coverage">项目目录</a>，benchmark/loss 的取得状态见 <a href="/papers/evidence/project-metrics">指标证据索引</a>。下面按材料类型列来源，不表示项目主次。</p>
-</header>
-<section class="document-section">
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_1-小米真实运行与反馈">
 <h2 id="_1-小米真实运行与反馈" tabindex="-1">1. 小米真实运行与反馈 <a class="header-anchor" href="#_1-小米真实运行与反馈" aria-label="Permalink to &quot;1. 小米真实运行与反馈&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="1. 小米真实运行与反馈表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>来源</th>
@@ -69,12 +95,13 @@
 <td>循环调用、修复后的可能回归</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p><code>live</code> 和 <code>tags</code> 文件一并保存，完整 URL 见 <a href="/papers/projects/mimo-v2-6/evidence/manifest.json">归档 manifest</a>。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_2-小米开源复现">
 <h2 id="_2-小米开源复现" tabindex="-1">2. 小米开源复现 <a class="header-anchor" href="#_2-小米开源复现" aria-label="Permalink to &quot;2. 小米开源复现&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="2. 小米开源复现表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>来源</th>
@@ -134,13 +161,14 @@
 <td>Code 的模型 gateway 和 capture</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p><code>.gitmodules</code> 中的 <code>MiMo-Agent</code> 旧名在本次 HTTP 访问重定向为 <code>mimoagent</code>；不是另一个已证明缺失的依赖。submodule 精确 revision 仍应取父仓库 gitlink，不能直接用子仓库当前头替代。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_3-mimo-报告与机制定位">
 <h2 id="_3-mimo-报告与机制定位" tabindex="-1">3. MiMo 报告与机制定位 <a class="header-anchor" href="#_3-mimo-报告与机制定位" aria-label="Permalink to &quot;3. MiMo 报告与机制定位&quot;">&ZeroWidthSpace;</a></h2>
 <p><a href="https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Pro-RL/blob/main/MiMo_V2_6_technical_report.pdf" target="_blank" rel="noreferrer">MiMo-V2.6 技术报告</a>共 44 页，已提取相关段落并查看架构/实验页。下表页码为 PDF 从 1 开始的页序；用于回到原文，避免把设计说明当成事故日志。</p>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="3. MiMo 报告与机制定位表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>PDF 页序</th>
@@ -173,12 +201,13 @@
 <td>跨 harness 结果</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p><a href="/papers/projects/codemidas/">CodeMidas</a>另有独立档案，使用其报告全文与训练/评测附录；不将两个项目的数据 manifest 或运行配置合并。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_4-各项目运行、报告与-benchmark">
 <h2 id="_4-各项目运行、报告与-benchmark" tabindex="-1">4. 各项目运行、报告与 benchmark <a class="header-anchor" href="#_4-各项目运行、报告与-benchmark" aria-label="Permalink to &quot;4. 各项目运行、报告与 benchmark&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="4. 各项目运行、报告与 benchmark表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>来源</th>
@@ -253,11 +282,12 @@
 <td>环境生产/过滤、GRPO 配置、benchmark 与行为分析</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_5-框架工程与实际报错">
 <h2 id="_5-框架工程与实际报错" tabindex="-1">5. 框架工程与实际报错 <a class="header-anchor" href="#_5-框架工程与实际报错" aria-label="Permalink to &quot;5. 框架工程与实际报错&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="5. 框架工程与实际报错表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>来源</th>
@@ -298,7 +328,7 @@
 <td>CPU offload 后 RAM 耗尽；Closed 不等于确认修复</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>全部源码只作阅读，没有执行远程训练代码。可读 HTTP 页面也不意味着动态图表/完整日志成功获取，具体状态在机器清单和检索记录中说明。</p>
 </section>
 </article>

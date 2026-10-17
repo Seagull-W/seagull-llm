@@ -7,7 +7,7 @@ title: 第 4 讲：值迭代与策略迭代
 outline: false
 aside: false
 pdf: true
-description: 第 4 讲：值迭代与策略迭代
+description: 第 4 讲课程资料：学习值迭代与策略迭代，比较寻找最优价值和改进策略的思路。
 contentFormat: html
 ---
 

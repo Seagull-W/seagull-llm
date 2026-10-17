@@ -1,11 +1,34 @@
-<article class="native-document format-paper" data-format="paper" aria-label="DeepSeek-R1 技术报告阅读笔记">
-<header class="document-intro">
-<h1 id="deepseek-r1-技术报告-阅读笔记" tabindex="-1">DeepSeek-R1 技术报告 阅读笔记 <a class="header-anchor" href="#deepseek-r1-技术报告-阅读笔记" aria-label="Permalink to &quot;DeepSeek-R1 技术报告 阅读笔记&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-paper" data-format="paper" aria-label="DeepSeek-R1 技术报告阅读笔记" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
+  <h1 id="deepseek-r1-技术报告-阅读笔记" tabindex="-1">DeepSeek-R1 技术报告 阅读笔记 <a class="header-anchor" href="#deepseek-r1-技术报告-阅读笔记" aria-label="Permalink to &quot;DeepSeek-R1 技术报告 阅读笔记&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">理解 R1-Zero 与 R1 的训练过程，梳理 GRPO、监督微调与奖励设计。</p>
+  <div class="note-chips"><span>论文与项目随谈</span><span>论文精读</span><span>推理模型</span><span>GRPO</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#deepseek-r1-zero"><span>02</span>deepseek-r1-zero</a>
+<a href="#deepseek-r1"><span>03</span>deepseek-r1</a>
+</nav>
+<figure class="note-diagram" aria-label="两条训练路线放在一起看">
+  <p class="note-diagram-title">两条训练路线放在一起看</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>R1-Zero</strong><span>直接 RL 的探索</span></div>
+    <div class="note-flow-step tone-1"><strong>观察与限制</strong><span>推理表现与可读性</span></div>
+    <div class="note-flow-step tone-2"><strong>DeepSeek-R1</strong><span>冷启动与多阶段训练</span></div>
+    <div class="note-flow-step tone-0"><strong>训练分析</strong><span>奖励、采样与系统实现</span></div>
+  </div>
+  <figcaption>先读 R1-Zero 的直接强化学习，再看 R1 如何加入多阶段训练。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <blockquote>
 <p>论文链接：<a href="https://arxiv.org/abs/2501.12948" target="_blank" rel="noreferrer">deepseek-r1</a>，此次阅读的是 v2 版本。</p>
 </blockquote>
-</header>
-<section class="document-section">
+</section>
+
+<section class="document-section note-panel" aria-labelledby="deepseek-r1-zero">
 <h2 id="deepseek-r1-zero" tabindex="-1">deepseek-r1-zero <a class="header-anchor" href="#deepseek-r1-zero" aria-label="Permalink to &quot;deepseek-r1-zero&quot;">&ZeroWidthSpace;</a></h2>
 <p>采样纯强化学习策略训练，无监督微调，具体算法为<strong>组相对策略优化(GRPO)</strong>。</p>
 <blockquote>
@@ -19,7 +42,7 @@
 </blockquote>
 <p>共训练10,400步，每个训练步有32个不同的问题（训练批次大小为32*16=512），值得注意的是，每400步即将参考模型替换为最新的策略模型（从而允许更大的搜索范围）。为加速训练，每次rollout 生成8,192个输出，划分为16个mini-batch（16*512），且只训练一轮。</p>
 <h4 id="rl-infra" tabindex="-1">RL Infra <a class="header-anchor" href="#rl-infra" aria-label="Permalink to &quot;RL Infra&quot;">&ZeroWidthSpace;</a></h4>
-<p><img src="./figures/RLInfra.png" alt="RLInfra架构图"></p>
+<figure class="note-figure"><img src="./figures/RLInfra.png" alt="RLInfra架构图"><figcaption>RLInfra架构图</figcaption></figure>
 <p><strong>Rollout生成模块</strong>：prompt分批发放给vLLM worker，每个worker用当前actor（策略模型）权重采样分布，采用专家并行及MTP自解码等提速。</p>
 <p><strong>Inference打分模块</strong>：VRAM（显存）换入reference+reward模型，对prompt和response做前向，以计算KL loss和基准奖励。</p>
 <p><strong>规则奖励</strong>：CPU执行，与Rollout和Inference并行，每条回复生成完即可验证，输出只用在train计算;loss前汇合即可。</p>
@@ -56,20 +79,23 @@
 <p>自一致性解码：生成多次回答并选取其中频率最多的回答作为最终答案。</p>
 </blockquote>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="deepseek-r1">
 <h2 id="deepseek-r1" tabindex="-1">deepseek-r1 <a class="header-anchor" href="#deepseek-r1" aria-label="Permalink to &quot;deepseek-r1&quot;">&ZeroWidthSpace;</a></h2>
-<p><img src="./figures/R1的多流程训练.png" alt="R1的多流程训练图"></p>
+<figure class="note-figure"><img src="./figures/R1的多流程训练.png" alt="R1的多流程训练图"><figcaption>R1的多流程训练图</figcaption></figure>
 <h3 id="基于模型的奖励" tabindex="-1">基于模型的奖励 <a class="header-anchor" href="#基于模型的奖励" aria-label="Permalink to &quot;基于模型的奖励&quot;">&ZeroWidthSpace;</a></h3>
 <p>对于通用数据的偏好，依然要用模型来捕捉。</p>
 <p>这里考虑了有用性与无害性。</p>
 <h4 id="有用性奖励模型" tabindex="-1">有用性奖励模型 <a class="header-anchor" href="#有用性奖励模型" aria-label="Permalink to &quot;有用性奖励模型&quot;">&ZeroWidthSpace;</a></h4>
 <div class="math-block" data-tex="Reward_{helpful}=RM_{helpful}(Response_A,Response_B)
-"></div><p>按照arena-hard格式生成偏好对（每队含一个查询和两个候补回复），通过judge prompt让v3对其评判4次（这里通过随机分配候补回复在judge prompt中的顺序缓解<strong>位置偏差</strong>），最终取分数差超过1的对的均值作为最终偏好分数。通过确保数据集被选和被拒的回复长度相当来最小化<strong>长度偏差</strong>。</p>
+"></div>
+<p>按照arena-hard格式生成偏好对（每队含一个查询和两个候补回复），通过judge prompt让v3对其评判4次（这里通过随机分配候补回复在judge prompt中的顺序缓解<strong>位置偏差</strong>），最终取分数差超过1的对的均值作为最终偏好分数。通过确保数据集被选和被拒的回复长度相当来最小化<strong>长度偏差</strong>。</p>
 <p>架构在R1的基础上添加一个预测标量偏好分数的奖励头。</p>
 <p>训练：批次大小256，学习率6e-6，训练一个epoch。训练期设置最大序列长度为8192token，推理期间不显式限制。</p>
 <h4 id="安全性奖励模型" tabindex="-1">安全性奖励模型 <a class="header-anchor" href="#安全性奖励模型" aria-label="Permalink to &quot;安全性奖励模型&quot;">&ZeroWidthSpace;</a></h4>
 <div class="math-block" data-tex="Reward_{safety}=RM_{safety}(Response)
-"></div><p>收集了10,600条提示，并按照预定义安全指南将其标注为安全或不安全。</p>
+"></div>
+<p>收集了10,600条提示，并按照预定义安全指南将其标注为安全或不安全。</p>
 <h3 id="训练" tabindex="-1">训练 <a class="header-anchor" href="#训练" aria-label="Permalink to &quot;训练&quot;">&ZeroWidthSpace;</a></h3>
 <h4 id="第一阶段rl" tabindex="-1">第一阶段RL <a class="header-anchor" href="#第一阶段rl" aria-label="Permalink to &quot;第一阶段RL&quot;">&ZeroWidthSpace;</a></h4>
 <p>学习率设置为 3e-6，KL 系数设置为 0.001，GRPO <strong>裁剪比 <span class="math-inline" data-tex="𝜀"></span> 设置为 10</strong>，rollout 采样温度为 1。对于每个问题，采样 16 个输出，最大长度为 32,768。每个训练步由 32 个不同问题组成，因此每步训练批次大小为 512。每 400 步，将参考模型替换为最新的策略模型。为加速训练，每次 rollout 生成 8,192 个输出，随机划分为 16 个 minibatch，仅训练一个内部轮次。</p>

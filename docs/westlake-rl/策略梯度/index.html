@@ -1,12 +1,44 @@
-<article class="native-document format-course" data-format="course" aria-label="策略梯度">
-<header class="document-intro">
-<h1 id="article-title" tabindex="-1">策略梯度 <a class="header-anchor" href="#article-title" aria-label="文章链接">&#8203;</a></h1>
+<article class="native-document format-course" data-format="course" aria-label="策略梯度" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">西湖 RL 笔记<span>概念、推导与算法</span></p>
+  <h1 id="article-title" tabindex="-1">策略梯度 <a class="header-anchor" href="#article-title" aria-label="文章链接">&#8203;</a></h1>
+  <p class="note-deck">理解策略参数化、优化指标与 REINFORCE 算法。</p>
+  <div class="note-chips"><span>强化学习</span><span>策略梯度</span><span>蒙特卡洛</span><span>价值函数</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#指标选择"><span>02</span>指标选择</a>
+<a href="#梯度推导"><span>03</span>梯度推导</a>
+<a href="#蒙特卡洛策略梯度reinforce"><span>04</span>蒙特卡洛策略梯度Reinforce</a>
+</nav>
+<figure class="note-diagram" aria-label="策略梯度的推导路线">
+  <p class="note-diagram-title">策略梯度的推导路线</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>参数化策略</strong><span>用参数描述动作概率</span></div>
+    <div class="note-flow-step tone-1"><strong>标量目标</strong><span>明确优化什么</span></div>
+    <div class="note-flow-step tone-2"><strong>梯度推导</strong><span>连接回报与参数变化</span></div>
+    <div class="note-flow-step tone-0"><strong>采样估计</strong><span>REINFORCE 等方法</span></div>
+  </div>
+  <figcaption>先确定优化指标，随后推导梯度，最后用采样估计落实为算法。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <p>将策略用参数化函数表示（<span class="math-inline" data-tex="\pi (a|s,\theta)"></span>），通过优化函数参数进而最大化某个<em>标量指标</em>来得到最优策略的方法叫做<strong>策略梯度</strong>。</p>
 <p>这里最优策略变为了最大化某个标量指标的策略，更新策略等价于更新参数，通过计算获取动作概率。</p>
-<h3 id="指标选择" tabindex="-1">指标选择 <a class="header-anchor" href="#指标选择" aria-label="Permalink to &quot;指标选择&quot;">&ZeroWidthSpace;</a></h3>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="指标选择">
+<h2 id="指标选择" tabindex="-1">指标选择 <a class="header-anchor" href="#指标选择" aria-label="Permalink to &quot;指标选择&quot;">&ZeroWidthSpace;</a></h2>
 <p>一是平均状态价值，不难理解
 二是平均单步奖励</p>
-<h3 id="梯度推导" tabindex="-1">梯度推导 <a class="header-anchor" href="#梯度推导" aria-label="Permalink to &quot;梯度推导&quot;">&ZeroWidthSpace;</a></h3>
-<h3 id="蒙特卡洛策略梯度reinforce" tabindex="-1">蒙特卡洛策略梯度Reinforce <a class="header-anchor" href="#蒙特卡洛策略梯度reinforce" aria-label="Permalink to &quot;蒙特卡洛策略梯度Reinforce&quot;">&ZeroWidthSpace;</a></h3>
-</header>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="梯度推导">
+<h2 id="梯度推导" tabindex="-1">梯度推导 <a class="header-anchor" href="#梯度推导" aria-label="Permalink to &quot;梯度推导&quot;">&ZeroWidthSpace;</a></h2>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="蒙特卡洛策略梯度reinforce">
+<h2 id="蒙特卡洛策略梯度reinforce" tabindex="-1">蒙特卡洛策略梯度Reinforce <a class="header-anchor" href="#蒙特卡洛策略梯度reinforce" aria-label="Permalink to &quot;蒙特卡洛策略梯度Reinforce&quot;">&ZeroWidthSpace;</a></h2>
+</section>
 </article>

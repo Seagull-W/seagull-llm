@@ -1,24 +1,54 @@
-<article class="native-document format-paper" data-format="paper" aria-label="Miles GLM-5.2：终端 Agent 的大型异步 RL 参考运行">
-<header class="document-intro">
-<h1 id="miles-glm-5-2-终端-agent-的大型异步-rl-参考运行" tabindex="-1">Miles GLM-5.2：终端 Agent 的大型异步 RL 参考运行 <a class="header-anchor" href="#miles-glm-5-2-终端-agent-的大型异步-rl-参考运行" aria-label="Permalink to &quot;Miles GLM-5.2：终端 Agent 的大型异步 RL 参考运行&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-paper" data-format="paper" aria-label="Miles GLM-5.2：终端 Agent 的大型异步 RL 参考运行" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
+  <h1 id="miles-glm-5-2-终端-agent-的大型异步-rl-参考运行" tabindex="-1">Miles GLM-5.2：终端 Agent 的大型异步 RL 参考运行 <a class="header-anchor" href="#miles-glm-5-2-终端-agent-的大型异步-rl-参考运行" aria-label="Permalink to &quot;Miles GLM-5.2：终端 Agent 的大型异步 RL 参考运行&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">整理终端环境、GRPO/TIS、Slurm/Ray、KV 与路由排错及 replay。</p>
+  <div class="note-chips"><span>论文与项目随谈</span><span>Miles</span><span>后训练</span><span>异步训练</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#_1-研究对象、规模与版本"><span>02</span>1. 研究对象、规模与版本</a>
+<a href="#_2-数据-→-环境-→-reward"><span>03</span>2. 数据 → 环境 → reward</a>
+<a href="#_3-算法、批次与异步采样"><span>04</span>3. 算法、批次与异步采样</a>
+<a href="#_4-分布式布局与启动路径"><span>05</span>4. 分布式布局与启动路径</a>
+<a href="#_5-训练-loss、性能与-benchmark"><span>06</span>5. 训练 loss、性能与 benchmark</a>
+<a href="#_6-故障、修复与恢复"><span>07</span>6. 故障、修复与恢复</a>
+<a href="#_7-产物、反馈与下一步"><span>08</span>7. 产物、反馈与下一步</a>
+</nav>
+<figure class="note-diagram" aria-label="终端 Agent 的异步训练链">
+  <p class="note-diagram-title">终端 Agent 的异步训练链</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>终端任务</strong><span>环境与交互反馈</span></div>
+    <div class="note-flow-step tone-1"><strong>异步采样</strong><span>rollout 与版本关联</span></div>
+    <div class="note-flow-step tone-2"><strong>GRPO / TIS</strong><span>核对更新算法</span></div>
+    <div class="note-flow-step tone-0"><strong>运行排错</strong><span>Slurm、Ray、KV 与 replay</span></div>
+  </div>
+  <figcaption>终端环境、采样和大型训练系统共同构成参考运行。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <blockquote>
 <p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
 </blockquote>
-</header>
-<section class="document-section">
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_1-研究对象、规模与版本">
 <h2 id="_1-研究对象、规模与版本" tabindex="-1">1. 研究对象、规模与版本 <a class="header-anchor" href="#_1-研究对象、规模与版本" aria-label="Permalink to &quot;1. 研究对象、规模与版本&quot;">&ZeroWidthSpace;</a></h2>
 <p>对象是 Miles 团队公开的 GLM-5.2 744B-A40B 参考实验。2026-08-18 的<a href="https://www.lmsys.org/blog/2026-08-18-miles-v0-1/" target="_blank" rel="noreferrer">作者工程文章</a>报告 64 GB300，训练/rollout 各 32 卡，65k context、batch 64、100 rollout steps。它是具体模型上的训练实验；材料没有覆盖 GLM-5.2 基础模型自身的全部后训练。</p>
 <p>本轮同时读取了当前 main 的 <a href="https://github.com/radixark/miles/blob/main/examples/experimental/openenv/glm52_tbench2/README.md" target="_blank" rel="noreferrer">README</a>、<a href="https://github.com/radixark/miles/blob/main/examples/experimental/openenv/glm52_tbench2/run_glm5_2_744b_a40b_daytona.py" target="_blank" rel="noreferrer">Python recipe</a>和 <a href="https://github.com/radixark/miles/blob/main/examples/experimental/openenv/glm52_tbench2/launch_16node_slurm.sh" target="_blank" rel="noreferrer">Slurm launcher</a>。抓取日及 hash 已保存，历史实验 SHA 尚未核验。文章中的推理 TP8 与当前默认 DP-attention 配置需要分别保留。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_2-数据-→-环境-→-reward">
 <h2 id="_2-数据-→-环境-→-reward" tabindex="-1">2. 数据 → 环境 → reward <a class="header-anchor" href="#_2-数据-→-环境-→-reward" aria-label="Permalink to &quot;2. 数据 → 环境 → reward&quot;">&ZeroWidthSpace;</a></h2>
 <p>训练任务来自 terminal-bench-2 checkout。数据生成器将任务整理为 JSONL，<code>metadata.task_id</code> 选择对应任务目录及镜像；评测需使用不相交的 held-out task set。每条 episode 在独立 Daytona sandbox 中执行终端任务，以任务的 <code>tests/test.sh</code> 评分。recipe 连接 agent function、reward hook 与 aborted-sample filter。<a href="https://github.com/radixark/miles/blob/main/examples/experimental/openenv/glm52_tbench2/README.md" target="_blank" rel="noreferrer">README</a>、<a href="https://github.com/radixark/miles/blob/main/examples/experimental/openenv/glm52_tbench2/run_glm5_2_744b_a40b_daytona.py" target="_blank" rel="noreferrer">recipe</a></p>
 <p>依赖需要逐层准备：Miles/SGLang 运行镜像、OpenEnv checkout 的 editable 环境包、任务定义、模型的训练分片与 FP8 推理格式、Megatron disk-streaming checkpoint hooks、Daytona 配额。原运行的数据 manifest、全部题目和过滤后样本尚未取得；本轮未核验该实验另有 SFT 或偏好训练阶段。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_3-算法、批次与异步采样">
 <h2 id="_3-算法、批次与异步采样" tabindex="-1">3. 算法、批次与异步采样 <a class="header-anchor" href="#_3-算法、批次与异步采样" aria-label="Permalink to &quot;3. 算法、批次与异步采样&quot;">&ZeroWidthSpace;</a></h2>
 <p>以下为当前 recipe 的可读默认值，不自动等于文章发表时的配置。<a href="https://github.com/radixark/miles/blob/main/examples/experimental/openenv/glm52_tbench2/run_glm5_2_744b_a40b_daytona.py" target="_blank" rel="noreferrer">recipe</a></p>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="3. 算法、批次与异步采样表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>环节</th>
@@ -58,17 +88,19 @@
 <td>完成一条即可补入，避免等待同组最长样本</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>多轮 token 的一致性还涉及 TITO，见团队的<a href="https://www.lmsys.org/blog/2026-05-13-no-token-left-behind/" target="_blank" rel="noreferrer">轨迹工程说明</a>。使用之前需核对模板、工具输出、采样 token 与训练 token 的实际连接；本轮没有在集群运行 recipe。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_4-分布式布局与启动路径">
 <h2 id="_4-分布式布局与启动路径" tabindex="-1">4. 分布式布局与启动路径 <a class="header-anchor" href="#_4-分布式布局与启动路径" aria-label="Permalink to &quot;4. 分布式布局与启动路径&quot;">&ZeroWidthSpace;</a></h2>
 <p>当前 README 为 16 节点×4 卡：8 个训练节点采用 TP2/CP4/PP4/EP8，8 个推理节点运行 FP8 DP-attention engines。训练 DP1 的 optimizer state 未按 DP 分片，依赖 node-local disk streaming。Slurm 负责节点和容器，Ray 负责进程资源；launcher 将实验参数交给 Python recipe。<a href="https://github.com/radixark/miles/blob/main/examples/experimental/openenv/glm52_tbench2/README.md" target="_blank" rel="noreferrer">README</a>、<a href="https://github.com/radixark/miles/blob/main/examples/experimental/openenv/glm52_tbench2/launch_16node_slurm.sh" target="_blank" rel="noreferrer">launcher</a></p>
 <p>启动前需匹配 compute-fabric 地址、共享挂载、node-local scratch 和模型格式。launcher 明确指出：误用管理网地址可能让 Ray 启动静默卡住，worker 首次连接过早也可能失败，因此脚本会重试加入。模型预置本地磁盘用于减少 engine 重启时的 NFS 读取等待。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_5-训练-loss、性能与-benchmark">
 <h2 id="_5-训练-loss、性能与-benchmark" tabindex="-1">5. 训练 loss、性能与 benchmark <a class="header-anchor" href="#_5-训练-loss、性能与-benchmark" aria-label="Permalink to &quot;5. 训练 loss、性能与 benchmark&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="5. 训练 loss、性能与 benchmark表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>证据</th>
@@ -98,12 +130,13 @@
 <td>已获得全部逐步分数，或小幅变化已显著</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>出处分别为<a href="https://www.lmsys.org/blog/2026-08-18-miles-v0-1/" target="_blank" rel="noreferrer">文章</a>和 <a href="https://github.com/radixark/miles/blob/main/examples/experimental/openenv/glm52_tbench2/README.md" target="_blank" rel="noreferrer">README</a>。README 作者给出该 eval 示例约 0.08 的 σ，这是其说明，不是本轮重新计算的置信区间。loss 数值序列和每题评测输出仍是本项目的重点检索缺口。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_6-故障、修复与恢复">
 <h2 id="_6-故障、修复与恢复" tabindex="-1">6. 故障、修复与恢复 <a class="header-anchor" href="#_6-故障、修复与恢复" aria-label="Permalink to &quot;6. 故障、修复与恢复&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="6. 故障、修复与恢复表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>症状</th>
@@ -133,10 +166,11 @@
 <td>加载后的 eval0 与 scheduler 检查</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>这些是<a href="https://github.com/radixark/miles/blob/main/examples/experimental/openenv/glm52_tbench2/README.md" target="_blank" rel="noreferrer">作者 README 的排错与重放说明</a>。本轮取得的是方法和配置，没有完整事故时间线、修复前后 loss 文件或成功恢复日志。故障索引见 <a href="/papers/engineering/failure-handbook">F11</a>。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_7-产物、反馈与下一步">
 <h2 id="_7-产物、反馈与下一步" tabindex="-1">7. 产物、反馈与下一步 <a class="header-anchor" href="#_7-产物、反馈与下一步" aria-label="Permalink to &quot;7. 产物、反馈与下一步&quot;">&ZeroWidthSpace;</a></h2>
 <p>当前可复核产物包括 recipe、launcher、模型转换路径、checkpoint/dump 目录约定；原 run 的完整公开 checkpoint 集及部署后用户反馈未核验。后续独立追踪：原始 commit/镜像；任务与 eval manifest；loss/reward/KL/梯度/版本滞后完整序列；100 步性能分解；重启与恢复样本。各项均需保留运行 ID，避免把不同模式拼成一个 run。</p>
 <p>返回：<a href="/papers/projects/coverage">项目目录</a>、<a href="/papers/evidence/project-metrics">指标证据索引</a>。</p>

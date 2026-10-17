@@ -4,33 +4,6 @@ import { researchSidebar } from './research-sidebar'
 
 // 手工专题和流水线文章统一登记在 docs/research/catalog.json。
 
-// ===== LLM 科普书侧边栏（/llm-book/）=====
-export const llmBookSidebar = [
-  {
-    text: '开篇',
-    collapsed: false,
-    items: [{ text: '第 0 章 大模型全景', link: '/llm-book/ch00-overview' }]
-  },
-  {
-    text: '第一层 · 建立直觉',
-    collapsed: false,
-    items: [
-      { text: '第 1 章 从一次对话说起', link: '/llm-book/ch01-what-is-lm' },
-      { text: '第 2 章 Token 化', link: '/llm-book/ch02-tokenization' }
-    ]
-  },
-  {
-    text: '新版重构试读',
-    collapsed: false,
-    items: [
-      { text: '学习地图与样章', link: '/llm-book/rebuild/' },
-      { text: '一次回答是怎样生成的', link: '/llm-book/rebuild/how-generation-works' },
-      { text: '带引用的回答，怎样才算有依据', link: '/llm-book/rebuild/verifiable-answers' },
-      { text: '图与动画的来源及范围', link: '/llm-book/rebuild/visual-resources' }
-    ]
-  }
-]
-
 // ===== Nathan Lambert RL BOOK 学习笔记侧边栏（/rl-book/）=====
 export const rlBookSidebar = [
   {
@@ -246,7 +219,6 @@ export const linuxNotesSidebar = [
 // VitePress 多侧边栏：按路径前缀匹配
 export const sidebar = {
   '/research/': researchSidebar,
-  '/llm-book/': llmBookSidebar,
   '/papers/': papersSidebar,
   '/rl-book/': rlBookSidebar,
   '/westlake-rl/': westlakeRlSidebar,

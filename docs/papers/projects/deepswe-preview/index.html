@@ -1,25 +1,55 @@
-<article class="native-document format-paper" data-format="paper" aria-label="DeepSWE-Preview：软件工程 Agent 的数据、RL 与评测闭环">
-<header class="document-intro">
-<h1 id="deepswe-preview-软件工程-agent-的数据、rl-与评测闭环" tabindex="-1">DeepSWE-Preview：软件工程 Agent 的数据、RL 与评测闭环 <a class="header-anchor" href="#deepswe-preview-软件工程-agent-的数据、rl-与评测闭环" aria-label="Permalink to &quot;DeepSWE-Preview：软件工程 Agent 的数据、RL 与评测闭环&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-paper" data-format="paper" aria-label="DeepSWE-Preview：软件工程 Agent 的数据、RL 与评测闭环" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
+  <h1 id="deepswe-preview-软件工程-agent-的数据、rl-与评测闭环" tabindex="-1">DeepSWE-Preview：软件工程 Agent 的数据、RL 与评测闭环 <a class="header-anchor" href="#deepswe-preview-软件工程-agent-的数据、rl-与评测闭环" aria-label="Permalink to &quot;DeepSWE-Preview：软件工程 Agent 的数据、RL 与评测闭环&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">整理 R2E-Gym、GRPO++、容器调度、训练脚本与评测复现边界。</p>
+  <div class="note-chips"><span>论文与项目随谈</span><span>DeepSWE</span><span>GRPO</span><span>代码智能体</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#_1-对象、规模与版本"><span>02</span>1. 对象、规模与版本</a>
+<a href="#_2-数据、环境与反馈信号"><span>03</span>2. 数据、环境与反馈信号</a>
+<a href="#_3-算法与更新配置"><span>04</span>3. 算法与更新配置</a>
+<a href="#_4-分布式与环境调度"><span>05</span>4. 分布式与环境调度</a>
+<a href="#_5-loss、训练曲线与-benchmark"><span>06</span>5. loss、训练曲线与 benchmark</a>
+<a href="#_6-报错、失败实验与恢复"><span>07</span>6. 报错、失败实验与恢复</a>
+<a href="#_7-发布、反馈与独立检索缺口"><span>08</span>7. 发布、反馈与独立检索缺口</a>
+</nav>
+<figure class="note-diagram" aria-label="软件工程 Agent 的反馈闭环">
+  <p class="note-diagram-title">软件工程 Agent 的反馈闭环</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>R2E-Gym</strong><span>软件工程任务与环境</span></div>
+    <div class="note-flow-step tone-1"><strong>Rollout</strong><span>执行与验证反馈</span></div>
+    <div class="note-flow-step tone-2"><strong>GRPO++</strong><span>训练配置和更新</span></div>
+    <div class="note-flow-step tone-0"><strong>评测复现</strong><span>脚本、协议与边界</span></div>
+  </div>
+  <figcaption>任务执行环境既产生学习反馈，也会带来独立的工程约束。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <blockquote>
 <p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
 </blockquote>
-</header>
-<section class="document-section">
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_1-对象、规模与版本">
 <h2 id="_1-对象、规模与版本" tabindex="-1">1. 对象、规模与版本 <a class="header-anchor" href="#_1-对象、规模与版本" aria-label="Permalink to &quot;1. 对象、规模与版本&quot;">&ZeroWidthSpace;</a></h2>
 <p>对象为 2025-07 发布的 DeepSWE-Preview。作者说明以已有 Qwen3-32B 为起点，约 4,500 个 R2E-Gym 任务、64 H100、六天 RL；“RL only”指该项目的训练阶段。<a href="https://www.together.ai/blog/deepswe" target="_blank" rel="noreferrer">作者文章</a> 它与 2026 年 DeepSWE benchmark 是不同对象。</p>
 <p>本轮读取作者文章、<a href="https://github.com/agentica-project/rllm/tree/main/examples/swe" target="_blank" rel="noreferrer">rLLM SWE README</a>、<a href="https://github.com/agentica-project/rllm/blob/main/examples/swe/prepare_swe_data.py" target="_blank" rel="noreferrer">数据准备</a>、<a href="https://github.com/agentica-project/rllm/blob/main/examples/swe/train_deepswe_32b.sh" target="_blank" rel="noreferrer">训练脚本</a>及评测指南。当前 main 的版本和历史 run 需要分别记录。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_2-数据、环境与反馈信号">
 <h2 id="_2-数据、环境与反馈信号" tabindex="-1">2. 数据、环境与反馈信号 <a class="header-anchor" href="#_2-数据、环境与反馈信号" aria-label="Permalink to &quot;2. 数据、环境与反馈信号&quot;">&ZeroWidthSpace;</a></h2>
 <p>R2E-Gym 将代码任务与独立镜像连接，Agent 使用 Bash、搜索、编辑、提交工具，环境返回执行观察。作者过滤了与 SWE-Bench Verified 同仓库的训练任务；训练 reward 为受限时间内选定测试通过的 0/1 结果，训练测试限时 5 分钟，官方评测限时 30 分钟。<a href="https://www.together.ai/blog/deepswe" target="_blank" rel="noreferrer">作者文章</a></p>
 <p>数据准备脚本注册 R2E-Gym 子集与 SWE-Bench Verified；没有预期 train/test 时会使用首个 split。复现需检查实际数据集内容、仓库交集和版本，不能只用 split 名称证明无污染。<a href="https://github.com/agentica-project/rllm/blob/main/examples/swe/prepare_swe_data.py" target="_blank" rel="noreferrer">数据准备代码</a> 完整原始训练任务清单及每题过滤记录尚未取得。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_3-算法与更新配置">
 <h2 id="_3-算法与更新配置" tabindex="-1">3. 算法与更新配置 <a class="header-anchor" href="#_3-算法与更新配置" aria-label="Permalink to &quot;3. 算法与更新配置&quot;">&ZeroWidthSpace;</a></h2>
 <p>作者将配方称为 GRPO++，包含多轮 observation mask、clip high、无 KL/entropy loss、leave-one-out 与 compact filtering。后者屏蔽达到上下文、步数或时间边界的非正常完成轨迹；失败实验和消融有助于解释其选择。<a href="https://www.together.ai/blog/deepswe" target="_blank" rel="noreferrer">作者文章</a></p>
 <p>下表是 2026-10-11 当前脚本的事实，不是恢复出的 2025 原始配置。<a href="https://github.com/agentica-project/rllm/blob/main/examples/swe/train_deepswe_32b.sh" target="_blank" rel="noreferrer">训练脚本</a></p>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="3. 算法与更新配置表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>环节</th>
@@ -56,17 +86,19 @@
 <td>50 steps、5,400s、每 10 更新保存/评测；console/W&amp;B logger</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>代码中的 KL coefficient 字段不证明已启用 KL loss；异步生成 mode 也不独自证明整个 optimizer 流水线完全异步。脚本 <code>total_epochs=1000</code> 不能当作实际运行完成长度。当前 batch8×n8 与作者原训练 64×8/512 容器说明不同。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_4-分布式与环境调度">
 <h2 id="_4-分布式与环境调度" tabindex="-1">4. 分布式与环境调度 <a class="header-anchor" href="#_4-分布式与环境调度" aria-label="Permalink to &quot;4. 分布式与环境调度&quot;">&ZeroWidthSpace;</a></h2>
 <p>GPU 训练之外还有容器供给集群。作者记录大批并发容器使 Docker API/dockerd 崩溃，随后用 Kubernetes 分摊环境执行并预置镜像；这给出了实际故障—架构调整的链条。<a href="https://www.together.ai/blog/deepswe" target="_blank" rel="noreferrer">作者文章</a></p>
 <p>README 的复现资源约束包括至少 64 GPU 和 512 个并发容器。训练进程、Kubernetes worker、镜像磁盘与评分任务分别需要容量规划；原始 Ray/Slurm 提交文件、GPU/CPU 节点完整拓扑和逐步利用率未核验。<a href="https://github.com/agentica-project/rllm/tree/main/examples/swe" target="_blank" rel="noreferrer">README</a></p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_5-loss、训练曲线与-benchmark">
 <h2 id="_5-loss、训练曲线与-benchmark" tabindex="-1">5. loss、训练曲线与 benchmark <a class="header-anchor" href="#_5-loss、训练曲线与-benchmark" aria-label="Permalink to &quot;5. loss、训练曲线与 benchmark&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="5. loss、训练曲线与 benchmark表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>项目</th>
@@ -101,16 +133,18 @@
 <td>已确认链接，本轮未完整解析归档</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>分数出处：<a href="https://www.together.ai/blog/deepswe" target="_blank" rel="noreferrer">作者文章</a>、<a href="https://github.com/agentica-project/rllm/tree/main/examples/swe" target="_blank" rel="noreferrer">README</a>。本项目仍需训练 loss、KL、gradient、截断/过滤率和 benchmark 逐步序列，不能用超参数或文章中的 reward 消融图代替原 run 的原始 loss。</p>
 <p>评测路径为模型服务 → agent 轨迹 → patch/prediction 转换 → 官方 SWE-Bench harness → 结果日志。<a href="https://github.com/agentica-project/R2E-Gym/blob/master/reproduction/DEEPSWE_REPRODUCTION.MD" target="_blank" rel="noreferrer">评测复现指南</a> 应同时保存 context、最大步数、temperature、候选数量、verifier 和任务集版本。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_6-报错、失败实验与恢复">
 <h2 id="_6-报错、失败实验与恢复" tabindex="-1">6. 报错、失败实验与恢复 <a class="header-anchor" href="#_6-报错、失败实验与恢复" aria-label="Permalink to &quot;6. 报错、失败实验与恢复&quot;">&ZeroWidthSpace;</a></h2>
 <p>已找到 dockerd 过载、轨迹边界处理及不成功的 SFT/数据选择尝试等作者反馈入口。<a href="https://www.together.ai/blog/deepswe" target="_blank" rel="noreferrer">作者文章</a> 接下来需要原始实验 ID、失败日志和对应曲线，才能精确比较这些尝试；不将“未改善”泛化为 SFT 或某数据集普遍无效。</p>
 <p>当前脚本保存 cadence 可见，完整恢复机制、optimizer/scheduler/RNG/环境状态的保存以及原 run 重启事件尚未核验。<code>save_freq=10</code> 不能证明每种状态都可恢复。可先固定 rollout 做代码核对，但本轮未执行 GPU 实验。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_7-发布、反馈与独立检索缺口">
 <h2 id="_7-发布、反馈与独立检索缺口" tabindex="-1">7. 发布、反馈与独立检索缺口 <a class="header-anchor" href="#_7-发布、反馈与独立检索缺口" aria-label="Permalink to &quot;7. 发布、反馈与独立检索缺口&quot;">&ZeroWidthSpace;</a></h2>
 <p>公开入口连接 <a href="https://huggingface.co/agentica-org/DeepSWE-Preview" target="_blank" rel="noreferrer">权重</a>、<a href="https://huggingface.co/datasets/R2E-Gym/R2E-Gym-Subset" target="_blank" rel="noreferrer">数据集</a>、训练与评测工程。<a href="https://github.com/agentica-project/rllm/tree/main/examples/swe" target="_blank" rel="noreferrer">README</a></p>
 <p>本项目继续独立追踪：W&amp;B 的原始 run/export；评测包内逐题输出；历史训练 SHA 与环境镜像；所有 loss/稳定性曲线；Docker/Kubernetes 故障时间线；checkpoint/恢复；发布后真实样本与回归反馈。各项缺口不会因为别的项目已公开同类数据而结束检索。</p>

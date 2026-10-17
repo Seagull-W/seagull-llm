@@ -5,6 +5,7 @@ import './styles/custom.css'
 import './styles/reading.css'
 import './styles/sections.css'
 import './styles/native-html.css'
+import './styles/notebook-design.css'
 import ChapterCards from '../components/ChapterCards.vue'
 import TagsIndex from '../components/TagsIndex.vue'
 

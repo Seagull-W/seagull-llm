@@ -1,9 +1,31 @@
-<article class="native-document format-course" data-format="course" aria-label="TD 算法">
-<header class="document-intro">
-<h1 id="td-algorithm" tabindex="-1">TD 算法 <a class="header-anchor" href="#td-algorithm" aria-label="章节链接">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-course" data-format="course" aria-label="TD 算法" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">西湖 RL 笔记<span>概念、推导与算法</span></p>
+  <h1 id="td-algorithm" tabindex="-1">TD 算法 <a class="header-anchor" href="#td-algorithm" aria-label="章节链接">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">记录 Q-learning 与 Sarsa 的更新过程，比较 on-policy 与 off-policy 方法。</p>
+  <div class="note-chips"><span>强化学习</span><span>时序差分</span></div>
+</header>
+
+<figure class="note-diagram" aria-label="比较 TD 控制算法时，先看策略">
+  <p class="note-diagram-title">比较 TD 控制算法时，先看策略</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>当前状态</strong><span>观察状态与动作</span></div>
+    <div class="note-flow-step tone-1"><strong>估计目标</strong><span>Sarsa / Q-learning 的差异</span></div>
+    <div class="note-flow-step tone-2"><strong>TD 误差</strong><span>目标减去当前估计</span></div>
+    <div class="note-flow-step tone-0"><strong>更新价值</strong><span>用步长混合新旧信息</span></div>
+  </div>
+  <figcaption>目标策略与行为策略是否一致，决定这里所说的 on-policy / off-policy。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
+<div class="note-comparison" aria-label="Sarsa 与 Q-learning 对照">
+  <div class="note-compare positive"><span class="note-compare-label">Sarsa</span><p>用下一步实际选择的动作构造更新目标。</p><small>这里讨论的是目标策略与行为策略一致的 on-policy 控制。</small></div>
+  <div class="note-compare neutral"><span class="note-compare-label">Q-learning</span><p>用下一状态下最大的动作价值构造更新目标。</p><small>目标策略与行为策略可以不同；off-policy 不等于离线学习。</small></div>
+</div>
 <p>算法7.1处 更新贪心策略时，<span class="math-inline" data-tex="a=argmin_a q_{t+1}(s_t,a)"></span>，此处对于a的动作价值，应当是初始值与估计值混合的状态。</p>
 <p>Q-learning似乎相当于在新息中就考虑了下一步的最佳动作（贪心策略）</p>
 <p>sarsa，MC是on-policy，q-learning是off-policy的，这里的在线策略离线策略和在线学习离线学习是两码事。主要是看目标策略和行为策略是否相同。</p>
 <p>Q-learning可以在线也可以离线学习。</p>
-</header>
+</section>
 </article>

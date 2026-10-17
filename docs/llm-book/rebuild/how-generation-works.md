@@ -8,20 +8,18 @@ layout: doc
 title: 一次回答是怎样生成的
 status: draft
 search: false
-prev:
-  text: 新版学习地图
-  link: /llm-book/rebuild/
-next:
-  text: 带引用的回答，怎样才算有依据
-  link: /llm-book/rebuild/verifiable-answers
+prev: false
+next: false
 head:
   - - meta
     - name: robots
-      content: noindex
+      content: 'noindex, nofollow'
 description: >-
   一次回答是怎样生成的 &ZeroWidthSpace; 本章导引 &ZeroWidthSpace;
   你输入一个问题，屏幕上很快出现了回答。中间发生了什么？本章沿着文字进入模型、变成表示、形成候选分布的过程走一遍。读完后，
 contentFormat: html
+hidden: true
+sidebar: false
 ---
 
 <!--@include: ./how-generation-works.html-->

@@ -1,15 +1,40 @@
-<article class="native-document format-paper" data-format="paper" aria-label="小米 9B 开源复现：配置核对表">
-<header class="document-intro">
-<h1 id="小米-9b-开源复现-配置核对表" tabindex="-1">小米 9B 开源复现：配置核对表 <a class="header-anchor" href="#小米-9b-开源复现-配置核对表" aria-label="Permalink to &quot;小米 9B 开源复现：配置核对表&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-paper" data-format="paper" aria-label="小米 9B 开源复现：配置核对表" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
+  <h1 id="小米-9b-开源复现-配置核对表" tabindex="-1">小米 9B 开源复现：配置核对表 <a class="header-anchor" href="#小米-9b-开源复现-配置核对表" aria-label="Permalink to &quot;小米 9B 开源复现：配置核对表&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">按固定提交核对五个领域的资源、采样、评分和恢复参数。</p>
+  <div class="note-chips"><span>论文与项目随谈</span><span>MiMo</span><span>后训练</span><span>训练配置</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#_1-各领域需要独立配置"><span>02</span>1. 各领域需要独立配置</a>
+<a href="#_2-code-的关键参数"><span>03</span>2. Code 的关键参数</a>
+<a href="#_3-其他领域的差异"><span>04</span>3. 其他领域的差异</a>
+<a href="#_4-复现推进顺序"><span>05</span>4. 复现推进顺序</a>
+</nav>
+<figure class="note-diagram" aria-label="按领域核对复现条件">
+  <p class="note-diagram-title">按领域核对复现条件</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>领域任务</strong><span>明确数据与执行环境</span></div>
+    <div class="note-flow-step tone-1"><strong>资源布局</strong><span>核对训练与采样配置</span></div>
+    <div class="note-flow-step tone-2"><strong>奖励规则</strong><span>验证反馈如何进入训练</span></div>
+    <div class="note-flow-step tone-0"><strong>复现记录</strong><span>保存版本、指标与状态</span></div>
+  </div>
+  <figcaption>资源、采样、评分和恢复设置应以对应领域的固定配置为准。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <blockquote>
 <p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
 </blockquote>
 <p>这些是固定源码版本中的 <strong>启动器默认值</strong>，可以被环境变量或 CLI 覆盖。它们不代表直播中 Pro/Flash 的生产配置。以实际生成的 resolved config 为最终运行依据。</p>
 <p>版本：<code>XiaomiMiMo/verl</code> 的 <code>a2ad9f6160b03ff2d47e59832bfb6b289f37c917</code>。Code 核心文件已分别从分支与固定 SHA 再读取，内容相同。其他参数的完整原始表达式见 <a href="/papers/projects/mimo-v2-6/evidence/%E5%B0%8F%E7%B1%B39B%E5%90%AF%E5%8A%A8%E5%8F%82%E6%95%B0.csv">启动参数 CSV</a>，没有执行其中的 shell 表达式。</p>
-</header>
-<section class="document-section">
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_1-各领域需要独立配置">
 <h2 id="_1-各领域需要独立配置" tabindex="-1">1. 各领域需要独立配置 <a class="header-anchor" href="#_1-各领域需要独立配置" aria-label="Permalink to &quot;1. 各领域需要独立配置&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="1. 各领域需要独立配置表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>字段</th>
@@ -110,12 +135,13 @@
 <td style="text-align:right">10</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>逐列来源：<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/code/train.sh" target="_blank" rel="noreferrer">Code</a>、<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/arvo/arvo.sh" target="_blank" rel="noreferrer">Cyber</a>、<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/general/general.sh" target="_blank" rel="noreferrer">General</a>、<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/design/webdev.sh" target="_blank" rel="noreferrer">Visual</a>、<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/design/music.sh" target="_blank" rel="noreferrer">Music</a>。这是源码索引，不能从默认 batch×n 直接推出真实并发或实际有效更新量。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_2-code-的关键参数">
 <h2 id="_2-code-的关键参数" tabindex="-1">2. Code 的关键参数 <a class="header-anchor" href="#_2-code-的关键参数" aria-label="Permalink to &quot;2. Code 的关键参数&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="2. Code 的关键参数表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>组别</th>
@@ -180,16 +206,18 @@
 <td>启动成功不能证明续训或泛化收益</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>来源为上述 Code 启动器、<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/code/env.example" target="_blank" rel="noreferrer">env</a>与 <a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/recipes/code/run_train.sh" target="_blank" rel="noreferrer">run_train</a>。启动器会将单轮 token/timeout/retry 写入实际 harness 配置，检查原 YAML 不足以确认最终值。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_3-其他领域的差异">
 <h2 id="_3-其他领域的差异" tabindex="-1">3. 其他领域的差异 <a class="header-anchor" href="#_3-其他领域的差异" aria-label="Permalink to &quot;3. 其他领域的差异&quot;">&ZeroWidthSpace;</a></h2>
 <p>General 必须配置 judge URL/key；默认模型名是脚本配置，不是证明生产 grader 使用同一模型。启动器将 reward 二值化阈值设为 1，开启 length penalty 与 infra sentinel；环境 setup3600s、trajectory1200s、reward timeout0 要结合实现解释。<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/general/general.sh" target="_blank" rel="noreferrer">General 启动器</a></p>
 <p>Cyber 默认 off-policy 阈值8、drop，启用 infra 从 group 剔除；environment setup900s、trajectory28800s。与 Code 的阈值2或 General 的时间预算不通用。<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/arvo/arvo.sh" target="_blank" rel="noreferrer">Cyber 启动器</a></p>
 <p>Visual 默认 temperature0.6/top-p0.95/top-k20，训练和评测 grader 参数分开；Music 则特意不指定这三项，以继承下层默认。给 Music 随手复制 Visual 采样参数会改变原参考实验。<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/design/webdev.sh" target="_blank" rel="noreferrer">Visual</a>、<a href="https://github.com/XiaomiMiMo/verl/blob/a2ad9f6160b03ff2d47e59832bfb6b289f37c917/scripts/design/music.env.example" target="_blank" rel="noreferrer">Music 环境</a></p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_4-复现推进顺序">
 <h2 id="_4-复现推进顺序" tabindex="-1">4. 复现推进顺序 <a class="header-anchor" href="#_4-复现推进顺序" aria-label="Permalink to &quot;4. 复现推进顺序&quot;">&ZeroWidthSpace;</a></h2>
 <p>这是整理建议，不是已经跑过的结果：固定父仓库/submodule revision与镜像 → 获取 9B SFT 模型和目标领域数据 → 确认环境/grader 依赖 → resolved config 预检 → 参考正确答案/失败答案评分检查 → 单 group rollout 捕获 → 固定轨迹的单更新 → 保存/恢复短跑 → 小规模 benchmark → 扩并发与节点。</p>
 <p>每一步应留下可审阅产物。数据、镜像、源码开放并不消除 GPU、Pod、grader API 和外部依赖的资源需求。</p>

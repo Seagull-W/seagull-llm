@@ -194,6 +194,8 @@ const config = withMermaid({
   // GitHub Pages 子路径部署时设置 BASE 环境变量（如 /seagull-llm/），本地 dev 默认 '/'
   base: (typeof process !== 'undefined' && process.env.BASE) || '/',
   cleanUrls: true,
+  // 科普书暂时整体撤出公开站点，保留源文件以便后续继续写作。
+  srcExclude: ['llm-book/**'],
 
   // ===== 主题外观 =====
   appearance: true, // 亮色/暗色双模式，跟随系统 + 手动切换
@@ -227,7 +229,6 @@ const config = withMermaid({
       { text: '标签索引', link: '/tags' },
       { text: '调研', link: '/research/' },
       { text: '科普视频', link: '/videos/' },
-      { text: 'LLM 科普书', link: '/llm-book/' },
       { text: '论文与项目随谈', link: '/papers/' },
       { text: 'RL 学习笔记', link: '/rl-book/' },
       { text: '西湖 RL 笔记', link: '/westlake-rl/' },

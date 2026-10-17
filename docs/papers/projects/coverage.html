@@ -1,14 +1,39 @@
-<article class="native-document format-paper" data-format="paper" aria-label="项目目录与全链路覆盖">
-<header class="document-intro">
-<h1 id="项目目录与全链路覆盖" tabindex="-1">项目目录与全链路覆盖 <a class="header-anchor" href="#项目目录与全链路覆盖" aria-label="Permalink to &quot;项目目录与全链路覆盖&quot;">&ZeroWidthSpace;</a></h1>
+<article class="native-document format-paper" data-format="paper" aria-label="项目目录与全链路覆盖" data-design="linux-notebook">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
+  <h1 id="项目目录与全链路覆盖" tabindex="-1">项目目录与全链路覆盖 <a class="header-anchor" href="#项目目录与全链路覆盖" aria-label="Permalink to &quot;项目目录与全链路覆盖&quot;">&ZeroWidthSpace;</a></h1>
+  <p class="note-deck">对照五个项目的数据、算法、系统、指标、故障与恢复证据。</p>
+  <div class="note-chips"><span>论文与项目随谈</span><span>后训练</span><span>项目实践</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#reading-context"><span>01</span>阅读起点</a>
+<a href="#_1-独立项目入口"><span>02</span>1. 独立项目入口</a>
+<a href="#_2-同一套全链路检查项"><span>03</span>2. 同一套全链路检查项</a>
+<a href="#_3-当前证据覆盖"><span>04</span>3. 当前证据覆盖</a>
+<a href="#_4-后续检索如何推进"><span>05</span>4. 后续检索如何推进</a>
+</nav>
+<figure class="note-diagram" aria-label="沿同一条链检查不同项目">
+  <p class="note-diagram-title">沿同一条链检查不同项目</p>
+  <div class="note-flow">
+    <div class="note-flow-step tone-0"><strong>任务与数据</strong><span>来源和验证方式</span></div>
+    <div class="note-flow-step tone-1"><strong>算法与系统</strong><span>更新、采样与资源</span></div>
+    <div class="note-flow-step tone-2"><strong>指标与评测</strong><span>结果与对应条件</span></div>
+    <div class="note-flow-step tone-0"><strong>故障与恢复</strong><span>实际反馈和证据边界</span></div>
+  </div>
+  <figcaption>统一检查项用于定位证据覆盖，不代表各项目实现相同。</figcaption>
+</figure>
+
+<section class="document-section note-panel" aria-labelledby="reading-context">
+<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <blockquote>
 <p>资料快照：本组后训练项目资料整理截至 2026-10-11；文中的运行状态、访问结果和未核验项均以该次归档为准。</p>
 </blockquote>
 <p>更新：2026-10-11。每个适合研究的项目都是独立、同等重要的目标；目录顺序不表示优先级。项目是否入选，取决于能否追溯真实训练、实验或环境构建的工程证据。资料多寡决定档案的证据深度。</p>
-</header>
-<section class="document-section">
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_1-独立项目入口">
 <h2 id="_1-独立项目入口" tabindex="-1">1. 独立项目入口 <a class="header-anchor" href="#_1-独立项目入口" aria-label="Permalink to &quot;1. 独立项目入口&quot;">&ZeroWidthSpace;</a></h2>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="1. 独立项目入口表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>项目</th>
@@ -49,18 +74,20 @@
 <td>官方生成代码、GPU/调度、loss 序列与故障日志</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>INTELLECT-3 和 DeepSWE-Preview 的日期早于近期窗口，保留它们是因为存在可核验的实际工程材料。CodeMidas 同时包含环境构建与 RL 实验，尚未发现可读的训练直播归档。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_2-同一套全链路检查项">
 <h2 id="_2-同一套全链路检查项" tabindex="-1">2. 同一套全链路检查项 <a class="header-anchor" href="#_2-同一套全链路检查项" aria-label="Permalink to &quot;2. 同一套全链路检查项&quot;">&ZeroWidthSpace;</a></h2>
 <p>每份档案都检查：目标与模型起点 → 数据生产与切分 → 环境与 verifier → SFT/偏好/蒸馏阶段 → RL 算法与 loss 实现 → rollout、批次与权重版本 → 并行与调度 → 监控、性能与损失 → benchmark → 故障、修复与恢复 → checkpoint、发布与反馈。</p>
 <p>未知项明确写出“本轮未核验”；项目未使用的阶段需有来源才能标为“不适用”。同一框架的当前默认值不能替代某项目的历史配置。档案篇幅不强行一致，但每个项目都保留自己的检索缺口。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_3-当前证据覆盖">
 <h2 id="_3-当前证据覆盖" tabindex="-1">3. 当前证据覆盖 <a class="header-anchor" href="#_3-当前证据覆盖" aria-label="Permalink to &quot;3. 当前证据覆盖&quot;">&ZeroWidthSpace;</a></h2>
 <p>表中“报告”指作者说明或图表，“代码”指可读实现，“数值”指已读取的机器可读观测；它们不代表同样的验证程度。</p>
-<table tabindex="0">
+<div class="note-table" role="region" aria-label="3. 当前证据覆盖表格" tabindex="0"><table tabindex="0">
 <thead>
 <tr>
 <th>项目</th>
@@ -125,10 +152,11 @@
 <td>原 checkpoint/恢复日志未知</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>详细指标入口见 <a href="/papers/evidence/project-metrics">各项目指标证据索引</a>。不能把“公开了日志链接”写成“已经获取日志”，也不能将各项目的不同 benchmark 和采样协议直接排序。</p>
 </section>
-<section class="document-section">
+
+<section class="document-section note-panel" aria-labelledby="_4-后续检索如何推进">
 <h2 id="_4-后续检索如何推进" tabindex="-1">4. 后续检索如何推进 <a class="header-anchor" href="#_4-后续检索如何推进" aria-label="Permalink to &quot;4. 后续检索如何推进&quot;">&ZeroWidthSpace;</a></h2>
 <p>每个项目独立沿官网、作者帖子和回复串、仓库、模型/数据卡、看板、Issue、PR、报告附录追踪；先取得该项目自己的完整路径，再做跨项目比较。检索顺序根据可访问入口和待核验问题安排，已在一个项目中找到某个环节的资料，不会结束对另一项目同一环节的搜索。</p>
 <p>新项目满足证据条件时直接加入目录并建立档案，不设固定数量上限。框架的通用功能保存在工程专题；发现框架背后的具体运行时，以那次运行独立建档。</p>
