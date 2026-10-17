@@ -5,6 +5,10 @@ export const researchSidebar = [
     "collapsed": false,
     "items": [
       {
+        "text": "2026-10-17 后训练强化学习数据集：来源、记录形式与对训练的影响",
+        "link": "/research/2026-10-17-post-training-rl-datasets"
+      },
+      {
         "text": "2026-10-16 后训练与 agentic RL 的 benchmark：准则、保证与数据形式",
         "link": "/research/2026-10-16-post-training-rl-benchmarks"
       },
