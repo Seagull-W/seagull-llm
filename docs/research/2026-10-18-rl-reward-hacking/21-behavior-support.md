@@ -4,6 +4,7 @@ description: 核对BSPO的支持集合、Bellman算子、理想策略迭代与�
 tags: [强化学习, Reward Hacking, RLHF, 分布外泛化]
 search: false
 published: false
+next: false
 ---
 
 # 奖励数据的行为支持：从token概率到价值约束
