@@ -2,8 +2,6 @@
 title: 监督器也会被优化：对抗审计的证据与剩余盲区
 description: 追踪从标量奖励到内部表示审计的路线，核对训练标签、冻结监督器及跨域泛化边界。
 tags: [强化学习, Reward Hacking, 监督, 可解释性]
-search: false
-published: false
 ---
 
 # 监督器也会被优化：对抗审计的证据与剩余盲区

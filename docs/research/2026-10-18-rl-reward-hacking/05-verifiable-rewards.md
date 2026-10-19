@@ -2,8 +2,6 @@
 title: 可验证奖励仍会漏检：任务内容、验证器与蒸馏污染
 description: 对照指令跟随、规则归纳和Countdown代码实验，解释何种可验证性可以保障何种目标。
 tags: [强化学习, Reward Hacking, RLVR, 验证器]
-search: false
-published: false
 ---
 
 # 可验证奖励仍会漏检：任务内容、验证器与蒸馏污染

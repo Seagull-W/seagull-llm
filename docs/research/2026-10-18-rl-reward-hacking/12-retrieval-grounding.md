@@ -2,8 +2,6 @@
 title: 检索工具的装饰性使用：奖励证据依赖是否足够
 description: 核对Proof-of-Use的引用协议、扰动奖励、QA证据和因果依赖主张的边界。
 tags: [强化学习, Reward Hacking, RAG, 奖励建模]
-search: false
-published: false
 ---
 
 # 检索工具的装饰性使用：奖励证据依赖是否足够

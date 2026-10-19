@@ -2,8 +2,6 @@
 title: 奖励数据的行为支持：从token概率到价值约束
 description: 核对BSPO的支持集合、Bellman算子、理想策略迭代与实际PPO实验之间的联系。
 tags: [强化学习, Reward Hacking, RLHF, 分布外泛化]
-search: false
-published: false
 next: false
 ---
 

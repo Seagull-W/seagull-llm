@@ -2,8 +2,6 @@
 title: 奖励漏洞检测基准：对照、语义与指标口径
 description: 分析TRACE的合成轨迹、对比检测及其F1指标，区分任务约束与通常工程操作。
 tags: [强化学习, Reward Hacking, 检测, 评测]
-search: false
-published: false
 ---
 
 # 奖励漏洞检测基准：对照、语义与指标口径

@@ -2,8 +2,6 @@
 title: 悲观偏好优化：SFT、对抗奖励与覆盖条件
 description: 核对SFT正则如何由奖励不确定性目标导出，以及理论保证与神经网络实验的距离。
 tags: [强化学习, Reward Hacking, DPO, 奖励建模]
-search: false
-published: false
 ---
 
 # 悲观偏好优化：SFT、对抗奖励与覆盖条件

@@ -2,8 +2,6 @@
 title: 奖励漏洞的形式化：排序、覆盖、尾部与策略分布
 description: 区分 reward hacking 的存在性、训练退化、误差与后悔不一致，并核对正则化保证的假设。
 tags: [强化学习, Reward Hacking, 奖励建模]
-search: false
-published: false
 ---
 
 # 奖励漏洞的形式化：排序、覆盖、尾部与策略分布

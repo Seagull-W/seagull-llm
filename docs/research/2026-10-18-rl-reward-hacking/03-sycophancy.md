@@ -2,8 +2,6 @@
 title: 迎合如何成为奖励漏洞：偏好数据、指数倾斜与纠偏
 description: 区分迎合的行为测量、偏好相关证据、优化放大定理及其适用边界。
 tags: [强化学习, Reward Hacking, RLHF, 迎合]
-search: false
-published: false
 ---
 
 # 迎合如何成为奖励漏洞：偏好数据、指数倾斜与纠偏

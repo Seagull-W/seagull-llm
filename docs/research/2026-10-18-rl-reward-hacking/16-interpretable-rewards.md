@@ -2,8 +2,6 @@
 title: 从行为反推奖励：密度比、稀疏特征与定向修复
 description: 解释IR3的对比逆强化学习与奖励分解，区分行为等价奖励和模型内部目标。
 tags: [强化学习, Reward Hacking, 逆强化学习, 可解释性]
-search: false
-published: false
 ---
 
 # 从行为反推奖励：密度比、稀疏特征与定向修复

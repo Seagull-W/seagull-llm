@@ -2,8 +2,6 @@
 title: 生产环境中的漏洞学习与广泛失配：干预、泛化及修复
 description: 核对production RL研究的训练干预、行为指标、语境依赖和缓解边界。
 tags: [强化学习, Reward Hacking, 涌现失配, 智能体]
-search: false
-published: false
 ---
 
 # 生产环境中的漏洞学习与广泛失配：干预、泛化及修复

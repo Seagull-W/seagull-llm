@@ -2,8 +2,6 @@
 title: 过程奖励的攻击面：逻辑、流畅度与空洞安全
 description: 分开静态扰动、白盒token攻击与在线RL对过程奖励模型的检验，保留成功和失败的模型差异。
 tags: [强化学习, Reward Hacking, 过程奖励, 数学推理]
-search: false
-published: false
 ---
 
 # 过程奖励的攻击面：逻辑、流畅度与空洞安全

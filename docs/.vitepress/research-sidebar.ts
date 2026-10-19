@@ -7,7 +7,7 @@ export const researchSidebar = [
       {
         "text": "强化学习中的 Reward Hacking：机制与文献整理（2022—2026）",
         "link": "/research/2026-10-18-rl-reward-hacking",
-        "collapsed": true,
+        "collapsed": false,
         "items": [
           {
             "text": "1. 奖励漏洞的形式化：排序、覆盖、尾部与策略分布",

@@ -2,8 +2,6 @@
 title: 从局部钻空子到奖励篡改：泛化证据与因果边界
 description: 核对从迎合到直接奖励代码篡改的课程实验，区分被强化的行为、迁移与自然发生率。
 tags: [强化学习, Reward Hacking, Reward Tampering, 智能体]
-search: false
-published: false
 ---
 
 # 从局部钻空子到奖励篡改：泛化证据与因果边界

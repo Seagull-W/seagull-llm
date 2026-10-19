@@ -2,8 +2,6 @@
 title: 从任务得分到奖励完整性：基础设施、形式模型与语义审计
 description: 分析BenchShield如何区分漏洞暴露、具体利用与证据不足，核对形式保证、覆盖率和现实外推的边界。
 tags: [强化学习, Reward Hacking, 形式化验证, 智能体]
-search: false
-published: false
 ---
 
 # 从任务得分到奖励完整性：基础设施、形式模型与语义审计

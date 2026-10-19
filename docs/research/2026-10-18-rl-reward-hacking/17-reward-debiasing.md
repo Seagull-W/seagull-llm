@@ -2,8 +2,6 @@
 title: 奖励去偏的机制：分离可疑信号与保留任务效用
 description: 从长度解耦出发，核对奖励去相关的目标、评估口径与分布外保证边界。
 tags: [强化学习, Reward Hacking, 奖励建模]
-search: false
-published: false
 ---
 
 # 奖励去偏的机制：分离可疑信号与保留任务效用

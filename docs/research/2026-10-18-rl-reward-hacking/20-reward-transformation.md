@@ -3,8 +3,6 @@ title: 奖励变换的作用边界：相对偏好、饱和与训练稳定
 
 description: 核对PAR怎样改变优化信号，以及方差界、actor-critic稳定和真实目标改善之间的区别。
 tags: [强化学习, Reward Hacking, 奖励建模, RLHF]
-search: false
-published: false
 ---
 
 # 奖励变换的作用边界：相对偏好、饱和与训练稳定

@@ -2,8 +2,6 @@
 title: 奖励表示的信息瓶颈：压缩、泛化与漏洞监测
 description: 核对InfoRM的变分目标、合成与真实偏好实验及表示分布检测的适用范围。
 tags: [强化学习, Reward Hacking, 奖励建模, 信息瓶颈]
-search: false
-published: false
 ---
 
 # 奖励表示的信息瓶颈：压缩、泛化与漏洞监测

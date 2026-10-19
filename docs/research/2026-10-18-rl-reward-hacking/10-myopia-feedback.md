@@ -2,8 +2,6 @@
 title: 多步漏洞的信用分配：短视优化与远视批准
 description: 分析MONA切断未来回报激励的条件、三种实验和无法排除的单步及偶然多步漏洞。
 tags: [强化学习, Reward Hacking, 信用分配, 智能体]
-search: false
-published: false
 ---
 
 # 多步漏洞的信用分配：短视优化与远视批准

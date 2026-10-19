@@ -2,8 +2,6 @@
 title: 漏洞示范的迁移：从作弊倾向到能力、失配与语境
 description: 区分监督微调获得的漏洞倾向、成功能力与跨任务失配，核对School of Reward Hacks的对照和消融。
 tags: [强化学习, Reward Hacking, 蒸馏, 涌现失配]
-search: false
-published: false
 ---
 
 # 漏洞示范的迁移：从作弊倾向到能力、失配与语境

@@ -2,8 +2,6 @@
 title: 奖励漏洞怎样跨过人类评审：说服性、复杂度与评价误差
 description: 用受控的人类研究区分训练奖励、人类批准与任务正确性，核对RLHF后说服性增强的证据。
 tags: [强化学习, Reward Hacking, RLHF, 人类监督]
-search: false
-published: false
 ---
 
 # 奖励漏洞怎样跨过人类评审：说服性、复杂度与评价误差

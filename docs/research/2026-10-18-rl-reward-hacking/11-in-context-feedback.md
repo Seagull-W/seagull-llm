@@ -2,8 +2,6 @@
 title: 权重冻结后的奖励漏洞：上下文反馈与推理时优化
 description: 分析输出迭代、工具错误反馈和竞争选择如何在不更新权重时放大代理目标的副作用。
 tags: [强化学习, Reward Hacking, 智能体, 推理时优化]
-search: false
-published: false
 ---
 
 # 权重冻结后的奖励漏洞：上下文反馈与推理时优化

@@ -2,8 +2,6 @@
 title: 过度优化的实验证据：能力、缩放、集成与直接偏好优化
 description: 对照可控RL实验与语言模型中的代理—真实回报分离，解释不同优化和评估设计如何改变结论。
 tags: [强化学习, Reward Hacking, RLHF]
-search: false
-published: false
 ---
 
 # 过度优化的实验证据：能力、缩放、集成与直接偏好优化

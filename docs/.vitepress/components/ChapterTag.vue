@@ -13,10 +13,10 @@ const allGroups = computed(() => {
 
 const layer = computed(() => {
   const path = route.path
+  const contains = (items: any[] | undefined): boolean =>
+    !!items?.some((item: any) => item.link === path || contains(item.items))
   for (const group of allGroups.value) {
-    if (group.items?.some((it: any) => it.link === path)) {
-      return group.text
-    }
+    if (contains(group.items)) return group.text
   }
   return ''
 })
