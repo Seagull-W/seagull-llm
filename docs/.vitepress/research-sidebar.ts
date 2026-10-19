@@ -5,6 +5,10 @@ export const researchSidebar = [
     "collapsed": false,
     "items": [
       {
+        "text": "Agent Sandbox 前沿综述的主要判断：大厂在优化错误的目标",
+        "link": "/research/2026-10-20-agent-sandbox-wrong-target"
+      },
+      {
         "text": "强化学习中的 Reward Hacking：机制与文献整理（2022—2026）",
         "link": "/research/2026-10-18-rl-reward-hacking",
         "collapsed": false,

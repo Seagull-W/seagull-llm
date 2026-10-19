@@ -1,5 +1,17 @@
 [
   {
+    "date": "2026-10-20",
+    "slug": "agent-sandbox-wrong-target",
+    "title": "Agent Sandbox 前沿综述的主要判断：大厂在优化错误的目标",
+    "description": "根据添茶一文已读片段，归纳沙箱成本、两类场景和“更快创建并非瓶颈”的论点，并补上阅读所需的沙箱概念。未读章节仍单独标明。",
+    "route": "/research/2026-10-20-agent-sandbox-wrong-target",
+    "source_urls": [
+      "https://zhuanlan.zhihu.com/p/2094034668836411382"
+    ],
+    "window_end": "2026-10-20T00:00:00+08:00",
+    "origin": "manual"
+  },
+  {
     "date": "2026-10-18",
     "slug": "rl-reward-hacking",
     "title": "强化学习中的 Reward Hacking：机制与文献整理（2022—2026）",
