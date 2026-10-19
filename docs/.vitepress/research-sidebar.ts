@@ -5,6 +5,10 @@ export const researchSidebar = [
     "collapsed": false,
     "items": [
       {
+        "text": "强化学习中的 Reward Hacking：机制与文献整理（2022—2026）",
+        "link": "/research/2026-10-18-rl-reward-hacking"
+      },
+      {
         "text": "2026-10-17 后训练强化学习数据集：来源、记录形式与对训练的影响",
         "link": "/research/2026-10-17-post-training-rl-datasets"
       },
@@ -13,7 +17,7 @@ export const researchSidebar = [
         "link": "/research/2026-10-16-post-training-rl-benchmarks"
       },
       {
-        "text": "2026-10-16 后训练强化学习：框架运行机制与项目材料",
+        "text": "后训练 RL 框架怎么选、怎么用：从零认识 TRL、verl、OpenRLHF、slime 与 AReaL",
         "link": "/research/2026-10-16-post-training-rl-frameworks"
       },
       {

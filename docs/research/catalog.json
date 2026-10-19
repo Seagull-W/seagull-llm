@@ -1,5 +1,25 @@
 [
   {
+    "date": "2026-10-18",
+    "slug": "rl-reward-hacking",
+    "title": "强化学习中的 Reward Hacking：机制与文献整理（2022—2026）",
+    "description": "面向已有机器学习基础读者，按奖励错设、过度优化、迎合、验证器、篡改与监督泛化组织的论文整理。",
+    "route": "/research/2026-10-18-rl-reward-hacking",
+    "source_urls": [
+      "https://arxiv.org/abs/2209.13085v2",
+      "https://arxiv.org/abs/2210.10760v1",
+      "https://arxiv.org/abs/2403.03185v4",
+      "https://arxiv.org/abs/2310.13548v4",
+      "https://arxiv.org/abs/2610.19525v1",
+      "https://arxiv.org/abs/2603.07084v3",
+      "https://arxiv.org/abs/2503.11926v1",
+      "https://arxiv.org/abs/2610.17062v1",
+      "https://arxiv.org/abs/2511.18397v1"
+    ],
+    "window_end": "2026-10-19T00:00:00+08:00",
+    "origin": "manual"
+  },
+  {
     "date": "2026-10-17",
     "slug": "post-training-rl-datasets",
     "title": "2026-10-17 后训练强化学习数据集：来源、记录形式与对训练的影响",
@@ -96,8 +116,8 @@
   {
     "date": "2026-10-16",
     "slug": "post-training-rl-frameworks",
-    "title": "2026-10-16 后训练强化学习：框架运行机制与项目材料",
-    "description": "先梳理 verl、TRL、OpenRLHF、slime 和 AReaL 的训练、采样与权重交接，再分别核对项目配置、框架自带示例和故障记录。",
+    "title": "后训练 RL 框架怎么选、怎么用：从零认识 TRL、verl、OpenRLHF、slime 与 AReaL",
+    "description": "从数据、采样、奖励和参数更新讲起，逐个介绍五个后训练 RL 框架的优势、适用条件、真实训练入口与检查点，并保留历史配方的版本差异。",
     "route": "/research/2026-10-16-post-training-rl-frameworks",
     "source_urls": [
       "https://github.com/verl-project/verl/blob/5b550b0c3dad8c7bb7aab834a3fe195f8cdfc517/README.md",
