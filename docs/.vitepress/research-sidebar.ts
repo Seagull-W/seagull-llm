@@ -5,7 +5,7 @@ export const researchSidebar = [
     "collapsed": false,
     "items": [
       {
-        "text": "Agent Sandbox 前沿综述的主要判断：大厂在优化错误的目标",
+        "text": "智能体沙箱：创建延迟、空闲驻留与状态恢复",
         "link": "/research/2026-10-20-agent-sandbox-wrong-target"
       },
       {
