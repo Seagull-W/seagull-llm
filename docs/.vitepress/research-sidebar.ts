@@ -5,6 +5,10 @@ export const researchSidebar = [
     "collapsed": false,
     "items": [
       {
+        "text": "大语言模型蒸馏：从教师信号到学生自己的生成分布",
+        "link": "/research/2026-10-23-llm-distillation"
+      },
+      {
         "text": "智能体沙箱：创建延迟、空闲驻留与状态恢复",
         "link": "/research/2026-10-20-agent-sandbox-wrong-target"
       },
