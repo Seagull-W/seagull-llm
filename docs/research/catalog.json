@@ -107,7 +107,7 @@
     "date": "2026-10-16",
     "slug": "post-training-rl-benchmarks",
     "title": "2026-10-16 后训练与 agentic RL 的 benchmark：准则、保证与数据形式",
-    "description": "用一条真实记录讲清数学、代码、仓库修复、工具对话和网页任务各自的输入、交付和判分，并说明训练奖励与独立评测如何分开，以及可验证奖励理论保证的适用条件。",
+    "description": "基准名不等于分数。评分器接受的对象、模型实际收到的输入，以及训练已经用过的反馈要分开；筛选标准与事后审计、pass@k 与 pass^k 也不是同一个结论。",
     "route": "/research/2026-10-16-post-training-rl-benchmarks",
     "source_urls": [
       "https://raw.githubusercontent.com/openai/grade-school-math/master/README.md",
