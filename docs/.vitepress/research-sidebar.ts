@@ -5,6 +5,10 @@ export const researchSidebar = [
     "collapsed": false,
     "items": [
       {
+        "text": "大模型后训练的集群调度：设备放置、通信约束与失败恢复",
+        "link": "/research/2026-10-24-llm-post-training-cluster-scheduling"
+      },
+      {
         "text": "大语言模型蒸馏：从教师信号到学生自己的生成分布",
         "link": "/research/2026-10-23-llm-distillation"
       },

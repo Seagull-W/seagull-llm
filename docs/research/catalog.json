@@ -1,5 +1,33 @@
 [
   {
+    "date": "2026-10-24",
+    "slug": "llm-post-training-cluster-scheduling",
+    "title": "大模型后训练的集群调度：设备放置、通信约束与失败恢复",
+    "description": "从集群拓扑、RDMA 和并行通信出发，解释后训练中的成组分配、生成与更新共置或分离、长尾调度、资源弹性及故障隔离，并比较代表系统的成立条件。",
+    "route": "/research/2026-10-24-llm-post-training-cluster-scheduling",
+    "source_urls": [
+      "https://www.cs.princeton.edu/courses/archive/fall10/cos597B/papers/fattree-sigcomm08.pdf",
+      "https://docs.nvidia.com/networking/display/infiniband-cluster-bring-up-procedure.pdf",
+      "https://docs.nvidia.com/enterprise-reference-architectures/rtx-pro-ai-factory/latest/networking-physical-topologies.html",
+      "https://conferences.sigcomm.org/sigcomm/2015/pdf/papers/p523.pdf",
+      "https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/usage/collectives.html",
+      "https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/usage/communicators.html",
+      "https://people.eecs.berkeley.edu/~matei/papers/2021/sc_megatron_lm.pdf",
+      "https://arxiv.org/html/1910.02054v3",
+      "https://arxiv.org/html/2006.16668v1",
+      "https://www.usenix.org/system/files/nsdi19-gu.pdf",
+      "https://www.pdl.cmu.edu/PDL-FTP/CloudComputing/osdi21-pollux.pdf",
+      "https://proceedings.mlsys.org/paper_files/paper/2025/file/3b3889d313ba9476c12c2d77ea66b24f-Paper-Conference.pdf",
+      "https://arxiv.org/html/2409.19256v2",
+      "https://arxiv.org/html/2504.15930v1",
+      "https://arxiv.org/html/2505.24298v1",
+      "https://arxiv.org/html/2510.12633v1",
+      "https://www.usenix.org/system/files/osdi26-wang-yuanqing.pdf"
+    ],
+    "window_end": "2026-10-24T00:00:00+08:00",
+    "origin": "manual"
+  },
+  {
     "date": "2026-10-23",
     "slug": "llm-distillation",
     "title": "大语言模型蒸馏：从教师信号到学生自己的生成分布",
