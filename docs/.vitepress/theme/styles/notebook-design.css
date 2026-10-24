@@ -66,7 +66,7 @@
 .VPDoc .vp-doc [data-design] .note-table tr:nth-child(2n) { background: #f9fbfd; }
 .VPDoc .vp-doc [data-design] .note-table tr:last-child td { border-bottom: 0; }
 .VPDoc .vp-doc [data-design] .note-table :where(th,td):last-child { border-right: 0; }
-.VPDoc .vp-doc [data-design] mjx-container[display='true'] { margin: 22px 0; padding: 20px 12px; border: 1px solid var(--note-line); border-radius: 10px; background: #f8fafd; min-width: 0 !important; }
+.VPDoc .vp-doc [data-design] mjx-container[display='true'] { margin: 22px 0; padding: 20px 12px; border: 1px solid var(--note-line); border-radius: 10px; background: var(--vp-c-bg-soft); color: var(--vp-c-text-1); min-width: 0 !important; }
 .VPDoc .vp-doc [data-design] div[class*='language-'] { border: 1px solid var(--note-line); border-radius: 10px; margin: 22px 0; }
 .VPDoc .vp-doc [data-design] .note-details { margin: 24px 0; border: 1px solid var(--note-line); border-radius: 10px; overflow: hidden; background: #f8fafd; }
 .note-details summary { cursor: pointer; display: flex; gap: 12px; align-items: center; padding: 14px 18px; color: var(--vp-c-text-1); font-size: 14px; font-weight: 600; list-style: none; }
@@ -83,7 +83,8 @@
 .VPDoc .vp-doc [data-design] .chapter-card-description { font-size: 14px; line-height: 1.8; }
 .dark .Layout:has([data-design]) { --vp-c-bg: #101722; --vp-c-bg-alt: #151f2d; --vp-c-bg-soft: #1b2839; --vp-c-text-1: #e1e8f1; --vp-c-text-2: #aab8ca; --vp-c-divider: #2a374a; }
 .dark [data-design] { --note-paper: #151f2d; --note-line: #2d3d53; --note-tint: #1b2e48; --note-shadow: none; --note-blue: #8bbbf6; --note-green: #81ceb8; --note-orange: #edc184; }
-.dark .VPDoc .vp-doc [data-design] :where(.note-diagram,.note-figure,.note-details,.chapter-card,.note-table th,mjx-container[display='true'],.note-compare) { background: #192638; }
+/* Match the component selectors' specificity so light surfaces cannot win. */
+.dark .VPDoc .vp-doc [data-design] :is(.note-diagram,.note-figure,.note-details,.chapter-card,.note-table th,mjx-container[display='true'],.note-compare) { background: var(--vp-c-bg-soft); }
 .dark .VPDoc .vp-doc [data-design] .chapter-card:hover { background: #213650; }
 .dark .VPDoc .vp-doc [data-design] .note-table tr:nth-child(2n) { background: #182436; }
 .dark [data-design] .note-flow-step { background: #1c355b; border-color: #355780; color: #b3d1fc; }

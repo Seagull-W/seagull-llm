@@ -4,7 +4,7 @@ const { isDark } = useData()
 </script>
 
 <template>
-  <div class="seagull-nav-actions">
+  <div class="seagull-nav-actions"><slot />
     <button type="button" :aria-pressed="isDark" :title="isDark ? '切换到浅色模式' : '切换到深色模式'" aria-label="深色主题" @click="isDark = !isDark">
       <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
         <path v-if="isDark" d="M20.8 13A9 9 0 0 1 11 3.2 9 9 0 1 0 20.8 13Z" />

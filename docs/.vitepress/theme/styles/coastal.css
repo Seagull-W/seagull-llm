@@ -1,0 +1,143 @@
+/* Coastal notebook: shared visual tokens and editorial rhythm. */
+:root {
+  --vp-c-bg: #f5f8f9;
+  --vp-c-bg-alt: #eaf0f2;
+  --vp-c-bg-soft: #e4edef;
+  --vp-c-text-1: #153a47;
+  --vp-c-text-2: #4e6670;
+  --vp-c-brand-1: #126b78;
+  --vp-c-brand-2: #105a66;
+  --vp-c-brand-3: #267d89;
+  --vp-c-divider: #cfdddf;
+  --vp-c-border: #c6d7da;
+  --glass-bg: #fff;
+  --glass-shadow: none;
+  --glass-shadow-hover: 0 12px 32px #153a4710;
+  --grad-accent: linear-gradient(120deg, #153a47, #126b78);
+  --vp-font-family-base: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+.dark {
+  --vp-c-bg: #10252d;
+  --vp-c-bg-alt: #16313b;
+  --vp-c-bg-soft: #1c3c46;
+  --vp-c-text-1: #e4eff0;
+  --vp-c-text-2: #aec4c9;
+  --vp-c-brand-1: #85cbd1;
+  --vp-c-brand-2: #a0dce1;
+  --vp-c-brand-3: #64aeb8;
+  --vp-c-divider: #31505a;
+  --vp-c-border: #31505a;
+  --glass-bg: #16313b;
+}
+body, .dark body { background-image: none; }
+.VPNavBar { box-shadow: none !important; }
+.VPNavBarTitle .title { letter-spacing: -.04em; }
+.VPHome.VPHome .VPHero { padding-top: 100px; padding-bottom: 90px; }
+.VPHome.VPHome .VPHero::before { display: none; }
+.VPHome.VPHome .VPHero .container { max-width: 1200px; align-items: center; gap: 48px; }
+.VPHome.VPHome .VPHero .main { flex: 1; }
+.VPHome.VPHome .VPHero .image { flex: 1; margin: 0; }
+.VPHome.VPHome .VPHero .image-container { transform: none; height: auto; }
+.VPHome.VPHome .VPHero .seagull-hero-heading { gap: 24px; }
+.VPHome.VPHome .VPHero .seagull-hero-wordmark { font-size: clamp(64px, 8vw, 112px); color: var(--vp-c-text-1); letter-spacing: -.055em; }
+.VPHome.VPHome .VPHero .seagull-hero-title { font-family: 'Songti SC', 'SimSun', serif; font-size: clamp(30px, 3.2vw, 46px); font-weight: 400; line-height: 1.5; }
+.VPHome.VPHome .VPHero .seagull-hero-tagline { font-size: 16px; line-height: 1.9; max-width: 30em; font-weight: 400; margin-top: 12px; }
+.VPHome.VPHome .VPHero .actions { padding-top: 30px; }
+.VPButton.brand, .VPButton.alt { border-radius: 6px; box-shadow: none; background-image: none; }
+.VPButton.brand { background: var(--vp-c-brand-1); color: var(--vp-c-bg); }
+.VPButton:hover { transform: translateY(-2px); }
+.VPHome.VPHome .VPHero .seagull-lens { border-radius: 48% 48% 8px 8px; overflow: hidden; box-shadow: 0 20px 50px #153a4715; }
+.VPHome.VPHome .home-dashboard { max-width: 1200px; display: flex; flex-direction: column; gap: 80px; margin-bottom: 90px; }
+.VPHome.VPHome .sections-panel { order: -1; }
+.VPHome.VPHome .panel-heading { padding: 0 0 24px; min-height: auto; align-items: baseline; }
+.VPHome.VPHome .panel-heading h2 { font-size: 28px; font-weight: 500; letter-spacing: -.04em; }
+.VPHome.VPHome .panel-heading p { font-size: 14px; margin-top: 8px; }
+.VPHome.VPHome .sections-window { height: auto; overflow: visible; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; padding: 24px 0 0; }
+.VPHome.VPHome .section-card { grid-column: span 2; min-height: 205px; padding: 28px; border: 0; border-radius: 6px; background: var(--vp-c-bg-alt); transition: background .2s, transform .2s; }
+.VPHome.VPHome .section-card:nth-child(-n+2) { grid-column: span 3; min-height: 230px; }
+.VPHome.VPHome .section-card:first-child { background: #153a47; }
+.VPHome.VPHome .section-card:first-child h3 { color: #f0f7f8; }
+.VPHome.VPHome .section-card:first-child p, .VPHome.VPHome .section-card:first-child > span { color: #b9d9de; }
+.VPHome.VPHome .section-card h3 { font-size: 21px; font-weight: 500; max-width: 22em; }
+.VPHome.VPHome .section-card p { font-size: 14px; max-width: 35em; margin-top: 12px; }
+.VPHome.VPHome .section-card:hover { transform: translateY(-4px); background: var(--vp-c-bg-soft); }
+.VPHome.VPHome .section-card:first-child:hover { background: #205363; }
+.VPHome.VPHome .research-panel { border: 0; border-radius: 0; background: none; overflow: visible; }
+.VPHome.VPHome .research-window { height: auto; overflow: visible; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
+.VPHome.VPHome .research-item { padding: 28px 0; border-bottom: 0; }
+.VPHome.VPHome .research-item h3 { font-size: 19px; line-height: 1.65; margin: 16px 0 12px; }
+.VPHome.VPHome .research-item p { font-size: 14px; }
+.VPHome.VPHome .scroll-buttons { display: none; }
+.vp-doc p, .vp-doc li { line-height: 1.95; }
+.vp-doc h2 { letter-spacing: -.025em; }
+.VPSidebar { box-shadow: none; }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid var(--vp-c-brand-1); outline-offset: 4px; }
+@media (max-width: 959px) {
+ .VPHome.VPHome .VPHero { padding-top: 55px; padding-bottom: 65px; }
+ .VPHome.VPHome .VPHero .container { gap: 36px; }
+ .VPHome.VPHome .VPHero .image { order: 2; width: 100%; }
+ .VPHome.VPHome .VPHero .seagull-lens { max-width: 480px; }
+ .VPHome.VPHome .section-card { grid-column: span 3; }
+ .VPHome.VPHome .research-window { grid-template-columns: 1fr; gap: 0; }
+ .VPHome.VPHome .research-item { border-bottom: 1px solid var(--vp-c-divider); }
+}
+@media (max-width: 600px) {
+ .VPHome.VPHome .home-dashboard { gap: 48px; }
+ .VPHome.VPHome .sections-window { grid-template-columns: 1fr; }
+ .VPHome.VPHome .section-card, .VPHome.VPHome .section-card:nth-child(-n+2) { grid-column: auto; min-height: 180px; padding: 24px; }
+ .VPHome.VPHome .VPHero .seagull-hero-wordmark { font-size: clamp(48px, 15vw, 80px); }
+ .VPHome.VPHome .VPHero .seagull-hero-title { font-size: 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+ *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+}
+.VPHome.VPHome .VPHero .VPButton { border-radius: 6px !important; }
+.VPHome.VPHome .VPHero .seagull-hero-wordmark { -webkit-text-fill-color: currentColor; }
+
+/* Mobile navigation uses the native accessible menu, not a clipped link strip. */
+@media (max-width: 767px) {
+ .VPNavBar .VPNavBarMenu { display: none; }
+ .VPNavBar .VPNavBarHamburger { display: flex !important; }
+ .VPHome.VPHome .VPHero { padding-top: 48px; }
+}
+.VPHome.VPHome .video-gallery { padding: 0; margin-top: 0; }
+.VPHome.VPHome .video-gallery .eyebrow { display: none; }
+.VPHome.VPHome .video-gallery h2 { padding: 0; border: 0; background: none; font-size: 28px; font-weight: 500; }
+.VPHome.VPHome .video-gallery h2::after { display: none; }
+.VPHome.VPHome .video-gallery .gallery-header { padding-bottom: 24px; border-bottom: 1px solid var(--vp-c-divider); margin-bottom: 24px; }
+.dark .VPHome.VPHome .VPButton.brand { color: #10252d; }
+@media (prefers-reduced-motion: no-preference) {
+ .VPHome .VPHero .container { animation: coast-arrive .65s ease-out both; }
+ @keyframes coast-arrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+}
+/* Bilingual personal motto: Chinese leads, English provides a quiet second line. */
+.VPHome.VPHome .VPHero .seagull-hero-title {
+ font-family: 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+ font-size: clamp(25px, 2.35vw, 34px); font-weight: 600; line-height: 1.65;
+ letter-spacing: -.035em; width: 100%; max-width: none; text-wrap: balance;
+}
+.VPHome.VPHome .VPHero .seagull-hero-tagline {
+ font-family: 'Seagull TeX', Georgia, 'Times New Roman', serif;
+ font-size: clamp(16px, 1.5vw, 21px); font-weight: 400; line-height: 1.7;
+ letter-spacing: .005em; max-width: none; padding-top: 0; margin-top: 14px; text-wrap: balance;
+}
+@media(max-width:600px) {
+ .VPHome.VPHome .VPHero .seagull-hero-title { max-width: 15em; margin-inline: auto; font-size: 25px; }
+ .VPHome.VPHome .VPHero .seagull-hero-tagline { max-width: 23em; margin-inline: auto; font-size: 17px; }
+}
+/* A restrained, classical treatment for the bilingual motto. */
+.VPHome.VPHome .VPHero .seagull-hero-title {
+ font-family: 'Songti SC', 'STSong', 'SimSun', serif;
+ font-weight: 400; font-size: clamp(25px, 2.35vw, 34px);
+ letter-spacing: .07em; line-height: 1.8; color: var(--vp-c-text-1);
+}
+.VPHome.VPHome .VPHero .seagull-hero-tagline {
+ font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+ font-size: clamp(15px, 1.35vw, 19px); font-weight: 400;
+ letter-spacing: .045em; line-height: 1.85; margin-top: 18px;
+ color: var(--vp-c-text-2);
+}
+@media(max-width:600px) {
+ .VPHome.VPHome .VPHero .seagull-hero-title { font-size: 25px; letter-spacing: .04em; }
+ .VPHome.VPHome .VPHero .seagull-hero-tagline { font-size: 16px; letter-spacing: .025em; }
+}

@@ -44,3 +44,8 @@ export default {
 }
 
 import './styles/navigation.css'
+
+import './styles/coastal.css'
+import './styles/interiors.css'
+
+import './styles/reader-navigation.css'

@@ -1,15 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+
 import { withBase } from 'vitepress'
 import { data as issues } from '../data/research.data'
 
 defineProps<{ sections: { title: string; details: string; link: string }[] }>()
-const sectionsWindow = ref<HTMLElement>()
-function scrollSections(direction: number) {
-  const el = sectionsWindow.value
-  if (!el) return
-  el.scrollBy({ top: direction * el.clientHeight * 0.8, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
-}
 </script>
 
 <template>
@@ -19,8 +13,8 @@ function scrollSections(direction: number) {
         <div><h2 id="home-research-title">每日调研</h2><p>论文与社区进展，持续更新</p></div>
         <a :href="withBase('/research/')">全部调研</a>
       </header>
-      <div class="research-window" tabindex="0" role="region" aria-label="每日调研列表，按日期从新到旧，可上下滚动">
-        <a v-for="(issue, index) in issues" :key="issue.url" class="research-item" :href="withBase(issue.url)">
+      <div class="research-window" tabindex="0" role="region" aria-label="最近三期每日调研">
+        <a v-for="(issue, index) in issues.slice(0, 3)" :key="issue.url" class="research-item" :href="withBase(issue.url)">
           <div class="issue-date"><time :datetime="issue.date">{{ issue.date }}</time><span v-if="index === 0">最新</span></div>
           <h3>{{ issue.title }}</h3>
           <p>{{ issue.description }}</p>
@@ -31,9 +25,8 @@ function scrollSections(direction: number) {
     <section class="sections-panel" aria-labelledby="home-sections-title">
       <header class="panel-heading">
         <div><h2 id="home-sections-title">学习栏目</h2><p>选择一个主题，继续阅读</p></div>
-        <div class="scroll-buttons"><button aria-label="向上滚动学习栏目" @click="scrollSections(-1)">↑</button><button aria-label="向下滚动学习栏目" @click="scrollSections(1)">↓</button></div>
       </header>
-      <div ref="sectionsWindow" class="sections-window" tabindex="0" role="region" aria-label="学习栏目，可上下滚动">
+      <div class="sections-window" tabindex="0" role="region" aria-label="学习栏目">
         <a v-for="section in sections" :key="section.link" class="section-card" :href="withBase(section.link)">
           <h3>{{ section.title }}</h3><p>{{ section.details }}</p><span>进入栏目</span>
         </a>

@@ -54,6 +54,17 @@
 .VPDoc .vp-doc :not(pre) > code { padding: 2px 5px; border: 0; border-radius: 4px; font-size: 0.86em; color: var(--vp-c-text-1); background: var(--vp-c-bg-soft); overflow-wrap: anywhere; }
 /* Follow Shiki's paired themes so light-mode token colors stay readable. */
 .VPDoc .vp-doc div[class*='language-'] { background: var(--vp-code-block-bg); border: 1px solid var(--vp-c-divider); border-radius: 8px; box-shadow: none; margin: 24px 0; }
+/* Native HTML examples and Shiki blocks share the active reading theme. */
+.Layout .VPDoc .vp-doc { --vp-code-block-bg: #ffffff; }
+.dark .Layout .VPDoc .vp-doc { --vp-code-block-bg: #10262e; }
+.dark .Layout .VPDoc .vp-doc pre:not(.shiki) { background: var(--vp-code-block-bg) !important; color: #e4eff0; }
+.dark .Layout .VPDoc .vp-doc pre code { background: transparent; color: #e4eff0; }
+.dark .Layout .VPDoc .vp-doc div[class*='language-'] { background: var(--vp-code-block-bg); }
+.dark .Layout .VPDoc .vp-doc div[class*='language-'] pre code { color: #e4eff0; }
+.dark .Layout .VPDoc .vp-doc .shiki span { color: var(--shiki-dark, inherit); }
+.dark .Layout .VPDoc .vp-doc .shiki span[style*='#6a737d' i] { --shiki-dark: #a4b4bf !important; }
+.dark .Layout .VPDoc .vp-doc mjx-container { color: var(--vp-c-text-1); }
+.dark .Layout .VPDoc .vp-doc mjx-container[display='true'] { background: var(--vp-c-bg-soft); border-color: var(--vp-c-divider); }
 .VPDoc .vp-doc div[class*='language-'] .lang,
 .VPDoc .vp-doc div[class*='language-'] .line-numbers-wrapper { color: var(--vp-c-text-2); }
 .VPDoc .vp-doc table { display: block; width: max-content; max-width: 100%; overflow-x: auto; border-radius: 6px; margin: 24px 0; box-shadow: none; font-size: 14px; line-height: 1.75; }

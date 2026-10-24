@@ -33,13 +33,16 @@ onUnmounted(() => window.removeEventListener('hashchange', readHash))
 
 <template>
   <section class="tag-index" aria-label="按标签查找内容">
+    <label class="tag-search">搜索内容
+      <input v-model="query" type="search" placeholder="输入标题、主题或关键词" />
+    </label>
+    <details class="tag-disclosure"><summary>按主题筛选 · {{ selected || '全部主题' }}</summary>
     <div class="tag-filters" aria-label="标签筛选">
       <button type="button" :aria-pressed="!selected" @click="selectTag('')">全部内容 <span>{{ pages.length }}</span></button>
       <button v-for="[tag, count] in tags" :key="tag" type="button" :aria-pressed="selected === tag" @click="selectTag(tag)">{{ tag }} <span>{{ count }}</span></button>
     </div>
-    <label class="tag-search">搜索内容
-      <input v-model="query" type="search" placeholder="输入标题、主题或关键词" />
-    </label>
+
+    </details>
     <p class="tag-summary" role="status">{{ selected || '全部内容' }} · {{ filtered.length }} 篇</p>
     <ChapterCards v-if="cards.length" :items="cards" />
     <p v-else class="tag-empty">没有找到匹配的内容。试试其他关键词或标签。</p>
