@@ -32,7 +32,8 @@
 body, .dark body { background-image: none; }
 .VPNavBar { box-shadow: none !important; }
 .VPNavBarTitle .title { letter-spacing: -.04em; }
-.VPHome.VPHome .VPHero { padding-top: 100px; padding-bottom: 90px; }
+/* VitePress offsets the hero by the nav height; reserve that space plus a gap. */
+.VPHome.VPHome .VPHero { padding-top: max(100px, calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 16px)); padding-bottom: 90px; }
 .VPHome.VPHome .VPHero::before { display: none; }
 .VPHome.VPHome .VPHero .container { max-width: 1200px; align-items: center; gap: 48px; }
 .VPHome.VPHome .VPHero .main { flex: 1; }
@@ -73,7 +74,7 @@ body, .dark body { background-image: none; }
 .VPSidebar { box-shadow: none; }
 a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid var(--vp-c-brand-1); outline-offset: 4px; }
 @media (max-width: 959px) {
- .VPHome.VPHome .VPHero { padding-top: 55px; padding-bottom: 65px; }
+ .VPHome.VPHome .VPHero { padding-top: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 16px); padding-bottom: 65px; }
  .VPHome.VPHome .VPHero .container { gap: 36px; }
  .VPHome.VPHome .VPHero .image { order: 2; width: 100%; }
  .VPHome.VPHome .VPHero .seagull-lens { max-width: 480px; }
@@ -98,7 +99,6 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px soli
 @media (max-width: 767px) {
  .VPNavBar .VPNavBarMenu { display: none; }
  .VPNavBar .VPNavBarHamburger { display: flex !important; }
- .VPHome.VPHome .VPHero { padding-top: 48px; }
 }
 .VPHome.VPHome .video-gallery { padding: 0; margin-top: 0; }
 .VPHome.VPHome .video-gallery .eyebrow { display: none; }
