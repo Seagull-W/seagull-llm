@@ -134,8 +134,8 @@
   {
     "date": "2026-10-16",
     "slug": "post-training-rl-benchmarks",
-    "title": "2026-10-16 后训练与 agentic RL 的 benchmark：准则、保证与数据形式",
-    "description": "基准名不等于分数。评分器接受的对象、模型实际收到的输入，以及训练已经用过的反馈要分开；筛选标准与事后审计、pass@k 与 pass^k 也不是同一个结论。",
+    "title": "后训练与 agent 评测：基准分数究竟证明了什么",
+    "description": "从模型输入、评分对象与训练反馈的区别出发，用数学、代码和交互任务解释基准的实际用途，再讨论测试缺陷、采样可靠性与奖励审计如何改变分数的解释。",
     "route": "/research/2026-10-16-post-training-rl-benchmarks",
     "source_urls": [
       "https://raw.githubusercontent.com/openai/grade-school-math/master/README.md",
@@ -183,8 +183,8 @@
   {
     "date": "2026-10-16",
     "slug": "post-training-rl-frameworks",
-    "title": "后训练 RL 框架怎么选、怎么用：从零认识 TRL、verl、OpenRLHF、slime 与 AReaL",
-    "description": "从数据、采样、奖励和参数更新讲起，逐个介绍五个后训练 RL 框架的优势、适用条件、真实训练入口与检查点，并保留历史配方的版本差异。",
+    "title": "后训练 RL 框架：从训练闭环到 TRL、verl、OpenRLHF、slime 与 AReaL",
+    "description": "解释数据、采样、奖励、优势、更新与权重交接如何组成在线后训练，再沿五条真实入口理解配置和模型产物，讨论训练生成分离、策略滞后与动态过滤怎样改变用法。",
     "route": "/research/2026-10-16-post-training-rl-frameworks",
     "source_urls": [
       "https://github.com/verl-project/verl/blob/5b550b0c3dad8c7bb7aab834a3fe195f8cdfc517/README.md",

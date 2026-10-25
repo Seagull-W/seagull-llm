@@ -1,219 +1,107 @@
 ---
-title: "后训练 RL 框架怎么选、怎么用：从零认识 TRL、verl、OpenRLHF、slime 与 AReaL"
-description: "从数据、采样、奖励和参数更新讲起，逐个介绍五个后训练 RL 框架的优势、适用条件、真实训练入口与检查点，并保留历史配方的版本差异。"
+title: "后训练 RL 框架：从训练闭环到 TRL、verl、OpenRLHF、slime 与 AReaL"
+description: "解释数据、采样、奖励、优势、更新与权重交接如何组成在线后训练，再沿五条真实入口理解配置和模型产物，讨论训练生成分离、策略滞后与动态过滤怎样改变用法。"
 tags: ["每日调研", "RLHF", "后训练", "GRPO"]
 date: "2026-10-16"
 ---
 
-# 后训练 RL 框架怎么选、怎么用：从零认识 TRL、verl、OpenRLHF、slime 与 AReaL
+# 后训练 RL 框架：从训练闭环到 TRL、verl、OpenRLHF、slime 与 AReaL
 
-懂 Python、知道大模型可以微调，就可以从这里开始。本文先解释一次强化学习训练怎样发生，再沿着数据、奖励、配置、启动、保存与验证介绍五个框架。读完后，应当能判断自己的任务值得从哪个框架开始，以及第一份训练配置要改哪些地方。
+把一份模型权重和一批题目交给框架，还没有定义一次强化学习训练。模型怎样生成回答、谁给奖励、奖励怎样转成更新、更新后的参数何时用于下一批生成，都需要接起来。框架的差别首先体现在这些连接处。
 
-> 原稿日期：2026-10-16；本次修订与官方资料核查：2026-10-19（Asia/Shanghai）。本文依据公开文档、固定版本源码和已有核对记录编写，没有安装训练环境、运行 GPU 训练或复现成绩。下面的命令均是依据注明版本整理、供读者准备环境后使用的路线；不表示已在本环境执行成功。
+同名训练器也不保证相同训练目标。`GRPOTrainer` 可以选择不同的损失聚合方式，名为 `train_ppo_ray` 的入口可以运行另一种优势估计。要读懂配置，必须同时看算法参数、版本和训练生成的部署方式。
 
-这里的“主流”指有公开实现、文档和训练案例的代表性路线，不是市场份额排名。五个框架能力有重叠，本文也不穷尽所有项目。SFT、DPO 用来交代后训练的位置，正文重点是**在线 RL**。vLLM、SGLang 是生成引擎，FSDP、DeepSpeed、Megatron 是训练与并行基础设施；Open R1 是项目，DAPO、ProRL 是算法或训练配方，不能把它们与框架混在一张排行榜里。
+## 一次在线后训练循环怎样发生
 
-## 1. 一次后训练到底在做什么
+监督微调（SFT）从“题目—示范答案”中学习；DPO 使用同一问题下的偏好答案对。在线 RL 则在训练期间让当前策略自己生成回答，再利用反馈更新它。这里的策略就是正在学习的语言模型，配置中通常叫 actor 或 policy。
 
-### 从一道数学题看完整循环
+以数学题为例，一条训练记录存题目和参考答案。题目经过对话模板送入生成侧，参考答案留给评分器。生成侧对同一题采样若干回答，这一步叫 rollout；多轮 agent 的 rollout 还包含工具调用、环境返回和后续回答。奖励函数接收生成结果和参考答案，返回数值。它可以是 Python 规则、测试执行器或神经奖励模型，不必另有一个“奖励模型”进程。[TRL 方法说明](#source-trl)、[verl 数据接口](#source-verl)
 
-预训练让模型学会根据前文预测后文；后训练继续改变模型参数，让它在指定任务上按需要回答。常见路径有三种：SFT 用“问题—示范答案”训练；DPO 使用同一问题下的偏好答案对；在线 RL 则在训练过程中让当前模型自己作答，再用反馈更新模型。PPO、GRPO 是构造更新目标的方法，框架负责把数据读取、生成、评分、反向传播、分布式资源和存盘接起来。下面的真实 GSM8K 例子来自 [verl v0.9.1 Quickstart](https://github.com/verl-project/verl/blob/v0.9.1/docs/start/quickstart.rst)：
+奖励还不能直接反向传播进采样出的文字。训练侧要计算**优势**，即这次选择相对基线有多好，再用它调整生成这些 token 的概率。GRPO 通常以同一道题多个回答的奖励作相对比较，不另训价值模型；PPO 的常见 GAE 路径会使用 critic，估计后续回报作为基线。组内回答全对或全错时，纯粹依靠组内差异就没有区分信号。是否归一化、怎样处理这种组，仍由配方决定。[TRL GRPO](#source-trl)、[verl 角色判定](#source-verl)
 
-- **问题**：Katy 做咖啡，糖的茶匙数与水的杯数之比为 7:13，两者合计 120，糖用了多少茶匙？（此处为原题中文转述。）
-- **参考答案**：糖占 7/20，因此是 7/20×120＝42；原始解答以 `#### 42` 结尾。
-- **模型输出**：训练时现生成的解答，可能正确，也可能算错。下面用“解答最后写 `#### 42`”和“写 `#### 40`”作示意，不是实际采样记录。
-- **规则反馈**：verl 此示例的评分器抽取最后的 `#### 数字`，与参考值字符串比较；默认正确得 1，错误或无法抽取得 0。参考答案只交给评分器，不能放进模型的题目里。
+更新时常见的 logprob 是已生成 token 概率的对数，用来计算新策略与采样策略的概率比；裁剪等机制限制一次更新的幅度。reference 是另一份参考策略，KL 项用来惩罚对它的偏离。它与 critic 的用途不同，也不一定始终启用。奖励回答“这份输出得到怎样的反馈”，损失函数则决定“怎样用反馈改变参数”。
 
 ```mermaid
 flowchart LR
-    D["数据记录"] -->|仅题目| P["提示送入生成后端"]
-    P --> R["同一题生成多个回答"]
-    R --> S["奖励函数或奖励模型评分"]
-    D -->|参考答案| S
-    S --> L["计算优势与训练目标"]
-    L --> T["训练后端反传并更新 actor"]
-    T --> W["同步新权重给生成后端"]
-    W --> P
-    T --> C["保存 checkpoint"]
+    D["数据：题目与参考信息"] -->|题目| G["生成侧采样回答或轨迹"]
+    D -->|参考信息| R["奖励函数或奖励模型"]
+    G --> R
+    R --> A["计算优势与训练目标"]
+    G -->|token 与采样概率| A
+    A --> U["训练侧反传并更新 actor"]
+    U -->|新权重| G
+    U --> C["模型权重与续训状态"]
 ```
 
-图示是便于理解的同步循环；异步系统会让其中一些阶段重叠。训练最终交付的是新的 **checkpoint（模型检查点）**，推理时才用它为新问题生成回答。训练期间看到一条正确回答，不能证明保存的模型整体提高了，仍要在未参加训练的题目上比较。
+图中箭头表示依赖关系。同步训练会收齐一轮生成、完成更新，再交回权重；异步训练可以让不同批次的阶段重叠。无论是否重叠，生成侧都需要获得更新后的参数，否则下一批仍来自旧策略。
 
-GRPO 用同一提示下多个回答的奖励作相对比较，通常不另训 critic；如果一组回答全对或全错，组内比较提供的信号可能很弱。PPO 的常见 GAE 路径会训练 critic 来估计价值。是否使用参考策略、KL 惩罚、怎样归一化奖励和聚合 token 损失，仍需看具体配置；同叫 `GRPOTrainer` 的训练未必用了相同损失。[TRL 方法与配置](https://github.com/huggingface/trl/blob/v1.16.0/docs/source/grpo_trainer.md)、[verl 角色判定](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/ppo/utils.py)支持这些区分。
+### 配置中的资源为什么分成几组
 
-### 先认识配置中的角色和资源
+训练需要梯度和优化器状态，生成需要保存已生成上下文的注意力键值缓存（KV cache）。这两种内存需求和计算节奏不同，所以训练与生成常使用不同引擎、不同并行布局。vLLM、SGLang 是生成引擎；FSDP、DeepSpeed、Megatron 提供训练分片或模型并行能力。它们与负责连接全循环的框架不处于同一层。DAPO、ProRL 是算法或训练配方，接在这些框架上，本身不是另一个框架。
 
-| 名称 | 在循环中负责什么 | 是否总需要 |
-| --- | --- | --- |
-| actor / policy | 正在学习的模型，训练后保存它 | 是 |
-| rollout | 用模型采样回答；多轮任务中还包含交互轨迹 | 在线 RL 需要 |
-| reward | 衡量回答或轨迹质量，可以是 Python 规则、测试执行器或奖励模型 | 需要反馈，但不一定需要奖励模型 |
-| reference | 一份参考策略，常用于限制偏离程度的 KL 项 | 由训练目标决定 |
-| critic / value | 估计状态或 token 位置的价值，辅助计算优势 | 常见 PPO 路径需要，GRPO 路径通常不需要 |
+读资源配置时，只需先抓住它如何切模型或样本：数据并行（DP）让多份模型处理不同样本；张量并行（TP）拆开层内计算；流水线并行（PP）把不同层放在不同设备上。FSDP 和 ZeRO 把参数、梯度或优化器状态分片，减少每张卡持有的训练状态。生成侧 TP 与训练侧 TP 可以不同，因此交接权重可能还需要重新切分。[verl 架构](#source-verl)、[OpenRLHF 同步](#source-sync)
 
-“优势”衡量一次回答相对基线有多好；GRPO 常用同题回答的组内奖励作基线。loss 是要通过梯度更新优化的目标；logprob 是模型给已生成 token 的概率取对数，训练会用它计算新旧策略的概率比。KL 项用于衡量并惩罚相对参考策略的偏离。奖励负责评判任务完成情况，这些量则把反馈变成参数更新。[TRL 方法说明](https://github.com/huggingface/trl/blob/v1.16.0/docs/source/grpo_trainer.md)
+训练和生成可以共置在同一组 GPU，也可以各占设备。共置时 offload 或 sleep 机制搬走、释放部分状态，让另一阶段使用显存；分离时两侧能独立安排资源，但需要传权重。**设备分离不等于异步**：即使各有一组 GPU，控制器仍可要求生成完成后才能更新。[TRL 配置](#source-trl)、[AReaL 异步](#source-areal)
 
-训练侧需要保存梯度和优化器状态，生成侧需要尽快把回答采出来。因此框架常分别接训练和推理引擎。两边即使是同一个模型，也可能使用不同的卡数、权重切分和数值计算实现，更新后要把训练侧参数交给生成侧。[verl 架构](#source-s1)、[OpenRLHF 架构与同步](#source-s9)
+batch 的单位也不能省略。slime 后文的脚本一次取 32 个提示，每题采 8 个回答，得到 256 条回答；这不等于 256 个提示。micro-batch 是一次前后向处理的一小批，梯度累积可以把若干小批合成一次优化器更新。回答长度不一时，即使回答条数相同，token 量也不同。一次 rollout 之后做几次更新，还取决于 mini-batch 切分和样本复用。[slime 脚本](#source-slime)
 
-| 配置术语 | 理解到这里就够用 |
-| --- | --- |
-| DP / TP / PP | 数据并行把不同样本分给多份模型；张量并行把层内计算拆到多卡；流水线并行把不同层分到多卡。训练 TP 和生成 TP 可以不同 |
-| ZeRO / FSDP | 把优化器状态、梯度或参数分片，减轻每卡训练内存负担；有通信和临时聚合成本 |
-| LoRA | 主要训练低秩适配参数；可减少可训练状态，但生成的 KV cache 等开销仍在 |
-| KV cache | 生成时缓存已处理 token 的注意力键和值，长度和并发会影响它的显存占用 |
-| offload / sleep | 阶段切换时释放或搬走一部分状态；显存下降可能伴随主机内存和搬运开销 |
-| Ray / Hydra | Ray 把 Python 任务和 worker 分配到单机或集群资源；Hydra 将默认配置、文件和命令行覆盖合成生效配置 |
+## TRL：在 Python 中接通数据与奖励
 
-**设备怎么摆，与循环是否重叠，是两个维度。**
+TRL 适合作为熟悉 Transformers、希望先验证奖励设计的入口：模型、数据集、训练参数、奖励函数都能从 Python 的 Trainer 调用看见。分布式启动与显存仍需安排，但第一次改任务时，可以先聚焦“数据列是否正确传到了奖励函数”。
 
-| 维度 | 一端 | 另一端 |
-| --- | --- | --- |
-| 部署位置 | 共置：训练和生成共享 GPU | 分离：各自有 GPU 或节点 |
-| 执行时序 | 同步：收齐本轮生成，再训练、交接权重 | 异步：用队列等机制让生成和训练重叠 |
+以下固定 **TRL v1.16.0**。同版官方 GRPO 入门使用 `trl-lib/DeepMath-103K` 和 `Qwen/Qwen2.5-0.5B-Instruct`。数据的 `prompt` 负责生成输入，`solution` 供内置 `accuracy_reward` 使用；奖励函数读取对话形式的 `completions`，解析参考解与生成答案，再作数学等价验证。参考解无法解析时返回 `None`，不是把它当成模型答错。[教程与奖励实现](#source-trl)
 
-因此 TRL 的 `colocate/server` 不能自动翻译成“同步/异步”。异步还要处理**策略滞后**：样本可能由旧版本模型生成；partial rollout 甚至可让一条轨迹跨权重版本。另一个独立问题是训练引擎与生成引擎计算 logprob 的数值差异。搬运权重、限制版本落后、重算或校正概率各有用途，不能互相替代。[TRL 配置](#source-s4)、[AReaL 异步文档](#source-s11)
-
-### batch 一定要带单位
-
-以 **32 个提示×每提示 8 个回答＝256 条回答** 为例。提示 batch 是 32，回答 batch 是 256；这些回答长短不同，token 总量还会变。micro-batch 是一次前后向处理的一小批；梯度累积把多次前后向合成一次 `optimizer.step()`。一个 rollout batch 能拆成多少次更新，还取决于 mini-batch、训练轮数和是否重复使用样本。
-
-这个数字关系确实出现在后文 slime 的官方脚本中，但不能照抄成别的框架的 `train_batch_size`。尤其动态过滤会先生成更多提示、再挑出有训练信号的组；日志中的 rollout step、optimizer step、权重版本和监控刷新也未必一一对应。
-
-## 2. 先把五个框架放在同一张表里
-
-以下是按接口和部署要求作出的选型判断，依据在各节的固定版本文件中展开，没有横向吞吐实测。
-
-| 框架 | 值得考虑它的具体原因 | 本文训练路线 | 主要前提与代价 |
-| --- | --- | --- | --- |
-| TRL | Python Trainer API，沿用 HF 模型、数据集和训练参数；容易看清奖励函数怎样接入 | Qwen2.5-0.5B-Instruct＋GSM8K 的教学改写，再看 Open R1 | 熟悉 Transformers 更容易上手；分布式和生成服务仍需配置，便利不等于任意模型单卡可跑 |
-| verl | 配置化连接采样、奖励、更新，训练与生成可采用不同后端和并行布局 | 官方 PPO 入门；另给真实 Qwen3-4B GRPO 脚本 | 需要研究配方、多后端或资源布局时有价值；配置项和依赖组合多 |
-| OpenRLHF | Ray 编排组件，DeepSpeed 更新、vLLM 生成；可分别配置组件资源 | 固定提交的 ProRL v2 数学脚本 | 适合已有 Ray/DeepSpeed 经验的团队；GPU 共置、主机内存、进程与依赖要一起管理 |
-| slime | 接通 Megatron 与 SGLang，模型并行、rollout 和奖励可定制 | Qwen3-4B＋DAPO 数学数据 | 已有 Megatron/SGLang 经验更合适；先处理模型参数、权重转换和补丁栈 |
-| AReaL | 把异步生成、训练、策略版本约束与 agent workflow 接口放在一起 | GSM8K YAML＋MathAgent | 值得用于长轨迹、交互等待、耗时差异大的任务；收益依赖瓶颈，调度和偏策略调试更复杂 |
-
-不能据此认为 TRL 只能训练小模型、slime 只能训练大模型、AReaL 只能异步，或其他框架不能做 agent。表格描述的是从哪里进入最容易理解。若目标是部署模型、全量预训练或已经固定在另一套训练平台中，这五者也不是唯一选择。
-
-## 3. TRL：先把 Python 训练闭环看清楚
-
-### 为什么从它开始
-
-TRL 将后训练算法封装成 Trainer。你主要提供模型、数据集、训练参数和奖励函数，训练器管理采样、奖励计算和参数更新。对已有 Hugging Face（简称 HF）流程、想先验证奖励设计的人，这样可以较直接地定位自己要改的代码。代价是显存规划、数据格式和分布式设置仍由使用者负责；开启 vLLM 后还多出生成引擎的兼容与资源配置。
-
-本节采用 **TRL v1.16.0，提交 `1b5c75ed94b7387f42532adb090c935166d4878d`**。已读此版 [GRPO 教程](https://github.com/huggingface/trl/blob/v1.16.0/docs/source/grpo_trainer.md)、[GRPOConfig](https://github.com/huggingface/trl/blob/v1.16.0/trl/trainer/grpo_config.py)、[奖励实现](https://github.com/huggingface/trl/blob/v1.16.0/trl/rewards/accuracy_rewards.py)与 trainer 传参段。官方入门用 DeepMath-103K；下面为了串起前文 GSM8K 的“题目—答案—奖励”，**将数据转换换成 GSM8K，显式添加教学参数与保存调用**。这不是官方原样脚本，也不是调优结果。
-
-### 数据怎样进入奖励函数
-
-TRL 读取 `prompt`，会把数据中其他列传给奖励函数。内置 `accuracy_reward(completions, solution, **kwargs)` 读取对话格式的生成消息和 `solution`，使用数学解析与等价验证；参考答案无法解析时返回 `None`。它与 verl 默认的 `####` 字符串匹配评分器不同，奖励数值不宜直接横比。
-
-前述题目在这里转换成如下结构；为节省篇幅，题目中文转述，字段结构与下面转换函数一致：
-
-```json
-{
-  "prompt": [{"role": "user", "content": "糖与水的数量比为7:13，合计120，糖有多少？请把最终答案写在\\boxed{}中。"}],
-  "solution": "\\boxed{42}"
-}
-```
-
-这是**从真实题目整理的字段示意**，不是数据集中的原始 JSON。模型只看到 `prompt`；`solution` 留给奖励函数。`\boxed{42}` 与参考数学答案等价时给正确性奖励，不要求逐字复制推理过程。[数据附加列的传递实现](https://github.com/huggingface/trl/blob/v1.16.0/trl/trainer/grpo_trainer.py)、[accuracy_reward](https://github.com/huggingface/trl/blob/v1.16.0/trl/rewards/accuracy_rewards.py)
-
-### 一份可继续修改的教学脚本
-
-此版本 `pyproject.toml` 要求 Python≥3.11、Accelerate≥1.10.1、Transformers≥4.56.2；数学奖励另需 `math_verify` extra。先在独立训练环境中安装 `trl[math_verify]==1.16.0`，按实际 CUDA/PyTorch 环境配置 Accelerate。依赖下限不等于完整锁文件；正式实验还要记录实际解析出的依赖、模型和数据 revision。[版本依赖](https://github.com/huggingface/trl/blob/v1.16.0/pyproject.toml)
-
-下面保存为 `train_grpo.py`。字段转换参考已读的 GSM8K 预处理逻辑；`num_generations=4`、batch、长度和 20 步均为本文教学选择，目的是检查接口，不保证收敛或显存可容纳。
+下面沿用该入门入口，额外明确损失类型、输出位置与最终保存；这些修改用于说明接口，不是一组经过调优的训练参数：
 
 ```python
 from datasets import load_dataset
 from trl import GRPOConfig, GRPOTrainer
 from trl.rewards import accuracy_reward
 
-raw = load_dataset("openai/gsm8k", "main", split="train")
-
-def to_grpo(row):
-    final_answer = row["answer"].rsplit("####", 1)[1].strip().replace(",", "")
-    return {
-        "prompt": [{"role": "user", "content": row["question"]
-                    + r" Please put your final answer within \boxed{}."}],
-        "solution": r"\boxed{" + final_answer + "}",
-    }
-
-dataset = raw.map(to_grpo, remove_columns=raw.column_names)
-args = GRPOConfig(
-    output_dir="outputs/trl-gsm8k",
-    per_device_train_batch_size=4,
-    gradient_accumulation_steps=1,
-    num_generations=4,
-    max_completion_length=512,
-    temperature=1.0,
-    learning_rate=1e-6,
+dataset = load_dataset("trl-lib/DeepMath-103K", split="train")
+config = GRPOConfig(
+    output_dir="outputs/trl-math",
     loss_type="grpo",
     beta=0.0,
-    num_iterations=1,
-    scale_rewards="group",
-    use_vllm=False,
-    remove_unused_columns=False,
-    max_steps=20,
-    save_steps=10,
-    logging_steps=1,
-    report_to="none",
 )
 trainer = GRPOTrainer(
     model="Qwen/Qwen2.5-0.5B-Instruct",
-    args=args,
+    args=config,
     reward_funcs=accuracy_reward,
     train_dataset=dataset,
 )
 trainer.train()
-trainer.save_model("outputs/trl-gsm8k/final")
+trainer.save_model("outputs/trl-math/final")
 ```
 
-启动入口沿用同版教程：
+在安装该版及数学奖励依赖、配置好 Accelerate 的环境中，将脚本存为 `train_grpo.py`，训练入口为 `accelerate launch train_grpo.py`。换自己的数据时，保留 `prompt` 并将参考值放到奖励函数需要的列；自定义函数可接收 `completions` 及数据的其他列。模型名、`num_generations`、回答长度和训练 batch 要一起调整：该版要求有效 batch 能被每题回答数整除。[GRPOConfig](#source-trl)
 
-```bash
-accelerate launch train_grpo.py
+这里显式写 `loss_type="grpo"` 很关键：v1.16.0 的默认值是 `dapo`。前者先按各条回答长度归一化，后者按有效 token 聚合；两者给长短回答的相对权重不同。`beta=0` 关闭 KL 项，在这版实现中不加载 reference。[配置定义](#source-trl)
+
+保存间隔和 `output_dir` 控制训练检查点，`save_model` 输出用于加载的模型；续训还需要对应训练状态。导出后的独立评测要另定题集、模板、采样预算和判分规则。
+
+更完整的项目入口是 Open R1 固定提交 `5b6ff22b3fb7aa069c54866e517f39dfc3160e09` 的 `src/open_r1/grpo.py`：它把数据转换、奖励注册、恢复、保存和可选评估接到 TRL。其历史 YAML 没有填写 `loss_type`，所以不能拿新版本默认值反推当时训练目标。复用这类项目时，项目提交、TRL 依赖和生效配置必须一起固定。[Open R1 配置与调用](#source-openr1)
+
+## verl：从数据路由读懂一份分布式配方
+
+verl 的入口更适合已经要调整优势估计、采样数量、奖励和多卡布局的实验。它以控制器连接数据流，允许训练与生成采用不同后端及并行方式；选择范围增加，也意味着启动脚本只是最终配置的一部分，必须连默认配置一起读。
+
+以下固定 **verl v0.9.1**，使用 `examples/grpo_trainer/run_qwen3_4b_fsdp.sh`。它启动 `verl.trainer.main_ppo`，但显式设置 `algorithm.adv_estimator=grpo`；`main_ppo` 是入口名，不是本次一定使用 GAE 和 critic 的证据。该版 Quickstart 的 PPO 入门则是另一条路线，不宜把两者参数拼在一起。[入口、角色判定与脚本](#source-verl)
+
+### 预处理决定了模型和评分器各拿到什么
+
+`examples/data_preprocess/gsm8k.py` 将原始 GSM8K 题目加上末答案格式指令，构造成 `prompt`，从参考解的 `####` 后提取 `ground_truth`，写成训练与测试 Parquet。转换后的连接关系是：
+
+```text
+question → prompt → 生成侧
+answer 的末答案 → reward_model.ground_truth → 评分器
+data_source="openai/gsm8k" → 选择 GSM8K 评分实现
+extra_info → 保留原题、原解和切分信息
 ```
 
-`num_generations` 是每题回答数；TRL 的 generation batch 按展开后的回答计数，并必须能被它整除。这里显式选择 `loss_type="grpo"`，不会随当前默认值 `dapo` 漂移；`beta=0` 关闭 KL 惩罚，不意味着所有 GRPO 都不需要 reference。这份脚本只显式限制回答长度；接长提示数据前还要根据 tokenizer 和上下文窗口检查输入长度。降低参数量也不能替代显存估算。
+这里的 `reward_model.style="rule"` 表示规则反馈，不是要求加载神经奖励模型。默认 GSM8K 评分只在生成文本最后 300 个字符中找最后一个 `#### 数字`，与参考值字符串比较；正确给 1，否则默认给 0。若换成 boxed 输出却保留这份评分器，奖励可能一直为零，问题出在接口约定而非优化器。[预处理与评分实现](#source-verl)
 
-训练中由 `output_dir` 和保存间隔控制检查点，末尾 `save_model` 输出用于加载的最终模型；继续训练还要保留训练状态检查点。下一步应在 GSM8K `test` 或自己的独立题集上，用相同提示、生成预算和评分器比较原模型与最终模型，记录正确率、抽取失败率和回答长度。脚本只覆盖训练接口，**没有附带一次已执行的独立评估**。
-
-### 从本地生成扩展到 vLLM，再读 Open R1
-
-不使用 vLLM 时，常规 GRPOTrainer 由模型自身生成；使用时可选 `colocate` 共享训练 GPU，或 `server` 放到独立服务。分离服务需要单独安排设备、地址和服务环境，也需要同步更新权重。这两种摆法不自动启用异步训练。当前发布页另有 AsyncGRPO 路线，因此本文只对这里选用的常规 `GRPOTrainer` 作说明，不把它当成 TRL 全部能力的边界。[v1.16.0 配置](https://github.com/huggingface/trl/blob/v1.16.0/trl/trainer/grpo_config.py)、[发布说明](https://github.com/huggingface/trl/releases/tag/v1.16.0)
-
-**Open R1 是更完整的项目例子。** 固定提交 `5b6ff22b3fb7aa069c54866e517f39dfc3160e09` 的 [grpo.py](https://github.com/huggingface/open-r1/blob/5b6ff22b3fb7aa069c54866e517f39dfc3160e09/src/open_r1/grpo.py) 把题目列转成对话提示，接入奖励注册表、`GRPOTrainer`、恢复、保存和可选评估；[YAML](https://github.com/huggingface/open-r1/blob/5b6ff22b3fb7aa069c54866e517f39dfc3160e09/recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo.yaml) 配 Qwen2.5-1.5B-Instruct、OpenR1-Math-220k、16 个回答、每设备 batch 16、梯度累积 4、提示/回答上限 512/1024。README 的命令以 8×H100 80GB 为机器假设，并说明共置和独立 vLLM server；这不是 TRL 最低配置。[S6](#source-s6)
-
-这份历史 YAML **没有填 `loss_type`**。后来 TRL 快照与当前 v1.16.0 的默认值为 `dapo`，也不能据此反推 Open R1 当时的实际损失。复用项目时，要同时固定项目提交、TRL 依赖和生效配置；不要把上面新版本的安装方式接到历史项目上就称为复现。历史 YAML 还启用了 Hub 推送和 W&B，纯本地实验应主动关闭这些选项。
-
-## 4. verl：从数据和配置进入多后端训练
-
-### 优势与使用前提
-
-verl 用控制器串联后训练的数据流，训练后端与生成后端可以采用不同并行布局，并在交接时重新切分权重。历史 README 列出 FSDP/FSDP2/Megatron 训练与 vLLM/SGLang/HF 生成，也有异步实验入口；这些清单不保证所有排列组合在每个版本都兼容。[S1](#source-s1)
-
-它适合需要修改采样数量、优势估计、KL、loss、奖励和多卡布局的研究工作。相应代价是配置维度多：同一个 `main_ppo` 入口可以跑不同算法，既要读启动脚本，也要读其合并的默认配置。下面固定 **v0.9.1，提交 `1876b06d0a3e4e71e06230be10af14492ca8a75b`**，分别介绍该版的 PPO 入门与 GRPO 脚本，不把两者拼成一个例子。
-
-### 数据与奖励：为什么先生成 Parquet
-
-同版 [gsm8k.py](https://github.com/verl-project/verl/blob/v0.9.1/examples/data_preprocess/gsm8k.py) 读取 GSM8K，将题目添加“逐步思考并在 `####` 后输出答案”的指令，把参考解答末尾数字提取为 `ground_truth`，生成训练和测试 Parquet。关键字段如下（题目省略；这是对转换后结构的示意）：
-
-```json
-{
-  "data_source": "openai/gsm8k",
-  "prompt": [{"role": "user", "content": "题目 + 输出格式指令"}],
-  "ability": "math",
-  "reward_model": {"style": "rule", "ground_truth": "42"},
-  "extra_info": {"split": "train", "index": 0, "answer": "原始解答", "question": "原始题目"}
-}
-```
-
-`data_source` 用来选择评分器，`prompt` 是生成输入，`reward_model.ground_truth` 是奖励标签，`extra_info` 留存样本来源。这一示意的 `index=0` 只解释字段，不宣称咖啡题在原数据中的索引。[奖励分派](https://github.com/verl-project/verl/blob/v0.9.1/verl/utils/reward_score/__init__.py) 对 `openai/gsm8k` 调用 [gsm8k.compute_score](https://github.com/verl-project/verl/blob/v0.9.1/verl/utils/reward_score/gsm8k.py)，默认只在生成末尾最多 300 个字符里寻找最后一个 `#### 数字`。没有标记、格式不匹配，即使文字里出现正确数字也未必得分。
-
-### PPO 入门与 GRPO 路线各怎么开始
-
-同版 [Quickstart](https://github.com/verl-project/verl/blob/v0.9.1/docs/start/quickstart.rst) 是 **PPO**：Qwen2.5-0.5B-Instruct，actor 和 critic 分别设置模型路径，vLLM 生成；配置默认优势估计是 `gae`。它写的准备条件包括至少 24 GB HBM 的 GPU，并提供单 GPU 参数组，这只是这条教程的条件。教程还提示低显存时调整 micro-batch；它不构成本文对显存的测试。
-
-下面选用实际读过的 [Qwen3-4B GRPO 脚本](https://github.com/verl-project/verl/blob/v0.9.1/examples/grpo_trainer/run_qwen3_4b_fsdp.sh) 展示另一条完整启动路线。该版 [安装说明](https://github.com/verl-project/verl/blob/v0.9.1/docs/start/install.rst) 的 uv 流程面向 Linux/Python 3.12，由提交中的 `uv.lock` 和 extras 选择环境；从检出 v0.9.1 的 verl 仓库根目录执行：
+在检出 v0.9.1、使用该版锁文件与依赖的仓库根目录，入口是：
 
 ```bash
 uv run --frozen --all-packages --extra vllm --extra fsdp \
@@ -224,131 +112,50 @@ PROJECT_NAME=gsm8k_grpo EXPERIMENT_NAME=qwen3_4b \
   'trainer.logger=[console]'
 ```
 
-第二条命令沿用官方脚本的环境变量和尾部配置覆盖；本文改了实验名、将日志限为 console。脚本自己通过 `uv run` 启动 driver，并给 Ray worker 设置同样环境，不能只保证主进程装了依赖。模型与数据路径可改 `MODEL_PATH`、`TRAIN_FILE`、`TEST_FILE`；完整脚本中的默认值及含义是：
+第二条保留官方脚本的执行方式，只替换实验名和日志设置。脚本通过 `uv run` 启动 driver，也为 Ray worker 设置相应依赖环境；仅给主进程装包还不够。Ray 负责把组件分配到资源，Hydra 负责合并默认项与命令行覆盖。[同版脚本](#source-verl)
 
-| 配置组 | 此 GRPO 脚本的设置 | 改它会影响什么 |
-| --- | --- | --- |
-| 模型与资源 | Qwen3-4B、1 节点、每节点默认 8 GPU | 模型大小与训练资源；GPU 型号未注明 |
-| 训练后端 | FSDP；默认配置 `dp_actor.yaml` 中 `strategy: fsdp` | 参数分片与更新；不能只看入口名判断后端 |
-| 数据与 batch | 512 个训练提示，每提示 5 个回答；PPO mini-batch 256、每 GPU micro-batch 2 | 生成量、更新批次和显存；动态 token batching 也已启用 |
-| 长度与生成 | 提示/回答上限 1024/1024；vLLM TP2，显存利用参数 0.6 | 上下文、并发与生成资源 |
-| 算法 | `adv_estimator=grpo`，actor KL loss 开启，系数 0.001；reward KL 关闭 | 不走默认 GAE critic 路径；KL 所在位置不同 |
-| 保存与验证 | 每 20 步保存、每 5 步验证，15 epochs | 存盘频率、测试成本和训练时长上限 |
+| 先改的配置 | 这条 GRPO 路线中的含义 |
+| --- | --- |
+| `MODEL_PATH`、`TRAIN_FILE`、`TEST_FILE` | 模型和训练、验证文件；验证文件仍须与训练用途区分 |
+| `NNODES`、`NGPUS_PER_NODE` | 默认单节点、每节点 8 GPU；这不是显存实测或最低卡数 |
+| `TRAIN_BATCH_SIZE`、`ROLLOUT_N` | 默认 512 个提示、每题 5 个回答 |
+| `PPO_MINI_BATCH_SIZE`、每卡 micro-batch | 默认 256 与 2；脚本开启动态 token batching，实际计算量还受长度影响 |
+| actor KL 与 reward KL | actor KL loss 开启、系数 0.001；reward 中的 KL 关闭，不能只记“用了 KL” |
+| `SAVE_FREQ`、`TEST_FREQ` | 默认每 20 步保存、每 5 步验证 |
 
-[入口](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/main_ppo.py) 用 Hydra 加载 [ppo_trainer.yaml](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/config/ppo_trainer.yaml)，再决定 trainer 路线；[need_critic](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/ppo/utils.py) 按配置判定是否需要 critic。上面的脚本还开了动态 batch，所以不能把 micro-batch 数字当作实际每次固定 token 数。修改奖励可从 `compute_score` 及 reward 配置进入，修改生成环境可沿 agent loop 接口扩展；这里只审了单轮数学任务。
+该路线用 FSDP 更新、vLLM 生成，生成侧 TP 为 2，提示和回答长度上限各 1024。换奖励时，应沿 reward 配置或评分分派接入新实现；不能只改数据路径而保留旧 `data_source` 和标签语义。[脚本与奖励分派](#source-verl)
 
-### 保存、导出与 DAPO 进阶
-
-默认训练目录是 `checkpoints/<project_name>/<experiment_name>`。同版 [model_merger](https://github.com/verl-project/verl/blob/v0.9.1/verl/model_merger/__main__.py) 提供 FSDP/Megatron 分片合并；下面依据 Quickstart 改成本文实验名和**示例 step 20**。使用前必须确认该步确实生成了目录，不能只根据保存间隔假定文件存在：
+默认模型训练产物在 `checkpoints/<project_name>/<experiment_name>` 下。分片检查点服务于训练保存与恢复，供推理加载的 HF 权重可用同版 `verl.model_merger` 合并。例如，确认实际生成了某一步的 actor 目录后，执行以下形式；`ACTOR_DIR` 是该目录变量：
 
 ```bash
 uv run --frozen --all-packages --extra vllm --extra fsdp \
   python3 -m verl.model_merger merge --backend fsdp \
-  --local_dir checkpoints/gsm8k_grpo/qwen3_4b/global_step_20/actor \
-  --target_dir outputs/verl-qwen3-4b-hf
+  --local_dir "$ACTOR_DIR" --target_dir outputs/verl-qwen3-4b-hf
 ```
 
-训练内验证用 `data.val_files` 与 `trainer.test_freq`；导出后还应另用相同生成预算评估原模型与导出模型，检查 tokenizer、chat template 和评分器是否一致。合并成功只证明产生了模型文件，不能替代质量验证。
+合并只改变分片格式。导出后仍要核对 tokenizer 和对话模板。[导出接口](#source-verl)
 
-<details>
-<summary>DAPO 历史案例：生成 batch 与训练 batch 为什么不同</summary>
+## OpenRLHF：组件部署与算法配置要一起读
 
-固定 `4f80e465c2ec79ab9c3c30ec74b9745de61d0490` 的脚本使用 Qwen2.5-32B：生成提示 `512×3=1536`，训练提示 512，每题 16 回答，提示 mini-batch 32。动态过滤丢弃组内指标相同的提示，再继续生成以凑齐训练 batch，最多尝试 10 批。优势估计为 `grpo`，clip 0.2/0.28，loss 聚合 `token-mean`，reward KL 与单独 KL loss 都关闭；rollout TP4、显存利用参数 0.7。[S2](#source-s2)
+OpenRLHF 通过 Ray 编排组件，由 DeepSpeed 更新、vLLM 生成。已有 Ray/DeepSpeed 经验、需要分别管理 actor、reference 和生成资源时，可以从组件配置进入。下面使用固定提交 `dc2a7ad326f619fc5a47737ea47d1920ce2c0b53` 的 ProRL v2 数学脚本；这里的 ProRL 是配方，OpenRLHF 才是执行框架。[脚本](#source-openrlhf)
 
-| 项目 | DAPO 报告 v2 第 4.1 节 | 该历史脚本 |
-| --- | --- | --- |
-| rollout 提示 | 512，每题 16 回答 | 生成 1536，训练 512，每题 16 回答 |
-| 训练 mini-batch | 512，并写每次 rollout 做 16 次梯度更新 | 提示 mini-batch 32，传给 `ppo_mini_batch_size` |
-| warm-up | 20 个 rollout step 的线性 warm-up | `lr_warmup_steps=10` |
+真实入口为 `bash examples/scripts/train_prorlv2_math_hybrid_engine.sh`，它调用 `python3 -m openrlhf.cli.train_ppo_ray`。脚本使用 DeepSeek-R1-Distill-Qwen-1.5B 和 `OpenRLHF/dapo-math-17k`，数据列为 `prompt`、`label`，并应用 chat template。换任务先改顶部 `MODEL_PATH`、`DATASET_PATH`、`REWARD_FUNC_PATH`、`SAVE_PATH`，再核对输入列、答案列和资源参数。该提交使用点号形式的参数，不应混入旧版扁平 flag。
 
-计步单位未完全对齐，不能把差异改写成一个一致数字。复现表里的机器是 16 节点×8 H800，属于该案例，不是 verl 入门要求；此历史脚本也不直接套用 v0.9.1 安装环境。[S2](#source-s2) [S3](#source-s3)
+`--reward.remote_url` 在这份脚本里指向本地 `examples/python/math_reward_func.py`，名字并不意味着它一定是 HTTP 服务。其接口 `reward_func(queries, prompts, labels, **kwargs)` 从完整序列中取出回答，抽取 boxed 答案并判等，返回 `rewards`、`scores` 和 `extra_logs`。同一答案若只写在 `####` 后，不能照搬 verl 的评分预期。[奖励实现](#source-openrlhf)
 
-</details>
+这条配方显式设置 `--algo.advantage.estimator reinforce_baseline`、KL loss 与 `k2` 估计器，并开启动态过滤。虽然入口带 PPO，也不能将整条路线称为原始 PPO 或原始 GRPO。actor 与 reference 都写为单节点各 8 GPU，vLLM 为 8 个 TP1 引擎，同时启用 `--train.colocate_all`；这是共享设备的组件部署描述，不能机械相加为 24 张 GPU。脚本末尾的异步参数处于注释中，因此这条具体入口没有启用它。[完整脚本](#source-openrlhf)
 
-## 5. OpenRLHF：把训练、生成和奖励作为组件部署
+保存也有不同产物：`ckpt.output_dir` 接收最终模型，`ckpt.path/_actor` 保存训练状态，周期 HF 快照使用 `<tag>_hf` 目录。恢复需要相应状态及加载选项，仅留最终模型不足以恢复原来的优化过程。[actor 保存实现](#source-openrlhf)
 
-### 为什么考虑这条路线
+同名配方的工程介绍与脚本还存在实质差异：NVIDIA ProRL v2 工程文讲周期性的长度惩罚与 reference reset；这份脚本没有启用注释中的 overlong 参数，也没有写出那条 reference reset 日程。脚本实际启用的截断惩罚系数为 0，使被长度上限截断的样本奖励归零。[ProRL 工程文](#source-prorl)、[脚本](#source-openrlhf)
 
-这条实现由 Ray 调度组件，DeepSpeed 负责更新，vLLM 负责生成。组件可以分开部署，也可以共置；资源配置明确写到 actor、reference、生成引擎。已有 Ray/DeepSpeed 运维经验、需要管理多个训练与评分组件的团队，可以沿这套结构扩展。代价是要同时理解调度、主机内存、GPU 占用和引擎版本，Ray 本身不计算梯度。
+## slime：权重格式是训练入口的一部分
 
-早期权重同步文档讲过 actor—vLLM 的 NCCL，以及共置 hybrid engine 的 CUDA IPC。两者有具体部署与版本条件，不能把旧博文当成最新版的统一默认协议。[S9](#source-s9) 本次可见最新 release 是 v0.11.2；以下 ProRL 路线仍固定原稿的 **`dc2a7ad326f619fc5a47737ea47d1920ce2c0b53`**，不宣称它等于 v0.11.2。
+slime 的这条路线以 Megatron 训练、SGLang 生成。已经在使用这两套后端、需要修改模型并行或 rollout 的团队，可以从它进入；第一次迁入模型时，难点往往先在模型结构参数与权重格式，而非奖励函数。
 
-### 用一份真实脚本看清输入和更新目标
+以下固定 **slime v0.4.0** 的 `scripts/run-qwen3-4B.sh`。模型参数文件 `scripts/models/qwen3-4B.sh` 描述层数、隐藏维度和注意力等结构；HF 模型目录提供配置和 tokenizer，训练需要的参考权重则通过 `tools/convert_hf_to_torch_dist.py` 转为 Megatron `torch_dist`。[快速开始、模型文件与转换工具](#source-slime)
 
-已读的 [ProRL v2 脚本](https://github.com/OpenRLHF/OpenRLHF/blob/dc2a7ad326f619fc5a47737ea47d1920ce2c0b53/examples/scripts/train_prorlv2_math_hybrid_engine.sh) 使用 DeepSeek-R1-Distill-Qwen-1.5B、`OpenRLHF/dapo-math-17k`，数据列为 `prompt`、`label`，应用 chat template。它调用：
-
-```bash
-python3 -m openrlhf.cli.train_ppo_ray
-```
-
-这一行是**入口摘录，单独执行不代表完整训练**。入口名带 PPO，但脚本显式设置 `--algo.advantage.estimator reinforce_baseline`；应按算法参数解释这次训练，而不是按文件名归类。
-
-奖励路径 `examples/python/math_reward_func.py` 不是 HTTP 地址，而是可加载的本地 Python 实现。它的接口及返回结构摘录如下，函数体省略：
-
-```python
-def reward_func(queries, prompts, labels, **kwargs) -> dict:
-    # queries 是提示加回答；labels 来自数据的 label 列
-    # 实现剥离提示，抽取 boxed 答案，与 label 比较
-    ...
-    return {
-        "rewards": rewards_tensor,
-        "scores": rewards_tensor,
-        "extra_logs": {"math_accuracy": accuracy},
-    }
-```
-
-这是说明接口的删节，不能当作可执行奖励文件。实际实现用 `extract_boxed_answer` 和 `grade_answer`，正确得 1，否则 0；只有 `#### 42`、没有 boxed 答案的输出不能照搬 verl 评分规则。改任务时要同时改数据列与奖励函数，先直接检查若干“正确、错误、格式不合、截断”的回答。[固定奖励实现](https://github.com/OpenRLHF/OpenRLHF/blob/dc2a7ad326f619fc5a47737ea47d1920ce2c0b53/examples/python/math_reward_func.py)
-
-### 资源、启动和产物
-
-固定提交的 [requirements](https://github.com/OpenRLHF/OpenRLHF/blob/dc2a7ad326f619fc5a47737ea47d1920ce2c0b53/requirements.txt) 写 DeepSpeed 0.19.6、Ray 2.55.0、Transformers 5.15.0；[setup.py](https://github.com/OpenRLHF/OpenRLHF/blob/dc2a7ad326f619fc5a47737ea47d1920ce2c0b53/setup.py) 的 `vllm` extra 固定 vLLM 0.29.0。应检出该提交，再按此版环境要求安装；不能把历史故障帖的旧 vLLM 拼进来。源码可编辑安装形式为 `pip install -e '.[vllm]'`，它仍需要合适的 PyTorch/CUDA 和构建环境，不是一份通用系统安装单。
-
-下面选取完整脚本中的关键参数组；完整启动使用原文件：
-
-| 参数组 | 原脚本的值 | 读者应先确认什么 |
-| --- | --- | --- |
-| Ray/生成资源 | actor 1×8、reference 1×8、vLLM 8 engines×TP1、`--train.colocate_all` | 共置后共享资源，不能把组件数量机械相加成 24 张卡；GPU 型号未注明 |
-| batch | `--train.batch_size 1024`、`--rollout.batch_size 512`、每题 16 回答 | 生成提示量和更新 batch 口径不同，且启用动态过滤 |
-| 长度/训练 | 最大总长度 9216、回答上限 8192、ZeRO3、bf16、LR 1e-6 | 长回答会影响缓存与训练 token 量，这是大批量配方，不是通用入门参数 |
-| 目标 | clip 0.2/0.27、KL loss 与 `k2`、`reinforce_baseline` | 不能改称原始 GRPO 或由入口名推断 PPO |
-| 输出/验证 | `--ckpt.output_dir`、`--ckpt.path`、每 5 步保存 HF；AIME-2024 每 5 步评估、每题 4 回答 | 路径空间、训练恢复状态与评估成本 |
-
-在该提交的仓库根目录、准备好资源后，完整入口为：
-
-```bash
-bash examples/scripts/train_prorlv2_math_hybrid_engine.sh
-```
-
-要改模型、数据、奖励、输出位置，先编辑脚本顶部 `MODEL_PATH`、`DATASET_PATH`、`REWARD_FUNC_PATH`、`SAVE_PATH`；要改卡数、长度与 batch，则改对应参数组。此版使用点号参数，不混入旧文档的扁平 flag。脚本没有启用底部注释中的 `--train.async_enable`，不能因框架支持异步便把这次脚本称为异步训练。
-
-[CLI](https://github.com/OpenRLHF/OpenRLHF/blob/dc2a7ad326f619fc5a47737ea47d1920ce2c0b53/openrlhf/cli/train_ppo_ray.py) 结束时调用 actor 保存；[ppo_actor.py](https://github.com/OpenRLHF/OpenRLHF/blob/dc2a7ad326f619fc5a47737ea47d1920ce2c0b53/openrlhf/trainer/ray/ppo_actor.py) 将最终模型写到 `ckpt.output_dir`，训练状态存入 `ckpt.path/_actor`，HF 周期快照为 `<tag>_hf`。恢复由 `--ckpt.load_enable` 等选项控制。训练内 AIME 结果之后，还应对导出的 HF 模型执行独立评估，保持抽样次数和长度相同；每题 4 回答的成绩不能直接与一次回答的正确率相比。
-
-<details>
-<summary>ProRL v2 工程文与同名脚本的差异</summary>
-
-| 对照项 | NVIDIA 工程文 | 固定提交的 OpenRLHF 脚本 |
-| --- | --- | --- |
-| clip 下限/上限 | 0.20/0.28 | 0.2/0.27 |
-| 长度惩罚 | 周期启停的 cosine 长度惩罚 | overlong 参数在注释中；启用的 `stop_properly_penalty_coef=0.0` 按注释将截断样本奖励归零 |
-| reference reset | 每 200–500 步，或按 KL/验证情况重置，保留 optimizer 状态 | 启动命令没有这条日程 |
-
-注释不等于启用参数，同名脚本不等于完整复现 NVIDIA 训练。这里保留材料差异，不替作者补齐训练日程。[S7](#source-s7) [S8](#source-s8)
-
-</details>
-
-## 6. slime：先打通模型权重，再接 Megatron 与 SGLang
-
-### 适合已有模型并行经验的团队
-
-slime 在这条路线中用 Megatron 训练、SGLang 生成。它把模型参数、rollout、奖励、并行和检查点拆成可调整的接口，适合已经使用这两套后端、需要定制采样或模型并行的团队。进入成本主要在模型结构配置、权重格式和补丁兼容；并非换一个 HF 模型名就能迁入任意模型。
-
-下面固定 **v0.4.0，提交 `0b0c277d5b4cc66efc3b6db269e2e5184e8f3b1e`**。入口统一为 `train.py`。其中 `async_train` 调用后会等待结果，这个名字不能证明整条流水线异步；异步生产逻辑要看 rollout 实现。初始化会先向生成侧更新权重，循环在训练后暂停 rollout admission、交接权重、按条件恢复；offload 场景中恢复 weights 与恢复 KV cache 是两次调用。[train.py](https://github.com/THUDM/slime/blob/v0.4.0/train.py)
-
-### 环境和权重准备不能跳过
-
-同版 [Quick Start](https://github.com/THUDM/slime/blob/v0.4.0/docs/en/get_started/quick_start.md) 提供 CUDA 12.9 的 H100/H200 镜像路线和 CUDA 13.0 的 Blackwell 路线，但 `slimerl/slime:latest` 是浮动标签，不能单靠它固定环境。可追溯的构建组合见同提交 [Dockerfile](https://github.com/THUDM/slime/blob/v0.4.0/docker/Dockerfile)：默认 SGLang 基础镜像 `slimerl/sglang:v0.5.15.post1-cu129`、Megatron 提交 `4b4acac9a1d28ea6829c8d4f566d75698a21249d`、Transformer Engine 2.18.0，并应用版本对应补丁。实际使用时还需记录镜像 digest；本文没有拉取镜像或验证兼容性。
-
-主线使用 [run-qwen3-4B.sh](https://github.com/THUDM/slime/blob/v0.4.0/scripts/run-qwen3-4B.sh) 和 [模型参数文件](https://github.com/THUDM/slime/blob/v0.4.0/scripts/models/qwen3-4B.sh)，不把 Quick Start 的 GLM 路径混入。先准备 Qwen/Qwen3-4B 到 `/root/Qwen3-4B`，以及训练、验证 JSONL，再转换权重。下面由同版转换说明改写模型和目录：
+在匹配该版本后端和补丁的环境里，Qwen3-4B 的权重准备形式如下，路径对应官方训练脚本：
 
 ```bash
 source scripts/models/qwen3-4B.sh
@@ -358,242 +165,103 @@ PYTHONPATH=/root/Megatron-LM python tools/convert_hf_to_torch_dist.py \
   --save /root/Qwen3-4B_torch_dist
 ```
 
-[转换程序](https://github.com/THUDM/slime/blob/v0.4.0/tools/convert_hf_to_torch_dist.py) 将 HF 权重转成 Megatron `torch_dist` 格式。模型脚本写层数、hidden size、attention heads、词表、rotary base 等；这些必须与实际模型一致。训练脚本中 `--hf-checkpoint` 提供 HF 配置/tokenizer，`--ref-load` 指向转换权重，`--load/--save` 指向训练目录；没有有效训练检查点时按该版加载逻辑从参考权重开始。转换不是训练结果。
+训练脚本的 `--hf-checkpoint`、`--ref-load`、`--load/--save` 分别指向 HF 配置目录、转换后的参考权重、训练检查点目录。准备数据时，训练 JSONL 用 `prompt` 和 `label` 列，官方路线采用 `zhuzilin/dapo-math-17k`，验证用 `zhuzilin/aime-2024`。`--input-key`、`--label-key` 和 `--apply-chat-template` 决定输入如何进入模型；改数据结构时要一起改。
 
-### 数据与奖励有一个容易忽略的约定
+这份脚本使用 `--rm-type deepscaler`，评分先取 `</think>` 后、或 `###Response` 后的回答，再抽答案并作数学判等。若两个标记都没有，直接给零。自定义奖励通过 `--custom-rm-path` 接入，应遵守同版 `async_rm(args, sample, **kwargs)` 的调用约定。[奖励分派与实现](#source-slime)
 
-官方训练数据是 `zhuzilin/dapo-math-17k`，评估数据是 `zhuzilin/aime-2024`，分别放到脚本指定的 `/root/dapo-math-17k/` 和 `/root/aime-2024/`。JSONL 通过 `--input-key prompt`、`--label-key label` 指定输入与答案列；对话形式的 prompt 配 `--apply-chat-template`。改自己的任务时，这几个字段要一起改。
+脚本一次生成 **32 提示×8 回答＝256 条回答**，`global-batch-size` 为 256，回答上限 8192；训练 TP2、PP1，生成引擎每个使用 2 GPU，训练生成共置。它探测可用卡数，探测失败回退到 8，这个回退值不能当最低硬件要求。完整入口是 `bash scripts/run-qwen3-4B.sh`，但原脚本开头会强制清理 Ray、SGLang 和 Python 进程，只适合专用训练容器；共享机器需要先移除这种全局清理。[训练脚本](#source-slime)
 
-脚本用 `--rm-type deepscaler`。[分派实现](https://github.com/THUDM/slime/blob/v0.4.0/slime/rollout/rm_hub/__init__.py) 将 `sample.response`、`sample.label` 交给 [deepscaler.py](https://github.com/THUDM/slime/blob/v0.4.0/slime/rollout/rm_hub/deepscaler.py)：先取 `</think>` 后或 `###Response` 后的回答，没有任一标记直接得零；然后抽取答案、用数学判等，正确为 1，否则 0。因而“模型答对了但奖励一直零”时，要先检查生成格式，不能只改学习率。自定义评分入口是 `--custom-rm-path`，需要按同版 `async_rm` 的调用约定实现。
+训练结果保存为 `/root/Qwen3-4B_slime/` 下的 Megatron 检查点，脚本每 20 轮保存。导出供 HF 使用的模型时，`tools/convert_torch_dist_to_hf.py` 接收实际迭代目录的 `--input-dir`、目标 `--output-dir`，并可通过 `--origin-hf-dir` 带入原始配置和 tokenizer。权重转换完成与训练恢复是两回事；保留训练分片，才能继续沿原训练后端恢复。[反向转换工具](#source-slime)
 
-### 配置、启动、导出和验证
+## AReaL：把 agent 的调用放进训练工作流
 
-Qwen3-4B 脚本使用 GRPO、32 提示×8 回答、global batch 256、回答上限 8192；Megatron TP2/PP1/CP1、sequence parallel，每个 SGLang engine 2 GPU、显存利用参数 0.7、训练生成共置。它会探测卡数，失败时回退 8；**8 是回退值，不是最低要求**。脚本没有给 GPU 型号、峰值显存或该配置的成绩。[S10](#source-s10)
+AReaL 值得从长短不一、含工具等待的轨迹进入：框架既提供训练与生成的组织方式，也提供 agent workflow，让调用生成、计算反馈和收集轨迹进入同一套训练。以下固定 **AReaL v2.1.0**，从单轮数学例子看接口，再讨论异步的含义。[配置与入口](#source-areal)
 
-完整脚本入口是：
-
-```bash
-bash scripts/run-qwen3-4B.sh
-```
-
-执行前须读脚本开头：它会 `pkill -9 python`、清理 Ray/SGLang。只在专用训练容器内原样使用；共享环境应先移除这种全局清理逻辑。再确认 Ray 节点地址、GPU 数、Megatron 路径、模型和数据目录。这里说明实际脚本行为，没有执行该命令。
-
-脚本每 20 轮保存与评估，评估 AIME 每题 16 回答、回答上限 16384。保存目录是 `/root/Qwen3-4B_slime/`；由同版 [反向转换工具](https://github.com/THUDM/slime/blob/v0.4.0/tools/convert_torch_dist_to_hf.py) 导出 HF 权重。下面路径 `iter_XXXXXXX` 是待替换的真实迭代目录，命令由 Quick Start 的转换示例改为 Qwen：
-
-```bash
-PYTHONPATH=/root/Megatron-LM python tools/convert_torch_dist_to_hf.py \
-  --input-dir /root/Qwen3-4B_slime/iter_XXXXXXX/ \
-  --output-dir /root/Qwen3-4B-export \
-  --origin-hf-dir /root/Qwen3-4B
-```
-
-导出后检查词表 padding、tokenizer、chat template，并在独立题集按固定预算评价。脚本内的多样本 AIME 评估与前文 GSM8K 单次正确率不是同一口径，不能拿来做框架比较。
-
-## 7. AReaL：把数学闭环接到异步与 agent 工作流
-
-### 它的优势何时有用
-
-如果轨迹长短差异很大，或工具调用、环境交互存在等待，收齐整批样本可能让训练设备空等。AReaL 提供生成与训练分离的异步组织方式、并发与队列配置、策略版本约束，以及 agent workflow 接口；这使它值得用于研究这些等待如何被重叠。是否更快取决于真实瓶颈，本文没有测量异步收益。代价是需要处理旧策略样本、运行中的请求、版本推进和异常恢复。
-
-下面固定 **v2.1.0，提交 `ecc8b0e4dfb4e3965f67121a5c87866a07c390ae`**。先看单轮 GSM8K，再谈 agent 扩展，不能仅用一个单轮例子声称已经讲完工具训练。[YAML](https://github.com/areal-project/AReaL/blob/v2.1.0/examples/math/gsm8k_grpo.yaml)、[入口](https://github.com/areal-project/AReaL/blob/v2.1.0/examples/math/gsm8k_rl.py)
-
-### 输入怎样变成带奖励的轨迹
-
-`gsm8k_rl.py` 读取 `GRPOConfig`，加载 tokenizer 和 GSM8K train/test，创建 `PPOTrainer`，向 `trainer.train()` 传入 `areal.workflow.openai.math_agent.MathAgent`。这里同样不能仅凭 `PPOTrainer` 名称判断算法，GRPO 的组内归一化等由配置确定。
-
-[数据转换](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/dataset/gsm8k.py) 把 `question` 变为用户 `messages`，添加 boxed 最终答案指令，保留 `answer`。[MathAgent](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/workflow/openai/math_agent.py) 读取消息、调用 OpenAI 兼容的生成客户端，再把回答文本与 `data["answer"]` 交给异步奖励包装；奖励用 `math_verify.parse/verify`。这条路径并不是调用外部商业模型：[proxy workflow](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/experimental/openai/proxy/workflow.py) 将请求指向本地训练系统的代理，并处理会话和轨迹。更换任务时，数据字段、agent 行为、环境返回和奖励必须共同对齐。
-
-入口的关键调用摘录如下；省略配置加载、数据准备与评估参数，不可独立执行：
-
-```python
-with PPOTrainer(config, train_dataset=train_dataset,
-                valid_dataset=valid_dataset) as trainer:
-    trainer.train(
-        workflow="areal.workflow.openai.math_agent.MathAgent",
-        workflow_kwargs=workflow_kwargs,
-        eval_workflow="areal.workflow.openai.math_agent.MathAgent",
-        eval_workflow_kwargs=eval_workflow_kwargs,
-    )
-```
-
-### 配置里哪些值决定资源和滞后
-
-| 字段 | v2.1.0 GSM8K YAML | 作用 |
-| --- | --- | --- |
-| 模型 | `actor.path: Qwen/Qwen2.5-1.5B-Instruct` | tokenizer、生成模型等通过插值跟随它 |
-| 集群 | 1 节点×8 GPU | 示例资源，未给 GPU 型号或显存实测 |
-| 训练/生成 | `fsdp:d4p1t1` / `sglang:d4p1t1` | 各自采用 DP4、PP1、TP1 的资源布局；不是给同一组件配置 8 路 DP |
-| 数据/生成 | 训练 dataset batch 256，`n_samples=4`，新 token 上限 1024 | 提示消费批次与每提示采样数，不照搬为其他框架同名 batch |
-| 滞后 | `rollout.max_head_offpolicyness: 2` | 对请求接纳施加策略版本约束，不是每两步才更新一次权重 |
-| 目标 | `actor.use_decoupled_loss: true`、`actor.recompute_logprob: true` | 对旧策略样本使用解耦目标、处理概率计算 |
-| 权重交接 | `actor.weight_update_mode: xccl` | 此版示例选用的交接模式，不扩展为全框架唯一协议 |
-
-`max_head_offpolicyness=0` 用于回到同步路线，便于建立基线；大于零允许生成和训练版本存在受限差异。partial rollout 可使单条轨迹跨多个策略版本，因此只记“本批用第几版权重”还不足以描述它。重算 logprob 也不会使一条旧回答变成新策略重新生成的回答。[异步文档](https://github.com/areal-project/AReaL/blob/v2.1.0/docs/en/algorithms/async.md)
-
-**原稿的拼写疑点可以进一步收窄。** 异步文档写复数 `recompute_logprobs`，但 YAML 写单数。此次追到 [cli_args.py](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/api/cli_args.py)：配置类定义的是 `recompute_logprob`，`load_expr_config` 走结构化配置；[actor.py](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/trainer/ppo/actor.py) 也读取单数。故 v2.1.0 实际配置应沿 YAML 和代码使用单数，不照抄文档复数；这是静态核对结果，没有执行解析器或训练测试。
-
-### 启动、保存、恢复与独立评估
-
-该版 [README](https://github.com/areal-project/AReaL/blob/v2.1.0/README.md) 使用 uv 安装，默认 SGLang；[pyproject.toml](https://github.com/areal-project/AReaL/blob/v2.1.0/pyproject.toml) 要求 Python≥3.11且<3.13、Transformers 5.0.0–5.3.0，并固定 math-verify 0.8.0。README 的预编译 flash-attn wheel 针对 Python 3.12/CUDA 12.8/PyTorch 2.9，应匹配环境选择，不能任意照搬；此栈也不能与前文 TRL/OpenRLHF 的依赖混装。
-
-在检出 v2.1.0、按此版要求准备并激活 uv 环境后，README 的单节点命令是：
+真实入口是：
 
 ```bash
 python3 examples/math/gsm8k_rl.py \
   --config examples/math/gsm8k_grpo.yaml scheduler.type=local
 ```
 
-README 文字提到 Qwen2-1.5B，而实际 YAML 配的是 Qwen2.5-1.5B；本节以选定配置为准。模型、集群、输出根目录和 scheduler 都可以在 YAML 或命令覆盖中修改，但修改布局时须核对资源分配，不能只把 8 卡数字改小便认定可跑。
+这条命令在准备好该版环境后，从其仓库根目录执行。`gsm8k_rl.py` 加载 `GRPOConfig` 和 GSM8K 的 train/test，创建 `PPOTrainer`，将 `areal.workflow.openai.math_agent.MathAgent` 传给训练与验证。数据把题目转成用户消息、添加 boxed 答案指令，保留 `answer` 供奖励使用；`MathAgent` 调用 OpenAI 兼容客户端生成，再将回答与 `answer` 交给数学验证奖励。训练系统的代理把请求接回本地生成侧，因此客户端接口形式不等于在训练外部商业模型。[数据、MathAgent 与代理](#source-areal)
 
-YAML 的 saver/evaluator 每 epoch 触发，`recover.mode` 默认 `disabled`。[RLTrainer](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/trainer/rl_trainer.py) 区分 HF 模型保存和 recover 状态；[Saver](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/utils/saver.py) 的 HF 模型默认位于：`<cluster.fileroot>/checkpoints/<用户名>/<experiment_name>/<trial_name>/default/epoch…epochstep…globalstep…`，默认根目录为 `/tmp/areal/experiments`。HF 导出不含 optimizer；需要恢复时要启用并保留 [RecoverHandler](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/utils/recover.py) 管理的训练状态，不能把两种产物混用。
+| 配置位置 | 这份 GSM8K YAML 连接的内容 |
+| --- | --- |
+| `actor.path` | Qwen/Qwen2.5-1.5B-Instruct；生成模型和 tokenizer 跟随配置 |
+| `cluster`、actor/rollout backend | 单节点 8 GPU，训练 `fsdp:d4p1t1`、生成 `sglang:d4p1t1`，两侧各自有并行布局 |
+| `train_dataset.batch_size`、`gconfig.n_samples` | 256 个训练提示，每提示 4 个回答；不是其他框架同名 batch 的替代值 |
+| `actor.reward_norm`、`actor.adv_norm` | 奖励按组处理，优势另按 batch 处理；Trainer 名称不足以说明这些选择 |
+| `rollout.max_head_offpolicyness` | 设为 2，对生成请求接纳施加策略版本约束 |
+| `actor.use_decoupled_loss`、`actor.recompute_logprob` | 均开启，配合旧策略样本和训练侧概率计算 |
+| `saver`、`recover` | 模型按 epoch 保存；恢复状态默认关闭 |
 
-入口把 `test` 交给验证，并把评估温度设为 0.6；最终还要固定抽样预算，从保存模型独立生成和评分。同文件另有 `MultiTurnMathAgent`、`MathToolAgent`，可作为多轮与工具接口的阅读入口；真正换到业务 agent 还需定义环境重置、工具结果、失败与超时、轨迹中哪些 token 参与学习，以及终局/过程奖励。这些不由更换一行 workflow 名自动完成。
+换模型先改 `actor.path`，换资源同时改集群和两侧布局。换任务则改数据、workflow 与奖励，并在新的交互里定义工具错误、超时、环境重置、哪些 token 参与学习，以及反馈看终局还是过程。单轮 GSM8K 只说明这组接口如何相接。
 
-## 8. 根据自己的任务和资源选择
+该版实际配置键是单数 `recompute_logprob`，与 YAML、配置类和 actor 一致；异步说明中的复数拼写不应直接复制进配置。模型保存由 Saver 管理，恢复由 RecoverHandler 管理，HF 模型不包含 optimizer；需要断点续训时必须启用并保留 recover 状态。更改 `cluster.fileroot`、实验名和 trial 名可以组织输出，但输出路径不替代恢复设置。[配置类与保存调用](#source-areal)
 
-下面是从已读接口作出的工程判断，不是性能排名。先选能让团队把数据与奖励接通的路线，再根据观测到的瓶颈扩展。
+## 会改变配置读法的几项进展
 
-| 你的情况 | 优先考察 | 选择前先做什么 |
-| --- | --- | --- |
-| 已有 HF 微调流程，主要想验证一份奖励函数 | TRL | 先读 `GRPOTrainer` 数据列与奖励接口，用短训练检查奖励、长度、保存和独立验证 |
-| 想研究算法配方、后端和并行布局 | verl | 从一个固定脚本开始，列出合并后的 batch、KL、后端和资源配置，再逐项改 |
-| 已有 Ray/DeepSpeed 基础，想明确拆分训练、生成和奖励组件 | OpenRLHF | 画出组件 GPU/CPU 布局，核对 vLLM 版本、主机内存和保存路径 |
-| 已经维护 Megatron/SGLang，重点是模型并行或 rollout 定制 | slime | 先完成模型结构核对、权重转换和评分器样本测试，再启动整套训练 |
-| 长轨迹、工具等待或生成耗时差异明显 | AReaL | 先建立同步基线，再观察等待占比、队列与策略版本，决定是否增加异步程度 |
+### 生成与训练分离后，权重交接成为循环中的显式阶段
 
-如果只需要学会按固定格式输出，先判断 SFT 是否足够；如果已有可靠偏好对，DPO 也值得先验证。在线 RL 要求能持续提供有效反馈，框架不能弥补“奖励高但任务做错”的目标设计。
+在一个 Python Trainer 里，生成与反传容易被理解成“同一个模型接着做两件事”。接入独立生成引擎后，实际上出现了两份运行中的参数表示。训练侧可能按 FSDP 或 Megatron 切分，生成侧按 TP 切分；更新结束还要把新参数送过去。verl 的多后端数据流、OpenRLHF 的 actor—vLLM 同步、slime 的 Megatron—SGLang 交接都在处理这个连接。[verl](#source-verl)、[同步说明](#source-sync)、[slime 入口](#source-slime)
 
-本次没有在统一模型、数据、硬件、算法、长度预算和奖励实现下运行五个框架。各官方示例的卡数、模型、抽样次数和任务不同，不能据此排列谁更快、谁显存更少或谁成绩更高。选定框架后才值得在自己的负载上测吞吐、显存、主机内存、稳定性和模型质量。
+部署方式改变具体动作。OpenRLHF 的早期同步文档分别写了 NCCL 传权重，以及共置 hybrid engine 的 CUDA IPC，两套都限于文档里的部署。slime v0.4.0 的训练入口则显式协调 rollout 暂停、权重更新与恢复，offload 情况下恢复 weights 与恢复 KV cache 是不同动作。判断某个阶段为什么耗时或内存上涨，需要区分载入参数、传输参数和恢复生成缓存。[SGLang 交接调用](#source-slime)、[OpenRLHF 同步](#source-sync)
 
-## 9. 开始训练前后，具体检查什么
+这改变了“改卡数”的含义：设备布局既约束训练，也约束生成和交接；模型能在训练侧装下，不代表生成侧能容纳期望并发。
 
-**先单测数据和奖励。** 抽出真实题目及参考答案，确认参考答案没有泄漏进 prompt，chat template 正确，长度过滤没有误删关键内容；给奖励函数喂正确、错误、无最终答案、多个答案、超长和截断输出。verl 的 `####`、OpenRLHF 的 boxed、slime deepscaler 的思考结束标记并不相同。格式错误导致的零奖励，要与数学错误分开统计。
+### 异步隐藏了等待，也让采样策略落后于训练策略
 
-**保留生效配置与环境。** 记录框架 SHA、依赖锁或实际包版本、镜像 digest、模型与数据 revision；同时记录提示数、每题回答数、token 上限、梯度累积、optimizer step、并行布局、KL 与 loss。不要只留一条 Trainer 名称或浮动的 `latest` 标签。
+同步训练等最慢的一批生成完成，异步则允许训练消费队列里的样本，同时生成侧继续工作。这对长短差异大、工具返回慢的轨迹有吸引力，但队列里的回答可能来自旧权重，成为相对当前策略的偏策略数据。增加并发或队列深度，并不只改变吞吐，也会改变样本被用于更新时有多旧。
 
-**把训练奖励、验证和导出验证分开。** 保留未参加训练的数据，固定推理参数和抽样预算，对原模型和导出模型分别生成；记录正确率、解析失败、截断比例、长度与成本。训练中验证用于选检查点，独立评估用于确认保存的产物在同等条件下表现如何。用于续训的状态与供推理的 HF 权重分别备份，恢复也需真实演练后才能报告成功。
+AReaL 的 `max_head_offpolicyness` 用于限制版本差异，设为 0 回到同步路线；大于零允许受限的落后。其 partial rollout 还允许一条轨迹分段跨越多个权重版本。此时给整条轨迹贴一个版本号已经不够，需要按实际生成片段理解采样概率。[异步文档](#source-areal)
 
-奖励设计仍有边界：Open R1 Update #3 的作者报告过，7 道题的解答通过公开短测试，提交 Codeforces 完整测试却全部失败；这说明该案例中的公开测试不足，不证明所有可验证奖励都失效。[S15](#source-s15) kalomaze 的实验把格式奖励 0.2 和长度奖励限制为判断正确才给，作者明确没有严格比较替代缩放方案，可作为设计提醒，不能当成通用最优权重。[S16](#source-s16)
+重算 logprob 解决的是“用训练侧模型计算这段既有 token 的概率”，并不会重新抽样这些 token。策略版本滞后与训练、生成引擎的数值差异也是两件事：即使版本相同，不同实现仍可能给出不同概率。版本约束、解耦目标和重要性采样校正因此各有作用，不能用“同步过权重”替代全部处理。异步是否值得启用，要看真实等待和校正代价。[AReaL 配置](#source-areal)、[TRL 概率校正说明](#source-trl)
 
-<details>
-<summary>排障附记：先辨认内存、日志与切换阶段</summary>
+### 动态过滤使 batch 成为筛选后的结果
 
-- **主机内存与显存分开看。** OpenRLHF #911 日志中主机内存达 239.02/251.56 GB，`nl2sql_reward.py` 占 176.97 GB；Ray 杀掉的最近调度 worker 不一定是主要占用者。#1013 报告去掉 `--vllm_enable_sleep` 后可运行，但没有确认因果或修复结论，不能把关 sleep 写成通用修法。[S12](#source-s12)
-- **训练/生成切换也会出现峰值。** 原作者的 verl＋SGLang 材料描述载入训练权重、恢复推理权重、同步、卸载训练模型、恢复 KV 的阶段。其 8×H200、Qwen32B、KV 比例 0.9 属于该作者案例，不能横比各框架内存。[S14](#source-s14)
-- **监控步数不等于进程位置。** Open R1 discussion #512 的 W&B 停在 step 8，控制台至少走到 step 15；最后日志是 NCCL `_ALLGATHER_BASE` watchdog timeout。材料未确认根因，留下的可执行做法是保存各 rank 日志、引擎版本和阻塞堆栈。[S13](#source-s13)
+组内相对奖励遇到全对或全错时缺少区分信号。DAPO 的动态采样据此丢弃组内结果没有差异的提示，再继续采样，直到凑够训练所需的有效组。它改变了进入更新的数据分布，也让“训练 batch 大小”不再等于这一轮一共生成了多少题。[DAPO 方法](#source-dapo)
 
-</details>
+固定 `4f80e465c2ec79ab9c3c30ec74b9745de61d0490` 的 verl DAPO 脚本把训练提示设为 512、生成提示设为其三倍，即 1536，每题 16 个回答，最多尝试 10 批。生成成本要计入被丢弃的组，不能只用最后留下的提示数计算。这与前文 slime 不过滤的那份脚本中“32×8”的直接展开关系不同。[历史脚本](#source-dapo)
+
+同一算法名也不能消除版本差异。DAPO 报告 v2 写 20 个 rollout step 的 warm-up，历史脚本写 `lr_warmup_steps=10`；计步口径未对齐时，不应把两个数改成一致。OpenRLHF 的 ProRL 脚本也开启动态过滤，但这不意味着它自动继承 DAPO 的损失、裁剪和 batch 定义。[报告与脚本](#source-dapo)、[OpenRLHF 配方](#source-openrlhf)
+
+没有共同的模型、数据、奖励、长度、资源和生效损失，这五份入口说明不了吞吐。测到的差别可能来自配方。
 
 ## 来源与阅读范围
 
-### 本次核查的当前发布状态与示例版本
+### TRL v1.16.0 {#source-trl}
 
-以下为 2026-10-19 实际读取官方 releases 页面，并通过 GitHub API 解析标签得到的版本；发布日期按 UTC。可见 release 不代表所有主分支功能都已发布，也不构成生产稳定性测试。
+[GRPO 教程](https://github.com/huggingface/trl/blob/v1.16.0/docs/source/grpo_trainer.md) · [GRPOConfig](https://github.com/huggingface/trl/blob/v1.16.0/trl/trainer/grpo_config.py) · [accuracy_reward](https://github.com/huggingface/trl/blob/v1.16.0/trl/rewards/accuracy_rewards.py) · [GRPOTrainer](https://github.com/huggingface/trl/blob/v1.16.0/trl/trainer/grpo_trainer.py)。支撑 DeepMath 入口、奖励传参、组内优势、loss 默认值与聚合差异、KL、vLLM 部署及概率校正。
 
-| 项目 | 可见最新 release / 发布日期 | release 对应 SHA | 本文训练示例 |
-| --- | --- | --- | --- |
-| [TRL](https://github.com/huggingface/trl/releases) | v1.16.0 / 2026-10-15 | `1b5c75ed94b7387f42532adb090c935166d4878d` | 此版 GRPO API 的教学改写；Open R1 另固定历史提交 |
-| [verl](https://github.com/verl-project/verl/releases) | v0.9.1 / 2026-09-20 | `1876b06d0a3e4e71e06230be10af14492ca8a75b` | 此版 Quickstart、Qwen3-4B GRPO；DAPO 另固定 `4f80e465` |
-| [OpenRLHF](https://github.com/OpenRLHF/OpenRLHF/releases) | v0.11.2 / 2026-09-14 | `17fd4a79cc87dfb2f6185ffac634066525bcd917` | ProRL 仍固定 `dc2a7ad326f619fc5a47737ea47d1920ce2c0b53` |
-| [slime](https://github.com/THUDM/slime/releases) | v0.4.0 / 2026-10-09 | `0b0c277d5b4cc66efc3b6db269e2e5184e8f3b1e` | 此版 Qwen3-4B、转换工具、奖励分派与实现 |
-| [AReaL](https://github.com/areal-project/AReaL/releases) | v2.1.0 / 2026-08-25 | `ecc8b0e4dfb4e3965f67121a5c87866a07c390ae` | 此版 GSM8K 配置、入口、MathAgent、配置类和保存流程 |
+### verl v0.9.1 {#source-verl}
 
-本次新增阅读以正文中的固定链接为准：TRL 的教程、依赖、GRPO 参数、数学奖励和 trainer 奖励传参；verl 的安装、Quickstart、GSM8K 转换/评分、GRPO 脚本、入口/配置与导出接口；OpenRLHF 固定提交的脚本、奖励、CLI、依赖及 actor 保存；slime 的快速开始、Dockerfile、模型脚本、训练入口、转换接口及奖励；AReaL 的数据、入口、MathAgent、代理工作流、异步配置、actor 与存盘调用段。大文件按相关定义和调用段阅读，没有宣称通读全部引擎或调度器，也未审计所有后端组合。
+[Quickstart](https://github.com/verl-project/verl/blob/v0.9.1/docs/start/quickstart.rst) · [GSM8K 预处理](https://github.com/verl-project/verl/blob/v0.9.1/examples/data_preprocess/gsm8k.py) · [奖励分派](https://github.com/verl-project/verl/blob/v0.9.1/verl/utils/reward_score/__init__.py) · [GSM8K 评分](https://github.com/verl-project/verl/blob/v0.9.1/verl/utils/reward_score/gsm8k.py) · [GRPO 脚本](https://github.com/verl-project/verl/blob/v0.9.1/examples/grpo_trainer/run_qwen3_4b_fsdp.sh) · [入口](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/main_ppo.py) · [角色判定](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/ppo/utils.py) · [模型合并](https://github.com/verl-project/verl/blob/v0.9.1/verl/model_merger/__main__.py)。支撑 PPO 与 GRPO 路线区别、数据到奖励的连接、资源参数、启动与分片导出。架构背景另见[固定 README](https://github.com/verl-project/verl/blob/5b550b0c3dad8c7bb7aab834a3fe195f8cdfc517/README.md)。
 
-下列 S1–S16 保留原稿有用的证据记录。未在本次重开的历史报告、博客和故障帖，继续沿用原稿注明的核对范围，不冒充新一轮全面复核；当前版本新增事实由上文直接链接支持。
+### Open R1 固定项目提交 {#source-openr1}
 
-### S1：verl README 与发布页 {#source-s1}
+[grpo.py](https://github.com/huggingface/open-r1/blob/5b6ff22b3fb7aa069c54866e517f39dfc3160e09/src/open_r1/grpo.py) · [历史 YAML](https://github.com/huggingface/open-r1/blob/5b6ff22b3fb7aa069c54866e517f39dfc3160e09/recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo.yaml)。支撑 TRL 项目的数据、奖励、保存调用及未显式填写损失类型的版本问题。
 
-[README](https://github.com/verl-project/verl/blob/5b550b0c3dad8c7bb7aab834a3fe195f8cdfc517/README.md) · [releases](https://github.com/verl-project/verl/releases)
+### OpenRLHF 固定 ProRL 脚本提交 {#source-openrlhf}
 
-阅读范围：README 的控制器、训练与采样后端、权重重新切分和异步实验入口。发布页保留为入口。未通读核心 trainer 和异步实现。
+[训练脚本](https://github.com/OpenRLHF/OpenRLHF/blob/dc2a7ad326f619fc5a47737ea47d1920ce2c0b53/examples/scripts/train_prorlv2_math_hybrid_engine.sh) · [奖励函数](https://github.com/OpenRLHF/OpenRLHF/blob/dc2a7ad326f619fc5a47737ea47d1920ce2c0b53/examples/python/math_reward_func.py) · [CLI](https://github.com/OpenRLHF/OpenRLHF/blob/dc2a7ad326f619fc5a47737ea47d1920ce2c0b53/openrlhf/cli/train_ppo_ray.py) · [actor 保存](https://github.com/OpenRLHF/OpenRLHF/blob/dc2a7ad326f619fc5a47737ea47d1920ce2c0b53/openrlhf/trainer/ray/ppo_actor.py)。支撑数据列、boxed 奖励、实际优势配置、共置、动态过滤、截断处理和模型/续训产物。
 
-### S2：DAPO 配方与历史训练脚本 {#source-s2}
+### ProRL v2 工程文 {#source-prorl}
 
-[配方 README](https://github.com/verl-project/verl-recipe/blob/main/dapo/README.md) · [commit 4f80e465 的脚本](https://github.com/verl-project/verl/blob/4f80e465c2ec79ab9c3c30ec74b9745de61d0490/recipe/dapo/run_dapo_qwen2.5_32b.sh)
+[NVIDIA 开发者文章](https://developer.nvidia.com/blog/scaling-llm-reinforcement-learning-with-prolonged-training-using-prorl-v2/)。支撑长度惩罚和 reference reset 的配方说明，与上述脚本区别对待。
 
-阅读范围：复现表、过滤逻辑摘录，以及该 commit 的完整脚本。未打开 W&B。
+### OpenRLHF—vLLM 权重同步 {#source-sync}
 
-### S3：DAPO 技术报告 v2 {#source-s3}
+[vLLM 官方工程文，2025-04-23](https://vllm.ai/blog/2025-04-23-openrlhf-vllm)。支撑其部署条件下的 NCCL 与 CUDA IPC 同步路线，不指定后续所有版本的默认协议。
 
-[报告 HTML](https://arxiv.org/html/2503.14476v2)
+### slime v0.4.0 {#source-slime}
 
-阅读范围：第 2–3 节方法和第 4.1 节训练设置。未精读附录，未复核图中的原始数据。
+[Quick Start](https://github.com/THUDM/slime/blob/v0.4.0/docs/en/get_started/quick_start.md) · [Qwen3-4B 脚本](https://github.com/THUDM/slime/blob/v0.4.0/scripts/run-qwen3-4B.sh) · [模型参数](https://github.com/THUDM/slime/blob/v0.4.0/scripts/models/qwen3-4B.sh) · [训练入口](https://github.com/THUDM/slime/blob/v0.4.0/train.py) · [HF 转换](https://github.com/THUDM/slime/blob/v0.4.0/tools/convert_hf_to_torch_dist.py) · [HF 导出](https://github.com/THUDM/slime/blob/v0.4.0/tools/convert_torch_dist_to_hf.py) · [奖励分派](https://github.com/THUDM/slime/blob/v0.4.0/slime/rollout/rm_hub/__init__.py) · [deepscaler 奖励](https://github.com/THUDM/slime/blob/v0.4.0/slime/rollout/rm_hub/deepscaler.py)。支撑模型准备、数据字段、格式约定、batch 与资源、权重交接和检查点转换。
 
-### S4：TRL 的 GRPOConfig 与 GRPO 文档 {#source-s4}
+### AReaL v2.1.0 {#source-areal}
 
-[GRPOConfig](https://github.com/huggingface/trl/blob/9d76f2f8c0421fcf8a4a72113a9e226ce796e592/trl/trainer/grpo_config.py) · [GRPO 文档](https://github.com/huggingface/trl/blob/main/docs/source/grpo_trainer.md)
+[GSM8K YAML](https://github.com/areal-project/AReaL/blob/v2.1.0/examples/math/gsm8k_grpo.yaml) · [训练入口](https://github.com/areal-project/AReaL/blob/v2.1.0/examples/math/gsm8k_rl.py) · [数据转换](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/dataset/gsm8k.py) · [MathAgent](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/workflow/openai/math_agent.py) · [代理工作流](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/experimental/openai/proxy/workflow.py) · [异步机制](https://github.com/areal-project/AReaL/blob/v2.1.0/docs/en/algorithms/async.md) · [配置类](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/api/cli_args.py) · [actor](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/trainer/ppo/actor.py) · [保存调用](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/trainer/rl_trainer.py) · [Saver](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/utils/saver.py) · [RecoverHandler](https://github.com/areal-project/AReaL/blob/v2.1.0/areal/utils/recover.py)。支撑训练入口、消息与奖励、两侧布局、版本限制、partial rollout、配置键与模型/恢复状态的区别。
 
-阅读范围：生成、训练、loss、KL 和重要性采样的配置定义，以及文档中的 loss 聚合段落。未通读 trainer 实现。
+### DAPO 方法与历史配方 {#source-dapo}
 
-### S5：TRL README 与发布页 {#source-s5}
-
-[README](https://github.com/huggingface/trl) · [releases](https://github.com/huggingface/trl/releases)
-
-阅读范围：架构、安装、trainer 示例和发布页可见变更。
-
-### S6：Open R1 的调用链和配置 {#source-s6}
-
-[README](https://github.com/huggingface/open-r1/blob/5b6ff22b3fb7aa069c54866e517f39dfc3160e09/README.md) · [grpo.py](https://github.com/huggingface/open-r1/blob/5b6ff22b3fb7aa069c54866e517f39dfc3160e09/src/open_r1/grpo.py) · [GRPO YAML](https://github.com/huggingface/open-r1/blob/5b6ff22b3fb7aa069c54866e517f39dfc3160e09/recipes/Qwen2.5-1.5B-Instruct/grpo/config_demo.yaml) · [zero2.yaml](https://github.com/huggingface/open-r1/blob/5b6ff22b3fb7aa069c54866e517f39dfc3160e09/recipes/accelerate_configs/zero2.yaml)
-
-阅读范围：硬件和部署段落、trainer 调用，以及两份配置全文。
-
-### S7：OpenRLHF README、发布页与 ProRL v2 脚本 {#source-s7}
-
-[README](https://github.com/OpenRLHF/OpenRLHF) · [releases](https://github.com/OpenRLHF/OpenRLHF/releases) · [脚本](https://github.com/OpenRLHF/OpenRLHF/blob/dc2a7ad326f619fc5a47737ea47d1920ce2c0b53/examples/scripts/train_prorlv2_math_hybrid_engine.sh)
-
-阅读范围：README 的架构和用法、发布页正文、脚本全文（含未启用的注释）。
-
-### S8：ProRL v2 工程文 {#source-s8}
-
-[NVIDIA 开发者博客](https://developer.nvidia.com/blog/scaling-llm-reinforcement-learning-with-prolonged-training-using-prorl-v2/)
-
-阅读范围：署名正文全文。页面上的 AI 摘要和图中估读的分数没有当作证据。
-
-### S9：OpenRLHF 与 vLLM 的权重同步说明 {#source-s9}
-
-[vLLM 博客](https://vllm.ai/blog/2025-04-23-openrlhf-vllm)
-
-阅读范围：全文和权重同步示例。旧博客地址会跳到这里。
-
-### S10：slime v0.4.0 {#source-s10}
-
-[README](https://github.com/THUDM/slime) · [v0.4.0](https://github.com/THUDM/slime/releases/tag/v0.4.0) · [train.py](https://github.com/THUDM/slime/blob/v0.4.0/train.py) · [Qwen3-4B 脚本](https://github.com/THUDM/slime/blob/v0.4.0/scripts/run-qwen3-4B.sh) · [调试文档](https://github.com/THUDM/slime/blob/v0.4.0/docs/en/developer_guide/debug.md) · [policy mismatch](https://github.com/THUDM/slime/blob/main/docs/en/advanced/policy-mismatch.md)
-
-阅读范围：v0.4.0 发布正文、`train.py` 和 Qwen3-4B 脚本。调试文档与 policy mismatch 保留为原文入口，这次没有据此扩展运行结论。未执行脚本，未审计具体权重传输实现。
-
-### S11：AReaL v2.1.0 {#source-s11}
-
-[README](https://github.com/areal-project/AReaL) · [releases](https://github.com/areal-project/AReaL/releases) · [GSM8K YAML](https://github.com/areal-project/AReaL/blob/v2.1.0/examples/math/gsm8k_grpo.yaml) · [异步文档](https://github.com/areal-project/AReaL/blob/v2.1.0/docs/en/algorithms/async.md)
-
-阅读范围：README、v2.0.0 与 v2.1.0 的发布正文、示例 YAML 和异步文档全文。未审计调度器。
-
-### S12：OpenRLHF 内存 issue {#source-s12}
-
-[#911](https://github.com/OpenRLHF/OpenRLHF/issues/911) · [#1013](https://github.com/OpenRLHF/OpenRLHF/issues/1013)
-
-阅读范围：可见正文、启动命令和日志。没有读到维护者确认的修复。
-
-### S13：Open R1 discussion #512 {#source-s13}
-
-[讨论](https://github.com/huggingface/open-r1/discussions/512)
-
-阅读范围：正文、维护者追问和可见跟帖。
-
-### S14：verl 与 SGLang 的内存切换 {#source-s14}
-
-[rl-memory-management](https://hebiao064.github.io/rl-memory-management)
-
-阅读范围：全文里的阶段顺序和代码示意。未追读全部 RFC，也没有跑性能测试。
-
-### S15：Open R1 Update #3 {#source-s15}
-
-[Hugging Face 博客](https://huggingface.co/blog/open-r1/update-3)
-
-阅读范围：正文全文。竞赛测试覆盖、SFT 经验和 GRPO 更新分开看。SFT 的 OOM 数字没有写成 RL 结果。
-
-### S16：kalomaze 的 GRPO 奖励笔记 {#source-s16}
-
-[GRPO Judge](https://kalomaze.bearblog.dev/grpo-judge-experiments-findings-and-empirical-observations/)
-
-阅读范围：正文里的正确性门槛、格式与长度奖励，以及作者自己写的「没有严格对照」。未打开外链 W&B，配图趋势没有当成测量。
+[报告 v2](https://arxiv.org/html/2503.14476v2) · [verl 固定脚本](https://github.com/verl-project/verl/blob/4f80e465c2ec79ab9c3c30ec74b9745de61d0490/recipe/dapo/run_dapo_qwen2.5_32b.sh)。支撑动态采样、生成与训练 batch 区别，以及 warm-up 设置差异；该历史脚本不与 v0.9.1 的环境或默认值混用。

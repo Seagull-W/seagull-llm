@@ -1,155 +1,203 @@
 ---
-title: "2026-10-16 后训练与 agentic RL 的 benchmark：准则、保证与数据形式"
-description: "基准名不等于分数。评分器接受的对象、模型实际收到的输入，以及训练已经用过的反馈要分开；筛选标准与事后审计、pass@k 与 pass^k 也不是同一个结论。"
+title: "后训练与 agent 评测：基准分数究竟证明了什么"
+description: "从模型输入、评分对象与训练反馈的区别出发，用数学、代码和交互任务解释基准的实际用途，再讨论测试缺陷、采样可靠性与奖励审计如何改变分数的解释。"
 tags: ["每日调研", "后训练", "强化学习", "评测"]
 date: "2026-10-16"
 ---
 
-# 2026-10-16 后训练与 agentic RL 的 benchmark：准则、保证与数据形式
+# 后训练与 agent 评测：基准分数究竟证明了什么
 
-报出来的分数挂在基准名上，产生这个数的却是另一套东西：模型当时拿到什么，评分器把什么算作成功，以及训练或选模型时有没有已经用过相近的反馈。这三件事可以同时成立，也可以只成立一件。把它们收成“在 GSM8K 上做了 RL”或“有测试，所以可验证”，会把不同的结论叠在同一个名字下。
+“模型在某个基准上得了多少分”，省略了产生分数的一连串决定。数学题可以只检查最后的数字；代码可以只跑有限测试；购物助手可以只比较订单数据库的终态。它们都能产生一个成功率，成功所指的对象却不同。
 
-数学题、函数补全、仓库补丁、工具对话和网页操作的差别，就出在这三件事上，不在任务看起来像不像智能体。
+读后训练结果时，更容易混淆的是：同一个基准名下，模型收到的输入、评分器接受的对象、训练已经用过的反馈，可以是三件不同的事。分清它们，才能判断一个分数是在说明答题能力、寻找候选解的能力，还是多次交互的可靠性。
 
-## 评分器接受的，常常不是题目在问的
+## 一个分数如何产生
 
-GSM8K 的官方评分只认末尾那个数。标准 `test.jsonl` 的第二条是蓝布、白布的卷数，参考解答末行是 `#### 3`。模型只应看到 `question`。示例评分器从生成文本里抽出第一个符合格式的数值，去掉逗号，再和参考答案里的 `3` 比较；抽不出来记为无效。推导错了但末数对，按这个规则仍算对；末数对了但写法不是它要的数值串，可以算错。它不做逐步检查，也不做代数等价。[S1](#source-s1)
+一次评测先固定任务记录，再决定向模型暴露哪些信息。数学数据里可以同时存题目和参考解答，但正常作答时只给题目；工具任务的完整用户意图可以交给用户模拟器，由它逐轮透露给 agent。数据文件有什么，不等于模型看到了什么。
 
-MATH-500 换的是等价，不是格式。Hugging Face H4 的 500 题来自 OpenAI 在 Let's Verify Step by Step 里从 MATH 留出的评测题。`grader.grade_answer` 先规范化，再用 sympy 看表达式是否相等，所以 `x^3+3x-6` 不要求和参考推导逐字相同。同一份说明承认：这个判断会拒绝一些正确答案，也会放过一些错误答案。PRM800K 的切分还改了“测试集”的含义：原 MATH 的 7,500 道训练题之外，又放进原测试集的 4,500 道，只随机留 500 道做评测。用了这套配方之后，把原 MATH 全部测试题再当作没见过的考试，和这 500 道不是同一件事。[S2](#source-s2)
+模型接着生成一个待检查的对象：答案文本、函数实现、仓库补丁，或者一段改变环境状态的交互。**评分器**把这个对象映射为成功或失败。它可能抽取数字、判断表达式等价、执行测试，也可能检查数据库。分数首先是对这条检查规则的满足程度。规则遗漏了某种错误，会把错误算成功；规则额外要求了题目没有要求的实现细节，也会把正确解算失败。两种偏差需要分别处理。[GSM8K 评分实现](#source-s1)、[SWE-bench 复查](#source-s7)
 
-`math-ai/aime24` 更靠前就停了。30 道题的 `solution` 字段可以只是 `\boxed{204}`，文件里没有统一的抽取器和采样协议。DAPO 在 AIME 2024 上重复采样 32 次，报告 `avg@32`，温度 1.0、top-p 0.7。这是 32 次的平均正确率，不是“32 次里对过一次”。换一套抽取或采样，同一批题会得到另一个数。[S3](#source-s3) [S12](#source-s12)
+最后才是汇总。单次成功率问的是一次运行成功的概率；重复采样后，既可以问“至少有一次成功”，也可以问“每次都成功”。温度、回答长度、工具调用预算和环境初态改变了这次考试允许模型做什么，因此也属于评测协议。[HumanEval](#source-s4)、[tau-bench](#source-s8)
 
-HumanEval 把“写对了”定义成测试通过，不是和参考实现相同。`HumanEval/0` 的 `prompt` 只到函数签名和文档字符串；`canonical_solution` 不交给模型。`check` 用断言看具体输入，例如同一组数在阈值 0.3 时为真、0.05 时为假。通过该题测试才记 `passed`。汇总的 `pass@k` 是 k 次里至少成功一次。`evaluation.py` 只在每题采样数不少于 k 时计算 k 为 1、10、100 的项，默认超时 3.0 秒。采样不够就把缺的 k 当成 0，和“模型做不到”不是同一个结果。[S4](#source-s4)
+后训练又给这条链加了一条回路：评分反馈可以拿来更新参数。规则检查提供奖励的训练常被称为可验证奖励强化学习（RLVR）。奖励也可以来自另一个模型，或混入格式、长度等辅助项。训练奖励上升只说明模型越来越擅长取得这份反馈；若验证分数还用于挑检查点，它也已经参与了选择。最终要判断迁移到新任务的能力，需要同时知道训练数据、选择过程和独立评测的关系，不能仅凭基准名字相同或不同判断是否隔离。
 
-仓库修复的成功条件更窄。SWE-bench 给的是 issue 和修复前的仓库，模型交补丁。记为 `resolved` 要同时满足：新增的问题测试全部变成通过，原有的维护测试也全部保持通过。调试报告里的 `PARTIAL` 不是这个指标，参考补丁也不是唯一合法实现。测试集 2,294 条、开发集 225 条，来自 12 个 Python 仓库。原论文把“可以收集训练截止日期之后的 issue”写成持续更新的办法；这要求题目时间确实晚于该模型的截止日，并不自动覆盖以后每一个模型。[S5](#source-s5)
+| 读到一项成绩时 | 真正需要确定的对象 |
+| --- | --- |
+| 模型在做什么 | 只看题目，还是能看测试、业务规则、工具返回和历史对话 |
+| 什么算成功 | 末答案、有限测试、补丁回归检查，还是环境终态 |
+| 分数怎么汇总 | 一次成功、多次中至少一次，还是多次全部成功 |
+| 反馈在哪里用过 | 参数训练、奖励模型训练、调参选模型，还是最终评测 |
 
-Verified 是从原测试集里人工选出的 500 条。筛选时的要求是：问题描述够用，测试接受合理实现，而不是只认题面没写的函数名或报错字符串。2026-02-23 的复查看的是另一群题：模型经常失败的 27.6% 子集里，至少 59.4% 有会拒绝功能上正确提交的测试。59.4% 的分母是这个子集，不是 500。同一则说明还把前沿模型复现参考补丁或题面原句当作污染，并因此不再用该基准衡量前沿编程能力。测试过窄和答案已经进了训练，都会让分数难解释，但它们否定的不是同一件事：前者是评分器拒绝了不该拒绝的补丁，后者是模型可能见过解。[S6](#source-s6) [S7](#source-s7)
+## 数学基准：同一道题，训练奖励与考试判分可以不同
 
-对话和网页任务里，执行轨迹也不是分数。tau-bench 零售域第一条的 `instruction` 写的是用户人设和换货要求，这份文字交给用户模拟器；agent 看到的是逐轮发言、工具观察、业务政策和接口。`actions` 里的查用户、读订单、换键盘和温控器是评估用的参考操作，不是发给 agent 的脚本。评分从初始数据库重放这些动作，再比 agent 执行后的数据库哈希。这条的 `outputs` 为空，没有额外的回答关键词；若列了 `outputs`，回答还得包含它们。只有终态符合才得 1。论文写明，这样仍可能漏掉“操作前有没有得到用户确认”。跨次稳定性用的 `pass^k` 是同一任务独立跑 k 次全部成功，和 HumanEval 至少成功一次的 `pass@k` 方向相反。[S8](#source-s8)
+### GSM8K：数字正确，不代表推理经过了检查
 
-WebArena 的 812 个任务允许不同操作路径，但“功能完成”的检查并不统一。电商后台那条问 2022 年销量第一的产品，`exact_match` 在去掉首尾空白和成对引号、转成小写之后，和 `Quest Lumaflex™ Band` 比较。它不看浏览路径。别的任务可以查目标 URL 或页面内容，组合时分数相乘；`fuzzy_match` 还会叫模型做语义判断。所以不能从这一条推出整个基准都是确定性字符串比较。运行这些配置要自托管网站；README 示例用的是 `accessibility_tree` 和 1280×720 视口，并在整批之后重置环境。换观察方式或忘了重置，比的就不是同一批交互。[S9](#source-s9)
+GSM8K 标准测试文件中的一道真实题目是：一件长袍需要 2 卷蓝色布料，白色布料用量是蓝色的一半，总共需要多少卷？参考解答先算白布为 1 卷，再相加，末行写 `#### 3`。正常评测时，模型只收到 `question`，不会收到这份解答。[S1](#source-s1)
 
-## 训练反馈和报出来的分数
+官方仓库的示例评分器用正则找到第一个 `#### 数值`，去掉逗号，然后比较抽出的字符串。因而，一份过程有错、最后仍写 `#### 3` 的回答会通过；一份文字里说对了总数、却没有可识别标记的回答会失败。这里检查的是带指定格式的末答案，没有逐步验证算式。
 
-同一套题名可以一边当奖励，一边当考试，也可以只是看起来像。
+这使 GSM8K 很容易接到数学后训练中：保留训练题的答案供奖励函数比较，让当前模型反复作答，再用测试题检查变化。但奖励未必沿用官方对错。ReFT 在监督微调之后，继续用同一批训练问题和答案做 PPO；其数值题奖励允许“抽得出数值但答错”得 0.1，答对得 1，抽不出得 0。这个辅助信号帮助模型进入可评分的输出空间，却不等于官方正确率。ReFT 表中的 GSM8K 计数是处理后的：自然语言推理 7,465 条、程序推理 7,356 条，测试 1,319 条。[S11](#source-s11)
 
-SimpleRL-Zoo 写明用 GSM8K 与 MATH 的训练集。`Easy` 是 GSM8K 加 MATH 难度 1，`Medium` 是 MATH 难度 1–4，`Hard` 是难度 3–5，每类约 8,000 题。训练奖励是对了 +1、错了 0，不用格式奖励。评测列表里则有 GSM8K、MATH-500 和 AIME 2024。难度实验说的是另一件事：题要和基座还能不能探索到正反馈相配。弱模型碰上过难题会缺少正样本，强模型碰上过易题提升有限。这不是“所有模型用同一难度”。严格格式奖励在他们的部分基座上会把更新拉向格式，训练变差。格式分上升和题目做对，在这个实验里可以分开。[S10](#source-s10)
+SimpleRL-Zoo 则用 GSM8K 和 MATH 的训练题构造不同难度的数据，正确奖励为 +1、错误为 0，不额外给格式奖励；GSM8K、MATH-500、AIME 2024 出现在评测列表中。它的难度实验说明，这些题在训练中承担的是“让基座探索到有用反馈”的角色：Mistral-7B 面对过难题时缺少正反馈，而 Qwen2.5-7B 在过易题上获益受限。[S10](#source-s10)
 
-ReFT 在 SFT 之后，用同一批训练题的问题和答案做 PPO，奖励来自和标准答案的比较，不另训奖励模型。表 1 的 GSM8K 计数是处理后的 `Train N-CoT: 7,465`、`Train P-CoT: 7,356`、`Test: 1,319`，不是原始 `train.jsonl` 的行数。它另外允许：答案能抽出来但不对给 0.1，对给 1，抽不出来给 0。这是训练时的辅助信号，不是 GSM8K 官方的对错。MathQA 上还出现中间算错、末尾猜中选项因而得分。辅助分变好，不能当成官方评测变好。[S11](#source-s11)
+### MATH-500：换了答案判等，也换了留出集
 
-DAPO 的 `DAPO-Math-17K` 是从网上和竞赛站收来、改写成整数答案的约 17K 条提示，基本奖励是对 1、错 −1，另有过长惩罚。AIME 2024 放在评测里，协议就是上面的 `avg@32`。正文把两套数据写成不同用途，但没有给出训练题相对 AIME 2024 的逐条排除清单。没有这份清单，就既不能写成已经隔离，也不能写成已经重叠。[S12](#source-s12)
+MATH-500 中有一道题要求把直角坐标点 `(0,3)` 转为极坐标，并限定半径为正、角度在指定的一周范围内；参考答案是 `(3, π/2)`。模型需要给出数学对象，评分器需要识别不同写法是否等价，而非要求复制参考推导。PRM800K 仓库提供的 `grader.grade_answer` 先规范化，再用 SymPy 判等；仓库也明确说明，它仍会误拒正确答案或误收错误答案。[S2](#source-s2)
 
-DeepSeekMath 的 RL 用的是 SFT 数据里和 GSM8K、MATH 相关的约 144K 道 CoT，并拿掉其他 SFT 题，用来看域外变化；优化是奖励模型加 GRPO。这 144K 没有对应到可下载的 GSM8K `train.jsonl` 或一份 MATH 分割名单。预训练语料的去污是另一条规则：10-gram 精确匹配，短于这个长度但至少 3-gram 的基准文本也做精确匹配过滤。把这条规则说成“RL 题和测试题已经逐条查过”，换了数据阶段。[S13](#source-s13)
+这组评测题的用途要连着切分看。PRM800K 所用配方在原 MATH 的 7,500 道训练题之外，又纳入原测试集的 4,500 道，只随机留下 500 道评测；HuggingFaceH4/MATH-500 数据卡将来源指向这份留出集。用过这套训练数据之后，原 MATH 全测试集与 MATH-500 就不再是同一个独立考试。[S2](#source-s2)
 
-过程奖励和上面几种末答案奖励也不是同一类目标。DeepSeek-R1 把 PRM 试失败的原因写成三件：步骤不好定义，步骤对错不好标，以及优化过程奖励时出现 reward hacking。报告同时写，这些失败不表示方法不可能有效。不能从这次试法推出任何过程奖励都会失败，也不能把过程分上升直接写成任务成功率上升。[S16](#source-s16)
+在后训练实验里，MATH-500 可以检查较复杂数学问题上的迁移；在奖励模型实验里，它也可以检查模型能否从候选解中选出正确解。后者评价的是生成器加上选择器。
 
-## 定理管的是哪一种奖励
+DeepSeekMath 还说明了“按数据阶段看隔离”的必要性：其 RL 使用约 144K 条来自 SFT 数据、与 GSM8K 和 MATH 相关的 CoT 数据，采用 GRPO 与奖励模型；预训练数学语料另有 10-gram 精确匹配过滤，较短基准文本至少 3-gram 时也作精确匹配。10-gram 过滤发生在预训练语料，没有检查 RL 题目和评测题是否逐条重叠。[S13](#source-s13)
 
-固定 verifier 上的 RLVR 分析，对象是奖励梯度流里的真正正确、被接受的错误和被拒绝的回答，不是 AIME、HumanEval 或 SWE-bench 的排行榜。命题 4.1–4.3 在一组条件下限制检测、识别和选择性控制：比较两种都与同一 verifier 相容的正确性标注时，问题分布、verifier、初始化和训练算法保持不变，训练日志里没有 verifier 以外的正确性反馈，并且没有假阴性。这样的日志可以在不同的“真正正确”世界里同分布，于是不能统一保证找出被接受的错误。
+### AIME：一道固定题不自带固定成绩
 
-定理 5.1 给的是投影审计校正的瞬时行为，假设要一起成立。A1：正确、错误接受和已审计错误的概率对参数连续可微，所看的时间区间里前两者都为正。A2：固定审计集合盖住全部有概率质量的错误接受。校正够强时，总接受概率的瞬时增长率保留，错误接受的占比下降，正确回答的概率上升；更强的条件才让错误接受的绝对概率下降。再加上 A3 对校正强度和错误增长压力的统一界，才有占比的指数衰减加余项。论文写明，有限样本梯度、实际优化器和有限步长可能破坏这些效果。它没有证明离散 GRPO 在上面任何一个基准上达到全局最优。[S14](#source-s14)
+`math-ai/aime24` 收录 AIME 2024 的 30 道题，包含 `problem`、`solution` 和来源 URL 等字段。题集固定了要解哪些问题，却没有同时固定所有使用者的答案抽取、采样与汇总方式。[S3](#source-s3)
 
-Skalse 等人把 reward hacking 定义成两条策略被两个奖励排成相反的序。定理 1 和定理 2 的前提不同，结论也不同。状态和动作有限、动作不止一个、所有状态可达、奖励均值有限。若策略集合包含开集，一对非平凡且不会 hacking 的奖励，在这个集合上必须给出相同排序。若策略集合有限，而且至少两条策略的状态—动作访问计数不同，就可以造出非平凡、不会 hacking、但并不等价的奖励对。“平凡”指策略回报是否恒定，不是奖励函数看起来简不简单。
+DAPO 把网上收集并转换为整数答案的约 17K 条提示用于训练，基本奖励为答对 1、答错 −1，另有过长惩罚；AIME 2024 用于评测。报告将评测集重复 32 次，使用温度 1.0、top-p 0.7，报告 `avg@32`。这表示重复运行的平均正确率，不表示每题有 32 次机会、任意答对一次就算成功。[S12](#source-s12)
 
-测试通过率、数据库哈希或单测，都可以被拿来代理“功能真的对了”。这个框架能把问题写成两个奖励会不会把策略排反；它没有替 HumanEval 的断言、tau-bench 的哈希或某个 PRM 检查假设是否成立，也没有证明优化器一定会找到那个反序。存在一对可被排反的策略，和这次训练已经走到了那一对，不是同一个命题。[S15](#source-s15)
+这里 AIME 承担的是训练配方在竞赛题上的效果检查，而 DAPO-Math-17K 承担的是提供更新信号。两份数据用途不同，题源也相近；有没有重叠，要看题目本身。
 
-所以，末答案比较、单测、修复测试和数据库终态都可以当代理奖励，但上面两组定理都不给出这些基准上的收敛率、遗憾或任务覆盖下界。`pass@k` 和 `pass^k` 约束的是怎样估计一个指标。可重置的网页环境和人工筛选提供的是实验设计。它们都不等于任意输入上都功能正确，也不等于整段对话遵守了政策。
+## 从函数到仓库：执行成功的范围由测试决定
+
+### HumanEval：把函数补全变成可执行检查
+
+`HumanEval/0` 要补全 `has_close_elements(numbers, threshold)`：判断列表中是否存在两个数，其距离小于阈值。给模型的 `prompt` 包含导入、函数签名、文档字符串和示例，不包含 `canonical_solution` 与评分用的完整 `check`。[S4](#source-s4)
+
+一次使用里，模型交出函数体，执行器把它接到提示后，再调用断言测试。例如评分用列表 `[1.0, 2.0, 3.9, 4.0, 5.0, 2.2]`，阈值为 0.3 时应返回真，0.05 时应返回假。通过测试才记 `passed`，不要求代码与参考实现相同。该快照执行器默认超时为 3.0 秒。[S4](#source-s4)
+
+HumanEval 因而适合检查代码后训练之后，模型能否把函数规格转成通过测试的实现；多次采样还可检查候选解覆盖。若把执行测试的反馈接入训练，它又成为代码奖励，训练用测试和最终评测用测试是两套题。
+
+### SWE-bench：修复 issue，并保住已有行为
+
+SWE-bench 将 issue 文本和修复前仓库交给模型或代码 agent，要求提交补丁。评分检查两类结果：原来失败、修复后应通过的测试（`FAIL_TO_PASS`），以及原来通过、修复后应保持通过的回归测试（`PASS_TO_PASS`）。`resolved` 要求达到完整解决状态；调试报告中的部分通过不等于解决，参考补丁也不是唯一可接受的实现。[S5](#source-s5)
+
+一个具体任务是 `pylint-dev__pylint-4551`：用户希望 UML 生成工具读取 Python 类型注解，在属性默认值为 `None` 时也显示其注解类型。一次实际 agent 评测需要先在仓库中定位解析和图生成代码，修改后交出 patch，再由测试环境应用并运行。它考察的是从问题描述到仓库修改的链条。[S7](#source-s7)
+
+问题在于，这条任务的测试直接导入参考补丁新增的 `get_annotation`，题面却没有要求使用这个函数名。合理的另一种实现可能在功能上完成类型显示，仍因导入失败而失分。这个例子使“补丁没通过”出现两种解释：模型没有修好，或测试只接受了某一种修法。Verified 的人工筛选试图减少这类问题，得到原测试集中的 500 条任务；筛选本身并不能让全部测试从此与功能需求完全一致。[S6](#source-s6)、[S7](#source-s7)
+
+SWE-bench 在 agent 评测中承担的是仓库修复的终局检查。若将这种反馈用于后训练，测试是否代表需求就同时变成奖励设计问题；若用成绩选择 agent 的搜索、工具或重试配置，最终数字还包含整套运行方案的效果，不只是基础模型的代码能力。
+
+## 工具和网页：模型采取了动作，评分器未必检查动作过程
+
+### tau-bench：用户意图经对话进入，成功在数据库上判断
+
+tau-bench 的零售任务中，Yusuf Rossi 要把已收货订单里的机械键盘换成 clicky 轴版本，把温控器从 Apple HomeKit 兼容款换成 Google Home 兼容款；如果没有同时满足 clicky、RGB 和全尺寸的键盘，他接受无背光款。这是任务文件中的真实用户要求，交给用户模拟器，agent 通过逐轮对话获得信息，同时能访问政策和工具接口。[S8](#source-s8)
+
+任务的参考动作包括查用户、读订单、查商品，再调用换货接口。它们用于构造目标结果，不是发给 agent 照做的操作脚本。agent 可以走不同路径；评分器从初始数据库重放参考动作，将目标数据库哈希与实际终态比较。这条任务的 `outputs` 为空，因此没有额外的回答关键词检查；其他任务若设置了 `outputs`，回答还需包含相应内容。[S8](#source-s8)
+
+这个协议适合检查业务 agent 能否把对话中的复合要求落实为正确工具操作，也能反复运行以检查稳定性。但终态一致不保证过程合规：论文明确举出未经用户确认就执行退货的情况，数据库可能正确，政策仍被违反。把终态分用作训练奖励，优化的仍是终态，不是确认这一步有没有发生。
+
+### WebArena：网页是交互环境，评分器随任务而变
+
+WebArena 中一个真实任务问：“2022 年销量第一的产品是什么？”agent 从电商后台开始，借助网页观察和操作查找结果；这条任务最终用 `exact_match` 把回答与 `Quest Lumaflex™ Band` 比较。比较前只清理首尾空白、成对引号并转为小写，不检查浏览路径是否与某条参考轨迹相同。[S9](#source-s9)
+
+因此，这条任务测的是在给定网站状态下找到并报告信息。另一些 WebArena 任务检查目标 URL 或页面内容，`fuzzy_match` 还调用模型做语义判定。
+
+在 agent 评测里，WebArena 使观察方式、浏览器动作和功能结果接在一起。网站需自托管，初始状态与重置方式属于协议；前一次任务造成的状态变化可能影响下一次。[S9](#source-s9)
+
+## 哪些进展改变了对成绩的判断
+
+### 测试缺陷和答案泄漏，需要两种不同的修复
+
+OpenAI 对 SWE-bench Verified 的复查选取模型经常失败的 27.6% 子集，其中至少 59.4% 的任务存在会拒绝功能正确提交的测试问题。这个百分比的分母是被审计子集，不能改写成整个 Verified 的缺陷率。前面的 `get_annotation` 就是测试过窄的例子：需要修的是评分规则与问题要求的对应关系。[S7](#source-s7)
+
+同一复查还报告，所测试前沿模型能在部分任务上复现原始人工补丁或题面细节，以此作为模型接触过评测材料的污染证据。污染损害的是“陌生任务考试”的解释，需要重新处理训练暴露和评测独立性；把测试改得更宽，并不能让模型忘掉答案。反过来，换一批未见题，也不会自动修好不合理的测试。
+
+两者还会相互遮蔽：如果通过测试需要题面没有给出的实现细节，见过参考补丁的模型恰好更容易通过。此时高分可能奖励了额外信息，低分可能惩罚了合理修法。OpenAI 据此停止用 Verified 衡量其前沿编程发布的能力进展。[S7](#source-s7)
+
+### 多采几次，覆盖与可靠性的方向相反
+
+HumanEval 的 `pass@k` 问：同一道题采样 k 个候选，至少一个通过测试的概率是多少？执行器用每题 n 个样本、其中 c 个通过的计数，估计 `1 − C(n−c,k) / C(n,k)`，且只在每题样本数足够时报告对应 k。缺少某项指标不能当成该项为零。[S4](#source-s4)
+
+tau-bench 的 `pass^k` 问：同一任务独立运行 k 次，是否全部成功？它衡量的是重复服务的可靠性。若单题每次成功概率为 p，且运行独立、同分布，那么前者是 `1 − (1−p)^k`，后者是 `p^k`。这是在这些假设下的概率关系。汇总不同难度的任务时，先按任务计算，再汇总。[S8](#source-s8)
+
+增加 k 会抬高“至少一次”的机会，却压低“全部成功”的概率。因此代码候选搜索中的覆盖提升，不能拿来证明业务助手可以稳定服务；AIME 的 `avg@32` 估计的是平均单次表现，既不是“至少一次”，也不是“全部成功”。
+
+### 过程奖励的筛选效果，不等于在线优化的效果
+
+过程奖励模型（PRM）评判推理中的步骤，结果奖励则评判最终结果。两者进入系统的位置还可以不同：用于给候选解排序，或直接作为在线 RL 要最大化的奖励。这个区别解释了为什么相关研究不应被收成一条统一的成功或失败叙事。
+
+《Let's Verify Step by Step》训练奖励模型，并用它对生成器已经采出的解答做 best-of-N 选择，最后按答案正确率评价选中的解答。其过程监督在这类 MATH 候选选择中优于结果监督；大规模比较的训练数据并不完全对齐，论文另设小规模控制实验处理这一点。结果支持的是过程监督能训练出更有效的选择器，不是在线策略长期追逐同一 PRM 时仍有相同收益。[S17](#source-s17)
+
+DeepSeek-R1 的失败经验针对大规模 RL 中引入 PRM：通用推理步骤难以切分，步骤正确性难标注，优化中还会出现奖励投机，持续重训奖励模型增加成本。报告同时承认 PRM 可用于重排候选与引导搜索，也明确不把这些失败写成方法不可能有效。两项结论可以同时成立，因为固定候选上的挑选与持续改变生成分布，对评分器提出了不同要求。[S16](#source-s16)
+
+### 审计需要补进评分器原来没有的信息
+
+奖励投机可以严格地表述为：一条策略在代理奖励下更优，在真实任务目标下却更差。Skalse 等人的形式化工作强调，能否避免这种排序反转取决于允许比较的策略集合。这里的非平凡指策略回报不是恒定值；开集指允许策略概率在一个邻域内连续变化的一片策略。有限状态、有限动作、动作数大于一、所有状态可达且奖励均值有限时，若策略集合包含开集，非平凡且不可相互投机的奖励对必须在该集合上给出相同排序；若策略集合有限，且至少两条策略的状态—动作访问计数不同，则可构造不等价的非平凡奖励对。存在排序反转的可能，不等于某次优化已经到达它。[S15](#source-s15)
+
+《Verifier Errors in RLVR》进一步限制了“只看训练日志就能发现问题”的想法。其分析固定题目分布、评分器、初始化和算法，假设评分器不会拒绝正确回答，且日志没有评分器以外的正确性反馈。在不同、都与评分器兼容的真实正确性标注下，日志可能同分布，因而仅靠这些日志不能统一保证识别被错误接受的回答。它针对的是固定评分器的信息边界，不覆盖 SWE-bench 中误拒正确补丁的那一侧。[S14](#source-s14)
+
+这项工作的投影审计校正引入额外正确性标签，并把校正方向投影到接受率梯度的正交空间，以保留接受率的瞬时增长。在正确、错误接受和已审计错误的概率连续可微、前两者为正，且固定审计集合覆盖全部有概率质量的错误接受时，足够强的校正可以降低错误接受占比、提高正确概率；要降低错误接受的绝对概率，还需更强的不等式。全程的指数衰减加余项界还要求统一的校正强度下界和错误增长压力上界。[S14](#source-s14)
+
+这里改变的判断是：提高同一评分器上的接受率，与减少评分器放过的错误，需要不同信息。该理论使用精确梯度流，有限样本、实际优化器和有限步长都可能破坏效果；它不构成 GRPO 在 AIME、HumanEval 或工具基准上的收敛保证。
 
 ## 来源与阅读范围
 
 ### S1：GSM8K {#source-s1}
 
-[README](https://raw.githubusercontent.com/openai/grade-school-math/master/README.md) · [train.jsonl](https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/train.jsonl) · [test.jsonl](https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl) · [dataset.py](https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/dataset.py)
-
-支撑：标准 test 第二条的 `#### 3`，以及 `extract_answer` / `is_correct` 只比较抽出的数值。阅读的是 README 的答案提取、该条完整记录和 dataset.py 的正则。
+[标准测试数据](https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl) · [评分实现](https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/dataset.py)。支撑蓝白布料实例、`####` 抽取和字符串比较，不提供逐步推理验证。
 
 ### S2：MATH-500 与 PRM800K {#source-s2}
 
-[MATH-500 数据卡](https://huggingface.co/datasets/HuggingFaceH4/MATH-500/raw/main/README.md) · [test.jsonl](https://huggingface.co/datasets/HuggingFaceH4/MATH-500/resolve/main/test.jsonl) · [PRM800K README](https://raw.githubusercontent.com/openai/prm800k/main/README.md)
+[MATH-500 数据卡](https://huggingface.co/datasets/HuggingFaceH4/MATH-500/raw/main/README.md) · [题目数据](https://huggingface.co/datasets/HuggingFaceH4/MATH-500/resolve/main/test.jsonl) · [PRM800K README](https://raw.githubusercontent.com/openai/prm800k/main/README.md)。支撑极坐标题、数学判等误差及非标准 MATH 留出切分。
 
-支撑：500 题的来源、sympy 等价及误拒/误收，以及 7,500 + 4,500 / 留 500 的切分。阅读的是数据卡、一条代数题和 README 的 Answer Grading、MATH Splits。
+### S3：AIME 2024 数据 {#source-s3}
 
-### S3：math-ai/aime24 {#source-s3}
+[math-ai/aime24 数据卡](https://huggingface.co/datasets/math-ai/aime24/raw/main/README.md)。支撑题目规模和字段；DAPO 的运行协议见 S12。
 
-[数据卡](https://huggingface.co/datasets/math-ai/aime24/raw/main/README.md) · [Parquet](https://huggingface.co/datasets/math-ai/aime24/resolve/main/test-00000-of-00001.parquet)
+### S4：HumanEval 固定快照 {#source-s4}
 
-支撑：30 题、首条只存 `\boxed{204}`、文件不附统一评测器。阅读的是数据卡和该条记录。
-
-### S4：HumanEval {#source-s4}
-
-[README](https://raw.githubusercontent.com/openai/human-eval/6d43fb980f9fee3c892a914eda09951f772ad10d/README.md) · [数据](https://raw.githubusercontent.com/openai/human-eval/6d43fb980f9fee3c892a914eda09951f772ad10d/data/HumanEval.jsonl.gz) · [evaluation.py](https://raw.githubusercontent.com/openai/human-eval/6d43fb980f9fee3c892a914eda09951f772ad10d/human_eval/evaluation.py)
-
-支撑：`HumanEval/0` 的提示与测试分离、通过测试即 `passed`、`pass@k` 在采样数不少于 k 时计算以及 3.0 秒超时。阅读的是该快照的 README、压缩数据和 evaluation.py。
+[数据](https://raw.githubusercontent.com/openai/human-eval/6d43fb980f9fee3c892a914eda09951f772ad10d/data/HumanEval.jsonl.gz) · [evaluation.py](https://raw.githubusercontent.com/openai/human-eval/6d43fb980f9fee3c892a914eda09951f772ad10d/human_eval/evaluation.py)。支撑函数补全实例、测试、超时和 `pass@k` 估计条件。
 
 ### S5：SWE-bench {#source-s5}
 
-[论文 v3](https://arxiv.org/html/2310.06770v3) · [数据卡](https://huggingface.co/datasets/SWE-bench/SWE-bench/raw/main/README.md) · [Verified 数据卡](https://huggingface.co/datasets/SWE-bench/SWE-bench_Verified/raw/main/README.md) · [grading.py](https://raw.githubusercontent.com/SWE-bench/SWE-bench/main/swebench/harness/grading.py)
+[论文 v3](https://arxiv.org/html/2310.06770v3) · [grading.py](https://raw.githubusercontent.com/SWE-bench/SWE-bench/main/swebench/harness/grading.py)。支撑 issue—仓库—补丁协议与完整解决判分。
 
-支撑：2,294 / 225 的规模、`resolved` 同时要求新测试通过和旧测试保持通过、参考补丁不是唯一解，以及截止日期之后收集 issue 的条件。阅读的是论文 v3 第 2 节、两份数据卡、grading.py 和 test 首条记录。
+### S6：SWE-bench Verified 筛选 {#source-s6}
 
-### S6：Verified 的筛选 {#source-s6}
+[发布说明](https://openai.com/index/introducing-swe-bench-verified/) · [标注规范](https://cdn.openai.com/introducing-swe-bench-verified/swe-b-annotation-instructions.pdf)。支撑人工筛选的目标、合理实现的接受条件与子集规模。
 
-[发布说明](https://openai.com/index/introducing-swe-bench-verified/) · [标注说明](https://cdn.openai.com/introducing-swe-bench-verified/swe-b-annotation-instructions.pdf)
+### S7：SWE-bench Verified 复查 {#source-s7}
 
-支撑：500 条来自人工筛选，测试应接受合理实现，而不是只认题面之外的函数名或报错。阅读的是发布页和标注说明第 1–5 页。
-
-### S7：Verified 的复查 {#source-s7}
-
-[OpenAI，2026-02-23](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/)
-
-支撑：27.6% 子集上至少 59.4% 的题会拒绝功能正确的提交，以及用复现补丁或题面原句作为不再用该基准衡量前沿能力的理由。阅读的是该文的导言、过窄/过宽测试和污染部分。
+[OpenAI，2026-02-23](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/)。支撑 pylint 类型注解实例、被审计子集的缺陷比例、污染证据和停报该成绩的判断。
 
 ### S8：tau-bench {#source-s8}
 
-[论文 v1](https://arxiv.org/html/2406.12045v1) · [零售第一条任务](https://raw.githubusercontent.com/sierra-research/tau-bench/59a200c6d575d595120f1cb70fea53cef0632f6b/tau_bench/envs/retail/tasks_test.py) · [执行接口](https://raw.githubusercontent.com/sierra-research/tau-bench/59a200c6d575d595120f1cb70fea53cef0632f6b/tau_bench/envs/base.py)
-
-支撑：`instruction` 给用户模拟器、分数是数据库哈希、`pass^k` 要求 k 次全部成功，以及终态奖励漏掉确认步骤。阅读的是论文 v1 的奖励与指标，和该快照第一条零售任务。
+[论文 v1](https://arxiv.org/html/2406.12045v1) · [任务快照](https://raw.githubusercontent.com/sierra-research/tau-bench/59a200c6d575d595120f1cb70fea53cef0632f6b/tau_bench/envs/retail/tasks_test.py) · [评分接口](https://raw.githubusercontent.com/sierra-research/tau-bench/59a200c6d575d595120f1cb70fea53cef0632f6b/tau_bench/envs/base.py)。支撑换货实例、用户与 agent 信息边界、终态奖励、确认遗漏和 `pass^k`。
 
 ### S9：WebArena {#source-s9}
 
-[论文 v4](https://arxiv.org/html/2307.13854v4) · [README 快照](https://raw.githubusercontent.com/web-arena-x/webarena/dce04686a56253aefba7b18a4fa0937cf1dc987b/README.md) · [evaluators.py](https://raw.githubusercontent.com/web-arena-x/webarena/dce04686a56253aefba7b18a4fa0937cf1dc987b/evaluation_harness/evaluators.py)
+[论文 v4](https://arxiv.org/html/2307.13854v4) · [README 快照](https://raw.githubusercontent.com/web-arena-x/webarena/dce04686a56253aefba7b18a4fa0937cf1dc987b/README.md) · [任务配置](https://raw.githubusercontent.com/web-arena-x/webarena/dce04686a56253aefba7b18a4fa0937cf1dc987b/config_files/test.raw.json) · [评分器](https://raw.githubusercontent.com/web-arena-x/webarena/dce04686a56253aefba7b18a4fa0937cf1dc987b/evaluation_harness/evaluators.py)。支撑产品查询实例、不同评分类型及环境重置条件。
 
-支撑：812 个任务、首条 `exact_match`、其他任务的 URL/页面检查与 `fuzzy_match`，以及示例观察和重置。阅读的是论文 v4 第 3.2 节、该快照 README、`test.raw.json` 首条和字符串评分实现。
+### S10：SimpleRL-Zoo {#source-s10}
 
-### S10：SimpleRL-Zoo v2 {#source-s10}
+[论文 v2](https://arxiv.org/html/2503.18892v2)，实验设置与难度、格式奖励实验。支撑训练集与评测集用途、正确性奖励和基座能力相关的数据难度差异。
 
-[论文](https://arxiv.org/html/2503.18892v2)
+### S11：ReFT {#source-s11}
 
-支撑：GSM8K 与 MATH 训练集的三档难度和约 8,000 题、+1/0 奖励、评测列表，以及过难/过易和严格格式奖励的实验。阅读的是 v2 第 2.1 节和第 3.1–3.2 节。
+[论文 v3](https://arxiv.org/html/2401.08967v3)，方法与数据表。支撑同一批训练题上的 PPO、数值可提取的辅助奖励及处理后数据计数。
 
-### S11：ReFT v3 {#source-s11}
+### S12：DAPO {#source-s12}
 
-[论文](https://arxiv.org/html/2401.08967v3)
+[论文 v2](https://arxiv.org/html/2503.14476v2)，奖励、数据转换与训练评测设置。支撑整数答案训练题、奖励取值、过长惩罚及 AIME 的 `avg@32` 协议。
 
-支撑：同一批训练题上的 PPO、处理后的 GSM8K 计数、0.1 的可提取分，以及 MathQA 上猜中选项仍得分。阅读的是 v3 第 3 节、第 4.1 节表 1 和第 4.4 节。
+### S13：DeepSeekMath {#source-s13}
 
-### S12：DAPO v2 {#source-s12}
-
-[论文](https://arxiv.org/html/2503.14476v2)
-
-支撑：17K 整数题、1/−1 与过长惩罚，以及 AIME 2024 的 `avg@32`、温度 1.0、top-p 0.7。阅读的是 v2 第 3.5 节和第 4.1 节。
-
-### S13：DeepSeekMath v3 {#source-s13}
-
-[论文](https://arxiv.org/html/2402.03300v3)
-
-支撑：约 144K 相关 CoT、GRPO 与奖励模型，以及预训练语料的 10-gram / 3-gram 过滤不是 RL 题单。阅读的是 v3 第 2.1 节和第 4.2 节。
+[论文 v3](https://arxiv.org/html/2402.03300v3)，预训练语料过滤与 RL 设置。支撑相关 CoT 训练数据、GRPO 和预训练去污的阶段边界。
 
 ### S14：Verifier Errors in RLVR {#source-s14}
 
-[PDF v1](https://arxiv.org/pdf/2609.35677)
-
-支撑：命题 4.1–4.3 的不可识别性，以及定理 5.1 在 A1–A3 下的瞬时界和不延伸到离散 GRPO 的全局最优。阅读的是 v1 第 4–5 节的命题、定理和假设。
+[预印本 v1](https://arxiv.org/pdf/2609.35677)，固定评分器的信息限制、投影审计校正与假设 A1–A3。支撑反馈不可识别性及有条件的局部控制，不提供上述基准的收敛保证。
 
 ### S15：Defining and Characterizing Reward Hacking {#source-s15}
 
-[PDF v2](https://arxiv.org/pdf/2209.13085)
-
-支撑：hacking 的相反排序定义，定理 1 的开集条件，以及定理 2 在有限策略集上可以不等价。阅读的是 v2 第 4 节和第 5.1–5.2 节。
+[论文 v2](https://arxiv.org/html/2209.13085v2)，奖励投机定义、开集与有限策略集合的结论。支撑代理奖励排序与策略集合之间的关系。
 
 ### S16：DeepSeek-R1 {#source-s16}
 
-[报告 v1](https://arxiv.org/html/2501.12948v1)
+[报告 v1](https://arxiv.org/html/2501.12948v1)，奖励设计与失败尝试。支撑大规模在线 RL 中 PRM 的步骤、标注和优化问题，以及与候选重排的区别。
 
-支撑：PRM 试失败的三个原因，以及作者不把这次失败写成方法不可能。阅读的是 v1 第 2.2.2 节和第 4.2 节。
+### S17：Let's Verify Step by Step {#source-s17}
 
+[论文 v1](https://arxiv.org/html/2305.20050v1)，方法、大规模比较与小规模控制实验。支撑过程监督奖励模型的 best-of-N 选择效果及实验比较条件。

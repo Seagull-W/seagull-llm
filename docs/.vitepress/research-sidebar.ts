@@ -112,11 +112,11 @@ export const researchSidebar = [
         "link": "/research/2026-10-17-post-training-rl-datasets"
       },
       {
-        "text": "后训练与 agentic RL 的 benchmark：准则、保证与数据形式",
+        "text": "后训练与 agent 评测：基准分数究竟证明了什么",
         "link": "/research/2026-10-16-post-training-rl-benchmarks"
       },
       {
-        "text": "后训练 RL 框架怎么选、怎么用：从零认识 TRL、verl、OpenRLHF、slime 与 AReaL",
+        "text": "后训练 RL 框架：从训练闭环到 TRL、verl、OpenRLHF、slime 与 AReaL",
         "link": "/research/2026-10-16-post-training-rl-frameworks"
       },
       {
