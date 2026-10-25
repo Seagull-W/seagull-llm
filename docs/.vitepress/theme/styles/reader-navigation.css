@@ -18,7 +18,7 @@
 .reader-toc-list a[aria-current] { border-left-color: var(--vp-c-brand-1); color: var(--vp-c-brand-1); font-weight: 550; }
 .reader-tools button:focus-visible, .reader-toc-list a:focus-visible, .reader-drawer button:focus-visible { outline: 2px solid var(--vp-c-brand-1); outline-offset: 2px; }
 .Layout .vp-doc :is(h2,h3,h4,h5,h6)[id] { scroll-margin-top: calc(var(--vp-nav-height) + 28px); }
-.Layout .VPSidebar { background: var(--vp-c-bg) !important; box-shadow: none; }
+.Layout .VPSidebar { background: var(--chrome-glass-bg) !important; box-shadow: none; }
 .Layout .VPSidebarItem.is-active > .item > .link { border-radius: 0; box-shadow: inset 2px 0 var(--vp-c-brand-1); }
 .reader-drawer { position: fixed; inset: 0 0 0 auto; margin: 0; padding: 24px; width: min(360px, 90vw); max-width: 90vw; height: 100dvh; max-height: 100dvh; border: 0; border-left: 1px solid var(--vp-c-divider); border-radius: 0; background: var(--vp-c-bg); color: var(--vp-c-text-1); overflow: hidden; }
 .reader-drawer[open] { display: flex; flex-direction: column; animation: reader-enter 180ms ease-out; }

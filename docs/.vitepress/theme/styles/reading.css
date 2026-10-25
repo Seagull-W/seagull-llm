@@ -24,8 +24,14 @@
   --vp-c-brand-1: #7bc4e5;
   --vp-c-brand-2: #a1d9f0;
 }
-.Layout:has(.VPDoc) .VPNavBar { background: var(--vp-c-bg) !important; border-bottom: 1px solid var(--vp-c-divider); backdrop-filter: none; }
-.Layout:has(.VPDoc) .VPSidebar { background: var(--vp-c-bg-soft) !important; border-right: 1px solid var(--vp-c-divider); backdrop-filter: none; }
+/* Share the translucent chrome on article pages, including mobile. */
+.Layout:has(.VPDoc) .VPNavBar,
+.Layout:has(.VPDoc) .VPSidebar {
+  background: var(--chrome-glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-color: var(--chrome-glass-edge);
+}
 .VPDoc .content-container { max-width: 760px !important; }
 .VPDoc .vp-doc { font-size: 16px; line-height: 1.9; }
 .VPDoc .vp-doc h1 {

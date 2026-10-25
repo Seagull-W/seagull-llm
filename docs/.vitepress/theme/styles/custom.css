@@ -37,7 +37,9 @@
   --glass-border: rgba(255, 255, 255, 0.8);
   --glass-shadow: 0 4px 24px rgba(37, 99, 235, 0.08);
   --glass-shadow-hover: 0 14px 38px rgba(37, 99, 235, 0.16);
-  --glass-blur: blur(14px) saturate(150%);
+  --glass-blur: blur(24px) saturate(170%);
+  --chrome-glass-bg: rgba(248, 251, 255, 0.58);
+  --chrome-glass-edge: rgba(140, 160, 190, 0.24);
 
   /* 深色代码块 */
   --code-bg: #0f1714;
@@ -84,7 +86,9 @@
   --glass-border: rgba(255, 255, 255, 0.09);
   --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
   --glass-shadow-hover: 0 14px 38px rgba(0, 0, 0, 0.5);
-  --glass-blur: blur(14px) saturate(140%);
+  --glass-blur: blur(24px) saturate(170%);
+  --chrome-glass-bg: rgba(16, 23, 34, 0.58);
+  --chrome-glass-edge: rgba(180, 200, 230, 0.16);
 
   --code-bg: #0d1418;
   --code-border: #1c2830;
@@ -275,12 +279,6 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 768px) {
-  /* 移动端禁用 backdrop-filter（GPU 成本高），改纯半透明背景 */
-  :root,
-  .dark {
-    --glass-blur: none;
-  }
-
   .vp-doc table {
     display: block;
     overflow-x: auto;
@@ -611,14 +609,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .VPNavBar {
-  background: rgba(238, 243, 252, 0.72) !important;
+  background: var(--chrome-glass-bg) !important;
   backdrop-filter: var(--glass-blur);
-  border-bottom: 1px solid rgba(211, 221, 239, 0.6);
-}
-
-.dark .VPNavBar {
-  background: rgba(10, 15, 24, 0.72) !important;
-  border-bottom: 1px solid rgba(36, 50, 74, 0.6);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--chrome-glass-edge);
 }
 
 .VPNavBar .title {
@@ -634,14 +628,10 @@ h1, h2, h3, h4, h5, h6 {
    侧边栏
    ============================================================ */
 .VPSidebar {
-  background-color: rgba(238, 243, 252, 0.55) !important;
+  background: var(--chrome-glass-bg) !important;
   backdrop-filter: var(--glass-blur);
-  border-right: 1px solid rgba(211, 221, 239, 0.5);
-}
-
-.dark .VPSidebar {
-  background-color: rgba(10, 15, 24, 0.6) !important;
-  border-right: 1px solid rgba(36, 50, 74, 0.5);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-right: 1px solid var(--chrome-glass-edge);
 }
 
 .VPSidebarItem .text {
