@@ -32,6 +32,10 @@
 body, .dark body { background-image: none; }
 .VPNavBar { box-shadow: none !important; }
 .VPNavBarTitle .title { letter-spacing: -.04em; }
+/* Keep the homepage navbar visible at every viewport width. */
+.Layout:has(.VPHome) .VPNav { position: fixed; top: 0; }
+/* Reserve the fixed bar's space on mobile, as VitePress already does on desktop. */
+.Layout .VPContent.is-home { padding-top: var(--vp-nav-height); }
 /* VitePress offsets the hero by the nav height; reserve that space plus a gap. */
 .VPHome.VPHome .VPHero { padding-top: max(100px, calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 16px)); padding-bottom: 90px; }
 .VPHome.VPHome .VPHero::before { display: none; }
