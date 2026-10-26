@@ -3,7 +3,11 @@ export const researchSidebar = [
   {
     "text": "每日调研",
     "collapsed": false,
-    "items": [
+        "items": [
+      {
+        "text": "解读 Claude Code 团队的七层代码审查：风险分级、收敛与迁移边界",
+        "link": "/research/2026-10-26-agent-code-review-layers"
+      },
       {
         "text": "大模型后训练的集群调度：设备放置、通信约束与失败恢复",
         "link": "/research/2026-10-24-llm-post-training-cluster-scheduling"

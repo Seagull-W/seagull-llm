@@ -1,5 +1,26 @@
 [
   {
+    "date": "2026-10-26",
+    "slug": "agent-code-review-layers",
+    "title": "解读 Claude Code 团队的七层代码审查：风险分级、收敛与迁移边界",
+    "description": "解读 Claude Code 团队关于 code review 的文章：七层检查各自挡住什么、风险分级怎样分配人工名额、agent 作者与 agent 审查者为何会互相拖住，以及这组数字在什么条件下才成立。",
+    "route": "/research/2026-10-26-agent-code-review-layers",
+    "source_urls": [
+      "https://claude.dev/blog/solving-code-review-at-anthropic/",
+      "https://www.anthropic.com/engineering/redesigning-source-control",
+      "https://claude.com/resources/articles/agentic-coding-is-straining-ci-heres-how-we-scaled-test-impact-analysis-at-anthropic",
+      "https://claude.com/resources/articles/code-review",
+      "https://code.claude.com/docs/en/code-review.md",
+      "https://code.claude.com/docs/en/code-review-customize.md",
+      "https://code.claude.com/docs/en/best-practices.md",
+      "https://support.claude.com/en/articles/11932705-automated-security-reviews-in-claude-code",
+      "https://github.com/anthropics/claude-code-security-review",
+      "https://news.ycombinator.com/item?id=50122951"
+    ],
+    "window_end": "2026-10-26T00:00:00+08:00",
+    "origin": "manual"
+  },
+  {
     "date": "2026-10-24",
     "slug": "llm-post-training-cluster-scheduling",
     "title": "大模型后训练的集群调度：设备放置、通信约束与失败恢复",
