@@ -8,7 +8,7 @@
 .reader-tools { grid-column: 1 / -1; grid-row: 1; display: flex; gap: 20px; margin: -16px 0 24px; min-height: 32px; align-items: center; }
 .reader-tools button, .reader-drawer header button { font-size: 12px; color: var(--vp-c-text-2); cursor: pointer; min-height: 36px; transition: color 180ms; }
 .reader-tools button:hover, .reader-drawer header button:hover { color: var(--vp-c-brand-1); }
-.reader-tools .collection-desktop, .reader-tools .toc-desktop { display: none; }
+.reader-tools .toc-desktop { display: none; }
 .reader-toc { grid-column: 2; grid-row: 2; position: sticky; top: calc(var(--vp-nav-height) + 24px); min-width: 0; display: none; max-height: calc(100dvh - var(--vp-nav-height) - 48px); }
 .reader-toc h2, .reader-drawer h2 { margin: 0 0 12px; font-size: 13px; font-weight: 600; line-height: 24px; }
 .reader-toc-list { position: relative; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; max-height: calc(100dvh - var(--vp-nav-height) - 90px); }
@@ -28,13 +28,11 @@
 .reader-drawer .reader-toc-list a { padding-block: 10px; }
 @keyframes reader-enter { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
 @media(min-width:960px) {
- .reader-tools .collection-desktop { display: block; }
- .reader-tools .collection-mobile { display: none; }
  .Layout .VPSidebar { top: var(--vp-nav-height); padding-top: 24px; width: var(--vp-sidebar-width); padding-left: 24px; padding-right: 20px; }
  .Layout .VPSidebar .curtain { display: none; }
  .Layout .VPContent.has-sidebar { padding-left: var(--vp-sidebar-width); padding-right: 0; }
- body.reader-collection-collapsed .VPSidebar { visibility: hidden; pointer-events: none; transform: translateX(-100%); }
- body.reader-collection-collapsed .VPContent.has-sidebar { padding-left: 0; }
+ .Layout:has(.reader-navigation:not(.collection-is-open)) .VPSidebar { visibility: hidden; pointer-events: none; transform: translateX(-100%); }
+ .Layout:has(.reader-navigation:not(.collection-is-open)) .VPContent.has-sidebar { padding-left: 0; }
 }
 @media(min-width:1440px) {
  .Layout .VPDoc:has(.reader-navigation.has-toc:not(.toc-is-collapsed)) { grid-template-columns: minmax(0,820px) 220px; }
@@ -42,7 +40,18 @@
  .reader-tools .toc-desktop { display: block; margin-left: auto; }
  .reader-tools .toc-mobile { display: none; }
 }
-@media(max-width:959px) { .Layout .VPSidebar { display: none; } }
+/* One collection control owns the existing left sidebar at every width.
+   Derive visibility from SSR markup so the first paint is collapsed too. */
+.Layout:has(.reader-navigation:not(.collection-is-open)) .VPSidebar { visibility: hidden; pointer-events: none; transform: translateX(-100%); }
+@media(max-width:959px) {
+ .Layout:has(.reader-navigation.collection-is-open) .VPSidebar {
+  display: block; visibility: visible; opacity: 1; transform: translateX(0);
+  top: calc(var(--vp-nav-height) + 44px); padding: 24px 20px;
+  width: min(280px, calc(100vw - 48px));
+  border-right: 1px solid var(--vp-c-divider);
+  box-shadow: 8px 0 24px #0001;
+ }
+}
 @media(prefers-reduced-motion:reduce) {
  .reader-drawer[open] { animation: none; }
  .reader-navigation *, .VPSidebar, .VPContent { transition: none !important; scroll-behavior: auto !important; }
@@ -54,8 +63,6 @@
  .reader-navigation { display: block; grid-column: 1; grid-row: 1; position: sticky; top: 0; z-index: 20; background: var(--vp-c-bg); margin-bottom: 24px; }
  .reader-tools { margin: 0; padding: 4px 24px; }
  .Layout .VPDoc:has(.reader-navigation) > .container { padding-inline: 24px; max-width: 868px; }
- .reader-tools .collection-desktop { display: none; }
- .reader-tools .collection-mobile { display: block; }
  .Layout .vp-doc :is(h2,h3,h4,h5,h6)[id] { scroll-margin-top: calc(var(--vp-nav-height) + 64px); }
 }
 @media(min-width:768px) and (max-width:1439px) {

@@ -2,17 +2,15 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { onContentUpdated, useData, useRoute } from 'vitepress'
 import { useSidebar } from 'vitepress/dist/client/theme-default/composables/sidebar'
-import VPSidebarItem from 'vitepress/dist/client/theme-default/components/VPSidebarItem.vue'
 
 const { frontmatter } = useData()
 const route = useRoute()
-const { sidebar, hasSidebar } = useSidebar()
+const { hasSidebar } = useSidebar()
 const enabled = computed(() => frontmatter.value.layout !== 'page')
 const headings = shallowRef<{ id: string; text: string; level: number; element: HTMLElement }[]>([])
 const active = ref('')
 const collapsed = ref(false)
-const collectionCollapsed = ref(false)
-const mode = ref<'collection' | 'toc'>('toc')
+const collectionCollapsed = ref(true)
 const drawer = ref<HTMLDialogElement>()
 const drawerOpen = ref(false)
 const rail = ref<HTMLElement>()
@@ -56,8 +54,7 @@ watch([active, collapsed, drawerOpen], async () => {
     }
   }
 })
-function open(which: 'collection' | 'toc', event: MouseEvent) {
-  mode.value = which
+function open(event: MouseEvent) {
   trigger = event.currentTarget as HTMLElement
   oldOverflow = document.documentElement.style.overflow
   locked = true
@@ -85,8 +82,7 @@ function jump(id: string) {
   active.value = id
 }
 function resize() { close(); schedule() }
-watch(collectionCollapsed, value => document.body.classList.toggle('reader-collection-collapsed', value))
-watch(() => route.path, close)
+watch(() => route.path, () => { close(); collectionCollapsed.value = true })
 onMounted(() => {
   document.body.classList.remove('vp-sidebar-collapsed')
   document.documentElement.style.setProperty('--vp-sidebar-width', '248px')
@@ -97,18 +93,16 @@ onMounted(() => {
 onUnmounted(() => {
   close()
   cancelAnimationFrame(frame)
-  document.body.classList.remove('reader-collection-collapsed')
   window.removeEventListener('scroll', schedule)
   window.removeEventListener('resize', resize)
 })
 </script>
 
 <template>
-  <div v-if="enabled" class="reader-navigation" :class="{ 'toc-is-collapsed': collapsed, 'has-toc': tocEnabled }">
+  <div v-if="enabled" class="reader-navigation" :class="{ 'toc-is-collapsed': collapsed, 'has-toc': tocEnabled, 'collection-is-open': !collectionCollapsed }">
     <nav class="reader-tools" aria-label="阅读导航">
-      <button v-if="hasSidebar" class="collection-desktop" :aria-expanded="!collectionCollapsed" @click="collectionCollapsed = !collectionCollapsed">{{ collectionCollapsed ? '展开栏目' : '收起栏目' }}</button>
-      <button v-if="hasSidebar" class="collection-mobile" aria-haspopup="dialog" @click="open('collection', $event)">栏目目录</button>
-      <button v-if="tocEnabled" class="toc-mobile" aria-haspopup="dialog" @click="open('toc', $event)">本页目录</button>
+      <button v-if="hasSidebar" class="collection-toggle" :aria-expanded="!collectionCollapsed" aria-controls="VPSidebarNav" @click="collectionCollapsed = !collectionCollapsed">栏目目录</button>
+      <button v-if="tocEnabled" class="toc-mobile" aria-haspopup="dialog" @click="open($event)">本页目录</button>
       <button v-if="tocEnabled" class="toc-desktop" :aria-expanded="!collapsed" aria-controls="reader-toc" @click="collapsed = !collapsed">{{ collapsed ? '展开本页目录' : '收起本页目录' }}</button>
     </nav>
     <aside v-if="tocEnabled" id="reader-toc" ref="rail" class="reader-toc" aria-label="本页目录" :hidden="collapsed">
@@ -118,12 +112,9 @@ onUnmounted(() => {
       </nav>
     </aside>
     <dialog ref="drawer" class="reader-drawer" aria-labelledby="reader-drawer-title" @close="restore" @click="($event.target === drawer) && close()">
-      <header><h2 id="reader-drawer-title">{{ mode === 'toc' ? '本页目录' : '栏目目录' }}</h2><button autofocus aria-label="关闭目录" @click="close">关闭</button></header>
-      <nav v-if="mode === 'toc'" class="reader-toc-list" aria-label="本页标题">
+      <header><h2 id="reader-drawer-title">本页目录</h2><button autofocus aria-label="关闭目录" @click="close">关闭</button></header>
+      <nav class="reader-toc-list" aria-label="本页标题">
         <a v-for="h in headings" :key="h.id" :href="'#' + encodeURIComponent(h.id)" :style="{ '--depth': h.level - 2 }" :aria-current="active === h.id ? 'location' : undefined" @click.prevent="jump(h.id)">{{ h.text }}</a>
-      </nav>
-      <nav v-else class="reader-collection-list" aria-label="栏目文章" @click="($event.target as HTMLElement).closest('a') && close()">
-        <VPSidebarItem v-for="(item, i) in sidebar" :key="i" :item="item" :depth="0" />
       </nav>
     </dialog>
   </div>
