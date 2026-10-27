@@ -1,20 +1,478 @@
-<script setup>
-import PdfViewer from '../../.vitepress/components/PdfViewer.vue'
+<script setup lang="ts">
+import '../lecture-academic.css'
+import { defineAsyncComponent, shallowRef } from 'vue'
 import pdfUrl from './值迭代与策略迭代.pdf?url'
 import outline from './目录.json'
+const PdfViewer = defineAsyncComponent(() => import('../../.vitepress/components/PdfViewer.vue'))
+const showOriginal = shallowRef(false)
+function toggleOriginal(event: Event) {
+  showOriginal.value = (event.target as HTMLDetailsElement).open
+}
 </script>
 
-<article class="native-document format-course" data-format="course" aria-label="第 4 讲：值迭代与策略迭代" data-design="linux-notebook">
+<article class="native-document format-course academic-lecture" data-format="course" data-design="linux-notebook" aria-label="第 4 讲：值迭代与策略迭代">
 <header class="document-intro note-hero">
-  <p class="note-kicker">西湖 RL 笔记<span>课程讲义</span></p>
-  <h1 id="note-title">第 4 讲：值迭代与策略迭代 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
-  <p class="note-deck">第 4 讲课程资料：学习值迭代与策略迭代，比较寻找最优价值和改进策略的思路。</p>
-  <div class="note-chips"><span>强化学习</span><span>动态规划</span></div>
+  <p class="note-kicker">西湖 RL 笔记<span>第 4 讲 · 课程讲义</span></p>
+  <h1 id="note-title" tabindex="-1">值迭代与策略迭代 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
+  <p class="note-deck">沿着策略评估与策略改进两条线索，比较值迭代、策略迭代与截断策略迭代的更新方式和收敛性。</p>
+  <div class="note-chips"><span>值迭代</span><span>策略迭代</span><span>截断策略迭代</span></div>
+  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记</p>
 </header>
+<nav class="note-jump" aria-label="本篇阅读导航"><a href="#值迭代">4.1 值迭代</a>
+<a href="#策略迭代">4.2 策略迭代</a>
+<a href="#截断策略迭代">4.3 截断策略迭代</a>
+<a href="#本章小结">4.4 本章小结</a>
+<a href="#常见问题解答">4.5 常见问题解答</a></nav>
+<div id="reading-context" class="lecture-body">
+<p>在前两讲的基础上，我们现在可以介绍第一批能够求解最优策略的算法。本章将介绍三个密切相关的算法：<strong>值迭代（Value Iteration）</strong>、<strong>策略迭代（Policy Iteration）</strong>和<strong>截断策略迭代（Truncated Policy Iteration）</strong>。值迭代正是第3讲中压缩映射定理所建议的求解贝尔曼最优方程的算法；策略迭代的基本思想在强化学习中得到了广泛应用；截断策略迭代则是统一前两者的一个更一般的算法框架。</p>
+<p>本章介绍的算法被称为<strong>动态规划（Dynamic Programming）</strong>算法，它们都需要已知系统模型（即 <span class="math-inline" data-tex="p(r \mid s,a)"></span> 和 <span class="math-inline" data-tex="p(s&#x27; \mid s,a)"></span>）。这些算法是后续章节无模型强化学习算法的重要基础：例如，第5讲介绍的蒙特卡洛方法可以通过推广本章的策略迭代算法直接得到。</p>
 
-
-<section class="document-section note-panel" aria-labelledby="reading-context">
-<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
-<PdfViewer :src="pdfUrl" title="值迭代与策略迭代" :outline="outline" />
+<section class="document-section note-panel" aria-labelledby="值迭代">
+<h2 class="unnumbered" tabindex="-1" id="值迭代">4.1 值迭代 <a class="header-anchor" href="#值迭代" aria-label="章节链接">&#8203;</a></h2>
+<p>值迭代正是第3讲中压缩映射定理所建议的求解贝尔曼最优方程的算法。具体而言，该算法的矩阵-向量形式为：</p>
+<div class="lecture-equation" id="lecture-equation-1"><div class="math-block" data-tex="\boldsymbol{v}_{k+1} = \max_{\pi \in \Pi} \bigl( \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_k \bigr), \quad k = 0,1,2,\dots"></div></div>
+<p>由定理3.3保证，当 <span class="math-inline" data-tex="k \to \infty"></span> 时，<span class="math-inline" data-tex="\boldsymbol{v}_k"></span> 收敛到最优状态价值，<span class="math-inline" data-tex="\pi_k"></span> 收敛到最优策略。</p>
+<p>该算法是迭代的，每次迭代包含两个步骤：</p>
+<ul>
+<li><p><strong>策略更新步骤（Policy Update）</strong>：求解以下优化问题得到策略</p>
+<div class="lecture-equation" id="lecture-equation-2"><div class="math-block" data-tex="\pi_{k+1} = \arg\max_{\pi} \bigl( \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_k \bigr)"></div></div>
+<p>其中 <span class="math-inline" data-tex="\boldsymbol{v}_k"></span> 来自上一次迭代。</p></li>
+<li><p><strong>价值更新步骤（Value Update）</strong>：计算新的价值</p>
+<div class="lecture-equation is-numbered" id="eq:vi_value_update"><div class="math-block" data-tex="\boldsymbol{v}_{k+1} = \boldsymbol{r}_{\pi_{k+1}} + \gamma \boldsymbol{P}_{\pi_{k+1}} \boldsymbol{v}_k"></div><a class="lecture-equation-number" href="#eq:vi_value_update" aria-label="公式 1">(1)</a></div>
+<p>其中 <span class="math-inline" data-tex="\boldsymbol{v}_{k+1}"></span> 将在下一次迭代中使用。</p></li>
+</ul>
+<p>上述矩阵-向量形式有助于理解算法的核心思想，但要实现该算法，还需要进一步分析其元素形式。</p>
+<h3 class="unnumbered" tabindex="-1" id="元素形式与实现">4.1.1 元素形式与实现 <a class="header-anchor" href="#元素形式与实现" aria-label="章节链接">&#8203;</a></h3>
+<p>考虑第 <span class="math-inline" data-tex="k"></span> 步迭代和状态 <span class="math-inline" data-tex="s"></span>。</p>
+<p><strong>策略更新步骤</strong>的元素形式：<span class="math-inline" data-tex="\pi_{k+1} = \arg\max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_k)"></span> 展开为</p>
+<div class="lecture-equation" id="lecture-equation-4"><div class="math-block" data-tex="\pi_{k+1}(s) = \arg\max_{\pi} \sum_{a} \pi(a \mid s) \underbrace{\left( \sum_{r} p(r \mid s,a) r + \gamma \sum_{s&#x27;} p(s&#x27; \mid s,a) v_k(s&#x27;) \right)}_{q_k(s,a)}, \quad s \in \mathcal{S}"></div></div>
+<p>由第3.3.1节的结论，求解该最大化问题的最优策略为贪心策略：</p>
+<div class="lecture-equation is-numbered" id="eq:vi_greedy"><div class="math-block" data-tex="\pi_{k+1}(a \mid s) =
+\begin{cases}
+1, &amp; a = a_k^*(s) \\
+0, &amp; a \neq a_k^*(s)
+\end{cases}"></div><a class="lecture-equation-number" href="#eq:vi_greedy" aria-label="公式 2">(2)</a></div>
+<p>其中 <span class="math-inline" data-tex="a_k^*(s) = \arg\max_a q_k(s,a)"></span>。若 <span class="math-inline" data-tex="\arg\max_a q_k(s,a)"></span> 有多个解，可任意选择其中一个而不影响算法的收敛性。</p>
+<p><strong>价值更新步骤</strong>的元素形式：<span class="math-inline" data-tex="\boldsymbol{v}_{k+1} = \boldsymbol{r}_{\pi_{k+1}} + \gamma \boldsymbol{P}_{\pi_{k+1}} \boldsymbol{v}_k"></span> 展开为</p>
+<div class="lecture-equation" id="lecture-equation-6"><div class="math-block" data-tex="v_{k+1}(s) = \sum_{a} \pi_{k+1}(a \mid s) \underbrace{\left( \sum_{r} p(r \mid s,a) r + \gamma \sum_{s&#x27;} p(s&#x27; \mid s,a) v_k(s&#x27;) \right)}_{q_k(s,a)}, \quad s \in \mathcal{S}"></div></div>
+<p>将 (<a href="#eq:vi_greedy" data-reference-type="ref" data-reference="eq:vi_greedy">2</a>) 代入上式可得：</p>
+<div class="lecture-equation" id="lecture-equation-7"><div class="math-block" data-tex="v_{k+1}(s) = \max_{a} q_k(s,a)"></div></div>
+<p>综上，值迭代的核心流程可以概括为：</p>
+<div class="lecture-equation" id="lecture-equation-8"><div class="math-block" data-tex="v_k(s) \;\to\; q_k(s,a) \;\to\; \text{新的贪心策略 } \pi_{k+1}(s) \;\to\; \text{新的价值 } v_{k+1}(s) = \max_a q_k(s,a)"></div></div>
+<div class="algobox lecture-box">
+<div class="lecture-box-title">
+<p>算法 4.1 值迭代算法</p>
+</div>
+<p><strong>初始化</strong>：已知所有 <span class="math-inline" data-tex="(s,a)"></span> 的概率模型 <span class="math-inline" data-tex="p(r \mid s,a)"></span> 和 <span class="math-inline" data-tex="p(s&#x27; \mid s,a)"></span>。初始猜测 <span class="math-inline" data-tex="\boldsymbol{v}_0"></span>。</p>
+<p><strong>目标</strong>：求解贝尔曼最优方程，得到最优状态价值与最优策略。</p>
+<p>当 <span class="math-inline" data-tex="\boldsymbol{v}_k"></span> 未收敛（即 <span class="math-inline" data-tex="\|\boldsymbol{v}_k - \boldsymbol{v}_{k-1}\|"></span> 大于预设阈值），对第 <span class="math-inline" data-tex="k"></span> 次迭代执行：</p>
+<ul>
+<li><p>对每个状态 <span class="math-inline" data-tex="s \in \mathcal{S}"></span>，执行：</p>
+<ul>
+<li><p>对每个动作 <span class="math-inline" data-tex="a \in \mathcal{A}(s)"></span>，计算： <span class="math-inline" data-tex="q_k(s,a) = \sum_{r} p(r \mid s,a) r + \gamma \sum_{s&#x27;} p(s&#x27; \mid s,a) v_k(s&#x27;)"></span></p></li>
+<li><p>最大动作价值：<span class="math-inline" data-tex="a_k^*(s) = \arg\max_a q_k(s,a)"></span></p></li>
+<li><p>策略更新：<span class="math-inline" data-tex="\pi_{k+1}(a \mid s) = 1"></span> 若 <span class="math-inline" data-tex="a = a_k^*"></span>，否则为 <span class="math-inline" data-tex="0"></span></p></li>
+<li><p>价值更新：<span class="math-inline" data-tex="v_{k+1}(s) = \max_a q_k(s,a)"></span></p></li>
+</ul></li>
+</ul>
+</div>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>备注</p>
+</div>
+<p>一个可能令人困惑的问题是：<span class="math-inline" data-tex="v_k"></span> 是否是一个状态价值？答案是<strong>否</strong>。虽然 <span class="math-inline" data-tex="v_k"></span> 最终收敛到最优状态价值，但它并不保证满足任何策略的贝尔曼方程。例如，它通常不满足 <span class="math-inline" data-tex="v_k = \boldsymbol{r}_{\pi_{k+1}} + \gamma \boldsymbol{P}_{\pi_{k+1}} v_k"></span> 或 <span class="math-inline" data-tex="v_k = \boldsymbol{r}_{\pi_k} + \gamma \boldsymbol{P}_{\pi_k} v_k"></span>。<span class="math-inline" data-tex="v_k"></span> 仅仅是算法产生的中间值。同理，<span class="math-inline" data-tex="q_k"></span> 也不是动作价值。</p>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="示例">4.1.2 示例 <a class="header-anchor" href="#示例" aria-label="章节链接">&#8203;</a></h3>
+<p>我们通过一个简单的 <span class="math-inline" data-tex="2 \times 2"></span> 网格世界来说明值迭代算法的逐步执行过程。该示例中 <span class="math-inline" data-tex="s_4"></span> 为目标区域，奖励设置 <span class="math-inline" data-tex="r_{\text{boundary}} = r_{\text{forbidden}} = -1"></span>，<span class="math-inline" data-tex="r_{\text{target}} = 1"></span>，折扣因子 <span class="math-inline" data-tex="\gamma = 0.9"></span>。每个状态-动作对的 <span class="math-inline" data-tex="q"></span> 值表达式如表4.1所示。</p>
+<div class="center">
+<p><strong>表4.1 示例的 <span class="math-inline" data-tex="q(s,a)"></span> 表达式</strong></p>
+<div class="lecture-equation" id="lecture-equation-9"><div class="math-block" data-tex="\begin{array}{c|ccccc}
+q\text{-table} &amp; a_1 &amp; a_2 &amp; a_3 &amp; a_4 &amp; a_5 \\
+\hline
+s_1 &amp; -1 + \gamma v(s_1) &amp; -1 + \gamma v(s_2) &amp; 0 + \gamma v(s_3) &amp; -1 + \gamma v(s_1) &amp; 0 + \gamma v(s_1) \\
+s_2 &amp; -1 + \gamma v(s_2) &amp; -1 + \gamma v(s_2) &amp; 1 + \gamma v(s_4) &amp; 0 + \gamma v(s_1) &amp; -1 + \gamma v(s_2) \\
+s_3 &amp; 0 + \gamma v(s_1) &amp; 1 + \gamma v(s_4) &amp; -1 + \gamma v(s_3) &amp; -1 + \gamma v(s_3) &amp; 0 + \gamma v(s_3) \\
+s_4 &amp; -1 + \gamma v(s_2) &amp; -1 + \gamma v(s_4) &amp; -1 + \gamma v(s_4) &amp; 0 + \gamma v(s_3) &amp; 1 + \gamma v(s_4)
+\end{array}"></div></div>
+</div>
+<p><strong><span class="math-inline" data-tex="k = 0"></span></strong>：不妨设初始价值 <span class="math-inline" data-tex="v_0(s_1) = v_0(s_2) = v_0(s_3) = v_0(s_4) = 0"></span>。</p>
+<p>将 <span class="math-inline" data-tex="v_0(s_i)"></span> 代入表4.1可得表4.2所示 <span class="math-inline" data-tex="q"></span> 值。</p>
+<div class="center">
+<p><strong>表4.2 <span class="math-inline" data-tex="k=0"></span> 时的 <span class="math-inline" data-tex="q(s,a)"></span> 值</strong></p>
+<div class="lecture-equation" id="lecture-equation-10"><div class="math-block" data-tex="\begin{array}{c|ccccc}
+q\text{-table} &amp; a_1 &amp; a_2 &amp; a_3 &amp; a_4 &amp; a_5 \\
+\hline
+s_1 &amp; -1 &amp; -1 &amp; 0 &amp; -1 &amp; 0 \\
+s_2 &amp; -1 &amp; -1 &amp; 1 &amp; 0 &amp; -1 \\
+s_3 &amp; 0 &amp; 1 &amp; -1 &amp; -1 &amp; 0 \\
+s_4 &amp; -1 &amp; -1 &amp; -1 &amp; 0 &amp; 1
+\end{array}"></div></div>
+</div>
+<p><strong>策略更新</strong>：对每个状态选择 <span class="math-inline" data-tex="q"></span> 值最大的动作，得到 <span class="math-inline" data-tex="\pi_1"></span>：</p>
+<div class="lecture-equation" id="lecture-equation-11"><div class="math-block" data-tex="\pi_1(a_5 \mid s_1) = 1,\; \pi_1(a_3 \mid s_2) = 1,\; \pi_1(a_2 \mid s_3) = 1,\; \pi_1(a_5 \mid s_4) = 1"></div></div>
+<p>该策略不是最优的，因为它在 <span class="math-inline" data-tex="s_1"></span> 选择了原地不动（<span class="math-inline" data-tex="a_5"></span>）。注意 <span class="math-inline" data-tex="(s_1, a_5)"></span> 和 <span class="math-inline" data-tex="(s_1, a_3)"></span> 的 <span class="math-inline" data-tex="q"></span> 值相同，可以任意选择。</p>
+<p><strong>价值更新</strong>：将 <span class="math-inline" data-tex="v"></span> 值更新为各状态的最大 <span class="math-inline" data-tex="q"></span> 值：</p>
+<div class="lecture-equation" id="lecture-equation-12"><div class="math-block" data-tex="v_1(s_1) = 0,\; v_1(s_2) = 1,\; v_1(s_3) = 1,\; v_1(s_4) = 1"></div></div>
+<p><strong><span class="math-inline" data-tex="k = 1"></span></strong>：将 <span class="math-inline" data-tex="v_1(s_i)"></span> 代入表4.1可得表4.3所示 <span class="math-inline" data-tex="q"></span> 值。</p>
+<div class="center">
+<p><strong>表4.3 <span class="math-inline" data-tex="k=1"></span> 时的 <span class="math-inline" data-tex="q(s,a)"></span> 值</strong></p>
+<div class="lecture-equation" id="lecture-equation-13"><div class="math-block" data-tex="\begin{array}{c|ccccc}
+q\text{-table} &amp; a_1 &amp; a_2 &amp; a_3 &amp; a_4 &amp; a_5 \\
+\hline
+s_1 &amp; -1 + \gamma \cdot 0 &amp; -1 + \gamma \cdot 1 &amp; 0 + \gamma \cdot 1 &amp; -1 + \gamma \cdot 0 &amp; 0 + \gamma \cdot 0 \\
+s_2 &amp; -1 + \gamma \cdot 1 &amp; -1 + \gamma \cdot 1 &amp; 1 + \gamma \cdot 1 &amp; 0 + \gamma \cdot 0 &amp; -1 + \gamma \cdot 1 \\
+s_3 &amp; 0 + \gamma \cdot 0 &amp; 1 + \gamma \cdot 1 &amp; -1 + \gamma \cdot 1 &amp; -1 + \gamma \cdot 1 &amp; 0 + \gamma \cdot 1 \\
+s_4 &amp; -1 + \gamma \cdot 1 &amp; -1 + \gamma \cdot 1 &amp; -1 + \gamma \cdot 1 &amp; 0 + \gamma \cdot 1 &amp; 1 + \gamma \cdot 1
+\end{array}"></div></div>
+</div>
+<p><strong>策略更新</strong>：<span class="math-inline" data-tex="\pi_2(a_3 \mid s_1) = 1,\; \pi_2(a_3 \mid s_2) = 1,\; \pi_2(a_2 \mid s_3) = 1,\; \pi_2(a_5 \mid s_4) = 1"></span>。</p>
+<p><strong>价值更新</strong>：</p>
+<div class="lecture-equation" id="lecture-equation-14"><div class="math-block" data-tex="v_2(s_1) = \gamma \cdot 1,\; v_2(s_2) = 1 + \gamma \cdot 1,\; v_2(s_3) = 1 + \gamma \cdot 1,\; v_2(s_4) = 1 + \gamma \cdot 1"></div></div>
+<p><strong><span class="math-inline" data-tex="k = 2, 3, 4, \dots"></span></strong>：值得注意的是，<span class="math-inline" data-tex="\pi_2"></span> 已经是最优策略。因此在这个简单示例中，只需两次迭代即可获得最优策略。对于更复杂的示例，需要运行更多次迭代，直到 <span class="math-inline" data-tex="v_k"></span> 收敛（例如直到 <span class="math-inline" data-tex="\|v_{k+1} - v_k\|"></span> 小于预设阈值）。</p>
 </section>
+<section class="document-section note-panel" aria-labelledby="策略迭代">
+<h2 class="unnumbered" tabindex="-1" id="策略迭代">4.2 策略迭代 <a class="header-anchor" href="#策略迭代" aria-label="章节链接">&#8203;</a></h2>
+<p>本节介绍另一个重要算法：<strong>策略迭代（Policy Iteration）</strong>。与值迭代不同，策略迭代并非直接求解贝尔曼最优方程，但它与值迭代有着密切的联系。此外，策略迭代的基本思想在强化学习算法中得到了广泛应用，因此非常重要。</p>
+<h3 class="unnumbered" tabindex="-1" id="算法分析">4.2.1 算法分析 <a class="header-anchor" href="#算法分析" aria-label="章节链接">&#8203;</a></h3>
+<p>策略迭代是一种迭代算法，每次迭代包含两个步骤：</p>
+<ul>
+<li><p><strong>策略评估步骤（Policy Evaluation）</strong>：求解给定策略 <span class="math-inline" data-tex="\pi_k"></span> 的状态价值，即求解以下贝尔曼方程：</p>
+<div class="lecture-equation is-numbered" id="eq:pi_pe"><div class="math-block" data-tex="\boldsymbol{v}_{\pi_k} = \boldsymbol{r}_{\pi_k} + \gamma \boldsymbol{P}_{\pi_k} \boldsymbol{v}_{\pi_k}"></div><a class="lecture-equation-number" href="#eq:pi_pe" aria-label="公式 3">(3)</a></div>
+<p>其中 <span class="math-inline" data-tex="\pi_k"></span> 是上一次迭代得到的策略，<span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span> 是待计算的状态价值。<span class="math-inline" data-tex="\boldsymbol{r}_{\pi_k}"></span> 和 <span class="math-inline" data-tex="\boldsymbol{P}_{\pi_k}"></span> 可从系统模型中获得。</p></li>
+<li><p><strong>策略改进步骤（Policy Improvement）</strong>：利用第一步计算出的 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span>，通过以下方式得到新策略：</p>
+<div class="lecture-equation is-numbered" id="eq:pi_improve"><div class="math-block" data-tex="\pi_{k+1} = \arg\max_{\pi} \bigl( \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_{\pi_k} \bigr)"></div><a class="lecture-equation-number" href="#eq:pi_improve" aria-label="公式 4">(4)</a></div></li>
+</ul>
+<p>上述算法描述自然地引出以下三个问题：</p>
+<ol>
+<li><p>策略评估步骤中，如何求解 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span>？</p></li>
+<li><p>策略改进步骤中，为什么新策略 <span class="math-inline" data-tex="\pi_{k+1}"></span> 优于 <span class="math-inline" data-tex="\pi_k"></span>？</p></li>
+<li><p>为什么该算法最终能收敛到最优策略？</p></li>
+</ol>
+<h3 class="unnumbered" tabindex="-1" id="如何计算-boldsymbolv_pi_k">如何计算 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span>？ <a class="header-anchor" href="#如何计算-boldsymbolv_pi_k" aria-label="章节链接">&#8203;</a></h3>
+<p>第2讲介绍了两种求解贝尔曼方程 (<a href="#eq:pi_pe" data-reference-type="ref" data-reference="eq:pi_pe">3</a>) 的方法：</p>
+<ul>
+<li><p><strong>闭式解</strong>：<span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k} = (I - \gamma \boldsymbol{P}_{\pi_k})^{-1} \boldsymbol{r}_{\pi_k}"></span>。该方法便于理论分析，但由于需要计算矩阵逆，实际实现效率较低。</p></li>
+<li><p><strong>迭代算法</strong>：</p>
+<div class="lecture-equation is-numbered" id="eq:pi_iterative_pe"><div class="math-block" data-tex="\boldsymbol{v}_{\pi_k}^{(j+1)} = \boldsymbol{r}_{\pi_k} + \gamma \boldsymbol{P}_{\pi_k} \boldsymbol{v}_{\pi_k}^{(j)}, \quad j = 0, 1, 2, \dots"></div><a class="lecture-equation-number" href="#eq:pi_iterative_pe" aria-label="公式 5">(5)</a></div>
+<p>其中 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}^{(j)}"></span> 表示 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span> 的第 <span class="math-inline" data-tex="j"></span> 次估计。从任意初始猜测 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}^{(0)}"></span> 出发，保证 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}^{(j)} \to \boldsymbol{v}_{\pi_k}"></span> 当 <span class="math-inline" data-tex="j \to \infty"></span>。</p></li>
+</ul>
+<p>有趣的是，策略迭代本身就是一个迭代算法，而其策略评估步骤中又嵌入了另一个迭代算法 (<a href="#eq:pi_iterative_pe" data-reference-type="ref" data-reference="eq:pi_iterative_pe">5</a>)。理论上，该嵌入的迭代算法需要无穷多步（即 <span class="math-inline" data-tex="j \to \infty"></span>）才能收敛到真实状态价值 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span>。实际上，当满足某个终止条件时迭代即可停止，例如 <span class="math-inline" data-tex="\|\boldsymbol{v}_{\pi_k}^{(j+1)} - \boldsymbol{v}_{\pi_k}^{(j)}\|"></span> 小于预设阈值，或 <span class="math-inline" data-tex="j"></span> 超过预设值。如果我们不运行无穷步迭代，就只能得到 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span> 的不精确值，这会造成问题吗？答案是<strong>不会</strong>——原因将在第4.3节介绍截断策略迭代时说明。</p>
+<h3 class="unnumbered" tabindex="-1" id="为什么-pi_k1-优于-pi_k">为什么 <span class="math-inline" data-tex="\pi_{k+1}"></span> 优于 <span class="math-inline" data-tex="\pi_k"></span>？ <a class="header-anchor" href="#为什么-pi_k1-优于-pi_k" aria-label="章节链接">&#8203;</a></h3>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 4.1 策略改进</p>
+</div>
+<p>若 <span class="math-inline" data-tex="\pi_{k+1} = \arg\max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_{\pi_k})"></span>，则 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_{k+1}} \geq \boldsymbol{v}_{\pi_k}"></span>。这里 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_{k+1}} \geq \boldsymbol{v}_{\pi_k}"></span> 表示对所有 <span class="math-inline" data-tex="s"></span> 都有 <span class="math-inline" data-tex="v_{\pi_{k+1}}(s) \geq v_{\pi_k}(s)"></span>。</p>
+</div>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p>由于 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_{k+1}}"></span> 和 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span> 都是状态价值，它们满足各自的贝尔曼方程：</p>
+<div class="lecture-equation" id="lecture-equation-18"><div class="math-block" data-tex="\boldsymbol{v}_{\pi_{k+1}} = \boldsymbol{r}_{\pi_{k+1}} + \gamma \boldsymbol{P}_{\pi_{k+1}} \boldsymbol{v}_{\pi_{k+1}}, \qquad
+    \boldsymbol{v}_{\pi_k} = \boldsymbol{r}_{\pi_k} + \gamma \boldsymbol{P}_{\pi_k} \boldsymbol{v}_{\pi_k}"></div></div>
+<p>由于 <span class="math-inline" data-tex="\pi_{k+1} = \arg\max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_{\pi_k})"></span>，可知：</p>
+<div class="lecture-equation" id="lecture-equation-19"><div class="math-block" data-tex="\boldsymbol{r}_{\pi_{k+1}} + \gamma \boldsymbol{P}_{\pi_{k+1}} \boldsymbol{v}_{\pi_k} \geq \boldsymbol{r}_{\pi_k} + \gamma \boldsymbol{P}_{\pi_k} \boldsymbol{v}_{\pi_k}"></div></div>
+<p>由此可得：</p>
+<div class="lecture-equation" id="lecture-equation-20"><div class="math-block" data-tex="\begin{aligned}
+    \boldsymbol{v}_{\pi_k} - \boldsymbol{v}_{\pi_{k+1}}
+    &amp;= (\boldsymbol{r}_{\pi_k} + \gamma \boldsymbol{P}_{\pi_k} \boldsymbol{v}_{\pi_k}) - (\boldsymbol{r}_{\pi_{k+1}} + \gamma \boldsymbol{P}_{\pi_{k+1}} \boldsymbol{v}_{\pi_{k+1}}) \\
+    &amp;\leq (\boldsymbol{r}_{\pi_{k+1}} + \gamma \boldsymbol{P}_{\pi_{k+1}} \boldsymbol{v}_{\pi_k}) - (\boldsymbol{r}_{\pi_{k+1}} + \gamma \boldsymbol{P}_{\pi_{k+1}} \boldsymbol{v}_{\pi_{k+1}}) \\
+    &amp;= \gamma \boldsymbol{P}_{\pi_{k+1}} (\boldsymbol{v}_{\pi_k} - \boldsymbol{v}_{\pi_{k+1}})
+    \end{aligned}"></div></div>
+<p>因此：</p>
+<div class="lecture-equation" id="lecture-equation-21"><div class="math-block" data-tex="\boldsymbol{v}_{\pi_k} - \boldsymbol{v}_{\pi_{k+1}} \leq \gamma^n \boldsymbol{P}_{\pi_{k+1}}^n (\boldsymbol{v}_{\pi_k} - \boldsymbol{v}_{\pi_{k+1}}) \leq \lim_{n \to \infty} \gamma^n \boldsymbol{P}_{\pi_{k+1}}^n (\boldsymbol{v}_{\pi_k} - \boldsymbol{v}_{\pi_{k+1}}) = 0"></div></div>
+<p>极限为零是因为 <span class="math-inline" data-tex="\gamma^n \to 0"></span>（当 <span class="math-inline" data-tex="n \to \infty"></span>）且 <span class="math-inline" data-tex="\boldsymbol{P}_{\pi_{k+1}}^n"></span> 对任意 <span class="math-inline" data-tex="n"></span> 都是非负随机矩阵。故 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_{k+1}} \geq \boldsymbol{v}_{\pi_k}"></span>。</p>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="为什么策略迭代算法最终能找到最优策略">为什么策略迭代算法最终能找到最优策略？ <a class="header-anchor" href="#为什么策略迭代算法最终能找到最优策略" aria-label="章节链接">&#8203;</a></h3>
+<p>策略迭代算法产生两个序列：策略序列 <span class="math-inline" data-tex="\{\pi_0, \pi_1, \dots, \pi_k, \dots\}"></span> 和状态价值序列 <span class="math-inline" data-tex="\{\boldsymbol{v}_{\pi_0}, \boldsymbol{v}_{\pi_1}, \dots, \boldsymbol{v}_{\pi_k}, \dots\}"></span>。设 <span class="math-inline" data-tex="\boldsymbol{v}^*"></span> 为最优状态价值，则 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k} \leq \boldsymbol{v}^*"></span> 对所有 <span class="math-inline" data-tex="k"></span> 成立。由引理4.1，策略不断改进，故：</p>
+<div class="lecture-equation" id="lecture-equation-22"><div class="math-block" data-tex="\boldsymbol{v}_{\pi_0} \leq \boldsymbol{v}_{\pi_1} \leq \boldsymbol{v}_{\pi_2} \leq \cdots \leq \boldsymbol{v}_{\pi_k} \leq \cdots \leq \boldsymbol{v}^*"></div></div>
+<p>由于 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span> 单调不减且有上界 <span class="math-inline" data-tex="\boldsymbol{v}^*"></span>，由单调收敛定理可知 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span> 收敛到某个常数值，记为 <span class="math-inline" data-tex="\boldsymbol{v}_\infty"></span>（当 <span class="math-inline" data-tex="k \to \infty"></span>）。下面的定理表明 <span class="math-inline" data-tex="\boldsymbol{v}_\infty = \boldsymbol{v}^*"></span>。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 4.2 策略迭代的收敛性</p>
+</div>
+<p>策略迭代算法产生的状态价值序列 <span class="math-inline" data-tex="\{\boldsymbol{v}_{\pi_k}\}_{k=0}^{\infty}"></span> 收敛到最优状态价值 <span class="math-inline" data-tex="\boldsymbol{v}^*"></span>。因此，策略序列 <span class="math-inline" data-tex="\{\pi_k\}_{k=0}^{\infty}"></span> 收敛到最优策略。</p>
+</div>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p>证明的核心思路是展示策略迭代算法的收敛速度比值迭代算法更快。</p>
+<p>具体来说，为证明 <span class="math-inline" data-tex="\{\boldsymbol{v}_{\pi_k}\}_{k=0}^\infty"></span> 的收敛性，我们引入另一个序列 <span class="math-inline" data-tex="\{\boldsymbol{v}_k\}_{k=0}^\infty"></span>，由下式生成：</p>
+<div class="lecture-equation" id="lecture-equation-23"><div class="math-block" data-tex="\boldsymbol{v}_{k+1} = f(\boldsymbol{v}_k) = \max_{\pi} (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_k)"></div></div>
+<p>这正是值迭代算法，我们已知对任意初值 <span class="math-inline" data-tex="\boldsymbol{v}_0"></span>，<span class="math-inline" data-tex="\boldsymbol{v}_k"></span> 都收敛到 <span class="math-inline" data-tex="\boldsymbol{v}^*"></span>。</p>
+<p>对 <span class="math-inline" data-tex="k = 0"></span>，总可以找到 <span class="math-inline" data-tex="\boldsymbol{v}_0"></span> 使得对任意 <span class="math-inline" data-tex="\pi_0"></span> 有 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_0} \geq \boldsymbol{v}_0"></span>。</p>
+<p>下面用归纳法证明对所有 <span class="math-inline" data-tex="k"></span> 都有 <span class="math-inline" data-tex="\boldsymbol{v}_k \leq \boldsymbol{v}_{\pi_k} \leq \boldsymbol{v}^*"></span>。</p>
+<p>对 <span class="math-inline" data-tex="k \geq 0"></span>，假设 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k} \geq \boldsymbol{v}_k"></span>。则对 <span class="math-inline" data-tex="k+1"></span> 有：</p>
+<div class="lecture-equation" id="lecture-equation-24"><div class="math-block" data-tex="\begin{aligned}
+    \boldsymbol{v}_{\pi_{k+1}} - \boldsymbol{v}_{k+1}
+    &amp;= (\boldsymbol{r}_{\pi_{k+1}} + \gamma \boldsymbol{P}_{\pi_{k+1}} \boldsymbol{v}_{\pi_{k+1}}) - \max_{\pi} (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_k) \\
+    &amp;\geq (\boldsymbol{r}_{\pi_{k+1}} + \gamma \boldsymbol{P}_{\pi_{k+1}} \boldsymbol{v}_{\pi_k}) - \max_{\pi} (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_k) \quad \text{（由引理4.1，$\boldsymbol{v}_{\pi_{k+1}} \geq \boldsymbol{v}_{\pi_k}$）}\\
+    &amp;= (\boldsymbol{r}_{\pi_{k+1}} + \gamma \boldsymbol{P}_{\pi_{k+1}} \boldsymbol{v}_{\pi_k}) - (\boldsymbol{r}_{\pi&#x27;_k} + \gamma \boldsymbol{P}_{\pi&#x27;_k} \boldsymbol{v}_k) \quad (\text{设 } \pi&#x27;_k = \arg\max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_k)) \\
+    &amp;\geq (\boldsymbol{r}_{\pi&#x27;_k} + \gamma \boldsymbol{P}_{\pi&#x27;_k} \boldsymbol{v}_{\pi_k}) - (\boldsymbol{r}_{\pi&#x27;_k} + \gamma \boldsymbol{P}_{\pi&#x27;_k} \boldsymbol{v}_k) \quad (\text{因 } \pi_{k+1} = \arg\max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_{\pi_k})) \\
+    &amp;= \gamma \boldsymbol{P}_{\pi&#x27;_k} (\boldsymbol{v}_{\pi_k} - \boldsymbol{v}_k)
+    \end{aligned}"></div></div>
+<p>由于 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k} - \boldsymbol{v}_k \geq 0"></span> 且 <span class="math-inline" data-tex="\boldsymbol{P}_{\pi&#x27;_k}"></span> 是非负的，有 <span class="math-inline" data-tex="\boldsymbol{P}_{\pi&#x27;_k} (\boldsymbol{v}_{\pi_k} - \boldsymbol{v}_k) \geq 0"></span>，因此 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_{k+1}} - \boldsymbol{v}_{k+1} \geq 0"></span>。</p>
+<p>由归纳法可知对所有 <span class="math-inline" data-tex="k \geq 0"></span> 都有 <span class="math-inline" data-tex="\boldsymbol{v}_k \leq \boldsymbol{v}_{\pi_k} \leq \boldsymbol{v}^*"></span>。由于 <span class="math-inline" data-tex="\boldsymbol{v}_k"></span> 收敛到 <span class="math-inline" data-tex="\boldsymbol{v}^*"></span>，由夹逼原理，<span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span> 也收敛到 <span class="math-inline" data-tex="\boldsymbol{v}^*"></span>。</p>
+</div>
+<p>该证明不仅展示了策略迭代的收敛性，还揭示了策略迭代与值迭代之间的关系：如果两个算法从相同的初始条件出发，由于策略评估步骤中嵌入了额外的迭代，策略迭代的收敛速度将<strong>快于</strong>值迭代。这一点在第4.3节介绍截断策略迭代时将更加清晰。</p>
+<h3 class="unnumbered" tabindex="-1" id="元素形式与实现-1">4.2.2 元素形式与实现 <a class="header-anchor" href="#元素形式与实现-1" aria-label="章节链接">&#8203;</a></h3>
+<p>为实现策略迭代算法，需要分析其元素形式。</p>
+<p><strong>策略评估步骤</strong>：使用迭代算法 (<a href="#eq:pi_iterative_pe" data-reference-type="ref" data-reference="eq:pi_iterative_pe">5</a>) 求解 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span>。其元素形式为：</p>
+<div class="lecture-equation" id="lecture-equation-25"><div class="math-block" data-tex="v_{\pi_k}^{(j+1)}(s) = \sum_{a} \pi_k(a \mid s) \left( \sum_{r} p(r \mid s,a) r + \gamma \sum_{s&#x27;} p(s&#x27; \mid s,a) v_{\pi_k}^{(j)}(s&#x27;) \right), \quad s \in \mathcal{S}"></div></div>
+<p>其中 <span class="math-inline" data-tex="j = 0, 1, 2, \dots"></span>。</p>
+<p><strong>策略改进步骤</strong>：求解 <span class="math-inline" data-tex="\pi_{k+1} = \arg\max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_{\pi_k})"></span>。其元素形式为：</p>
+<div class="lecture-equation" id="lecture-equation-26"><div class="math-block" data-tex="\pi_{k+1}(s) = \arg\max_{\pi} \sum_{a} \pi(a \mid s) \underbrace{\left( \sum_{r} p(r \mid s,a) r + \gamma \sum_{s&#x27;} p(s&#x27; \mid s,a) v_{\pi_k}(s&#x27;) \right)}_{q_{\pi_k}(s,a)}, \quad s \in \mathcal{S}"></div></div>
+<p>其中 <span class="math-inline" data-tex="q_{\pi_k}(s,a)"></span> 是策略 <span class="math-inline" data-tex="\pi_k"></span> 下的动作价值。设 <span class="math-inline" data-tex="a_k^*(s) = \arg\max_a q_{\pi_k}(s,a)"></span>，则贪心最优策略为：</p>
+<div class="lecture-equation" id="lecture-equation-27"><div class="math-block" data-tex="\pi_{k+1}(a \mid s) =
+\begin{cases}
+1, &amp; a = a_k^*(s) \\
+0, &amp; a \neq a_k^*(s)
+\end{cases}"></div></div>
+<div class="algobox lecture-box">
+<div class="lecture-box-title">
+<p>算法 4.2 策略迭代算法</p>
+</div>
+<p><strong>初始化</strong>：已知所有 <span class="math-inline" data-tex="(s,a)"></span> 的系统模型 <span class="math-inline" data-tex="p(r \mid s,a)"></span> 和 <span class="math-inline" data-tex="p(s&#x27; \mid s,a)"></span>。初始猜测 <span class="math-inline" data-tex="\pi_0"></span>。</p>
+<p><strong>目标</strong>：求解最优状态价值与最优策略。</p>
+<p>当 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span> 未收敛，对第 <span class="math-inline" data-tex="k"></span> 次迭代执行：</p>
+<ul>
+<li><p><strong>策略评估</strong>：</p>
+<ul>
+<li><p>初始化：任意初始猜测 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}^{(0)}"></span></p></li>
+<li><p>当 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}^{(j)}"></span> 未收敛，对第 <span class="math-inline" data-tex="j"></span> 次迭代执行：</p>
+<ul>
+<li><p>对每个状态 <span class="math-inline" data-tex="s \in \mathcal{S}"></span>： <span class="math-inline" data-tex="v_{\pi_k}^{(j+1)}(s) = \sum_{a} \pi_k(a \mid s) \bigl[ \sum_{r} p(r \mid s,a) r + \gamma \sum_{s&#x27;} p(s&#x27; \mid s,a) v_{\pi_k}^{(j)}(s&#x27;) \bigr]"></span></p></li>
+</ul></li>
+</ul></li>
+<li><p><strong>策略改进</strong>：</p>
+<ul>
+<li><p>对每个状态 <span class="math-inline" data-tex="s \in \mathcal{S}"></span>，执行：</p>
+<ul>
+<li><p>对每个动作 <span class="math-inline" data-tex="a \in \mathcal{A}"></span>： <span class="math-inline" data-tex="q_{\pi_k}(s,a) = \sum_{r} p(r \mid s,a) r + \gamma \sum_{s&#x27;} p(s&#x27; \mid s,a) v_{\pi_k}(s&#x27;)"></span></p></li>
+<li><p><span class="math-inline" data-tex="a_k^*(s) = \arg\max_a q_{\pi_k}(s,a)"></span></p></li>
+<li><p><span class="math-inline" data-tex="\pi_{k+1}(a \mid s) = 1"></span> 若 <span class="math-inline" data-tex="a = a_k^*"></span>，否则为 <span class="math-inline" data-tex="0"></span></p></li>
+</ul></li>
+</ul></li>
+</ul>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="示例-1">4.2.3 示例 <a class="header-anchor" href="#示例-1" aria-label="章节链接">&#8203;</a></h3>
+<p><strong>简单示例</strong></p>
+<p>考虑一个简单示例（如图4.3所示）：两个状态 <span class="math-inline" data-tex="\{s_1, s_2\}"></span>，三个动作 <span class="math-inline" data-tex="\mathcal{A} = \{a_\ell, a_0, a_r\}"></span>，分别表示左移、不动和右移。奖励设置 <span class="math-inline" data-tex="r_{\text{boundary}} = -1"></span>，<span class="math-inline" data-tex="r_{\text{target}} = 1"></span>，<span class="math-inline" data-tex="\gamma = 0.9"></span>。</p>
+<p>从初始策略出发（在 <span class="math-inline" data-tex="s_1"></span> 处选择左移，<span class="math-inline" data-tex="s_2"></span> 处选择不动），该策略并不好，无法到达目标区域。</p>
+<p><strong><span class="math-inline" data-tex="k = 0"></span></strong>，策略评估步骤：求解贝尔曼方程</p>
+<div class="lecture-equation" id="lecture-equation-28"><div class="math-block" data-tex="v_{\pi_0}(s_1) = -1 + \gamma v_{\pi_0}(s_1), \qquad v_{\pi_0}(s_2) = 0 + \gamma v_{\pi_0}(s_1)"></div></div>
+<p>手动解得 <span class="math-inline" data-tex="v_{\pi_0}(s_1) = -10"></span>，<span class="math-inline" data-tex="v_{\pi_0}(s_2) = -9"></span>。</p>
+<p>在实践中，可用迭代算法求解。例如取初值 <span class="math-inline" data-tex="v_{\pi_0}^{(0)}(s_1) = v_{\pi_0}^{(0)}(s_2) = 0"></span>，则：</p>
+<div class="lecture-equation" id="lecture-equation-29"><div class="math-block" data-tex="\begin{aligned}
+v_{\pi_0}^{(1)}(s_1) &amp;= -1 + \gamma \cdot 0 = -1, &amp; v_{\pi_0}^{(1)}(s_2) &amp;= 0 + \gamma \cdot 0 = 0 \\
+v_{\pi_0}^{(2)}(s_1) &amp;= -1 + \gamma \cdot (-1) = -1.9, &amp; v_{\pi_0}^{(2)}(s_2) &amp;= 0 + \gamma \cdot (-1) = -0.9 \\
+v_{\pi_0}^{(3)}(s_1) &amp;= -1 + \gamma \cdot (-1.9) = -2.71, &amp; v_{\pi_0}^{(3)}(s_2) &amp;= 0 + \gamma \cdot (-1.9) = -1.71 \\
+&amp;\cdots
+\end{aligned}"></div></div>
+<p>随着 <span class="math-inline" data-tex="j"></span> 增大，<span class="math-inline" data-tex="v_{\pi_0}^{(j)}(s_1) \to -10"></span>，<span class="math-inline" data-tex="v_{\pi_0}^{(j)}(s_2) \to -9"></span>。</p>
+<p>策略改进步骤：关键计算每个状态-动作对的 <span class="math-inline" data-tex="q_{\pi_0}(s,a)"></span>。</p>
+<div class="center">
+<p><strong>表4.4 <span class="math-inline" data-tex="q_{\pi_k}(s,a)"></span> 的表达式</strong></p>
+<div class="lecture-equation" id="lecture-equation-30"><div class="math-block" data-tex="\begin{array}{c|ccc}
+q_{\pi_k}(s,a) &amp; a_\ell &amp; a_0 &amp; a_r \\
+\hline
+s_1 &amp; -1 + \gamma v_{\pi_k}(s_1) &amp; 0 + \gamma v_{\pi_k}(s_1) &amp; 1 + \gamma v_{\pi_k}(s_2) \\
+s_2 &amp; 0 + \gamma v_{\pi_k}(s_1) &amp; 1 + \gamma v_{\pi_k}(s_2) &amp; -1 + \gamma v_{\pi_k}(s_2)
+\end{array}"></div></div>
+</div>
+<p>代入 <span class="math-inline" data-tex="v_{\pi_0}(s_1) = -10"></span>，<span class="math-inline" data-tex="v_{\pi_0}(s_2) = -9"></span>：</p>
+<div class="center">
+<p><strong>表4.5 <span class="math-inline" data-tex="k=0"></span> 时的 <span class="math-inline" data-tex="q_{\pi_0}(s,a)"></span> 值</strong></p>
+<div class="lecture-equation" id="lecture-equation-31"><div class="math-block" data-tex="\begin{array}{c|ccc}
+q_{\pi_0}(s,a) &amp; a_\ell &amp; a_0 &amp; a_r \\
+\hline
+s_1 &amp; -10 &amp; -9 &amp; -7.1 \\
+s_2 &amp; -9 &amp; -7.1 &amp; -9.1
+\end{array}"></div></div>
+</div>
+<p>取 <span class="math-inline" data-tex="q_{\pi_0}"></span> 中最大的值，得到改进后的策略 <span class="math-inline" data-tex="\pi_1"></span>：</p>
+<div class="lecture-equation" id="lecture-equation-32"><div class="math-block" data-tex="\pi_1(a_r \mid s_1) = 1, \qquad \pi_1(a_0 \mid s_2) = 1"></div></div>
+<p>该策略是最优策略。在该简单示例中，仅需一次迭代即可找到最优策略。</p>
+<p><strong>更复杂的示例</strong></p>
+<p>考虑一个 <span class="math-inline" data-tex="5 \times 5"></span> 的网格世界（如图4.4所示）。奖励设置 <span class="math-inline" data-tex="r_{\text{boundary}} = -1"></span>，<span class="math-inline" data-tex="r_{\text{forbidden}} = -10"></span>，<span class="math-inline" data-tex="r_{\text{target}} = 1"></span>，<span class="math-inline" data-tex="\gamma = 0.9"></span>。从随机初始策略出发，策略迭代算法最终收敛到最优策略。</p>
+<p>在迭代过程中可观察到两个有趣现象：</p>
+<ol>
+<li><p>靠近目标区域的状态先于远离的状态找到最优策略。只有当近距离状态先找到通往目标的路径，远距离状态才能找到经过近状态到达目标的路径。</p></li>
+<li><p>状态价值的空间分布呈现出「离目标越近价值越高」的模式。这是因为从更远的初始状态出发，智能体需要更多步才能获得正奖励，这些奖励会经过严重的折扣衰减。</p></li>
+</ol>
+</section>
+<section class="document-section note-panel" aria-labelledby="截断策略迭代">
+<h2 class="unnumbered" tabindex="-1" id="截断策略迭代">4.3 截断策略迭代 <a class="header-anchor" href="#截断策略迭代" aria-label="章节链接">&#8203;</a></h2>
+<p>本节介绍一个更一般的算法，称为<strong>截断策略迭代（Truncated Policy Iteration）</strong>。我们将看到，值迭代和策略迭代实际上是截断策略迭代的两个极端特例。</p>
+<h3 class="unnumbered" tabindex="-1" id="值迭代与策略迭代的对比">4.3.1 值迭代与策略迭代的对比 <a class="header-anchor" href="#值迭代与策略迭代的对比" aria-label="章节链接">&#8203;</a></h3>
+<p>首先对比两种算法的步骤：</p>
+<p><strong>策略迭代</strong>：选择任意初始策略 <span class="math-inline" data-tex="\pi_0"></span>。在第 <span class="math-inline" data-tex="k"></span> 次迭代中：</p>
+<ul>
+<li><p>步骤1（PE）：给定 <span class="math-inline" data-tex="\pi_k"></span>，从 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k} = \boldsymbol{r}_{\pi_k} + \gamma \boldsymbol{P}_{\pi_k} \boldsymbol{v}_{\pi_k}"></span> 求解 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span></p></li>
+<li><p>步骤2（PI）：给定 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span>，从 <span class="math-inline" data-tex="\pi_{k+1} = \arg\max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_{\pi_k})"></span> 求解 <span class="math-inline" data-tex="\pi_{k+1}"></span></p></li>
+</ul>
+<p><strong>值迭代</strong>：选择任意初始价值 <span class="math-inline" data-tex="\boldsymbol{v}_0"></span>。在第 <span class="math-inline" data-tex="k"></span> 次迭代中：</p>
+<ul>
+<li><p>步骤1（PU）：给定 <span class="math-inline" data-tex="\boldsymbol{v}_k"></span>，从 <span class="math-inline" data-tex="\pi_{k+1} = \arg\max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_k)"></span> 求解 <span class="math-inline" data-tex="\pi_{k+1}"></span></p></li>
+<li><p>步骤2（VU）：给定 <span class="math-inline" data-tex="\pi_{k+1}"></span>，从 <span class="math-inline" data-tex="\boldsymbol{v}_{k+1} = \boldsymbol{r}_{\pi_{k+1}} + \gamma \boldsymbol{P}_{\pi_{k+1}} \boldsymbol{v}_k"></span> 求解 <span class="math-inline" data-tex="\boldsymbol{v}_{k+1}"></span></p></li>
+</ul>
+<p>这两种算法的流程可以表示为：</p>
+<div class="lecture-equation" id="lecture-equation-33"><div class="math-block" data-tex="\begin{aligned}
+\text{策略迭代: } &amp;\pi_0 \xrightarrow{\text{PE}} \boldsymbol{v}_{\pi_0} \xrightarrow{\text{PI}} \pi_1 \xrightarrow{\text{PE}} \boldsymbol{v}_{\pi_1} \xrightarrow{\text{PI}} \pi_2 \xrightarrow{\text{PE}} \boldsymbol{v}_{\pi_2} \xrightarrow{\text{PI}} \dots \\
+\text{值迭代: } &amp;\boldsymbol{v}_0 \xrightarrow{\text{PU}} \pi_1 \xrightarrow{\text{VU}} \boldsymbol{v}_1 \xrightarrow{\text{PU}} \pi_2 \xrightarrow{\text{VU}} \boldsymbol{v}_2 \xrightarrow{\text{PU}} \dots
+\end{aligned}"></div></div>
+<p>为了看清两者的差异，令两种算法从相同的初始条件出发：<span class="math-inline" data-tex="\boldsymbol{v}_0 = \boldsymbol{v}_{\pi_0}"></span>。表4.6对比了两种算法的执行步骤。</p>
+<div class="center">
+<p><strong>表4.6 策略迭代与值迭代的执行步骤对比</strong></p>
+<div class="lecture-equation" id="lecture-equation-34"><div class="math-block" data-tex="\begin{array}{c|c|c|c}
+\text{步骤} &amp; \text{策略迭代} &amp; \text{值迭代} &amp; \text{备注} \\
+\hline
+1) \text{策略} &amp; \pi_0 &amp; \text{——} &amp; \\
+2) \text{价值} &amp; \boldsymbol{v}_{\pi_0} = \boldsymbol{r}_{\pi_0} + \gamma \boldsymbol{P}_{\pi_0} \boldsymbol{v}_{\pi_0} &amp; \boldsymbol{v}_0 := \boldsymbol{v}_{\pi_0} &amp; \\
+3) \text{策略} &amp; \pi_1 = \arg\max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_{\pi_0}) &amp; \pi_1 = \arg\max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_0) &amp; \text{两个策略相同} \\
+4) \text{价值} &amp; \boldsymbol{v}_{\pi_1} = \boldsymbol{r}_{\pi_1} + \gamma \boldsymbol{P}_{\pi_1} \boldsymbol{v}_{\pi_1} &amp; \boldsymbol{v}_1 = \boldsymbol{r}_{\pi_1} + \gamma \boldsymbol{P}_{\pi_1} \boldsymbol{v}_0 &amp; \boldsymbol{v}_{\pi_1} \geq \boldsymbol{v}_1 \\
+5) \text{策略} &amp; \pi_2 = \arg\max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_{\pi_1}) &amp; \pi&#x27;_2 = \arg\max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_1) &amp; \\
+\dots &amp; \dots &amp; \dots &amp;
+\end{array}"></div></div>
+</div>
+<p>前三个步骤中，两种算法产生相同结果（因为 <span class="math-inline" data-tex="\boldsymbol{v}_0 = \boldsymbol{v}_{\pi_0}"></span>）。从第四步开始，差异出现：值迭代执行一步计算 <span class="math-inline" data-tex="\boldsymbol{v}_1 = \boldsymbol{r}_{\pi_1} + \gamma \boldsymbol{P}_{\pi_1} \boldsymbol{v}_0"></span>，而策略迭代求解 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_1} = \boldsymbol{r}_{\pi_1} + \gamma \boldsymbol{P}_{\pi_1} \boldsymbol{v}_{\pi_1}"></span>，这需要无穷多步迭代。</p>
+<p>将策略迭代第四步中求解 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_1}"></span> 的迭代过程显式写出（令 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_1}^{(0)} = \boldsymbol{v}_0"></span>）：</p>
+<div class="lecture-equation" id="lecture-equation-35"><div class="math-block" data-tex="\begin{aligned}
+\boldsymbol{v}_{\pi_1}^{(0)} &amp;= \boldsymbol{v}_0 \\
+\text{值迭代：} \boldsymbol{v}_1 &amp;\quad\text{——}\quad \boldsymbol{v}_{\pi_1}^{(1)} = \boldsymbol{r}_{\pi_1} + \gamma \boldsymbol{P}_{\pi_1} \boldsymbol{v}_{\pi_1}^{(0)} \\
+&amp;\quad\text{——}\quad \boldsymbol{v}_{\pi_1}^{(2)} = \boldsymbol{r}_{\pi_1} + \gamma \boldsymbol{P}_{\pi_1} \boldsymbol{v}_{\pi_1}^{(1)} \\
+&amp;\quad\cdots \\
+\text{截断策略迭代：} \tilde{\boldsymbol{v}}_1 &amp;\quad\text{——}\quad \boldsymbol{v}_{\pi_1}^{(j)} = \boldsymbol{r}_{\pi_1} + \gamma \boldsymbol{P}_{\pi_1} \boldsymbol{v}_{\pi_1}^{(j-1)} \\
+&amp;\quad\cdots \\
+\text{策略迭代：} \boldsymbol{v}_{\pi_1} &amp;\quad\text{——}\quad \boldsymbol{v}_{\pi_1}^{(\infty)} = \boldsymbol{r}_{\pi_1} + \gamma \boldsymbol{P}_{\pi_1} \boldsymbol{v}_{\pi_1}^{(\infty)}
+\end{aligned}"></div></div>
+<p>由此可以得到以下观察：</p>
+<ul>
+<li><p>若策略评估步骤仅执行<strong>一次</strong>迭代，则 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_1}^{(1)}"></span> 实际上就是值迭代中的 <span class="math-inline" data-tex="\boldsymbol{v}_1"></span>。</p></li>
+<li><p>若执行<strong>无穷多次</strong>迭代，则 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_1}^{(\infty)}"></span> 就是策略迭代中的 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_1}"></span>。</p></li>
+<li><p>若执行<strong>有限</strong> <span class="math-inline" data-tex="j_{\text{truncate}}"></span> 次迭代，则该算法称为<strong>截断策略迭代</strong>。之所以称为「截断」，是因为从 <span class="math-inline" data-tex="j_{\text{truncate}}"></span> 到 <span class="math-inline" data-tex="\infty"></span> 的迭代被截去了。</p></li>
+</ul>
+<p>因此，值迭代和策略迭代可以看作截断策略迭代的两个极端情况：值迭代在 <span class="math-inline" data-tex="j_{\text{truncate}} = 1"></span> 处终止，策略迭代在 <span class="math-inline" data-tex="j_{\text{truncate}} = \infty"></span> 处终止。</p>
+<h3 class="unnumbered" tabindex="-1" id="截断策略迭代算法">4.3.2 截断策略迭代算法 <a class="header-anchor" href="#截断策略迭代算法" aria-label="章节链接">&#8203;</a></h3>
+<p>简而言之，截断策略迭代与策略迭代的唯一区别在于策略评估步骤仅执行有限步迭代。其实现细节总结在算法4.3中。</p>
+<div class="algobox lecture-box">
+<div class="lecture-box-title">
+<p>算法 4.3 截断策略迭代算法</p>
+</div>
+<p><strong>初始化</strong>：已知所有 <span class="math-inline" data-tex="(s,a)"></span> 的概率模型 <span class="math-inline" data-tex="p(r \mid s,a)"></span> 和 <span class="math-inline" data-tex="p(s&#x27; \mid s,a)"></span>。初始猜测 <span class="math-inline" data-tex="\pi_0"></span>。</p>
+<p><strong>目标</strong>：求解最优状态价值与最优策略。</p>
+<p>当 <span class="math-inline" data-tex="v_k"></span> 未收敛，对第 <span class="math-inline" data-tex="k"></span> 次迭代执行：</p>
+<ul>
+<li><p><strong>策略评估</strong>：</p>
+<ul>
+<li><p>初始化：选取初始猜测 <span class="math-inline" data-tex="\boldsymbol{v}_k^{(0)} = \boldsymbol{v}_{k-1}"></span>。设置最大迭代次数 <span class="math-inline" data-tex="j_{\text{truncate}}"></span>。</p></li>
+<li><p>当 <span class="math-inline" data-tex="j &lt; j_{\text{truncate}}"></span>，执行：</p>
+<ul>
+<li><p>对每个状态 <span class="math-inline" data-tex="s \in \mathcal{S}"></span>： <span class="math-inline" data-tex="v_k^{(j+1)}(s) = \sum_{a} \pi_k(a \mid s) \bigl[ \sum_{r} p(r \mid s,a) r + \gamma \sum_{s&#x27;} p(s&#x27; \mid s,a) v_k^{(j)}(s&#x27;) \bigr]"></span></p></li>
+</ul></li>
+<li><p>设置 <span class="math-inline" data-tex="\boldsymbol{v}_k = \boldsymbol{v}_k^{(j_{\text{truncate}})}"></span></p></li>
+</ul></li>
+<li><p><strong>策略改进</strong>：</p>
+<ul>
+<li><p>对每个状态 <span class="math-inline" data-tex="s \in \mathcal{S}"></span>，执行：</p>
+<ul>
+<li><p>对每个动作 <span class="math-inline" data-tex="a \in \mathcal{A}(s)"></span>： <span class="math-inline" data-tex="q_k(s,a) = \sum_{r} p(r \mid s,a) r + \gamma \sum_{s&#x27;} p(s&#x27; \mid s,a) v_k(s&#x27;)"></span></p></li>
+<li><p><span class="math-inline" data-tex="a_k^*(s) = \arg\max_a q_k(s,a)"></span></p></li>
+<li><p><span class="math-inline" data-tex="\pi_{k+1}(a \mid s) = 1"></span> 若 <span class="math-inline" data-tex="a = a_k^*"></span>，否则为 <span class="math-inline" data-tex="0"></span></p></li>
+</ul></li>
+</ul></li>
+</ul>
+</div>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>备注</p>
+</div>
+<p>算法中的 <span class="math-inline" data-tex="\boldsymbol{v}_k"></span> 和 <span class="math-inline" data-tex="\boldsymbol{v}_k^{(j)}"></span> 并非真实的状态价值，而是真实状态价值的近似值，因为策略评估步骤只执行了有限次迭代。</p>
+<p>即使 <span class="math-inline" data-tex="\boldsymbol{v}_k"></span> 不等于 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span>，算法仍然能够找到最优策略。直观上，截断策略迭代介于值迭代和策略迭代之间：一方面，由于在策略评估步骤中执行了多于一次的迭代，它比值迭代收敛得更快；另一方面，由于仅执行有限次迭代，它比策略迭代的每次迭代计算量更小。三者之间的关系如图4.5所示。</p>
+</div>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 4.3 价值改进</p>
+</div>
+<p>考虑策略评估步骤中的迭代算法：</p>
+<div class="lecture-equation" id="lecture-equation-36"><div class="math-block" data-tex="\boldsymbol{v}_{\pi_k}^{(j+1)} = \boldsymbol{r}_{\pi_k} + \gamma \boldsymbol{P}_{\pi_k} \boldsymbol{v}_{\pi_k}^{(j)}, \quad j = 0, 1, 2, \dots"></div></div>
+<p>若初始猜测选为 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}^{(0)} = \boldsymbol{v}_{\pi_{k-1}}"></span>，则对 <span class="math-inline" data-tex="j = 0, 1, 2, \dots"></span> 有</p>
+<div class="lecture-equation" id="lecture-equation-37"><div class="math-block" data-tex="\boldsymbol{v}_{\pi_k}^{(j+1)} \geq \boldsymbol{v}_{\pi_k}^{(j)}"></div></div>
+</div>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p>首先，由于 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}^{(j)} = \boldsymbol{r}_{\pi_k} + \gamma \boldsymbol{P}_{\pi_k} \boldsymbol{v}_{\pi_k}^{(j-1)}"></span> 且 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}^{(j+1)} = \boldsymbol{r}_{\pi_k} + \gamma \boldsymbol{P}_{\pi_k} \boldsymbol{v}_{\pi_k}^{(j)}"></span>，有：</p>
+<div class="lecture-equation" id="lecture-equation-38"><div class="math-block" data-tex="\boldsymbol{v}_{\pi_k}^{(j+1)} - \boldsymbol{v}_{\pi_k}^{(j)} = \gamma \boldsymbol{P}_{\pi_k} (\boldsymbol{v}_{\pi_k}^{(j)} - \boldsymbol{v}_{\pi_k}^{(j-1)}) = \cdots = \gamma^j \boldsymbol{P}_{\pi_k}^j (\boldsymbol{v}_{\pi_k}^{(1)} - \boldsymbol{v}_{\pi_k}^{(0)})"></div></div>
+<p>其次，由于 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}^{(0)} = \boldsymbol{v}_{\pi_{k-1}}"></span>，有：</p>
+<div class="lecture-equation" id="lecture-equation-39"><div class="math-block" data-tex="\begin{aligned}
+    \boldsymbol{v}_{\pi_k}^{(1)} &amp;= \boldsymbol{r}_{\pi_k} + \gamma \boldsymbol{P}_{\pi_k} \boldsymbol{v}_{\pi_k}^{(0)}
+    = \boldsymbol{r}_{\pi_k} + \gamma \boldsymbol{P}_{\pi_k} \boldsymbol{v}_{\pi_{k-1}} \\
+    &amp;\geq \boldsymbol{r}_{\pi_{k-1}} + \gamma \boldsymbol{P}_{\pi_{k-1}} \boldsymbol{v}_{\pi_{k-1}} = \boldsymbol{v}_{\pi_{k-1}} = \boldsymbol{v}_{\pi_k}^{(0)}
+    \end{aligned}"></div></div>
+<p>其中不等号是因为 <span class="math-inline" data-tex="\pi_k = \arg\max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_{\pi_{k-1}})"></span>。</p>
+<p>将 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}^{(1)} \geq \boldsymbol{v}_{\pi_k}^{(0)}"></span> 代入可得 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}^{(j+1)} \geq \boldsymbol{v}_{\pi_k}^{(j)}"></span>。</p>
+</div>
+<p>值得注意的是，命题4.3要求假设 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}^{(0)} = \boldsymbol{v}_{\pi_{k-1}}"></span>。然而在实际中，<span class="math-inline" data-tex="\boldsymbol{v}_{\pi_{k-1}}"></span> 是不可获得的，只有 <span class="math-inline" data-tex="\boldsymbol{v}_{k-1}"></span> 是可用的。尽管如此，该命题仍为截断策略迭代的收敛性提供了洞见。</p>
+<p><strong>截断策略迭代的优势</strong>：与策略迭代相比，截断策略迭代在策略评估步骤中只需执行有限步迭代，因此计算效率更高；与值迭代相比，截断策略迭代通过在策略评估步骤中多执行几步迭代，可以加速整体收敛。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="本章小结">
+<h2 class="unnumbered" tabindex="-1" id="本章小结">4.4 本章小结 <a class="header-anchor" href="#本章小结" aria-label="章节链接">&#8203;</a></h2>
+<p>本章介绍了三种可用于求解最优策略的算法：</p>
+<ul>
+<li><p><strong>值迭代</strong>：正是压缩映射定理所建议的求解贝尔曼最优方程的算法。每次迭代可分为价值更新和策略更新两个步骤。值迭代的中间值 <span class="math-inline" data-tex="v_k"></span> 不是任何策略的状态价值。</p></li>
+<li><p><strong>策略迭代</strong>：比值迭代稍复杂，每次迭代包含策略评估和策略改进两个步骤。策略评估步骤中嵌入了求解贝尔曼方程的迭代过程。策略迭代的中间值 <span class="math-inline" data-tex="\boldsymbol{v}_{\pi_k}"></span> 是真实的状态价值。</p></li>
+<li><p><strong>截断策略迭代</strong>：值迭代和策略迭代可看作截断策略迭代的两个极端特例（分别对应 <span class="math-inline" data-tex="j_{\text{truncate}} = 1"></span> 和 <span class="math-inline" data-tex="j_{\text{truncate}} = \infty"></span>）。</p></li>
+</ul>
+<p>这三种算法的一个共同特点是每次迭代都包含两个步骤：一个步骤更新价值，另一个步骤更新策略。价值与策略交互更新的思想广泛存在于强化学习算法中，这一思想也被称为<strong>广义策略迭代（Generalized Policy Iteration）</strong>。</p>
+<p>最后，本章介绍的算法都需要系统模型。从第5讲开始，我们将研究无模型强化学习算法。我们将看到，无模型算法可以通过推广本章介绍的算法得到。</p>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>备注</p>
+</div>
+<p>本章算法需要已知 <span class="math-inline" data-tex="p(r \mid s,a)"></span> 和 <span class="math-inline" data-tex="p(s&#x27; \mid s,a)"></span>，通常被称为<strong>动态规划算法</strong>而非强化学习算法。强化学习算法可分为<strong>基于模型（model-based）</strong>和<strong>无模型（model-free）</strong>两类。这里的「基于模型」并非指需要系统模型，而是指利用数据估计系统模型并在学习过程中使用该模型。无模型强化学习则在学习过程中不涉及模型估计。</p>
+</div>
+</section>
+<section class="document-section note-panel" aria-labelledby="常见问题解答">
+<h2 class="unnumbered" tabindex="-1" id="常见问题解答">4.5 常见问题解答 <a class="header-anchor" href="#常见问题解答" aria-label="章节链接">&#8203;</a></h2>
+<ul>
+<li><p><strong>Q：值迭代算法一定能找到最优策略吗？</strong></p>
+<p>A：是的。值迭代正是第3讲中压缩映射定理所建议的求解贝尔曼最优方程的算法，该算法的收敛性由压缩映射定理保证。</p></li>
+<li><p><strong>Q：值迭代产生的中间价值是状态价值吗？</strong></p>
+<p>A：不是。这些中间值并不保证满足任何策略的贝尔曼方程。它们只是算法生成的中间值。</p></li>
+<li><p><strong>Q：策略迭代算法包含哪些步骤？</strong></p>
+<p>A：策略迭代的每次迭代包含两个步骤：策略评估和策略改进。策略评估步骤求解贝尔曼方程以获得当前策略的状态价值；策略改进步骤更新策略，使新策略具有更大的状态价值。</p></li>
+<li><p><strong>Q：策略迭代算法中是否嵌入了另一个迭代算法？</strong></p>
+<p>A：是的。在策略迭代的策略评估步骤中，需要用一个迭代算法来求解当前策略的贝尔曼方程。</p></li>
+<li><p><strong>Q：策略迭代产生的中间价值是状态价值吗？</strong></p>
+<p>A：是的。因为这些值正是当前策略的贝尔曼方程的解。</p></li>
+<li><p><strong>Q：策略迭代算法一定能找到最优策略吗？</strong></p>
+<p>A：是的。本章给出了其收敛性的严格证明：策略价值序列单调不减且有上界，由单调收敛定理和夹逼原理可证其收敛到最优状态价值。</p></li>
+<li><p><strong>Q：截断策略迭代与策略迭代的关系是什么？</strong></p>
+<p>A：顾名思义，截断策略迭代可以从策略迭代出发，在策略评估步骤仅执行有限步迭代而得到。它是策略迭代的计算高效版本。</p></li>
+<li><p><strong>Q：截断策略迭代与值迭代的关系是什么？</strong></p>
+<p>A：值迭代可以看作截断策略迭代的极端情况——在策略评估步骤中仅执行一步迭代。</p></li>
+<li><p><strong>Q：截断策略迭代产生的中间价值是状态价值吗？</strong></p>
+<p>A：不是。只有在策略评估步骤中执行无穷步迭代，才能得到真实状态价值。执行有限步迭代只能得到真实状态价值的近似。</p></li>
+<li><p><strong>Q：在截断策略迭代的策略评估步骤中应执行多少步迭代？</strong></p>
+<p>A：一般建议是执行几步但不至于太多。在策略评估步骤中多执行几步迭代可以加速整体收敛速度，但执行太多步则不会显著进一步加速收敛。</p></li>
+<li><p><strong>Q：什么是广义策略迭代？</strong></p>
+<p>A：广义策略迭代并非特指某个具体算法，而是指价值与策略交替更新的通用思想。这一思想根植于策略迭代算法，本书介绍的大多数强化学习算法都属于广义策略迭代的范畴。</p></li>
+<li><p><strong>Q：为什么需要截断策略迭代？</strong></p>
+<p>A：策略迭代的策略评估步骤需要求解贝尔曼方程，这需要理论上的无穷步迭代，计算量很大。截断策略迭代通过控制策略评估步数，在计算量和收敛速度之间取得平衡，是实际应用中最实用的形式。</p></li>
+</ul>
+
+</section>
+</div>
+<details class="lecture-original note-details" @toggle="toggleOriginal">
+  <summary>对照原版 PDF<span>保留原页码与讲义目录</span></summary>
+  <div class="lecture-original-content">
+    <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
+    <p><a :href="pdfUrl" target="_blank" rel="noopener">在新窗口打开原版 PDF</a></p>
+    <ClientOnly><PdfViewer v-if="showOriginal" :src="pdfUrl" title="值迭代与策略迭代" :outline="outline" /></ClientOnly>
+  </div>
+</details>
 </article>

@@ -4,6 +4,10 @@
 
 ## 2026-10-17 阅读设计修订
 
+> **2026-10-27 全站学术排版修订（优先于下方旧视觉约定）**：已确认的西湖讲义学术阅读样式推广到六个文字栏目中的全部公开文章。`theme/reading-design.ts` 按真实源路径与现有公开范围规则启用 `academic-reading`，共享样式位于 `theme/styles/academic-reading.css`。正文使用本地 Noto Serif SC、720px 文字版心和连续分节；开篇与分节面板采用克制的标题、留白及分隔线。原有导读、机制图、比较、图片、代码、折叠详解和交互组件仍按文章内容维护。代码保持等宽字体，导航、图中标注、表格、图注和交互控件保持无衬线字体。首页、栏目目录、标签索引与视频保留各自布局；草稿、内部内容和已撤下的科普书不因此公开。每日调研保留 Markdown，仅由共享样式改善阅读。
+
+共享字体位于 `docs/.vitepress/theme/fonts/`，400／600 两个 WOFF2 子集由 `python scripts/update-reading-font.py` 根据当前公开文章生成；原字体缓存在忽略的 `.research/font-cache`，文章清单保存在 `scripts/data/academic-reading-pages.json`。新增字符后更新子集，未覆盖字符使用系统宋体回退。原奖励建模比较开关已结束试用，使用确定后的学术排版。
+
 笔记页面充分沿用 Linux 隔离机制笔记的视觉语言，而不只是把 Markdown 标签换成 HTML：深蓝渐变的 `note-hero` 开篇、主题 chips、可跳转的 `note-jump` 阅读导航、白色 `note-panel` 分节、蓝／绿／橙的机制图和对照块、独立的公式与图片区域。正文左对齐，段落保持连续阅读；仅在概念、步骤或结果需要比较时使用网格，不把每段文字都拆成卡片。
 
 HTML 源文件使用 `data-design="linux-notebook"` 标记，页内按实际内容维护以下元素：
@@ -34,7 +38,7 @@ HTML 是页面模板片段，编译后直接出现在主文档中，不是嵌入
 | LLM 科普书 | `article.format-book` | 章节标题、本章导引、概念图与交互演示、小节、小结与参考资料；新版内容遵循 `LLM_BOOK_PLAN.md` |
 | 论文与项目随谈 | `article.format-paper` | 标题与来源、问题、方法、证据与结果、工程分析、适用边界及引用；图表紧邻分析 |
 | RL 学习笔记 | `article.format-lab` | 学习目标、算法与公式、配置和命令、实验结果与分析；表格用等宽数字、结果区允许更宽布局 |
-| 西湖 RL 笔记 | `article.format-course` | 概念、假设、公式推导、算法与课程资料；保持连续阅读。现有 PDF 讲义作为资料保留，`PdfViewer` 仍提供讲义目录 |
+| 西湖 RL 笔记 | `article.format-course` | 概念、假设、公式推导、算法与课程资料；保持连续阅读。由 LaTeX 源稿导入的五篇讲义额外使用 `academic-lecture` 学术排版，原 PDF 在文末按需展开对照 |
 | Rust 学习笔记 | `article.format-code` | 问题、概念和 API、代码示例、行为解释、易错点与速查；代码语言与复制操作保持可用 |
 | Linux 学习笔记 | `article.format-system` | 机制总览、基础概念、机制图、命令与限制、组合边界、速查表；沿用隔离机制笔记的图解和分节面板 |
 | 栏目首页与标签页 | `div.format-directory` | 标题与简介、`ChapterCards` 或 `TagsIndex`；保留 `pageClass: chapter-index` |
@@ -43,6 +47,14 @@ HTML 是页面模板片段，编译后直接出现在主文档中，不是嵌入
 | 每日调研 | Markdown | 保留现有日报流水线、日期、目录和发布方式 |
 
 共同视觉采用白色 `#fcfdff` 阅读底色、`#243247` 正文、`#59677a` 辅助文字、`#e1e7ee` 分隔线及对应栏目强调色；暗色跟随站点变量。正文使用现有中文系统字体，代码使用等宽字体。主文左对齐，优先控制行长，实验和机制图适度加宽；不要给整篇文章建立固定高度或独立滚动条。
+
+### 西湖讲义学术排版（2026-10-27 试用）
+
+现有第 1–6 讲的五篇 PDF 页面已由对应 LaTeX 源稿接入 HTML 正文，沿用原路由、侧边栏与栏目卡片。正文采用本地 Noto Serif SC 字体子集、720px 版心、连续分节及轻量的定义／定理／证明／算法区域；共享样式位于 `docs/westlake-rl/lecture-academic.css`，只作用于 `academic-lecture`。此变体的开篇与分节不要求深色 hero 或白色卡片。
+
+公式保留 `data-tex` 源码与原有编号，原 `eqref/ref` 转为可定位链接。长公式与宽表格局部滚动，行内公式遵循数学基线；源稿未附的教材插图不补造。文末原生 `details` 保留 PDF 及讲义目录，展开后才挂载异步 `PdfViewer`。恢复本页目录，移除旧 `pdf: true`、`outline: false` 和 `aside: false`。
+
+导入工具为 `scripts/import-westlake-lectures.py`（需 Pandoc），来源摘要与 SHA-256 位于 `scripts/data/westlake-lecture-import.json`。HTML 仍为正文主版本；导入工具重跑须显式传 `--overwrite`，不能覆盖后续人工修订。使用原源目录重新导入时，应重新阅读成稿并运行 `node scripts/test-westlake-lectures.mjs`，核对编号、定理标题、证明、表格与 PDF 对照。字库按当前内容生成，新字需更新子集或使用系统宋体回退。
 
 ## 正文示例
 

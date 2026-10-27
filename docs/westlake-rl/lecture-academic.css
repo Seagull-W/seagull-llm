@@ -1,0 +1,99 @@
+/* Native lecture reading: source structure, mathematical baselines, quiet paper. */
+.Layout.Layout:has(.academic-lecture) {
+  --vp-c-bg: #fcfcfa; --vp-c-bg-alt: #fff; --vp-c-bg-soft: #f0f4f4;
+  --vp-c-text-1: #263338; --vp-c-text-2: #627076;
+  --vp-c-divider: #d9dfe0; --vp-c-brand-1: #22616b;
+}
+.Layout.Layout:has(.academic-lecture) .VPDoc .content-container { max-width: 820px !important; }
+.Layout .VPDoc .vp-doc article.academic-lecture {
+  --lecture-serif: 'Seagull Academic Serif', 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', SimSun, serif;
+  font: 18px/1.95 var(--lecture-serif); font-synthesis: none; color: var(--vp-c-text-1);
+}
+.Layout .VPDoc .vp-doc .academic-lecture .note-hero {
+  max-width: 720px; margin: 0 auto 26px; padding: 14px 0 28px;
+  background: transparent; color: inherit; border-radius: 0; border-bottom: 1px solid var(--vp-c-divider);
+}
+.Layout .VPDoc .vp-doc .academic-lecture .note-kicker {
+  font: 13px/1.8 var(--vp-font-family-base); color: var(--vp-c-text-2); margin: 0 0 22px;
+}
+.academic-lecture .note-kicker > span { border-color: var(--vp-c-divider); }
+.Layout .VPDoc .vp-doc .academic-lecture .note-hero h1 {
+  color: var(--vp-c-text-1); -webkit-text-fill-color: currentColor;
+  font: 600 clamp(29px, 2.7vw, 38px)/1.6 var(--lecture-serif); letter-spacing: .015em; margin: 0 0 20px;
+}
+.Layout .VPDoc .vp-doc .academic-lecture .note-hero h1 .header-anchor { color: var(--vp-c-brand-1); }
+.Layout .VPDoc .vp-doc .academic-lecture .note-deck { color: var(--vp-c-text-2); max-width: none; font-size: 16px; line-height: 1.95; }
+.academic-lecture .note-chips { margin-top: 18px; gap: 16px; }
+.academic-lecture .note-chips > span { padding: 0; border: 0; color: var(--vp-c-brand-1); font: 12px/1.8 var(--vp-font-family-base); }
+.Layout .VPDoc .vp-doc .academic-lecture .lecture-source { color: var(--vp-c-text-2); font: 12px/1.8 var(--vp-font-family-base); margin: 18px 0 0; }
+.Layout .VPDoc .vp-doc .academic-lecture .note-jump { max-width: 720px; margin: 0 auto 34px; gap: 5px 18px; }
+.Layout .VPDoc .vp-doc .academic-lecture .note-jump a {
+  padding: 3px 0; border: 0; background: transparent; font: 12px/1.8 var(--vp-font-family-base);
+}
+.academic-lecture .lecture-body { max-width: 720px; margin: auto; min-width: 0; }
+.Layout .VPDoc .vp-doc .academic-lecture .note-panel {
+  padding: 0; margin: 46px 0; background: transparent; border: 0; border-radius: 0; box-shadow: none;
+}
+.Layout .VPDoc .vp-doc .academic-lecture .note-panel > h2 {
+  margin: 0 0 24px; padding: 0; border: 0; font: 600 25px/1.7 var(--lecture-serif);
+}
+.Layout .VPDoc .vp-doc .academic-lecture .note-panel h3 { font: 600 21px/1.7 var(--lecture-serif); margin: 36px 0 18px; }
+.Layout .VPDoc .vp-doc .academic-lecture .note-panel h4 { font: 600 18px/1.8 var(--lecture-serif); color: var(--vp-c-text-1); margin: 28px 0 14px; }
+.Layout .VPDoc .vp-doc .academic-lecture .lecture-body p { font-size: 18px; line-height: 1.95; margin: 17px 0; text-align: left; overflow-wrap: break-word; }
+.academic-lecture strong { font-weight: 600; }
+.Layout .VPDoc .vp-doc .academic-lecture li { line-height: 1.95; }
+.Layout .VPDoc .vp-doc .academic-lecture li + li { margin-top: 8px; }
+.Layout .VPDoc .vp-doc .academic-lecture li > p { margin-block: 8px; }
+.Layout .VPDoc .vp-doc .academic-lecture mjx-container:not([display='true']) {
+  display: inline-block; max-width: calc(100% - .26em); line-height: 0;
+  vertical-align: var(--math-baseline, 0ex); overflow-x: auto; overflow-y: hidden; margin-inline: .13em;
+}
+.Layout .VPDoc .vp-doc .academic-lecture mjx-container:not([display='true']) > svg { vertical-align: 0 !important; }
+.academic-lecture .lecture-equation { position: relative; min-width: 0; margin: 25px 0; scroll-margin-top: 120px; }
+.academic-lecture .lecture-equation.is-numbered { padding-right: 36px; }
+.Layout .VPDoc .vp-doc .academic-lecture mjx-container[display='true'] {
+  margin: 0; padding: 12px 0; border: 0; border-radius: 0; background: transparent;
+  max-width: 100%; min-width: 0 !important; overflow-x: auto; overflow-y: hidden; font-size: 104% !important;
+}
+.Layout .VPDoc .vp-doc .academic-lecture .lecture-equation-number {
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  color: var(--vp-c-text-2); font: 15px/1.5 Georgia, serif; text-decoration: none;
+}
+.academic-lecture .lecture-equation:target { outline: 1px solid var(--vp-c-divider); outline-offset: 7px; }
+.academic-lecture .lecture-box { margin: 28px 0; padding: 18px 22px; border-inline-start: 3px solid var(--vp-c-brand-1); background: var(--vp-c-bg-soft); border-radius: 2px; min-width: 0; }
+.academic-lecture .proofbox { padding: 4px 0 4px 20px; background: transparent; border-color: var(--vp-c-divider); }
+.academic-lecture .remarkbox { background: transparent; border-color: var(--vp-c-divider); }
+.academic-lecture .algobox { border-color: #36755d; }
+.Layout .VPDoc .vp-doc .academic-lecture .lecture-box-title p { font: 600 15px/1.85 var(--vp-font-family-base); color: var(--vp-c-brand-1); margin: 0 0 14px; }
+.academic-lecture .lecture-box > :last-child { margin-bottom: 0; }
+.Layout .VPDoc .vp-doc .academic-lecture .lecture-box .lecture-equation { margin-block: 18px; }
+.academic-lecture .center { margin: 28px 0; }
+.academic-lecture .note-table { border-radius: 3px; }
+.Layout .VPDoc .vp-doc .academic-lecture .note-table table { font-family: var(--vp-font-family-base); font-size: 14px; }
+.academic-lecture .lecture-original { margin-top: 56px; font-family: var(--vp-font-family-base); }
+.academic-lecture .lecture-original-content { padding: 0 18px 18px; }
+.Layout .VPDoc .vp-doc .academic-lecture .lecture-original-content > p { font: 14px/1.8 var(--vp-font-family-base); color: var(--vp-c-text-2); }
+.dark .Layout.Layout:has(.academic-lecture) {
+  --vp-c-bg: #172126; --vp-c-bg-alt: #1c292f; --vp-c-bg-soft: #223239;
+  --vp-c-text-1: #e0e6e6; --vp-c-text-2: #adbdc1; --vp-c-divider: #3c4c53; --vp-c-brand-1: #98cbd0;
+}
+.dark .Layout .VPDoc .vp-doc .academic-lecture mjx-container[display='true'] { background: transparent; }
+.dark .academic-lecture .algobox { border-color: #8fc6ad; }
+@media (max-width: 760px) {
+  .Layout .VPDoc .vp-doc .academic-lecture .note-hero { padding: 8px 0 24px; }
+  .Layout .VPDoc .vp-doc .academic-lecture .note-panel { margin: 34px 0; }
+  .Layout .VPDoc .vp-doc .academic-lecture .lecture-body p { font-size: 17px; line-height: 1.9; }
+  .Layout .VPDoc .vp-doc .academic-lecture .note-panel > h2 { font-size: 23px; }
+  .Layout .VPDoc .vp-doc .academic-lecture .note-panel h3 { font-size: 20px; }
+  .academic-lecture .lecture-box { padding: 14px 14px 14px 16px; margin-block: 22px; }
+  .academic-lecture .proofbox, .academic-lecture .remarkbox { padding-inline-end: 0; }
+  .academic-lecture .lecture-equation.is-numbered { padding-right: 27px; }
+  .academic-lecture .lecture-original > summary { align-items: flex-start; flex-wrap: wrap; }
+  .academic-lecture .lecture-original > summary > span { margin-left: 0; }
+}
+@media print {
+  .academic-lecture .note-jump, .academic-lecture .lecture-original { display: none; }
+  .Layout .VPDoc .vp-doc .academic-lecture .note-hero { background: transparent; }
+  .academic-lecture .lecture-box, .academic-lecture .lecture-equation { break-inside: avoid; }
+  .academic-lecture .proofbox { break-inside: auto; }
+}

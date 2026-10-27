@@ -1,0 +1,490 @@
+{
+  "source_project": "西湖大学强化学习/Study",
+  "pandoc": "3.9.0.2",
+  "pages": [
+    {
+      "chapter": "cha1_2",
+      "source": "chapters/cha1_2/cha1_2.tex",
+      "source_sha256": "4efa8536d90c513e161438ab9824abe9fd0c1c3f98f6f5b22a62b08342e87447",
+      "pdf_sha256": "af55829d383a28d91d9c400bcb49af3389b19c01ec01b01d7e40cd98e79fb7f4",
+      "html": "docs/westlake-rl/强化学习基本概念与贝尔曼方程/index.html",
+      "math": {
+        "InlineMath": 69,
+        "DisplayMath": 23
+      },
+      "boxes": {
+        "definitionbox": 8,
+        "theorembox": 1,
+        "proofbox": 1,
+        "remarkbox": 1
+      },
+      "headings": [
+        {
+          "level": 2,
+          "id": "第一讲强化学习基本概念",
+          "title": "第一讲：强化学习基本概念"
+        },
+        {
+          "level": 2,
+          "id": "第二讲贝尔曼方程",
+          "title": "第二讲：贝尔曼方程"
+        },
+        {
+          "level": 3,
+          "id": "状态价值函数",
+          "title": "1. 状态价值函数"
+        },
+        {
+          "level": 3,
+          "id": "贝尔曼期望方程推导",
+          "title": "2. 贝尔曼期望方程推导"
+        },
+        {
+          "level": 3,
+          "id": "矩阵向量形式",
+          "title": "3. 矩阵向量形式"
+        },
+        {
+          "level": 3,
+          "id": "策略评估贝尔曼方程的求解",
+          "title": "4. 策略评估：贝尔曼方程的求解"
+        },
+        {
+          "level": 4,
+          "id": "解法1解析闭式解",
+          "title": "解法1：解析闭式解"
+        },
+        {
+          "level": 4,
+          "id": "解法2迭代法含收敛性证明",
+          "title": "解法2：迭代法（含收敛性证明）"
+        },
+        {
+          "level": 3,
+          "id": "动作价值函数",
+          "title": "5. 动作价值函数"
+        }
+      ],
+      "numbered_equations": 2,
+      "equation_references": 1
+    },
+    {
+      "chapter": "cha3",
+      "source": "chapters/cha3/cha3.tex",
+      "source_sha256": "d2262c8245d8cbfb03e8d3f5f68fe60ad0784321fbb096aa0b36ac254123ccc3",
+      "pdf_sha256": "6de7718507f772a63a8221f160df5a6aca674854e67b139af6e81be4032005b2",
+      "html": "docs/westlake-rl/最优状态价值与贝尔曼最优方程/index.html",
+      "math": {
+        "InlineMath": 158,
+        "DisplayMath": 45
+      },
+      "boxes": {
+        "definitionbox": 1,
+        "theorembox": 6,
+        "proofbox": 5,
+        "remarkbox": 1
+      },
+      "headings": [
+        {
+          "level": 2,
+          "id": "动机示例如何改进策略",
+          "title": "3.1 动机示例：如何改进策略"
+        },
+        {
+          "level": 2,
+          "id": "最优状态价值与最优策略",
+          "title": "3.2 最优状态价值与最优策略"
+        },
+        {
+          "level": 2,
+          "id": "贝尔曼最优方程",
+          "title": "3.3 贝尔曼最优方程"
+        },
+        {
+          "level": 3,
+          "id": "方程右端的最大化问题",
+          "title": "3.3.1 方程右端的最大化问题"
+        },
+        {
+          "level": 3,
+          "id": "矩阵-向量形式",
+          "title": "3.3.2 矩阵-向量形式"
+        },
+        {
+          "level": 3,
+          "id": "压缩映射定理",
+          "title": "3.3.3 压缩映射定理"
+        },
+        {
+          "level": 3,
+          "id": "贝尔曼最优方程右端的压缩性质",
+          "title": "3.3.4 贝尔曼最优方程右端的压缩性质"
+        },
+        {
+          "level": 2,
+          "id": "从贝尔曼最优方程求解最优策略",
+          "title": "3.4 从贝尔曼最优方程求解最优策略"
+        },
+        {
+          "level": 3,
+          "id": "求解最优状态价值-v",
+          "title": "求解最优状态价值 v^*"
+        },
+        {
+          "level": 3,
+          "id": "求解最优策略-pi",
+          "title": "求解最优策略 \\pi^*"
+        },
+        {
+          "level": 3,
+          "id": "贪心最优策略",
+          "title": "贪心最优策略"
+        },
+        {
+          "level": 2,
+          "id": "影响最优策略的因素",
+          "title": "3.5 影响最优策略的因素"
+        },
+        {
+          "level": 3,
+          "id": "折扣因子的影响",
+          "title": "折扣因子的影响"
+        },
+        {
+          "level": 3,
+          "id": "奖励值的影响",
+          "title": "奖励值的影响"
+        },
+        {
+          "level": 3,
+          "id": "避免无意义绕路",
+          "title": "避免无意义绕路"
+        },
+        {
+          "level": 2,
+          "id": "本章小结",
+          "title": "3.6 本章小结"
+        },
+        {
+          "level": 2,
+          "id": "常见问题解答",
+          "title": "3.7 常见问题解答"
+        }
+      ],
+      "numbered_equations": 5,
+      "equation_references": 0
+    },
+    {
+      "chapter": "cha4",
+      "source": "chapters/cha4/cha4.tex",
+      "source_sha256": "682b855d62ed0eea6316faa25aa0ace73ca6c7285c03ed6c75b8635b6fa49a67",
+      "pdf_sha256": "f8318eb63fa5c0bfe9c1db8a56e19bf9040a834adc60bf8b9e7ced0e0276946b",
+      "html": "docs/westlake-rl/值迭代与策略迭代/index.html",
+      "math": {
+        "InlineMath": 263,
+        "DisplayMath": 39
+      },
+      "boxes": {
+        "algobox": 3,
+        "remarkbox": 3,
+        "theorembox": 3,
+        "proofbox": 3
+      },
+      "headings": [
+        {
+          "level": 2,
+          "id": "值迭代",
+          "title": "4.1 值迭代"
+        },
+        {
+          "level": 3,
+          "id": "元素形式与实现",
+          "title": "4.1.1 元素形式与实现"
+        },
+        {
+          "level": 3,
+          "id": "示例",
+          "title": "4.1.2 示例"
+        },
+        {
+          "level": 2,
+          "id": "策略迭代",
+          "title": "4.2 策略迭代"
+        },
+        {
+          "level": 3,
+          "id": "算法分析",
+          "title": "4.2.1 算法分析"
+        },
+        {
+          "level": 3,
+          "id": "如何计算-boldsymbolv_pi_k",
+          "title": "如何计算 \\boldsymbol{v}_{\\pi_k}？"
+        },
+        {
+          "level": 3,
+          "id": "为什么-pi_k1-优于-pi_k",
+          "title": "为什么 \\pi_{k+1} 优于 \\pi_k？"
+        },
+        {
+          "level": 3,
+          "id": "为什么策略迭代算法最终能找到最优策略",
+          "title": "为什么策略迭代算法最终能找到最优策略？"
+        },
+        {
+          "level": 3,
+          "id": "元素形式与实现-1",
+          "title": "4.2.2 元素形式与实现"
+        },
+        {
+          "level": 3,
+          "id": "示例-1",
+          "title": "4.2.3 示例"
+        },
+        {
+          "level": 2,
+          "id": "截断策略迭代",
+          "title": "4.3 截断策略迭代"
+        },
+        {
+          "level": 3,
+          "id": "值迭代与策略迭代的对比",
+          "title": "4.3.1 值迭代与策略迭代的对比"
+        },
+        {
+          "level": 3,
+          "id": "截断策略迭代算法",
+          "title": "4.3.2 截断策略迭代算法"
+        },
+        {
+          "level": 2,
+          "id": "本章小结",
+          "title": "4.4 本章小结"
+        },
+        {
+          "level": 2,
+          "id": "常见问题解答",
+          "title": "4.5 常见问题解答"
+        }
+      ],
+      "numbered_equations": 5,
+      "equation_references": 4
+    },
+    {
+      "chapter": "cha5",
+      "source": "chapters/cha5/cha5.tex",
+      "source_sha256": "2cb3b4942ff0d6a32383c000a5a299a79def857a695ff74bcc28be023d7063c7",
+      "pdf_sha256": "9301c09e664030b01708b7b1724af709b54fbdb144ff4229f4a20ebb3944ade6",
+      "html": "docs/westlake-rl/蒙特卡洛方法/index.html",
+      "math": {
+        "InlineMath": 313,
+        "DisplayMath": 31
+      },
+      "boxes": {
+        "theorembox": 1,
+        "proofbox": 1,
+        "remarkbox": 4,
+        "definitionbox": 3
+      },
+      "headings": [
+        {
+          "level": 2,
+          "id": "动机示例均值估计",
+          "title": "5.1 动机示例：均值估计"
+        },
+        {
+          "level": 2,
+          "id": "mc-basic最简单的mc强化学习算法",
+          "title": "5.2 MC Basic：最简单的MC强化学习算法"
+        },
+        {
+          "level": 3,
+          "id": "将策略迭代改造为无模型方法",
+          "title": "5.2.1 将策略迭代改造为无模型方法"
+        },
+        {
+          "level": 3,
+          "id": "mc-basic-算法",
+          "title": "5.2.2 MC Basic 算法"
+        },
+        {
+          "level": 3,
+          "id": "示例分析",
+          "title": "5.2.3 示例分析"
+        },
+        {
+          "level": 2,
+          "id": "mc-exploring-starts",
+          "title": "5.3 MC Exploring Starts"
+        },
+        {
+          "level": 3,
+          "id": "更高效地利用样本",
+          "title": "5.3.1 更高效地利用样本"
+        },
+        {
+          "level": 3,
+          "id": "更高效地更新策略",
+          "title": "5.3.2 更高效地更新策略"
+        },
+        {
+          "level": 3,
+          "id": "算法描述",
+          "title": "5.3.3 算法描述"
+        },
+        {
+          "level": 2,
+          "id": "mc-varepsilon-greedy无需exploring-starts的学习",
+          "title": "5.4 MC \\varepsilon-Greedy：无需Exploring Starts的学习"
+        },
+        {
+          "level": 3,
+          "id": "varepsilon-greedy-策略",
+          "title": "5.4.1 \\varepsilon-greedy 策略"
+        },
+        {
+          "level": 3,
+          "id": "算法描述-1",
+          "title": "5.4.2 算法描述"
+        },
+        {
+          "level": 3,
+          "id": "示例分析-1",
+          "title": "5.4.3 示例分析"
+        },
+        {
+          "level": 2,
+          "id": "varepsilon-greedy策略的探索与利用",
+          "title": "5.5 \\varepsilon-Greedy策略的探索与利用"
+        },
+        {
+          "level": 3,
+          "id": "varepsilon-greedy策略的最优性",
+          "title": "\\varepsilon-Greedy策略的最优性"
+        },
+        {
+          "level": 3,
+          "id": "varepsilon-greedy策略的探索能力",
+          "title": "\\varepsilon-Greedy策略的探索能力"
+        },
+        {
+          "level": 2,
+          "id": "本章小结",
+          "title": "5.6 本章小结"
+        },
+        {
+          "level": 2,
+          "id": "常见问题解答",
+          "title": "5.7 常见问题解答"
+        }
+      ],
+      "numbered_equations": 9,
+      "equation_references": 6
+    },
+    {
+      "chapter": "cha6",
+      "source": "chapters/cha6/cha6.tex",
+      "source_sha256": "49a6715fc703662e9d1ebcbfc457f9517dc0a5083ede298965ab6e4c373976cb",
+      "pdf_sha256": "6b46fafcde0d070ee57fbafa9e6cb9f5ff578357a4c6a0d8d106d11f8e0998ba",
+      "html": "docs/westlake-rl/随机近似/课程讲义.html",
+      "math": {
+        "InlineMath": 432,
+        "DisplayMath": 63
+      },
+      "boxes": {
+        "theorembox": 4,
+        "remarkbox": 1,
+        "proofbox": 4
+      },
+      "headings": [
+        {
+          "level": 2,
+          "id": "动机示例均值估计",
+          "title": "6.1 动机示例：均值估计"
+        },
+        {
+          "level": 2,
+          "id": "robbins-monro-算法",
+          "title": "6.2 Robbins-Monro 算法"
+        },
+        {
+          "level": 3,
+          "id": "收敛性质",
+          "title": "6.2.1 收敛性质"
+        },
+        {
+          "level": 3,
+          "id": "在均值估计中的应用",
+          "title": "6.2.2 在均值估计中的应用"
+        },
+        {
+          "level": 2,
+          "id": "dvoretzky-收敛定理",
+          "title": "6.3 Dvoretzky 收敛定理"
+        },
+        {
+          "level": 3,
+          "id": "dvoretzky-定理的证明",
+          "title": "6.3.1 Dvoretzky 定理的证明"
+        },
+        {
+          "level": 3,
+          "id": "在均值估计中的应用-1",
+          "title": "6.3.2 在均值估计中的应用"
+        },
+        {
+          "level": 3,
+          "id": "在-robbins-monro-定理中的应用",
+          "title": "6.3.3 在 Robbins-Monro 定理中的应用"
+        },
+        {
+          "level": 3,
+          "id": "dvoretzky-定理的推广",
+          "title": "6.3.4 Dvoretzky 定理的推广"
+        },
+        {
+          "level": 2,
+          "id": "随机梯度下降",
+          "title": "6.4 随机梯度下降"
+        },
+        {
+          "level": 3,
+          "id": "在均值估计中的应用-2",
+          "title": "6.4.1 在均值估计中的应用"
+        },
+        {
+          "level": 3,
+          "id": "sgd-的收敛模式",
+          "title": "6.4.2 SGD 的收敛模式"
+        },
+        {
+          "level": 3,
+          "id": "sgd-的确定性形式",
+          "title": "6.4.3 SGD 的确定性形式"
+        },
+        {
+          "level": 3,
+          "id": "bgdsgd-与-mbgd",
+          "title": "6.4.4 BGD、SGD 与 MBGD"
+        },
+        {
+          "level": 3,
+          "id": "sgd-的收敛性",
+          "title": "6.4.5 SGD 的收敛性"
+        },
+        {
+          "level": 2,
+          "id": "本章小结",
+          "title": "6.5 本章小结"
+        },
+        {
+          "level": 2,
+          "id": "常见问题解答",
+          "title": "6.6 常见问题解答"
+        }
+      ],
+      "numbered_equations": 11,
+      "equation_references": 23
+    }
+  ]
+}

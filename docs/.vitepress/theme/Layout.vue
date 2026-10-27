@@ -8,10 +8,12 @@ import ReadingProgress from '../components/ReadingProgress.vue'
 import ChapterTag from '../components/ChapterTag.vue'
 import NavActions from '../components/NavActions.vue'
 import { isPublicContent } from '../public-content'
+import { usesAcademicReading } from './reading-design'
 
 const { Layout } = DefaultTheme
 const route = useRoute()
 const { frontmatter, page } = useData()
+const academicReading = computed(() => usesAcademicReading('/' + page.value.relativePath, frontmatter.value))
 // Source paths work with base URLs, encoded routes, and client-side navigation.
 const sectionClass = computed(() => {
   const section = page.value.relativePath?.split('/')[0]
@@ -38,7 +40,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Layout :class="sectionClass">
+  <Layout :class="[sectionClass, { 'academic-reading': academicReading }]">
     <template #layout-top>
       <!-- 阅读进度条 -->
       <ClientOnly>

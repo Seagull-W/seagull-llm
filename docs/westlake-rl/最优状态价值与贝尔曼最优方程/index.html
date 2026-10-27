@@ -1,20 +1,377 @@
-<script setup>
-import PdfViewer from '../../.vitepress/components/PdfViewer.vue'
+<script setup lang="ts">
+import '../lecture-academic.css'
+import { defineAsyncComponent, shallowRef } from 'vue'
 import pdfUrl from './最优状态价值与贝尔曼最优方程.pdf?url'
 import outline from './目录.json'
+const PdfViewer = defineAsyncComponent(() => import('../../.vitepress/components/PdfViewer.vue'))
+const showOriginal = shallowRef(false)
+function toggleOriginal(event: Event) {
+  showOriginal.value = (event.target as HTMLDetailsElement).open
+}
 </script>
 
-<article class="native-document format-course" data-format="course" aria-label="第 3 讲：最优状态价值与贝尔曼最优方程" data-design="linux-notebook">
+<article class="native-document format-course academic-lecture" data-format="course" data-design="linux-notebook" aria-label="第 3 讲：最优状态价值与贝尔曼最优方程">
 <header class="document-intro note-hero">
-  <p class="note-kicker">西湖 RL 笔记<span>课程讲义</span></p>
-  <h1 id="note-title">第 3 讲：最优状态价值与贝尔曼最优方程 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
-  <p class="note-deck">第 3 讲课程资料：围绕最优状态价值与贝尔曼最优方程，继续理解最优策略的刻画。</p>
-  <div class="note-chips"><span>强化学习</span><span>价值函数</span><span>贝尔曼方程</span></div>
+  <p class="note-kicker">西湖 RL 笔记<span>第 3 讲 · 课程讲义</span></p>
+  <h1 id="note-title" tabindex="-1">最优状态价值与贝尔曼最优方程 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
+  <p class="note-deck">从策略改进进入最优状态价值，通过压缩映射理解贝尔曼最优方程的唯一解与贪心最优策略。</p>
+  <div class="note-chips"><span>最优策略</span><span>压缩映射</span><span>贝尔曼最优方程</span></div>
+  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记</p>
 </header>
+<nav class="note-jump" aria-label="本篇阅读导航"><a href="#动机示例如何改进策略">3.1 动机示例：如何改进策略</a>
+<a href="#最优状态价值与最优策略">3.2 最优状态价值与最优策略</a>
+<a href="#贝尔曼最优方程">3.3 贝尔曼最优方程</a>
+<a href="#从贝尔曼最优方程求解最优策略">3.4 从贝尔曼最优方程求解最优策略</a>
+<a href="#影响最优策略的因素">3.5 影响最优策略的因素</a>
+<a href="#本章小结">3.6 本章小结</a>
+<a href="#常见问题解答">3.7 常见问题解答</a></nav>
+<div id="reading-context" class="lecture-body">
+<p>强化学习的最终目标是寻找最优策略，因此需要明确最优策略的严格定义。本章包含一个核心概念与一个核心工具：核心概念是<strong>最优状态价值</strong>，基于它可以定义最优策略；核心工具是<strong>贝尔曼最优方程（Bellman Optimality Equation, BOE）</strong>，通过求解该方程可以得到最优状态价值与最优策略。</p>
+<p>本章与前后章节的关联如下：第2讲介绍了任意给定策略对应的贝尔曼方程，本章介绍的贝尔曼最优方程是一类特殊的贝尔曼方程，其对应的策略为最优策略；第4讲将介绍的值迭代算法，正是求解贝尔曼最优方程的数值算法。</p>
 
-
-<section class="document-section note-panel" aria-labelledby="reading-context">
-<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
-<PdfViewer :src="pdfUrl" title="最优状态价值与贝尔曼最优方程" :outline="outline" />
+<section class="document-section note-panel" aria-labelledby="动机示例如何改进策略">
+<h2 class="unnumbered" tabindex="-1" id="动机示例如何改进策略">3.1 动机示例：如何改进策略 <a class="header-anchor" href="#动机示例如何改进策略" aria-label="章节链接">&#8203;</a></h2>
+<p>我们通过一个简单的网格世界示例说明策略改进的基本思想。示例中橙色格子为禁区，蓝色格子为目标区域。给定一个初始策略，它在状态 <span class="math-inline" data-tex="s_1"></span> 选择向右的动作 <span class="math-inline" data-tex="a_2"></span>，这并非最优选择。</p>
+<p><strong>直觉层面</strong>：在状态 <span class="math-inline" data-tex="s_1"></span> 选择向下的动作 <span class="math-inline" data-tex="a_3"></span> 可以避免进入禁区，从而获得更高的长期回报，策略因此得到改进。</p>
+<p><strong>数学层面</strong>：上述直觉可以通过计算状态价值与动作价值严格验证。</p>
+<p>首先计算给定策略 <span class="math-inline" data-tex="\pi"></span> 下的状态价值，该策略对应的贝尔曼方程为：</p>
+<div class="lecture-equation" id="lecture-equation-1"><div class="math-block" data-tex="\begin{cases}
+v_\pi(s_1) = -1 + \gamma v_\pi(s_2) \\
+v_\pi(s_2) = 1 + \gamma v_\pi(s_4) \\
+v_\pi(s_3) = 1 + \gamma v_\pi(s_4) \\
+v_\pi(s_4) = 1 + \gamma v_\pi(s_4)
+\end{cases}"></div></div>
+<p>取折扣因子 <span class="math-inline" data-tex="\gamma=0.9"></span>，可解得：</p>
+<div class="lecture-equation" id="lecture-equation-2"><div class="math-block" data-tex="v_\pi(s_4) = v_\pi(s_3) = v_\pi(s_2) = 10, \quad v_\pi(s_1) = 8"></div></div>
+<p>接下来计算状态 <span class="math-inline" data-tex="s_1"></span> 下所有动作对应的动作价值：</p>
+<div class="lecture-equation" id="lecture-equation-3"><div class="math-block" data-tex="\begin{aligned}
+q_\pi(s_1, a_1) &amp;= -1 + \gamma v_\pi(s_1) = 6.2 \\
+q_\pi(s_1, a_2) &amp;= -1 + \gamma v_\pi(s_2) = 8 \\
+q_\pi(s_1, a_3) &amp;= 0 + \gamma v_\pi(s_3) = 9 \\
+q_\pi(s_1, a_4) &amp;= -1 + \gamma v_\pi(s_1) = 6.2 \\
+q_\pi(s_1, a_5) &amp;= 0 + \gamma v_\pi(s_1) = 7.2
+\end{aligned}"></div></div>
+<p>可以看到动作 <span class="math-inline" data-tex="a_3"></span> 对应的动作价值最大，满足：</p>
+<div class="lecture-equation" id="lecture-equation-4"><div class="math-block" data-tex="q_\pi(s_1, a_3) \geq q_\pi(s_1, a_i), \quad \forall i \neq 3"></div></div>
+<p>因此，将策略更新为在 <span class="math-inline" data-tex="s_1"></span> 处选择动作 <span class="math-inline" data-tex="a_3"></span>，即可得到更优的策略。</p>
+<p>该示例揭示了策略改进的基本思想：将策略更新为选择动作价值最大的动作，即可得到更优的策略。这也是绝大多数强化学习算法的核心思路。</p>
 </section>
+<section class="document-section note-panel" aria-labelledby="最优状态价值与最优策略">
+<h2 class="unnumbered" tabindex="-1" id="最优状态价值与最优策略">3.2 最优状态价值与最优策略 <a class="header-anchor" href="#最优状态价值与最优策略" aria-label="章节链接">&#8203;</a></h2>
+<p>强化学习的最终目标是获得最优策略，而最优策略的定义基于状态价值。对于两个策略 <span class="math-inline" data-tex="\pi_1"></span> 和 <span class="math-inline" data-tex="\pi_2"></span>，若对任意状态 <span class="math-inline" data-tex="s \in \mathcal{S}"></span>，都有 <span class="math-inline" data-tex="v_{\pi_1}(s) \geq v_{\pi_2}(s)"></span>，则称策略 <span class="math-inline" data-tex="\pi_1"></span> 优于 <span class="math-inline" data-tex="\pi_2"></span>。进一步地，若一个策略优于所有其他可能的策略，则称其为最优策略。</p>
+<div class="definitionbox lecture-box">
+<div class="lecture-box-title">
+<p>定义</p>
+</div>
+<p><strong>最优策略与最优状态价值</strong>：若策略 <span class="math-inline" data-tex="\pi^*"></span> 满足对任意状态 <span class="math-inline" data-tex="s \in \mathcal{S}"></span> 以及任意其他策略 <span class="math-inline" data-tex="\pi"></span>，都有</p>
+<div class="lecture-equation" id="lecture-equation-5"><div class="math-block" data-tex="v_{\pi^*}(s) \geq v_\pi(s)"></div></div>
+<p>则称 <span class="math-inline" data-tex="\pi^*"></span> 为<strong>最优策略</strong>，其对应的状态价值 <span class="math-inline" data-tex="v_{\pi^*}"></span> 称为<strong>最优状态价值</strong>，记为 <span class="math-inline" data-tex="v^*"></span>。</p>
+</div>
+<p>基于该定义，自然引出一系列基础问题：</p>
+<ul>
+<li><p>存在性：最优策略是否一定存在？</p></li>
+<li><p>唯一性：最优策略是否唯一？</p></li>
+<li><p>随机性：最优策略是随机策略还是确定性策略？</p></li>
+<li><p>算法：如何求解最优策略与最优状态价值？</p></li>
+</ul>
+<p>本章后续内容将逐一解答这些问题。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="贝尔曼最优方程">
+<h2 class="unnumbered" tabindex="-1" id="贝尔曼最优方程">3.3 贝尔曼最优方程 <a class="header-anchor" href="#贝尔曼最优方程" aria-label="章节链接">&#8203;</a></h2>
+<p>分析最优策略与最优状态价值的核心工具是<strong>贝尔曼最优方程（BOE）</strong>，求解该方程即可得到最优策略与最优状态价值。</p>
+<p>对任意状态 <span class="math-inline" data-tex="s \in \mathcal{S}"></span>，贝尔曼最优方程的元素形式为：</p>
+<div class="lecture-equation is-numbered" id="eq:boe_element"><div class="math-block" data-tex="\begin{aligned}
+v(s) &amp;= \max_{\pi(s) \in \Pi(s)} \sum_{a \in \mathcal{A}} \pi(a \mid s) \left( \sum_{r \in \mathcal{R}} p(r \mid s, a) r + \gamma \sum_{s&#x27; \in \mathcal{S}} p(s&#x27; \mid s, a) v(s&#x27;) \right) \\
+&amp;= \max_{\pi(s) \in \Pi(s)} \sum_{a \in \mathcal{A}} \pi(a \mid s) q(s, a)
+\end{aligned}"></div><a class="lecture-equation-number" href="#eq:boe_element" aria-label="公式 1">(1)</a></div>
+<p>其中 <span class="math-inline" data-tex="v(s), v(s&#x27;)"></span> 是待求解的未知变量，动作价值函数定义为：</p>
+<div class="lecture-equation" id="lecture-equation-7"><div class="math-block" data-tex="q(s, a) \doteq \sum_{r \in \mathcal{R}} p(r \mid s, a) r + \gamma \sum_{s&#x27; \in \mathcal{S}} p(s&#x27; \mid s, a) v(s&#x27;)"></div></div>
+<p>式中 <span class="math-inline" data-tex="\pi(s)"></span> 表示状态 <span class="math-inline" data-tex="s"></span> 处的策略，<span class="math-inline" data-tex="\Pi(s)"></span> 表示状态 <span class="math-inline" data-tex="s"></span> 处所有可能策略构成的集合。</p>
+<p>贝尔曼最优方程是一个非线性方程，围绕它需要解答以下核心问题：解的存在性、解的唯一性、求解算法、解与最优策略的对应关系。</p>
+<h3 class="unnumbered" tabindex="-1" id="方程右端的最大化问题">3.3.1 方程右端的最大化问题 <a class="header-anchor" href="#方程右端的最大化问题" aria-label="章节链接">&#8203;</a></h3>
+<p>贝尔曼最优方程看似包含 <span class="math-inline" data-tex="v(s)"></span> 和 <span class="math-inline" data-tex="\pi(a \mid s)"></span> 两个未知变量，但二者可以分步求解：先固定 <span class="math-inline" data-tex="v(s)"></span>，求解右端最大化问题得到最优策略；再代入方程求解最优价值。</p>
+<p>我们通过一个简单例子理解该思路：给定 <span class="math-inline" data-tex="q_1, q_2, q_3 \in \mathbb{R}"></span>，寻找非负系数 <span class="math-inline" data-tex="c_1, c_2, c_3"></span> 满足 <span class="math-inline" data-tex="c_1+c_2+c_3=1"></span>，使得 <span class="math-inline" data-tex="\sum_{i=1}^3 c_i q_i"></span> 最大。不妨设 <span class="math-inline" data-tex="q_3 \geq q_1, q_2"></span>，则最优解为 <span class="math-inline" data-tex="c_3^*=1"></span>，<span class="math-inline" data-tex="c_1^*=c_2^*=0"></span>。</p>
+<p>将该结论推广到策略最大化问题：由于 <span class="math-inline" data-tex="\sum_{a \in \mathcal{A}} \pi(a \mid s) = 1"></span> 且 <span class="math-inline" data-tex="\pi(a \mid s) \geq 0"></span>，加权和 <span class="math-inline" data-tex="\sum_{a \in \mathcal{A}} \pi(a \mid s) q(s, a)"></span> 的最大值等于最大的动作价值，即</p>
+<div class="lecture-equation" id="lecture-equation-8"><div class="math-block" data-tex="\max_{\pi(s)} \sum_{a \in \mathcal{A}} \pi(a \mid s) q(s, a) = \max_{a \in \mathcal{A}} q(s, a)"></div></div>
+<p>等号成立当且仅当策略将全部概率赋予动作价值最大的动作：</p>
+<div class="lecture-equation" id="lecture-equation-9"><div class="math-block" data-tex="\pi(a \mid s) =
+\begin{cases}
+1, &amp; a = a^* \\
+0, &amp; a \neq a^*
+\end{cases}"></div></div>
+<p>其中 <span class="math-inline" data-tex="a^* = \arg\max_{a} q(s, a)"></span>。</p>
+<p>由此得到重要结论：<strong>最优策略是确定性的贪心策略，在每个状态选择动作价值最大的动作</strong>。</p>
+<h3 class="unnumbered" tabindex="-1" id="矩阵-向量形式">3.3.2 矩阵-向量形式 <a class="header-anchor" href="#矩阵-向量形式" aria-label="章节链接">&#8203;</a></h3>
+<p>贝尔曼最优方程是定义在所有状态上的方程组，可整理为紧凑的矩阵-向量形式：</p>
+<div class="lecture-equation is-numbered" id="eq:boe_matrix"><div class="math-block" data-tex="\boldsymbol{v} = \max_{\pi \in \Pi} \left( \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v} \right)"></div><a class="lecture-equation-number" href="#eq:boe_matrix" aria-label="公式 2">(2)</a></div>
+<p>其中 <span class="math-inline" data-tex="\boldsymbol{v} \in \mathbb{R}^{|\mathcal{S}|}"></span> 为状态价值向量，<span class="math-inline" data-tex="\max_\pi"></span> 表示按元素逐个取最大值。<span class="math-inline" data-tex="\boldsymbol{r}_\pi"></span> 和 <span class="math-inline" data-tex="\boldsymbol{P}_\pi"></span> 与普通贝尔曼方程中的定义一致：</p>
+<ul>
+<li><p><span class="math-inline" data-tex="[\boldsymbol{r}_\pi]_s = \sum_{a \in \mathcal{A}} \pi(a \mid s) \sum_{r \in \mathcal{R}} p(r \mid s, a) r"></span></p></li>
+<li><p><span class="math-inline" data-tex="[\boldsymbol{P}_\pi]_{s,s&#x27;} = \sum_{a \in \mathcal{A}} \pi(a \mid s) p(s&#x27; \mid s, a)"></span></p></li>
+</ul>
+<p>由于最优策略由价值 <span class="math-inline" data-tex="\boldsymbol{v}"></span> 决定，方程右端是关于 <span class="math-inline" data-tex="\boldsymbol{v}"></span> 的函数，记为</p>
+<div class="lecture-equation" id="lecture-equation-11"><div class="math-block" data-tex="f(\boldsymbol{v}) \doteq \max_{\pi \in \Pi} \left( \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v} \right)"></div></div>
+<p>于是贝尔曼最优方程可简写为不动点形式：</p>
+<div class="lecture-equation is-numbered" id="eq:boe_fixed_point"><div class="math-block" data-tex="\boldsymbol{v} = f(\boldsymbol{v})"></div><a class="lecture-equation-number" href="#eq:boe_fixed_point" aria-label="公式 3">(3)</a></div>
+<h3 class="unnumbered" tabindex="-1" id="压缩映射定理">3.3.3 压缩映射定理 <a class="header-anchor" href="#压缩映射定理" aria-label="章节链接">&#8203;</a></h3>
+<p>贝尔曼最优方程是形如 <span class="math-inline" data-tex="\boldsymbol{v}=f(\boldsymbol{v})"></span> 的非线性不动点方程，分析这类方程的核心工具是<strong>压缩映射定理</strong>（又称不动点定理）。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 3.1 压缩映射定理</p>
+</div>
+<p>对于方程 <span class="math-inline" data-tex="x = f(x)"></span>（<span class="math-inline" data-tex="x"></span> 与 <span class="math-inline" data-tex="f(x)"></span> 为实向量），若映射 <span class="math-inline" data-tex="f"></span> 是压缩映射，即存在 <span class="math-inline" data-tex="\gamma \in (0,1)"></span>，使得对任意 <span class="math-inline" data-tex="x_1, x_2"></span> 都有</p>
+<div class="lecture-equation" id="lecture-equation-13"><div class="math-block" data-tex="\| f(x_1) - f(x_2) \| \leq \gamma \| x_1 - x_2 \|"></div></div>
+<p>则以下三条性质成立：</p>
+<ol>
+<li><p><strong>存在性</strong>：存在不动点 <span class="math-inline" data-tex="x^*"></span> 满足 <span class="math-inline" data-tex="f(x^*) = x^*"></span>。</p></li>
+<li><p><strong>唯一性</strong>：不动点 <span class="math-inline" data-tex="x^*"></span> 是唯一的。</p></li>
+<li><p><strong>迭代收敛性</strong>：迭代过程 <span class="math-inline" data-tex="x_{k+1} = f(x_k)"></span>（<span class="math-inline" data-tex="k=0,1,2,\dots"></span>）对任意初始值 <span class="math-inline" data-tex="x_0"></span> 都收敛到 <span class="math-inline" data-tex="x^*"></span>，且收敛速度为指数级。</p></li>
+</ol>
+</div>
+<p>压缩映射定理不仅保证了解的存在性与唯一性，还给出了数值求解算法——迭代法。</p>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p>我们通过柯西序列的性质分四步证明该定理。</p>
+<p><strong>第一步：证明迭代序列 <span class="math-inline" data-tex="\{x_k\}_{k=1}^\infty"></span> 是柯西序列</strong></p>
+<p>由压缩映射性质，相邻迭代项满足：</p>
+<div class="lecture-equation" id="lecture-equation-14"><div class="math-block" data-tex="\| x_{k+1} - x_k \| = \| f(x_k) - f(x_{k-1}) \| \leq \gamma \| x_k - x_{k-1} \|"></div></div>
+<p>递推可得：</p>
+<div class="lecture-equation" id="lecture-equation-15"><div class="math-block" data-tex="\| x_{k+1} - x_k \| \leq \gamma^k \| x_1 - x_0 \|"></div></div>
+<p>对任意 <span class="math-inline" data-tex="m &gt; n"></span>，由三角不等式：</p>
+<div class="lecture-equation" id="lecture-equation-16"><div class="math-block" data-tex="\begin{aligned}
+    \| x_m - x_n \| &amp;\leq \sum_{k=n}^{m-1} \| x_{k+1} - x_k \| \\
+    &amp;\leq \sum_{k=n}^{m-1} \gamma^k \| x_1 - x_0 \| \\
+    &amp;\leq \gamma^n \sum_{k=0}^{\infty} \gamma^k \| x_1 - x_0 \| \\
+    &amp;= \frac{\gamma^n}{1-\gamma} \| x_1 - x_0 \|
+    \end{aligned}"></div></div>
+<p>由于 <span class="math-inline" data-tex="\gamma &lt; 1"></span>，当 <span class="math-inline" data-tex="n \to \infty"></span> 时右端趋于0，因此 <span class="math-inline" data-tex="\{x_k\}"></span> 是柯西序列，必定收敛到某个极限 <span class="math-inline" data-tex="x^* = \lim_{k \to \infty} x_k"></span>。</p>
+<p><strong>第二步：证明极限 <span class="math-inline" data-tex="x^*"></span> 是不动点</strong></p>
+<p>由 <span class="math-inline" data-tex="\| x_{k+1} - x_k \| \leq \gamma^k \| x_1 - x_0 \|"></span>，当 <span class="math-inline" data-tex="k \to \infty"></span> 时 <span class="math-inline" data-tex="\| f(x_k) - x_k \| \to 0"></span>，因此在极限处有 <span class="math-inline" data-tex="f(x^*) = x^*"></span>，即 <span class="math-inline" data-tex="x^*"></span> 是不动点。</p>
+<p><strong>第三步：证明不动点唯一</strong></p>
+<p>假设存在两个不动点 <span class="math-inline" data-tex="x^*"></span> 和 <span class="math-inline" data-tex="x&#x27;"></span>，满足 <span class="math-inline" data-tex="f(x^*)=x^*"></span> 且 <span class="math-inline" data-tex="f(x&#x27;)=x&#x27;"></span>。则：</p>
+<div class="lecture-equation" id="lecture-equation-17"><div class="math-block" data-tex="\| x&#x27; - x^* \| = \| f(x&#x27;) - f(x^*) \| \leq \gamma \| x&#x27; - x^* \|"></div></div>
+<p>由于 <span class="math-inline" data-tex="\gamma &lt; 1"></span>，该不等式成立当且仅当 <span class="math-inline" data-tex="\| x&#x27; - x^* \| = 0"></span>，即 <span class="math-inline" data-tex="x&#x27; = x^*"></span>，故不动点唯一。</p>
+<p><strong>第四步：证明指数级收敛速度</strong></p>
+<p>由第一步的结论，令 <span class="math-inline" data-tex="m \to \infty"></span> 可得：</p>
+<div class="lecture-equation" id="lecture-equation-18"><div class="math-block" data-tex="\| x^* - x_n \| \leq \frac{\gamma^n}{1-\gamma} \| x_1 - x_0 \|"></div></div>
+<p>误差随迭代步数 <span class="math-inline" data-tex="n"></span> 指数衰减，因此收敛速度为指数级。</p>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="贝尔曼最优方程右端的压缩性质">3.3.4 贝尔曼最优方程右端的压缩性质 <a class="header-anchor" href="#贝尔曼最优方程右端的压缩性质" aria-label="章节链接">&#8203;</a></h3>
+<p>要将压缩映射定理应用于贝尔曼最优方程，需要证明 <span class="math-inline" data-tex="f(\boldsymbol{v})"></span> 是压缩映射。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 3.2 <span class="math-inline" data-tex="f(\boldsymbol{v})"></span> 的压缩性质</p>
+</div>
+<p>贝尔曼最优方程右端的映射 <span class="math-inline" data-tex="f(\boldsymbol{v}) = \max_{\pi \in \Pi} (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v})"></span> 是无穷范数下的压缩映射，即对任意 <span class="math-inline" data-tex="\boldsymbol{v}_1, \boldsymbol{v}_2 \in \mathbb{R}^{|\mathcal{S}|}"></span>，都有</p>
+<div class="lecture-equation" id="lecture-equation-19"><div class="math-block" data-tex="\| f(\boldsymbol{v}_1) - f(\boldsymbol{v}_2) \|_\infty \leq \gamma \| \boldsymbol{v}_1 - \boldsymbol{v}_2 \|_\infty"></div></div>
+<p>其中 <span class="math-inline" data-tex="\gamma \in (0,1)"></span> 为折扣因子，<span class="math-inline" data-tex="\|\cdot\|_\infty"></span> 为向量的无穷范数（最大绝对值范数）。</p>
+</div>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p>设 <span class="math-inline" data-tex="\pi_1^* = \arg\max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_1)"></span>，<span class="math-inline" data-tex="\pi_2^* = \arg\max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_2)"></span>，则由最大值的定义有：</p>
+<div class="lecture-equation" id="lecture-equation-20"><div class="math-block" data-tex="f(\boldsymbol{v}_1) = \boldsymbol{r}_{\pi_1^*} + \gamma \boldsymbol{P}_{\pi_1^*} \boldsymbol{v}_1 \geq \boldsymbol{r}_{\pi_2^*} + \gamma \boldsymbol{P}_{\pi_2^*} \boldsymbol{v}_1"></div></div>
+<div class="lecture-equation" id="lecture-equation-21"><div class="math-block" data-tex="f(\boldsymbol{v}_2) = \boldsymbol{r}_{\pi_2^*} + \gamma \boldsymbol{P}_{\pi_2^*} \boldsymbol{v}_2 \geq \boldsymbol{r}_{\pi_1^*} + \gamma \boldsymbol{P}_{\pi_1^*} \boldsymbol{v}_2"></div></div>
+<p>上述比较均为按元素比较。</p>
+<p>对 <span class="math-inline" data-tex="f(\boldsymbol{v}_1) - f(\boldsymbol{v}_2)"></span> 做放缩：</p>
+<div class="lecture-equation" id="lecture-equation-22"><div class="math-block" data-tex="\begin{aligned}
+    f(\boldsymbol{v}_1) - f(\boldsymbol{v}_2) &amp;= \boldsymbol{r}_{\pi_1^*} + \gamma \boldsymbol{P}_{\pi_1^*} \boldsymbol{v}_1 - \left( \boldsymbol{r}_{\pi_2^*} + \gamma \boldsymbol{P}_{\pi_2^*} \boldsymbol{v}_2 \right) \\
+    &amp;\leq \boldsymbol{r}_{\pi_1^*} + \gamma \boldsymbol{P}_{\pi_1^*} \boldsymbol{v}_1 - \left( \boldsymbol{r}_{\pi_1^*} + \gamma \boldsymbol{P}_{\pi_1^*} \boldsymbol{v}_2 \right) \\
+    &amp;= \gamma \boldsymbol{P}_{\pi_1^*} (\boldsymbol{v}_1 - \boldsymbol{v}_2)
+    \end{aligned}"></div></div>
+<p>同理可得：</p>
+<div class="lecture-equation" id="lecture-equation-23"><div class="math-block" data-tex="f(\boldsymbol{v}_2) - f(\boldsymbol{v}_1) \leq \gamma \boldsymbol{P}_{\pi_2^*} (\boldsymbol{v}_2 - \boldsymbol{v}_1)"></div></div>
+<p>因此有双向不等式：</p>
+<div class="lecture-equation" id="lecture-equation-24"><div class="math-block" data-tex="-\gamma \boldsymbol{P}_{\pi_2^*} (\boldsymbol{v}_1 - \boldsymbol{v}_2) \leq f(\boldsymbol{v}_1) - f(\boldsymbol{v}_2) \leq \gamma \boldsymbol{P}_{\pi_1^*} (\boldsymbol{v}_1 - \boldsymbol{v}_2)"></div></div>
+<p>定义向量 <span class="math-inline" data-tex="\boldsymbol{z}"></span>，其每个元素为对应位置上界与下界的绝对值的最大值，则 <span class="math-inline" data-tex="|f(\boldsymbol{v}_1) - f(\boldsymbol{v}_2)| \leq \boldsymbol{z}"></span>，因此：</p>
+<div class="lecture-equation" id="lecture-equation-25"><div class="math-block" data-tex="\| f(\boldsymbol{v}_1) - f(\boldsymbol{v}_2) \|_\infty \leq \| \boldsymbol{z} \|_\infty"></div></div>
+<p>对 <span class="math-inline" data-tex="\boldsymbol{z}"></span> 的第 <span class="math-inline" data-tex="i"></span> 个元素，设 <span class="math-inline" data-tex="\boldsymbol{p}_i^T"></span> 和 <span class="math-inline" data-tex="\boldsymbol{q}_i^T"></span> 分别为 <span class="math-inline" data-tex="\boldsymbol{P}_{\pi_1^*}"></span> 和 <span class="math-inline" data-tex="\boldsymbol{P}_{\pi_2^*}"></span> 的第 <span class="math-inline" data-tex="i"></span> 行，则：</p>
+<div class="lecture-equation" id="lecture-equation-26"><div class="math-block" data-tex="z_i = \max\left\{ \gamma |\boldsymbol{p}_i^T (\boldsymbol{v}_1 - \boldsymbol{v}_2)|,\ \gamma |\boldsymbol{q}_i^T (\boldsymbol{v}_1 - \boldsymbol{v}_2)| \right\}"></div></div>
+<p>由于状态转移矩阵的行和为1且元素非负，因此：</p>
+<div class="lecture-equation" id="lecture-equation-27"><div class="math-block" data-tex="|\boldsymbol{p}_i^T (\boldsymbol{v}_1 - \boldsymbol{v}_2)| \leq \boldsymbol{p}_i^T |\boldsymbol{v}_1 - \boldsymbol{v}_2| \leq \| \boldsymbol{v}_1 - \boldsymbol{v}_2 \|_\infty"></div></div>
+<p>同理 <span class="math-inline" data-tex="|\boldsymbol{q}_i^T (\boldsymbol{v}_1 - \boldsymbol{v}_2)| \leq \| \boldsymbol{v}_1 - \boldsymbol{v}_2 \|_\infty"></span>。</p>
+<p>因此 <span class="math-inline" data-tex="z_i \leq \gamma \| \boldsymbol{v}_1 - \boldsymbol{v}_2 \|_\infty"></span>，对所有 <span class="math-inline" data-tex="i"></span> 取最大值得：</p>
+<div class="lecture-equation" id="lecture-equation-28"><div class="math-block" data-tex="\| \boldsymbol{z} \|_\infty \leq \gamma \| \boldsymbol{v}_1 - \boldsymbol{v}_2 \|_\infty"></div></div>
+<p>联立可得 <span class="math-inline" data-tex="\| f(\boldsymbol{v}_1) - f(\boldsymbol{v}_2) \|_\infty \leq \gamma \| \boldsymbol{v}_1 - \boldsymbol{v}_2 \|_\infty"></span>，压缩性质得证。</p>
+</div>
+</section>
+<section class="document-section note-panel" aria-labelledby="从贝尔曼最优方程求解最优策略">
+<h2 class="unnumbered" tabindex="-1" id="从贝尔曼最优方程求解最优策略">3.4 从贝尔曼最优方程求解最优策略 <a class="header-anchor" href="#从贝尔曼最优方程求解最优策略" aria-label="章节链接">&#8203;</a></h2>
+<p>基于压缩映射定理，我们可以严格分析贝尔曼最优方程的解，并得到最优状态价值与最优策略。</p>
+<h3 class="unnumbered" tabindex="-1" id="求解最优状态价值-v">求解最优状态价值 <span class="math-inline" data-tex="v^*"></span> <a class="header-anchor" href="#求解最优状态价值-v" aria-label="章节链接">&#8203;</a></h3>
+<p>若 <span class="math-inline" data-tex="v^*"></span> 是贝尔曼最优方程的解，则满足：</p>
+<div class="lecture-equation" id="lecture-equation-29"><div class="math-block" data-tex="\boldsymbol{v}^* = \max_{\pi \in \Pi} \left( \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}^* \right)"></div></div>
+<p>即 <span class="math-inline" data-tex="\boldsymbol{v}^*"></span> 是映射 <span class="math-inline" data-tex="f"></span> 的不动点。结合压缩映射定理，可得到如下核心结论。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 3.3 解的存在性、唯一性与迭代算法</p>
+</div>
+<p>对于贝尔曼最优方程 <span class="math-inline" data-tex="\boldsymbol{v} = f(\boldsymbol{v}) = \max_{\pi \in \Pi} (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v})"></span>：</p>
+<ol>
+<li><p>存在唯一的解 <span class="math-inline" data-tex="\boldsymbol{v}^*"></span>，即最优状态价值；</p></li>
+<li><p>可通过迭代算法求解：</p>
+<div class="lecture-equation" id="lecture-equation-30"><div class="math-block" data-tex="\boldsymbol{v}_{k+1} = f(\boldsymbol{v}_k) = \max_{\pi \in \Pi} \left( \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_k \right), \quad k=0,1,2,\dots"></div></div>
+<p>对任意初始值 <span class="math-inline" data-tex="\boldsymbol{v}_0"></span>，迭代序列 <span class="math-inline" data-tex="\boldsymbol{v}_k"></span> 都将以指数速度收敛到 <span class="math-inline" data-tex="\boldsymbol{v}^*"></span>。</p></li>
+</ol>
+</div>
+<p>该迭代算法就是第4讲将详细介绍的<strong>值迭代算法</strong>。</p>
+<h3 class="unnumbered" tabindex="-1" id="求解最优策略-pi">求解最优策略 <span class="math-inline" data-tex="\pi^*"></span> <a class="header-anchor" href="#求解最优策略-pi" aria-label="章节链接">&#8203;</a></h3>
+<p>得到最优状态价值 <span class="math-inline" data-tex="\boldsymbol{v}^*"></span> 后，最优策略可通过下式求解：</p>
+<div class="lecture-equation" id="lecture-equation-31"><div class="math-block" data-tex="\pi^* = \arg\max_{\pi \in \Pi} \left( \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}^* \right)"></div></div>
+<p>将 <span class="math-inline" data-tex="\pi^*"></span> 代入贝尔曼最优方程可得：</p>
+<div class="lecture-equation" id="lecture-equation-32"><div class="math-block" data-tex="\boldsymbol{v}^* = \boldsymbol{r}_{\pi^*} + \gamma \boldsymbol{P}_{\pi^*} \boldsymbol{v}^*"></div></div>
+<p>这说明 <span class="math-inline" data-tex="\boldsymbol{v}^* = v_{\pi^*}"></span>，即最优状态价值正是最优策略对应的状态价值，贝尔曼最优方程是对应最优策略的特殊贝尔曼方程。</p>
+<p>接下来的定理保证了上述解的最优性。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 3.4 <span class="math-inline" data-tex="v^*"></span> 与 <span class="math-inline" data-tex="\pi^*"></span> 的最优性</p>
+</div>
+<p>贝尔曼最优方程的解 <span class="math-inline" data-tex="\boldsymbol{v}^*"></span> 是最优状态价值，对应的 <span class="math-inline" data-tex="\pi^*"></span> 是最优策略。即对任意策略 <span class="math-inline" data-tex="\pi"></span>，都有</p>
+<div class="lecture-equation" id="lecture-equation-33"><div class="math-block" data-tex="v^* = v_{\pi^*} \geq v_\pi"></div></div>
+<p>其中不等号为按元素比较。</p>
+</div>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p>对任意策略 <span class="math-inline" data-tex="\pi"></span>，其状态价值满足贝尔曼方程：</p>
+<div class="lecture-equation" id="lecture-equation-34"><div class="math-block" data-tex="\boldsymbol{v}_\pi = \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_\pi"></div></div>
+<p>由 <span class="math-inline" data-tex="\boldsymbol{v}^*"></span> 的定义，有：</p>
+<div class="lecture-equation" id="lecture-equation-35"><div class="math-block" data-tex="\boldsymbol{v}^* = \max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}^*) = \boldsymbol{r}_{\pi^*} + \gamma \boldsymbol{P}_{\pi^*} \boldsymbol{v}^* \geq \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}^*"></div></div>
+<p>两式相减得：</p>
+<div class="lecture-equation" id="lecture-equation-36"><div class="math-block" data-tex="\boldsymbol{v}^* - \boldsymbol{v}_\pi \geq (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}^*) - (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_\pi) = \gamma \boldsymbol{P}_\pi (\boldsymbol{v}^* - \boldsymbol{v}_\pi)"></div></div>
+<p>反复应用该不等式递推可得：</p>
+<div class="lecture-equation" id="lecture-equation-37"><div class="math-block" data-tex="\boldsymbol{v}^* - \boldsymbol{v}_\pi \geq \gamma^n \boldsymbol{P}_\pi^n (\boldsymbol{v}^* - \boldsymbol{v}_\pi)"></div></div>
+<p>当 <span class="math-inline" data-tex="n \to \infty"></span> 时，由于 <span class="math-inline" data-tex="\gamma &lt; 1"></span> 且 <span class="math-inline" data-tex="\boldsymbol{P}_\pi^n"></span> 是行和为1的非负矩阵，右端趋于零向量，因此：</p>
+<div class="lecture-equation" id="lecture-equation-38"><div class="math-block" data-tex="\boldsymbol{v}^* - \boldsymbol{v}_\pi \geq 0"></div></div>
+<p>即对任意策略 <span class="math-inline" data-tex="\pi"></span> 都有 <span class="math-inline" data-tex="v^* \geq v_\pi"></span>，最优性得证。</p>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="贪心最优策略">贪心最优策略 <a class="header-anchor" href="#贪心最优策略" aria-label="章节链接">&#8203;</a></h3>
+<p>进一步地，我们可以证明存在确定性的贪心最优策略。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 3.5 贪心最优策略</p>
+</div>
+<p>对任意状态 <span class="math-inline" data-tex="s \in \mathcal{S}"></span>，如下确定性贪心策略是最优策略：</p>
+<div class="lecture-equation is-numbered" id="lecture-equation-39"><div class="math-block" data-tex="\pi^*(a \mid s) =
+    \begin{cases}
+    1, &amp; a = a^*(s) \\
+    0, &amp; a \neq a^*(s)
+    \end{cases}"></div><a class="lecture-equation-number" href="#lecture-equation-39" aria-label="公式 4">(4)</a></div>
+<p>其中 <span class="math-inline" data-tex="a^*(s) = \arg\max_a q_*(s, a)"></span>，最优动作价值定义为：</p>
+<div class="lecture-equation" id="lecture-equation-40"><div class="math-block" data-tex="q_*(s, a) \doteq \sum_{r \in \mathcal{R}} p(r \mid s, a) r + \gamma \sum_{s&#x27; \in \mathcal{S}} p(s&#x27; \mid s, a) v_*(s&#x27;)"></div></div>
+</div>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p>最优策略的元素形式为：</p>
+<div class="lecture-equation" id="lecture-equation-41"><div class="math-block" data-tex="\pi^*(s) = \arg\max_{\pi \in \Pi(s)} \sum_{a \in \mathcal{A}} \pi(a \mid s) q_*(s, a)"></div></div>
+<p>由3.3.1节的结论，加权和 <span class="math-inline" data-tex="\sum_a \pi(a \mid s) q_*(s, a)"></span> 在策略将全部概率赋予最大动作价值的动作时取得最大值，因此上述贪心策略是最优策略。</p>
+</div>
+<p>关于最优策略，有两点重要性质：</p>
+<ul>
+<li><p><strong>唯一性</strong>：最优状态价值 <span class="math-inline" data-tex="v^*"></span> 是唯一的，但对应的最优策略不一定唯一，可能存在多个策略达到相同的最优状态价值。</p></li>
+<li><p><strong>随机性</strong>：最优策略可以是随机的也可以是确定性的，但一定存在确定性的贪心最优策略。</p></li>
+</ul>
+</section>
+<section class="document-section note-panel" aria-labelledby="影响最优策略的因素">
+<h2 class="unnumbered" tabindex="-1" id="影响最优策略的因素">3.5 影响最优策略的因素 <a class="header-anchor" href="#影响最优策略的因素" aria-label="章节链接">&#8203;</a></h2>
+<p>通过贝尔曼最优方程可以分析影响最优策略的因素。从方程形式可以看出，最优状态价值与最优策略由三个要素决定：即时奖励 <span class="math-inline" data-tex="r"></span>、折扣因子 <span class="math-inline" data-tex="\gamma"></span>、环境模型 <span class="math-inline" data-tex="p(s&#x27; \mid s,a)"></span> 和 <span class="math-inline" data-tex="p(r \mid s,a)"></span>。</p>
+<h3 class="unnumbered" tabindex="-1" id="折扣因子的影响">折扣因子的影响 <a class="header-anchor" href="#折扣因子的影响" aria-label="章节链接">&#8203;</a></h3>
+<p>折扣因子 <span class="math-inline" data-tex="\gamma"></span> 决定了智能体的“远见程度”：</p>
+<ul>
+<li><p>当 <span class="math-inline" data-tex="\gamma"></span> 较大时（如 <span class="math-inline" data-tex="\gamma=0.9"></span>），智能体更看重长期回报，愿意承担短期风险以获取更高的长期收益，甚至愿意穿过禁区到达目标区域。</p></li>
+<li><p>当 <span class="math-inline" data-tex="\gamma"></span> 较小时（如 <span class="math-inline" data-tex="\gamma=0.5"></span>），智能体变得短视，会规避短期风险，选择更保守的路径绕开禁区。</p></li>
+<li><p>当 <span class="math-inline" data-tex="\gamma=0"></span> 时，智能体完全只看即时奖励，无法规划到达目标的路径。</p></li>
+</ul>
+<p>此外，状态价值的空间分布呈现出“离目标越近价值越高”的规律，这正是折扣因子作用的体现：路径越长，未来奖励的折扣衰减越严重。</p>
+<h3 class="unnumbered" tabindex="-1" id="奖励值的影响">奖励值的影响 <a class="header-anchor" href="#奖励值的影响" aria-label="章节链接">&#8203;</a></h3>
+<p>调整奖励值可以改变智能体的行为偏好。例如增大禁区的惩罚（如从-1改为-10），最优策略将主动避开所有禁区。</p>
+<p>但奖励值的调整并非都会改变最优策略，最优策略对奖励的仿射变换具有不变性。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 3.6 最优策略不变性</p>
+</div>
+<p>设原MDP的最优状态价值为 <span class="math-inline" data-tex="v^*"></span>，满足 <span class="math-inline" data-tex="v^* = \max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi v^*)"></span>。若将所有奖励做仿射变换 <span class="math-inline" data-tex="r \to \alpha r + \beta"></span>（其中 <span class="math-inline" data-tex="\alpha &gt; 0"></span>，<span class="math-inline" data-tex="\alpha, \beta \in \mathbb{R}"></span>），则新的最优状态价值为：</p>
+<div class="lecture-equation is-numbered" id="lecture-equation-42"><div class="math-block" data-tex="v&#x27; = \alpha v^* + \frac{\beta}{1-\gamma} \boldsymbol{1}"></div><a class="lecture-equation-number" href="#lecture-equation-42" aria-label="公式 5">(5)</a></div>
+<p>其中 <span class="math-inline" data-tex="\boldsymbol{1}"></span> 为全1向量。由此得到的最优策略与原最优策略完全相同，即最优策略在奖励的仿射变换下保持不变。</p>
+</div>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p>奖励做仿射变换后，策略的即时奖励向量变为 <span class="math-inline" data-tex="\boldsymbol{r}_\pi&#x27; = \alpha \boldsymbol{r}_\pi + \beta \boldsymbol{1}"></span>，新的贝尔曼最优方程为：</p>
+<div class="lecture-equation" id="lecture-equation-43"><div class="math-block" data-tex="v&#x27; = \max_{\pi \in \Pi} \left( \alpha \boldsymbol{r}_\pi + \beta \boldsymbol{1} + \gamma \boldsymbol{P}_\pi v&#x27; \right)"></div></div>
+<p>我们猜测解的形式为 <span class="math-inline" data-tex="v&#x27; = \alpha v^* + c \boldsymbol{1}"></span>，其中 <span class="math-inline" data-tex="c = \beta/(1-\gamma)"></span>，代入方程右端：</p>
+<div class="lecture-equation" id="lecture-equation-44"><div class="math-block" data-tex="\begin{aligned}
+    \max_\pi \left( \alpha \boldsymbol{r}_\pi + \beta \boldsymbol{1} + \gamma \boldsymbol{P}_\pi (\alpha v^* + c \boldsymbol{1}) \right)
+    &amp;= \max_\pi \left( \alpha \boldsymbol{r}_\pi + \beta \boldsymbol{1} + \alpha \gamma \boldsymbol{P}_\pi v^* + c\gamma \boldsymbol{1} \right) \\
+    &amp;= \alpha \max_\pi \left( \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi v^* \right) + (\beta + c\gamma) \boldsymbol{1}
+    \end{aligned}"></div></div>
+<p>其中利用了 <span class="math-inline" data-tex="\boldsymbol{P}_\pi \boldsymbol{1} = \boldsymbol{1}"></span> 的性质。</p>
+<p>由于 <span class="math-inline" data-tex="v^* = \max_\pi (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi v^*)"></span>，代入得：</p>
+<div class="lecture-equation" id="lecture-equation-45"><div class="math-block" data-tex="\text{右端} = \alpha v^* + (\beta + c\gamma) \boldsymbol{1}"></div></div>
+<p>令其等于左端 <span class="math-inline" data-tex="\alpha v^* + c \boldsymbol{1}"></span>，解得 <span class="math-inline" data-tex="c = \beta + c\gamma"></span>，即 <span class="math-inline" data-tex="c = \beta/(1-\gamma)"></span>，与假设一致。</p>
+<p>因此 <span class="math-inline" data-tex="v&#x27; = \alpha v^* + \frac{\beta}{1-\gamma} \boldsymbol{1}"></span> 是新方程的解。由于解唯一，这就是新的最优状态价值。</p>
+<p>由于仿射变换不改变动作价值之间的相对大小关系，因此贪心最优策略保持不变。</p>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="避免无意义绕路">避免无意义绕路 <a class="header-anchor" href="#避免无意义绕路" aria-label="章节链接">&#8203;</a></h3>
+<p>一个常见的疑问是：如果每步移动的即时奖励为0，最优策略是否会在到达目标前无意义地绕路？</p>
+<p>答案是否定的。即使每步即时奖励为0，折扣因子也会自动促使智能体尽快到达目标：绕路会增加轨迹长度，导致未来目标奖励的折扣衰减更严重，从而降低总回报。因此，更短的轨迹对应更高的折扣回报，最优策略不会选择无意义的绕路。</p>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>备注</p>
+</div>
+<p>为每步移动增加负奖励以促使智能体走最短路径，本质上是对奖励做仿射变换，并不会改变最优策略。折扣因子本身已经隐含了“尽快到达目标”的激励。</p>
+</div>
+</section>
+<section class="document-section note-panel" aria-labelledby="本章小结">
+<h2 class="unnumbered" tabindex="-1" id="本章小结">3.6 本章小结 <a class="header-anchor" href="#本章小结" aria-label="章节链接">&#8203;</a></h2>
+<p>本章的核心概念是最优策略与最优状态价值：若一个策略在所有状态上的状态价值都不低于其他任何策略，则称其为最优策略，对应的状态价值为最优状态价值。</p>
+<p>本章的核心工具是贝尔曼最优方程，它是一个具有压缩性质的非线性不动点方程。通过压缩映射定理可以证明：该方程存在唯一的最优状态价值解，且可通过迭代算法指数收敛到该解；对应的贪心策略即为最优策略。</p>
+<p>本章的结论是后续值迭代、策略迭代等核心算法的理论基础。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="常见问题解答">
+<h2 class="unnumbered" tabindex="-1" id="常见问题解答">3.7 常见问题解答 <a class="header-anchor" href="#常见问题解答" aria-label="章节链接">&#8203;</a></h2>
+<ul>
+<li><p><strong>Q：最优策略的定义是什么？</strong></p>
+<p>A：若一个策略对应的状态价值在所有状态上都大于等于其他任意策略，则该策略为最优策略。该定义适用于表格型强化学习，函数近似场景下需要采用其他评价标准。</p></li>
+<li><p><strong>Q：贝尔曼最优方程为什么重要？</strong></p>
+<p>A：它同时刻画了最优策略与最优状态价值，求解该方程即可得到最优策略与对应的最优状态价值。</p></li>
+<li><p><strong>Q：贝尔曼最优方程属于贝尔曼方程吗？</strong></p>
+<p>A：是的。贝尔曼最优方程是一类特殊的贝尔曼方程，其对应的策略为最优策略。</p></li>
+<li><p><strong>Q：贝尔曼最优方程的解是唯一的吗？</strong></p>
+<p>A：最优状态价值的解是唯一的，但对应的最优策略不一定唯一，可能存在多个策略达到相同的最优状态价值。</p></li>
+<li><p><strong>Q：分析贝尔曼最优方程解的关键性质是什么？</strong></p>
+<p>A：方程右端的映射是压缩映射，因此可以应用压缩映射定理分析解的存在性、唯一性与收敛性。</p></li>
+<li><p><strong>Q：最优策略一定存在吗？</strong></p>
+<p>A：是的，基于贝尔曼最优方程的分析，最优策略总是存在的。</p></li>
+<li><p><strong>Q：最优策略是随机的还是确定性的？</strong></p>
+<p>A：最优策略既可以是随机的也可以是确定性的，但一定存在确定性的贪心最优策略。</p></li>
+<li><p><strong>Q：如何得到最优策略？</strong></p>
+<p>A：通过迭代算法求解贝尔曼最优方程，得到最优状态价值后，取贪心策略即可得到最优策略。后续章节介绍的各类强化学习算法，本质上都是在不同设定下求解最优策略。</p></li>
+<li><p><strong>Q：减小折扣因子对最优策略有什么影响？</strong></p>
+<p>A：折扣因子减小会使最优策略变得更短视，智能体不愿承担短期风险，即使长期收益更高。</p></li>
+<li><p><strong>Q：折扣因子设为0会怎样？</strong></p>
+<p>A：此时智能体完全只关注即时奖励，会选择当前即时奖励最大的动作，不考虑长期后果。</p></li>
+<li><p><strong>Q：所有奖励同时增加相同数值，最优状态价值和最优策略会变化吗？</strong></p>
+<p>A：最优状态价值会增加（满足仿射变换公式），但最优策略保持不变。因为这是奖励的仿射变换，不改变动作价值的相对大小。</p></li>
+<li><p><strong>Q：为了让智能体不绕路，需要给每步加负奖励吗？</strong></p>
+<p>A：不需要。首先，给所有步骤加相同负奖励是仿射变换，不改变最优策略；其次，折扣因子本身会激励智能体尽快到达目标，绕路会降低折扣回报。</p></li>
+</ul>
+
+</section>
+</div>
+<details class="lecture-original note-details" @toggle="toggleOriginal">
+  <summary>对照原版 PDF<span>保留原页码与讲义目录</span></summary>
+  <div class="lecture-original-content">
+    <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
+    <p><a :href="pdfUrl" target="_blank" rel="noopener">在新窗口打开原版 PDF</a></p>
+    <ClientOnly><PdfViewer v-if="showOriginal" :src="pdfUrl" title="最优状态价值与贝尔曼最优方程" :outline="outline" /></ClientOnly>
+  </div>
+</details>
 </article>

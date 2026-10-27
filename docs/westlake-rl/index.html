@@ -2,7 +2,7 @@
 <header class="document-intro note-hero">
   <p class="note-kicker">西湖 RL 笔记<span>概念、推导与算法</span></p>
   <h1 id="西湖大学强化学习笔记" tabindex="-1">西湖大学强化学习笔记 <a class="header-anchor" href="#西湖大学强化学习笔记" aria-label="Permalink to &quot;西湖大学强化学习笔记&quot;">&ZeroWidthSpace;</a></h1>
-  <p class="note-deck">以概念笔记连接课程讲义，循序理解价值函数、策略梯度、随机近似与强化学习算法。</p>
+  <p class="note-deck">以概念笔记连接课程讲义，循序理解价值函数、策略梯度、随机近似与强化学习算法。课程讲义采用连续的网页学术排版，原版 PDF 可在文末对照阅读。</p>
   <div class="note-chips"><span>强化学习</span><span>策略梯度</span><span>价值函数</span><span>贝尔曼方程</span></div>
 </header>
 <nav class="note-jump" aria-label="本篇阅读导航">
@@ -27,11 +27,11 @@
 <section class="document-section note-panel" aria-labelledby="课程讲义">
 <h2 id="课程讲义" tabindex="-1">课程讲义 <a class="header-anchor" href="#课程讲义" aria-label="Permalink to &quot;课程讲义&quot;">&ZeroWidthSpace;</a></h2>
 <ChapterCards :items="[
-  { label: '第 1–2 讲 · PDF / 5 页', title: '强化学习基本概念与贝尔曼方程', link: '/westlake-rl/强化学习基本概念与贝尔曼方程/', description: '建立强化学习的基本概念，理解贝尔曼方程。' },
-  { label: '第 3 讲 · PDF / 9 页', title: '最优状态价值与贝尔曼最优方程', link: '/westlake-rl/最优状态价值与贝尔曼最优方程/', description: '从状态价值走向最优策略与最优方程。' },
-  { label: '第 4 讲 · PDF / 11 页', title: '值迭代与策略迭代', link: '/westlake-rl/值迭代与策略迭代/', description: '通过迭代求解价值函数与策略。' },
-  { label: '第 5 讲 · PDF / 11 页', title: '蒙特卡洛方法', link: '/westlake-rl/蒙特卡洛方法/', description: '通过采样轨迹估计价值。' },
-  { label: '第 6 讲 · PDF / 13 页', title: '随机近似', link: '/westlake-rl/随机近似/课程讲义', description: '随机近似算法的课程讲义。' }
+  { label: '第 1–2 讲 · 网页讲义 / 附原版 PDF', title: '强化学习基本概念与贝尔曼方程', link: '/westlake-rl/强化学习基本概念与贝尔曼方程/', description: '从状态、动作与回报出发，建立价值函数的递归关系，并推导贝尔曼方程与策略评估的收敛性。' },
+  { label: '第 3 讲 · 网页讲义 / 附原版 PDF', title: '最优状态价值与贝尔曼最优方程', link: '/westlake-rl/最优状态价值与贝尔曼最优方程/', description: '从策略改进进入最优状态价值，通过压缩映射理解贝尔曼最优方程的唯一解与贪心最优策略。' },
+  { label: '第 4 讲 · 网页讲义 / 附原版 PDF', title: '值迭代与策略迭代', link: '/westlake-rl/值迭代与策略迭代/', description: '沿着策略评估与策略改进两条线索，比较值迭代、策略迭代与截断策略迭代的更新方式和收敛性。' },
+  { label: '第 5 讲 · 网页讲义 / 附原版 PDF', title: '蒙特卡洛方法', link: '/westlake-rl/蒙特卡洛方法/', description: '用采样回报替代已知模型，从 MC Basic 到 Exploring Starts 与 ε-greedy，理解估计、控制和探索之间的关系。' },
+  { label: '第 6 讲 · 网页讲义 / 附原版 PDF', title: '随机近似', link: '/westlake-rl/随机近似/课程讲义', description: '从增量均值估计进入 Robbins–Monro 递推、Dvoretzky 收敛定理与随机梯度下降，连接采样噪声和收敛条件。' }
 ]" />
 </section>
 </div>

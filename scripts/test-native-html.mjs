@@ -64,6 +64,9 @@ test('editable HTML formulas compile to accessible static math', () => {
   assert.equal((html.match(/<mjx-container/g) ?? []).length, 2)
   assert.doesNotMatch(html, /data-mjx-error|data-tex=/)
   assert.match(html, /<mjx-assistive-mml/)
+  const subscript = md.render('---\ncontentFormat: html\n---\n<span class="math-inline" data-tex="p_i"></span>', {})
+  assert.match(subscript, /--math-baseline:-[\d.]+ex/)
+  assert.match(md.render('Inline $p_i$ in an ordinary Markdown article.', {}), /--math-baseline:-[\d.]+ex/)
 })
 
 test('visible notebooks have editorial structure, usable anchors and clean summaries', () => {
@@ -81,7 +84,10 @@ test('visible notebooks have editorial structure, usable anchors and clean summa
     for (const match of content.matchAll(/<section class="document-section note-panel" aria-labelledby="([^"]+)"/g)) {
       assert.ok(ids.includes(match[1]), `${file}: ${match[1]}`)
     }
-    for (const match of content.matchAll(/href="#([^"]+)"/g)) assert.ok(ids.includes(match[1]), `${file}: ${match[1]}`)
+    // Equations and figures can also be valid fragment targets.
+    const anchorIds = [...content.matchAll(/\bid="([^"]+)"/g)].map(match => match[1])
+    assert.equal(anchorIds.length, new Set(anchorIds).size, `${file}: duplicate anchor`)
+    for (const match of content.matchAll(/href="#([^"]+)"/g)) assert.ok(anchorIds.includes(match[1]), `${file}: ${match[1]}`)
     diagrams += (content.match(/<figure class="note-diagram/g) ?? []).length
     disclosures += (content.match(/<details class="note-details"/g) ?? []).length
   }

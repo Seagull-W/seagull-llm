@@ -1,0 +1,13 @@
+/* Article-specific numbering; shared typography lives in academic-reading.css. */
+.reward-academic { counter-reset: academic-section; }
+.reward-academic .note-panel > h2 { counter-increment: academic-section; }
+.reward-academic .note-panel > h2::before { content: counter(academic-section) '\2002'; color: var(--vp-c-text-2); font-weight: 400; }
+.reward-academic .note-diagram figcaption::before { content: '图 1\2002'; font-weight: 600; }
+.reward-academic .reward-equation { position: relative; padding-right: 36px; margin: 28px 0; scroll-margin-top: 120px; }
+.Layout .VPDoc .vp-doc .reward-academic .reward-equation-number {
+  display: block; position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  color: var(--vp-c-text-2); font: 15px/1.5 Georgia, serif; text-decoration: none;
+}
+.reward-academic .reward-equation:target { outline: 1px solid var(--vp-c-divider); outline-offset: 8px; }
+@media (max-width: 760px) { .reward-academic .reward-equation { padding-right: 28px; } }
+@media print { .reward-academic .reward-equation { break-inside: avoid; } }

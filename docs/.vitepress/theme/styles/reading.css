@@ -57,6 +57,11 @@
 .VPDoc .vp-doc a:not(.header-anchor):not(.chapter-card) { background-image: none; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--vp-c-brand-1) 35%, transparent); text-underline-offset: 3px; }
 .VPDoc .vp-doc a:hover { text-decoration-color: currentColor; }
 .VPDoc .vp-doc .header-anchor { background-image: none; }
+/* Custom headings have no default 24px top padding. Keep permalink targets
+   aligned with the heading and reveal their symbol only for keyboard focus. */
+.VPDoc .vp-doc :is(h1,h2,h3,h4,h5,h6) .header-anchor { top: 0; }
+.VPDoc .vp-doc :is(h1,h2,h3,h4,h5,h6):hover .header-anchor { opacity: 0; }
+.VPDoc .vp-doc :is(h1,h2,h3,h4,h5,h6) .header-anchor:focus-visible { opacity: 1; outline: 2px solid currentColor; outline-offset: 3px; }
 .VPDoc .vp-doc :not(pre) > code { padding: 2px 5px; border: 0; border-radius: 4px; font-size: 0.86em; color: var(--vp-c-text-1); background: var(--vp-c-bg-soft); overflow-wrap: anywhere; }
 /* Follow Shiki's paired themes so light-mode token colors stay readable. */
 .VPDoc .vp-doc div[class*='language-'] { background: var(--vp-code-block-bg); border: 1px solid var(--vp-c-divider); border-radius: 8px; box-shadow: none; margin: 24px 0; }

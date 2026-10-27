@@ -1,20 +1,217 @@
-<script setup>
-import PdfViewer from '../../.vitepress/components/PdfViewer.vue'
+<script setup lang="ts">
+import '../lecture-academic.css'
+import { defineAsyncComponent, shallowRef } from 'vue'
 import pdfUrl from './强化学习基本概念与贝尔曼方程.pdf?url'
 import outline from './目录.json'
+const PdfViewer = defineAsyncComponent(() => import('../../.vitepress/components/PdfViewer.vue'))
+const showOriginal = shallowRef(false)
+function toggleOriginal(event: Event) {
+  showOriginal.value = (event.target as HTMLDetailsElement).open
+}
 </script>
 
-<article class="native-document format-course" data-format="course" aria-label="第 1–2 讲：强化学习基本概念与贝尔曼方程" data-design="linux-notebook">
+<article class="native-document format-course academic-lecture" data-format="course" data-design="linux-notebook" aria-label="第 1–2 讲：强化学习基本概念与贝尔曼方程">
 <header class="document-intro note-hero">
-  <p class="note-kicker">西湖 RL 笔记<span>课程讲义</span></p>
-  <h1 id="note-title">第 1–2 讲：强化学习基本概念与贝尔曼方程 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
-  <p class="note-deck">第 1–2 讲课程资料：从强化学习基本概念进入价值函数与贝尔曼方程，保留讲义目录和逐页阅读。</p>
-  <div class="note-chips"><span>强化学习</span><span>贝尔曼方程</span></div>
+  <p class="note-kicker">西湖 RL 笔记<span>第 1–2 讲 · 课程讲义</span></p>
+  <h1 id="note-title" tabindex="-1">强化学习基本概念与贝尔曼方程 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
+  <p class="note-deck">从状态、动作与回报出发，建立价值函数的递归关系，并推导贝尔曼方程与策略评估的收敛性。</p>
+  <div class="note-chips"><span>基础概念</span><span>贝尔曼方程</span><span>策略评估</span></div>
+  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记</p>
 </header>
+<nav class="note-jump" aria-label="本篇阅读导航"><a href="#第一讲强化学习基本概念">第一讲：强化学习基本概念</a>
+<a href="#第二讲贝尔曼方程">第二讲：贝尔曼方程</a></nav>
+<div id="reading-context" class="lecture-body">
 
-
-<section class="document-section note-panel" aria-labelledby="reading-context">
-<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
-<PdfViewer :src="pdfUrl" title="强化学习基本概念与贝尔曼方程" :outline="outline" />
+<section class="document-section note-panel" aria-labelledby="第一讲强化学习基本概念">
+<h2 tabindex="-1" id="第一讲强化学习基本概念">第一讲：强化学习基本概念 <a class="header-anchor" href="#第一讲强化学习基本概念" aria-label="章节链接">&#8203;</a></h2>
+<p>强化学习的核心框架基于马尔可夫决策过程，包含以下基础构成要素：</p>
+<div class="definitionbox lecture-box">
+<div class="lecture-box-title">
+<p>定义</p>
+</div>
+<p><strong>状态（State）</strong>：状态是智能体（Agent）对自身所处环境的表征。</p>
+<ul>
+<li><p><strong>状态空间</strong>（State Space）：所有可能状态构成的集合，记为 <span class="math-inline" data-tex="\mathcal{S}"></span>；任意单个状态记为 <span class="math-inline" data-tex="s"></span>，满足 <span class="math-inline" data-tex="s \in \mathcal{S}"></span>。</p></li>
+</ul>
+</div>
+<div class="definitionbox lecture-box">
+<div class="lecture-box-title">
+<p>定义</p>
+</div>
+<p><strong>动作（Action）</strong>：智能体在特定状态下可执行的操作。</p>
+<ul>
+<li><p>状态 <span class="math-inline" data-tex="s"></span> 对应的动作空间记为 <span class="math-inline" data-tex="\mathcal{A}(s)"></span>；任意单个动作记为 <span class="math-inline" data-tex="a"></span>，满足 <span class="math-inline" data-tex="a \in \mathcal{A}(s)"></span>。</p></li>
+</ul>
+</div>
+<div class="definitionbox lecture-box">
+<div class="lecture-box-title">
+<p>定义</p>
+</div>
+<p><strong>状态转移（State Transition）</strong>：智能体在状态 <span class="math-inline" data-tex="s"></span> 执行动作 <span class="math-inline" data-tex="a"></span> 后，环境转移到下一状态的随机过程，由条件概率描述：</p>
+<div class="lecture-equation" id="lecture-equation-1"><div class="math-block" data-tex="p(s&#x27; \mid s, a) = \mathbb{P}(S_{t+1}=s&#x27; \mid S_t=s, A_t=a)"></div></div>
+<p>其中 <span class="math-inline" data-tex="S_t"></span>、<span class="math-inline" data-tex="A_t"></span> 分别表示第 <span class="math-inline" data-tex="t"></span> 决策步的状态与动作。</p>
+</div>
+<div class="definitionbox lecture-box">
+<div class="lecture-box-title">
+<p>定义</p>
+</div>
+<p><strong>策略（Policy）</strong>：策略定义了智能体的行为规则，即每个状态下的动作选择方式，记为 <span class="math-inline" data-tex="\pi"></span>。</p>
+<ul>
+<li><p>随机策略表示为条件概率分布 <span class="math-inline" data-tex="\pi(a \mid s)"></span>，含义为：处于状态 <span class="math-inline" data-tex="s"></span> 时选择动作 <span class="math-inline" data-tex="a"></span> 的概率，满足归一性</p>
+<div class="lecture-equation" id="lecture-equation-2"><div class="math-block" data-tex="\sum_{a \in \mathcal{A}(s)} \pi(a \mid s) = 1 ."></div></div></li>
+</ul>
+</div>
+<div class="definitionbox lecture-box">
+<div class="lecture-box-title">
+<p>定义</p>
+</div>
+<p><strong>奖励（Reward）</strong>：奖励是环境向智能体反馈的标量信号，是强化学习的优化目标来源。</p>
+<ul>
+<li><p>即时奖励：在状态 <span class="math-inline" data-tex="s"></span> 执行动作 <span class="math-inline" data-tex="a"></span> 后获得的期望奖励记为 <span class="math-inline" data-tex="r(s,a)"></span>，即</p>
+<div class="lecture-equation" id="lecture-equation-3"><div class="math-block" data-tex="r(s,a) = \mathbb{E}\left[ R_{t+1} \mid S_t=s, A_t=a \right],"></div></div>
+<p>其中 <span class="math-inline" data-tex="R_{t+1}"></span> 是第 <span class="math-inline" data-tex="t+1"></span> 步的随机奖励变量。</p></li>
+</ul>
+</div>
+<div class="definitionbox lecture-box">
+<div class="lecture-box-title">
+<p>定义</p>
+</div>
+<p><strong>折扣回报（Discounted Return）</strong>：回报是从当前时刻起，未来所有奖励的累积和；引入折扣因子以平衡即时奖励与长期奖励。</p>
+<ul>
+<li><p>折扣因子 <span class="math-inline" data-tex="\gamma \in [0,1)"></span>，保证无限步交互下回报有限，取值越小表示智能体越看重即时奖励。</p></li>
+<li><p>第 <span class="math-inline" data-tex="t"></span> 步的折扣回报定义为：</p>
+<div class="lecture-equation" id="lecture-equation-4"><div class="math-block" data-tex="G_t = R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \dots = \sum_{k=0}^{\infty} \gamma^k R_{t+k+1}."></div></div>
+<p>回报 <span class="math-inline" data-tex="G_t"></span> 是依赖于轨迹的随机变量。</p></li>
+</ul>
+</div>
+<div class="definitionbox lecture-box">
+<div class="lecture-box-title">
+<p>定义</p>
+</div>
+<p><strong>回合与任务分类</strong>：</p>
+<ul>
+<li><p><strong>回合（Episode）</strong>：具有明确终止状态的有限长度交互轨迹。</p></li>
+<li><p><strong>回合式任务（Episodic Tasks）</strong>：任务存在终止状态，交互过程可划分为独立的回合。</p></li>
+<li><p><strong>持续性任务（Continuing Tasks）</strong>：任务无终止状态，交互过程无限持续。</p></li>
+</ul>
+</div>
+<div class="definitionbox lecture-box">
+<div class="lecture-box-title">
+<p>定义</p>
+</div>
+<p><strong>马尔可夫决策过程（MDP）</strong>：马尔可夫决策过程是强化学习的标准数学模型，核心满足<strong>马尔可夫性</strong>：下一状态仅由当前状态和动作决定，与历史状态无关。</p>
+<div class="lecture-equation" id="lecture-equation-5"><div class="math-block" data-tex="\mathbb{P}(S_{t+1} \mid S_t, A_t, S_{t-1}, A_{t-1}, \dots) = \mathbb{P}(S_{t+1} \mid S_t, A_t)."></div></div>
+<p>完整的 MDP 由五元组 <span class="math-inline" data-tex="(\mathcal{S}, \mathcal{A}, p, r, \gamma)"></span> 构成：</p>
+<ul>
+<li><p>状态空间 <span class="math-inline" data-tex="\mathcal{S}"></span></p></li>
+<li><p>动作空间 <span class="math-inline" data-tex="\mathcal{A}"></span></p></li>
+<li><p>状态转移概率函数 <span class="math-inline" data-tex="p(s&#x27; \mid s,a)"></span></p></li>
+<li><p>期望奖励函数 <span class="math-inline" data-tex="r(s,a)"></span></p></li>
+<li><p>折扣因子 <span class="math-inline" data-tex="\gamma"></span></p></li>
+</ul>
+</div>
 </section>
+<section class="document-section note-panel" aria-labelledby="第二讲贝尔曼方程">
+<h2 tabindex="-1" id="第二讲贝尔曼方程">第二讲：贝尔曼方程 <a class="header-anchor" href="#第二讲贝尔曼方程" aria-label="章节链接">&#8203;</a></h2>
+<p>贝尔曼方程是强化学习的核心方程，刻画了价值函数的递归关系，是策略评估与优化的基础。</p>
+<h3 class="unnumbered" tabindex="-1" id="状态价值函数">1. 状态价值函数 <a class="header-anchor" href="#状态价值函数" aria-label="章节链接">&#8203;</a></h3>
+<p>在策略 <span class="math-inline" data-tex="\pi"></span> 下，状态价值函数定义为：从状态 <span class="math-inline" data-tex="s"></span> 出发，始终遵循策略 <span class="math-inline" data-tex="\pi"></span> 交互所能获得的期望折扣回报：</p>
+<div class="lecture-equation" id="lecture-equation-6"><div class="math-block" data-tex="v_\pi(s) = \mathbb{E}_\pi\left[ G_t \mid S_t = s \right]."></div></div>
+<ul>
+<li><p><span class="math-inline" data-tex="v_\pi(s)"></span> 是状态 <span class="math-inline" data-tex="s"></span> 的函数，取值完全依赖于策略 <span class="math-inline" data-tex="\pi"></span>；</p></li>
+<li><p>价值函数本质是回报的期望，用于量化不同状态的长期优劣程度。</p></li>
+</ul>
+<h3 class="unnumbered" tabindex="-1" id="贝尔曼期望方程推导">2. 贝尔曼期望方程推导 <a class="header-anchor" href="#贝尔曼期望方程推导" aria-label="章节链接">&#8203;</a></h3>
+<p>利用回报的递归分解关系 <span class="math-inline" data-tex="G_t = R_{t+1} + \gamma G_{t+1}"></span>，代入状态价值函数的定义展开：</p>
+<div class="lecture-equation" id="lecture-equation-7"><div class="math-block" data-tex="\begin{align*}
+  v_\pi(s) &amp;= \mathbb{E}_\pi\left[ G_t \mid S_t = s \right] \\
+           &amp;= \mathbb{E}_\pi\left[ R_{t+1} + \gamma G_{t+1} \mid S_t = s \right] \\
+           &amp;= \mathbb{E}_\pi\left[ R_{t+1} \mid S_t = s \right] + \gamma \cdot \mathbb{E}_\pi\left[ G_{t+1} \mid S_t = s \right].
+\end{align*}"></div></div>
+<p>对第一项（即时奖励期望）按策略与状态转移展开：</p>
+<div class="lecture-equation" id="lecture-equation-8"><div class="math-block" data-tex="\mathbb{E}_\pi\left[ R_{t+1} \mid S_t = s \right] = \sum_{a \in \mathcal{A}(s)} \pi(a \mid s) \cdot r(s,a)."></div></div>
+<p>对第二项（未来回报期望），由马尔可夫性可得 <span class="math-inline" data-tex="\mathbb{E}_\pi\left[ G_{t+1} \mid S_t=s, S_{t+1}=s&#x27; \right] = v_\pi(s&#x27;)"></span>，因此：</p>
+<div class="lecture-equation" id="lecture-equation-9"><div class="math-block" data-tex="\mathbb{E}_\pi\left[ G_{t+1} \mid S_t = s \right] = \sum_{a \in \mathcal{A}(s)} \pi(a \mid s) \sum_{s&#x27; \in \mathcal{S}} p(s&#x27; \mid s,a) \cdot v_\pi(s&#x27;)."></div></div>
+<p>合并两项后得到<strong>贝尔曼期望方程</strong>：</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理</p>
+</div>
+<p><strong>贝尔曼期望方程（Bellman Expectation Equation）</strong></p>
+<div class="lecture-equation is-numbered" id="eq:bellman_expect"><div class="math-block" data-tex="v_\pi(s) = \sum_{a \in \mathcal{A}(s)} \pi(a \mid s) \left( r(s,a) + \gamma \sum_{s&#x27; \in \mathcal{S}} p(s&#x27; \mid s,a) \, v_\pi(s&#x27;) \right), \quad \forall s \in \mathcal{S}."></div><a class="lecture-equation-number" href="#eq:bellman_expect" aria-label="公式 1">(1)</a></div>
+<p><strong>直观含义</strong>：当前状态的价值 = 即时奖励的期望 + 折扣后所有后续状态价值的加权期望。</p>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="矩阵向量形式">3. 矩阵向量形式 <a class="header-anchor" href="#矩阵向量形式" aria-label="章节链接">&#8203;</a></h3>
+<p>对于有限离散状态空间，可将贝尔曼方程写为紧凑的矩阵形式。 定义：</p>
+<ul>
+<li><p>状态价值向量 <span class="math-inline" data-tex="\boldsymbol{v}_\pi = \left[ v_\pi(s_1), v_\pi(s_2), \dots, v_\pi(s_n) \right]^T \in \mathbb{R}^n"></span>；</p></li>
+<li><p>策略即时奖励向量 <span class="math-inline" data-tex="\boldsymbol{r}_\pi = \left[ r_\pi(s_1), r_\pi(s_2), \dots, r_\pi(s_n) \right]^T \in \mathbb{R}^n"></span>，其中 <span class="math-inline" data-tex="r_\pi(s) = \sum_a \pi(a|s) r(s,a)"></span>；</p></li>
+<li><p>策略状态转移矩阵 <span class="math-inline" data-tex="\boldsymbol{P}_\pi \in \mathbb{R}^{n \times n}"></span>，元素 <span class="math-inline" data-tex="(\boldsymbol{P}_\pi)_{i,j} = \sum_a \pi(a \mid s_i) p(s_j \mid s_i,a)"></span>。</p></li>
+</ul>
+<p>则贝尔曼方程的矩阵形式为：</p>
+<div class="lecture-equation is-numbered" id="eq:bellman_matrix"><div class="math-block" data-tex="\boldsymbol{v}_\pi = \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_\pi."></div><a class="lecture-equation-number" href="#eq:bellman_matrix" aria-label="公式 2">(2)</a></div>
+<h3 class="unnumbered" tabindex="-1" id="策略评估贝尔曼方程的求解">4. 策略评估：贝尔曼方程的求解 <a class="header-anchor" href="#策略评估贝尔曼方程的求解" aria-label="章节链接">&#8203;</a></h3>
+<p>策略评估（Policy Evaluation）即给定固定策略 <span class="math-inline" data-tex="\pi"></span>，求解贝尔曼方程以得到对应状态价值函数 <span class="math-inline" data-tex="v_\pi"></span>。</p>
+<h4 class="unnumbered" tabindex="-1" id="解法1解析闭式解">解法1：解析闭式解 <a class="header-anchor" href="#解法1解析闭式解" aria-label="章节链接">&#8203;</a></h4>
+<p>对矩阵形式直接代数整理求解：</p>
+<div class="lecture-equation" id="lecture-equation-12"><div class="math-block" data-tex="\boldsymbol{v}_\pi = \left( \boldsymbol{I} - \gamma \boldsymbol{P}_\pi \right)^{-1} \boldsymbol{r}_\pi,"></div></div>
+<p>其中 <span class="math-inline" data-tex="\boldsymbol{I}"></span> 为 <span class="math-inline" data-tex="n"></span> 阶单位矩阵。该方法仅适用于小规模状态空间，实际场景中状态数量巨大时，矩阵求逆计算复杂度极高、不可行。</p>
+<h4 class="unnumbered" tabindex="-1" id="解法2迭代法含收敛性证明">解法2：迭代法（含收敛性证明） <a class="header-anchor" href="#解法2迭代法含收敛性证明" aria-label="章节链接">&#8203;</a></h4>
+<p>通过迭代更新逐步逼近真实价值函数，迭代公式为：</p>
+<div class="lecture-equation" id="lecture-equation-13"><div class="math-block" data-tex="\boldsymbol{v}_{k+1} = \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_k."></div></div>
+<ul>
+<li><p><strong>初始值</strong>：可任意初始化 <span class="math-inline" data-tex="\boldsymbol{v}_0"></span>；</p></li>
+<li><p><strong>收敛性</strong>：当迭代步数 <span class="math-inline" data-tex="k \to \infty"></span> 时，<span class="math-inline" data-tex="\boldsymbol{v}_k \to \boldsymbol{v}_\pi"></span>。</p></li>
+</ul>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p><strong>迭代法收敛性证明（压缩映射原理）</strong></p>
+<p>设 <span class="math-inline" data-tex="\boldsymbol{v}_\pi"></span> 为方程 <a href="#eq:bellman_matrix" data-reference-type="eqref" data-reference="eq:bellman_matrix">(2)</a> 的唯一解（即真值），定义第 <span class="math-inline" data-tex="k"></span> 步的误差向量 <span class="math-inline" data-tex="\boldsymbol{\delta}_k = \boldsymbol{v}_k - \boldsymbol{v}_\pi"></span>。</p>
+<p>由迭代公式与不动点方程相减，可得误差的递推关系：</p>
+<div class="lecture-equation" id="lecture-equation-14"><div class="math-block" data-tex="\boldsymbol{\delta}_{k+1} = \boldsymbol{v}_{k+1} - \boldsymbol{v}_\pi
+    = \left(\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_k\right)
+    - \left(\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_\pi\right)
+    = \gamma \boldsymbol{P}_\pi \boldsymbol{\delta}_k ."></div></div>
+<p>对上式两边同时取无穷范数（<span class="math-inline" data-tex="\ell_\infty"></span> 范数），并结合范数的相容性（次乘法性）：</p>
+<div class="lecture-equation" id="lecture-equation-15"><div class="math-block" data-tex="\| \boldsymbol{\delta}_{k+1} \|_\infty
+    = \| \gamma \boldsymbol{P}_\pi \boldsymbol{\delta}_k \|_\infty
+    \le \gamma \cdot \| \boldsymbol{P}_\pi \|_\infty \cdot \| \boldsymbol{\delta}_k \|_\infty ."></div></div>
+<p>由于 <span class="math-inline" data-tex="\boldsymbol{P}_\pi"></span> 是行随机矩阵（每行元素非负且和为 1），其诱导的无穷范数（即最大行和）为：</p>
+<div class="lecture-equation" id="lecture-equation-16"><div class="math-block" data-tex="\| \boldsymbol{P}_\pi \|_\infty = \max_{i} \sum_{j} |(\boldsymbol{P}_\pi)_{i,j}| = 1 ."></div></div>
+<p>结合折扣因子 <span class="math-inline" data-tex="\gamma \in [0,1)"></span>，可得误差范数的递推不等式：</p>
+<div class="lecture-equation" id="lecture-equation-17"><div class="math-block" data-tex="\| \boldsymbol{\delta}_{k+1} \|_\infty \le \gamma \| \boldsymbol{\delta}_k \|_\infty ."></div></div>
+<p>递推展开至初始步：</p>
+<div class="lecture-equation" id="lecture-equation-18"><div class="math-block" data-tex="\| \boldsymbol{\delta}_k \|_\infty \le \gamma^k \| \boldsymbol{\delta}_0 \|_\infty ."></div></div>
+<p>因为 <span class="math-inline" data-tex="0 \le \gamma &lt; 1"></span>，所以当 <span class="math-inline" data-tex="k \to \infty"></span> 时，<span class="math-inline" data-tex="\gamma^k \to 0"></span>，从而有：</p>
+<div class="lecture-equation" id="lecture-equation-19"><div class="math-block" data-tex="\lim_{k \to \infty} \| \boldsymbol{\delta}_k \|_\infty = 0 ."></div></div>
+<p>这意味着向量序列 <span class="math-inline" data-tex="\{\boldsymbol{v}_k\}"></span> 在范数意义下收敛于 <span class="math-inline" data-tex="\boldsymbol{v}_\pi"></span>，即：</p>
+<div class="lecture-equation" id="lecture-equation-20"><div class="math-block" data-tex="\lim_{k \to \infty} \boldsymbol{v}_k = \boldsymbol{v}_\pi ."></div></div>
+<p>证毕。<span class="math-inline" data-tex="\square"></span></p>
+</div>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>备注</p>
+</div>
+<p>上述证明本质是<strong>压缩映射（Banach 不动点）定理</strong>在有限维向量空间的具体应用。算子 <span class="math-inline" data-tex="\mathcal{T}_\pi(\boldsymbol{v}) = \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}"></span> 是一个 <span class="math-inline" data-tex="\gamma"></span>-收缩映射，保证了迭代的线性收敛速度，收敛速率由 <span class="math-inline" data-tex="\gamma"></span> 决定（<span class="math-inline" data-tex="\gamma"></span> 越接近 0，收敛越快）。</p>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="动作价值函数">5. 动作价值函数 <a class="header-anchor" href="#动作价值函数" aria-label="章节链接">&#8203;</a></h3>
+<p>动作价值函数定义为：在状态 <span class="math-inline" data-tex="s"></span> 下执行动作 <span class="math-inline" data-tex="a"></span>，之后始终遵循策略 <span class="math-inline" data-tex="\pi"></span> 交互所能获得的期望折扣回报：</p>
+<div class="lecture-equation" id="lecture-equation-21"><div class="math-block" data-tex="q_\pi(s,a) = \mathbb{E}_\pi\left[ G_t \mid S_t = s, A_t = a \right]."></div></div>
+<p>展开后的递归形式为：</p>
+<div class="lecture-equation" id="lecture-equation-22"><div class="math-block" data-tex="q_\pi(s,a) = r(s,a) + \gamma \sum_{s&#x27; \in \mathcal{S}} p(s&#x27; \mid s,a) \, v_\pi(s&#x27;)."></div></div>
+<p>状态价值函数与动作价值函数满足如下关系：</p>
+<div class="lecture-equation" id="lecture-equation-23"><div class="math-block" data-tex="v_\pi(s) = \sum_{a \in \mathcal{A}(s)} \pi(a \mid s) \, q_\pi(s,a)."></div></div>
+
+</section>
+</div>
+<details class="lecture-original note-details" @toggle="toggleOriginal">
+  <summary>对照原版 PDF<span>保留原页码与讲义目录</span></summary>
+  <div class="lecture-original-content">
+    <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
+    <p><a :href="pdfUrl" target="_blank" rel="noopener">在新窗口打开原版 PDF</a></p>
+    <ClientOnly><PdfViewer v-if="showOriginal" :src="pdfUrl" title="强化学习基本概念与贝尔曼方程" :outline="outline" /></ClientOnly>
+  </div>
+</details>
 </article>

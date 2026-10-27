@@ -5,10 +5,8 @@ tags:
   - 贝尔曼方程
 layout: doc
 title: 第 3 讲：最优状态价值与贝尔曼最优方程
-outline: false
-aside: false
-pdf: true
-description: 第 3 讲课程资料：围绕最优状态价值与贝尔曼最优方程，继续理解最优策略的刻画。
+description: 从策略改进进入最优状态价值，通过压缩映射理解贝尔曼最优方程的唯一解与贪心最优策略。
+outline: [2, 3]
 contentFormat: html
 ---
 

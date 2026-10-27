@@ -1,0 +1,14 @@
+@font-face {
+  font-family: 'Seagull Academic Serif';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./noto-serif-sc-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Seagull Academic Serif';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./noto-serif-sc-600.woff2') format('woff2');
+}

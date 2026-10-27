@@ -1,0 +1,291 @@
+{
+  "family": "Noto Serif SC",
+  "license": "SIL OFL 1.1",
+  "character_count": 1577,
+  "pages": [
+    {
+      "path": "/linux-notes/linux-isolation.md",
+      "title": "Linux 隔离机制：Namespace、cgroups 与 seccomp"
+    },
+    {
+      "path": "/papers/post-training-guide.md",
+      "title": "公开后训练项目阅读导引"
+    },
+    {
+      "path": "/research/2026-10-14-llm-post-training-agentic-rl.md",
+      "title": "2026-10-14 后训练与 agentic RL：从轨迹奖励走向步骤反馈"
+    },
+    {
+      "path": "/research/2026-10-15-llm-post-training-agentic-rl.md",
+      "title": "2026-10-15 大模型强化学习、后训练与 agentic RL"
+    },
+    {
+      "path": "/research/2026-10-16-post-training-rl-benchmarks.md",
+      "title": "后训练与 agent 评测：基准分数究竟证明了什么"
+    },
+    {
+      "path": "/research/2026-10-16-post-training-rl-frameworks.md",
+      "title": "后训练 RL 框架：从训练闭环到 TRL、verl、OpenRLHF、slime 与 AReaL"
+    },
+    {
+      "path": "/research/2026-10-17-post-training-rl-datasets.md",
+      "title": "2026-10-17 后训练强化学习数据集：来源、记录形式与对训练的影响"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking.md",
+      "title": "强化学习中的 Reward Hacking：机制与文献整理（2022—2026）"
+    },
+    {
+      "path": "/research/2026-10-20-agent-sandbox-wrong-target.md",
+      "title": "智能体沙箱：创建延迟、空闲驻留与状态恢复"
+    },
+    {
+      "path": "/research/2026-10-23-llm-distillation.md",
+      "title": "大语言模型蒸馏：从教师信号到学生自己的生成分布"
+    },
+    {
+      "path": "/research/2026-10-24-llm-post-training-cluster-scheduling.md",
+      "title": "大模型后训练的集群调度：设备放置、通信约束与失败恢复"
+    },
+    {
+      "path": "/research/2026-10-26-agent-code-review-layers.md",
+      "title": "解读 Claude Code 团队的七层代码审查：风险分级、收敛与迁移边界"
+    },
+    {
+      "path": "/rl-book/cha4对话模板与监督微调.md",
+      "title": "对话模板与监督微调"
+    },
+    {
+      "path": "/rl-book/cha5奖励建模.md",
+      "title": "奖励建模"
+    },
+    {
+      "path": "/rl-book/cha6-experiment.md",
+      "title": "强化学习训练实验与分析"
+    },
+    {
+      "path": "/rl-book/cha6强化学习.md",
+      "title": "强化学习"
+    },
+    {
+      "path": "/rl-book/奖励模型训练实验.md",
+      "title": "奖励模型训练实验与分析"
+    },
+    {
+      "path": "/rust-notes/多线程并发编程.md",
+      "title": "多线程并发编程"
+    },
+    {
+      "path": "/papers/deepseek-r1/index.md",
+      "title": "DeepSeek-R1 技术报告阅读笔记"
+    },
+    {
+      "path": "/papers/engineering/async-and-consistency.md",
+      "title": "异步采样与训练推理一致性"
+    },
+    {
+      "path": "/papers/engineering/data-and-environments.md",
+      "title": "数据、环境与可验证任务"
+    },
+    {
+      "path": "/papers/engineering/distributed-performance.md",
+      "title": "分布式调度、显存与端到端性能"
+    },
+    {
+      "path": "/papers/engineering/evaluation-and-feedback.md",
+      "title": "Benchmark、checkpoint 选择与上线反馈"
+    },
+    {
+      "path": "/papers/engineering/failure-handbook.md",
+      "title": "实际故障与反馈手册"
+    },
+    {
+      "path": "/papers/engineering/operations-and-recovery.md",
+      "title": "启动、观测与恢复：把训练做成可追溯的运行"
+    },
+    {
+      "path": "/papers/engineering/rewards-and-algorithms.md",
+      "title": "奖励、优势与策略更新"
+    },
+    {
+      "path": "/papers/engineering/workflow.md",
+      "title": "从数据到上线：后训练的工程闭环"
+    },
+    {
+      "path": "/papers/evidence/gaps.md",
+      "title": "项目证据边界与待核验项"
+    },
+    {
+      "path": "/papers/evidence/project-metrics.md",
+      "title": "各项目 benchmark、loss 与运行指标证据索引"
+    },
+    {
+      "path": "/papers/evidence/sources.md",
+      "title": "后训练项目来源与版本定位"
+    },
+    {
+      "path": "/papers/gigpo/index.md",
+      "title": "GiGPO：面向长程智能体的分层信用分配"
+    },
+    {
+      "path": "/papers/graph-gpo/index.md",
+      "title": "Graph-GPO：基于状态转移图的信用分配"
+    },
+    {
+      "path": "/papers/projects/coverage.md",
+      "title": "项目目录与全链路覆盖"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/01-formalization.md",
+      "title": "奖励漏洞的形式化：排序、覆盖、尾部与策略分布"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/02-overoptimization.md",
+      "title": "过度优化的实验证据：能力、缩放、集成与直接偏好优化"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/03-sycophancy.md",
+      "title": "迎合如何成为奖励漏洞：偏好数据、指数倾斜与纠偏"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/04-tampering-generalization.md",
+      "title": "从局部钻空子到奖励篡改：泛化证据与因果边界"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/05-verifiable-rewards.md",
+      "title": "可验证奖励仍会漏检：任务内容、验证器与蒸馏污染"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/06-auditing.md",
+      "title": "监督器也会被优化：对抗审计的证据与剩余盲区"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/07-human-oversight.md",
+      "title": "奖励漏洞怎样跨过人类评审：说服性、复杂度与评价误差"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/08-production-generalization.md",
+      "title": "生产环境中的漏洞学习与广泛失配：干预、泛化及修复"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/09-demonstrations-transfer.md",
+      "title": "漏洞示范的迁移：从作弊倾向到能力、失配与语境"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/10-myopia-feedback.md",
+      "title": "多步漏洞的信用分配：短视优化与远视批准"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/11-in-context-feedback.md",
+      "title": "权重冻结后的奖励漏洞：上下文反馈与推理时优化"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/12-retrieval-grounding.md",
+      "title": "检索工具的装饰性使用：奖励证据依赖是否足够"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/13-process-reward-attacks.md",
+      "title": "过程奖励的攻击面：逻辑、流畅度与空洞安全"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/14-detection-benchmarks.md",
+      "title": "奖励漏洞检测基准：对照、语义与指标口径"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/15-infrastructure-integrity.md",
+      "title": "从任务得分到奖励完整性：基础设施、形式模型与语义审计"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/16-interpretable-rewards.md",
+      "title": "从行为反推奖励：密度比、稀疏特征与定向修复"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/17-reward-debiasing.md",
+      "title": "奖励去偏的机制：分离可疑信号与保留任务效用"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/18-pessimistic-preference.md",
+      "title": "悲观偏好优化：SFT、对抗奖励与覆盖条件"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/19-information-bottleneck.md",
+      "title": "奖励表示的信息瓶颈：压缩、泛化与漏洞监测"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/20-reward-transformation.md",
+      "title": "奖励变换的作用边界：相对偏好、饱和与训练稳定"
+    },
+    {
+      "path": "/research/2026-10-18-rl-reward-hacking/21-behavior-support.md",
+      "title": "奖励数据的行为支持：从token概率到价值约束"
+    },
+    {
+      "path": "/westlake-rl/TD算法/TD.md",
+      "title": "TD 算法"
+    },
+    {
+      "path": "/westlake-rl/价值函数/index.md",
+      "title": "价值函数"
+    },
+    {
+      "path": "/westlake-rl/值迭代与策略迭代/index.md",
+      "title": "第 4 讲：值迭代与策略迭代"
+    },
+    {
+      "path": "/westlake-rl/强化学习基本概念与贝尔曼方程/index.md",
+      "title": "第 1–2 讲：强化学习基本概念与贝尔曼方程"
+    },
+    {
+      "path": "/westlake-rl/最优状态价值与贝尔曼最优方程/index.md",
+      "title": "第 3 讲：最优状态价值与贝尔曼最优方程"
+    },
+    {
+      "path": "/westlake-rl/策略梯度/index.md",
+      "title": "策略梯度"
+    },
+    {
+      "path": "/westlake-rl/蒙特卡洛方法/index.md",
+      "title": "第 5 讲：蒙特卡洛方法"
+    },
+    {
+      "path": "/westlake-rl/随机近似/index.md",
+      "title": "随机近似"
+    },
+    {
+      "path": "/westlake-rl/随机近似/课程讲义.md",
+      "title": "第 6 讲：随机近似"
+    },
+    {
+      "path": "/papers/projects/codemidas/index.md",
+      "title": "CodeMidas：从源码构建环境到 MiMo-V2.5 RL 实验"
+    },
+    {
+      "path": "/papers/projects/deepswe-preview/index.md",
+      "title": "DeepSWE-Preview：软件工程 Agent 的数据、RL 与评测闭环"
+    },
+    {
+      "path": "/papers/projects/intellect-3/index.md",
+      "title": "INTELLECT-3：SFT、异步 RL 与多节点工程"
+    },
+    {
+      "path": "/papers/projects/miles-glm-5-2/index.md",
+      "title": "Miles GLM-5.2：终端 Agent 的大型异步 RL 参考运行"
+    },
+    {
+      "path": "/papers/projects/mimo-v2-6/9b-config.md",
+      "title": "小米 9B 开源复现：配置核对表"
+    },
+    {
+      "path": "/papers/projects/mimo-v2-6/dashboard-guide.md",
+      "title": "小米公开看板：指标字典与数据阅读指南"
+    },
+    {
+      "path": "/papers/projects/mimo-v2-6/index.md",
+      "title": "小米 MiMo-V2.6：从公开训练到上线修复"
+    },
+    {
+      "path": "/papers/projects/mimo-v2-6/loss-and-metrics.md",
+      "title": "MiMo 训练损失、稳定性与 benchmark"
+    }
+  ]
+}

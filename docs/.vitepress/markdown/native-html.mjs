@@ -36,11 +36,23 @@ export function inspectHtml(source) {
   return { title, headers, links }
 }
 
+function mathBaselines(html) {
+  return html.replace(/<mjx-container\b([^>]*)>([\s\S]*?)<\/mjx-container>/g, (markup, attributes, content) => {
+    if (/\bdisplay="true"/.test(attributes)) return markup
+    const baseline = content.match(/<svg\b[^>]*style="[^"]*vertical-align:\s*([^;" ]+)/)?.[1] ?? '0ex'
+    const style = `--math-baseline:${baseline};`
+    const merged = /\bstyle="/.test(attributes)
+      ? attributes.replace(/\bstyle="/, `style="${style}`)
+      : `${attributes} style="${style}"`
+    return `<mjx-container${merged}>${content}</mjx-container>`
+  })
+}
+
 export default function nativeHtml(md, base = '/') {
   const render = md.render.bind(md)
   md.render = (source, env = {}) => {
     const { data, content } = matter(source)
-    if (data.contentFormat !== 'html') return render(source, env)
+    if (data.contentFormat !== 'html') return mathBaselines(render(source, env))
     if (/<!--\s*@include:/.test(content)) {
       throw new Error('HTML source must be expanded with VitePress processIncludes before rendering.')
     }
@@ -58,7 +70,10 @@ export default function nativeHtml(md, base = '/') {
         const node = parse(markup).children[0]
         const tex = node.props.find(prop => prop.name === 'data-tex').value.content
         const rendered = render(mode === 'block' ? `$$\n${tex}\n$$` : `$${tex}$`, {})
-        return mode === 'block' ? rendered : rendered.trim().replace(/^<p>|<\/p>$/g, '')
+        if (mode === 'block') return rendered
+        // Scrollable inline math needs the SVG's TeX depth on its outer box;
+        // otherwise overflow changes the baseline to the box's bottom edge.
+        return mathBaselines(rendered.trim().replace(/^<p>|<\/p>$/g, ''))
       })
     const info = inspectHtml(html)
     // Root-relative links and public assets must also work under GitHub Pages.

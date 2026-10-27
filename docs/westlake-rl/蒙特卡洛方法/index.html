@@ -1,20 +1,441 @@
-<script setup>
-import PdfViewer from '../../.vitepress/components/PdfViewer.vue'
+<script setup lang="ts">
+import '../lecture-academic.css'
+import { defineAsyncComponent, shallowRef } from 'vue'
 import pdfUrl from './蒙特卡洛方法.pdf?url'
 import outline from './目录.json'
+const PdfViewer = defineAsyncComponent(() => import('../../.vitepress/components/PdfViewer.vue'))
+const showOriginal = shallowRef(false)
+function toggleOriginal(event: Event) {
+  showOriginal.value = (event.target as HTMLDetailsElement).open
+}
 </script>
 
-<article class="native-document format-course" data-format="course" aria-label="第 5 讲：蒙特卡洛方法" data-design="linux-notebook">
+<article class="native-document format-course academic-lecture" data-format="course" data-design="linux-notebook" aria-label="第 5 讲：蒙特卡洛方法">
 <header class="document-intro note-hero">
-  <p class="note-kicker">西湖 RL 笔记<span>课程讲义</span></p>
-  <h1 id="note-title">第 5 讲：蒙特卡洛方法 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
-  <p class="note-deck">第 5 讲课程资料：通过采样回合学习蒙特卡洛方法，连接经验回报与价值估计。</p>
-  <div class="note-chips"><span>强化学习</span><span>蒙特卡洛</span></div>
+  <p class="note-kicker">西湖 RL 笔记<span>第 5 讲 · 课程讲义</span></p>
+  <h1 id="note-title" tabindex="-1">蒙特卡洛方法 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
+  <p class="note-deck">用采样回报替代已知模型，从 MC Basic 到 Exploring Starts 与 ε-greedy，理解估计、控制和探索之间的关系。</p>
+  <div class="note-chips"><span>蒙特卡洛</span><span>采样估计</span><span>探索与利用</span></div>
+  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记</p>
 </header>
+<nav class="note-jump" aria-label="本篇阅读导航"><a href="#动机示例均值估计">5.1 动机示例：均值估计</a>
+<a href="#mc-basic最简单的mc强化学习算法">5.2 MC Basic：最简单的MC强化学习算法</a>
+<a href="#mc-exploring-starts">5.3 MC Exploring Starts</a>
+<a href="#mc-varepsilon-greedy无需exploring-starts的学习">5.4 MC ε-Greedy：无需Exploring Starts的学习</a>
+<a href="#varepsilon-greedy策略的探索与利用">5.5 ε-Greedy策略的探索与利用</a>
+<a href="#本章小结">5.6 本章小结</a>
+<a href="#常见问题解答">5.7 常见问题解答</a></nav>
+<div id="reading-context" class="lecture-body">
+<p>在第4讲中，我们介绍了基于系统模型求解最优策略的算法（值迭代与策略迭代）。从本章开始，我们将介绍不依赖系统模型的<strong>无模型（model-free）</strong>强化学习算法。</p>
+<p>无模型强化学习的基本思想是：如果没有模型，就必须有数据；如果没有数据，就必须有模型。若两者皆无，则无法找到最优策略。强化学习中的“数据”通常指智能体与环境的交互经验。</p>
+<p>本章基于<strong>蒙特卡洛（Monte Carlo, MC）方法</strong>，从经验样本中学习最优策略。我们首先介绍均值估计问题，说明如何从数据而非模型进行学习——状态价值和动作价值都是回报的期望，估计它们本质上就是均值估计问题。随后，我们依次介绍三种MC算法：MC Basic、MC Exploring Starts和MC <span class="math-inline" data-tex="\varepsilon"></span>-Greedy。</p>
 
-
-<section class="document-section note-panel" aria-labelledby="reading-context">
-<h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
-<PdfViewer :src="pdfUrl" title="蒙特卡洛方法" :outline="outline" />
+<section class="document-section note-panel" aria-labelledby="动机示例均值估计">
+<h2 class="unnumbered" tabindex="-1" id="动机示例均值估计">5.1 动机示例：均值估计 <a class="header-anchor" href="#动机示例均值估计" aria-label="章节链接">&#8203;</a></h2>
+<p>我们以均值估计问题为例，展示如何从数据而非模型进行学习。考虑一个取值于有限实数集<span class="math-inline" data-tex="\mathcal{X}"></span>的随机变量<span class="math-inline" data-tex="X"></span>，任务是计算<span class="math-inline" data-tex="X"></span>的期望<span class="math-inline" data-tex="\mathbb{E}[X]"></span>。有两种方法可以实现。</p>
+<p><strong>基于模型的方法</strong>：若<span class="math-inline" data-tex="X"></span>的概率分布已知，则可以直接根据期望的定义计算：</p>
+<div class="lecture-equation" id="lecture-equation-1"><div class="math-block" data-tex="\mathbb{E}[X] = \sum_{x \in \mathcal{X}} p(x) x ."></div></div>
+<p><strong>无模型方法</strong>：若概率分布未知，但有一些样本<span class="math-inline" data-tex="\{x_1, x_2, \ldots, x_n\}"></span>，则期望可以近似为：</p>
+<div class="lecture-equation" id="lecture-equation-2"><div class="math-block" data-tex="\mathbb{E}[X] \approx \bar{x} = \frac{1}{n} \sum_{j=1}^{n} x_j ."></div></div>
+<p>当<span class="math-inline" data-tex="n"></span>较小时，该近似可能不准确；但随着<span class="math-inline" data-tex="n"></span>增大，近似越来越准确。当<span class="math-inline" data-tex="n \to \infty"></span>时，有<span class="math-inline" data-tex="\bar{x} \to \mathbb{E}[X]"></span>。这由大数定律保证。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 5.1 大数定律</p>
+</div>
+<p>对于随机变量<span class="math-inline" data-tex="X"></span>，设<span class="math-inline" data-tex="\{x_i\}_{i=1}^n"></span>为独立同分布（i.i.d.）样本，令<span class="math-inline" data-tex="\bar{x} = \frac{1}{n}\sum_{i=1}^n x_i"></span>为样本均值。则：</p>
+<div class="lecture-equation" id="lecture-equation-3"><div class="math-block" data-tex="\mathbb{E}[\bar{x}] = \mathbb{E}[X], \quad \mathrm{var}[\bar{x}] = \frac{1}{n} \mathrm{var}[X] ."></div></div>
+<p>上述两式表明<span class="math-inline" data-tex="\bar{x}"></span>是<span class="math-inline" data-tex="\mathbb{E}[X]"></span>的无偏估计，且其方差随<span class="math-inline" data-tex="n"></span>增大而趋于零。</p>
+</div>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p>首先，<span class="math-inline" data-tex="\mathbb{E}[\bar{x}] = \mathbb{E}\bigl[\sum_{i=1}^n x_i / n\bigr] = \sum_{i=1}^n \mathbb{E}[x_i]/n = \mathbb{E}[X]"></span>，最后一步利用了样本同分布的性质（即<span class="math-inline" data-tex="\mathbb{E}[x_i] = \mathbb{E}[X]"></span>）。</p>
+<p>其次，<span class="math-inline" data-tex="\mathrm{var}(\bar{x}) = \mathrm{var}\bigl[\sum_{i=1}^n x_i / n\bigr] = \sum_{i=1}^n \mathrm{var}[x_i]/n^2 = (n \cdot \mathrm{var}[X])/n^2 = \mathrm{var}[X]/n"></span>，其中第二步利用了样本相互独立，第三步利用了样本同分布（即<span class="math-inline" data-tex="\mathrm{var}[x_i] = \mathrm{var}[X]"></span>）。</p>
+</div>
+<p>下面通过抛硬币的例子来说明上述两种方法。设随机变量<span class="math-inline" data-tex="X"></span>表示硬币落地时朝上的一面：正面朝上时<span class="math-inline" data-tex="X = +1"></span>，反面朝上时<span class="math-inline" data-tex="X = -1"></span>。假设<span class="math-inline" data-tex="X"></span>的真实概率分布为：</p>
+<div class="lecture-equation" id="lecture-equation-4"><div class="math-block" data-tex="p(X = 1) = 0.5, \quad p(X = -1) = 0.5 ."></div></div>
+<p>若概率分布事先已知，可以直接计算均值：<span class="math-inline" data-tex="\mathbb{E}[X] = 0.5 \times 1 + 0.5 \times (-1) = 0"></span>。</p>
+<p>若概率分布未知，可以多次抛硬币并记录采样结果<span class="math-inline" data-tex="\{x_i\}_{i=1}^n"></span>，通过计算样本均值得到期望的估计。随着样本数量增加，估计均值越来越准确。</p>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>备注</p>
+</div>
+<p>用于均值估计的样本必须是独立同分布（i.i.d.）的。否则，若采样值之间存在相关性，可能无法正确估计期望。一个极端情形是：所有采样值都与第一个样本相同，则无论使用多少样本，样本均值始终等于第一个样本的值。</p>
+</div>
 </section>
+<section class="document-section note-panel" aria-labelledby="mc-basic最简单的mc强化学习算法">
+<h2 class="unnumbered" tabindex="-1" id="mc-basic最简单的mc强化学习算法">5.2 MC Basic：最简单的MC强化学习算法 <a class="header-anchor" href="#mc-basic最简单的mc强化学习算法" aria-label="章节链接">&#8203;</a></h2>
+<p>本节介绍第一个也是最简单的基于MC的强化学习算法——MC Basic。该算法通过将策略迭代（第4.2节）中基于模型的策略评估步骤替换为无模型的MC估计步骤而得到。</p>
+<h3 class="unnumbered" tabindex="-1" id="将策略迭代改造为无模型方法">5.2.1 将策略迭代改造为无模型方法 <a class="header-anchor" href="#将策略迭代改造为无模型方法" aria-label="章节链接">&#8203;</a></h3>
+<p>策略迭代算法每次迭代包含两步：</p>
+<ul>
+<li><p><strong>策略评估</strong>：通过求解<span class="math-inline" data-tex="v_{\pi_k} = \boldsymbol{r}_{\pi_k} + \gamma \boldsymbol{P}_{\pi_k} v_{\pi_k}"></span>来计算<span class="math-inline" data-tex="v_{\pi_k}"></span>；</p></li>
+<li><p><strong>策略改进</strong>：求解贪心策略<span class="math-inline" data-tex="\pi_{k+1} = \arg\max_{\pi} (\boldsymbol{r}_{\pi} + \gamma \boldsymbol{P}_{\pi} v_{\pi_k})"></span>。</p></li>
+</ul>
+<p>策略改进步骤的元素形式为：</p>
+<div class="lecture-equation" id="lecture-equation-5"><div class="math-block" data-tex="\pi_{k+1}(s) = \arg\max_{\pi} \sum_a \pi(a \mid s) \left[ \sum_r p(r \mid s,a) r + \gamma \sum_{s&#x27;} p(s&#x27; \mid s,a) v_{\pi_k}(s&#x27;) \right]
+= \arg\max_{\pi} \sum_a \pi(a \mid s) q_{\pi_k}(s,a), \quad s \in \mathcal{S}."></div></div>
+<p>动作价值在这两步中处于核心地位。计算动作价值有两种方法：</p>
+<p><strong>基于模型的方法</strong>（策略迭代所采用）：先求解贝尔曼方程得到<span class="math-inline" data-tex="v_{\pi_k}"></span>，再通过模型计算<span class="math-inline" data-tex="q_{\pi_k}(s,a)"></span>：</p>
+<div class="lecture-equation is-numbered" id="eq:mb_q"><div class="math-block" data-tex="q_{\pi_k}(s,a) = \sum_r p(r \mid s,a) r + \gamma \sum_{s&#x27;} p(s&#x27; \mid s,a) v_{\pi_k}(s&#x27;)."></div><a class="lecture-equation-number" href="#eq:mb_q" aria-label="公式 1">(1)</a></div>
+<p>这需要已知系统模型<span class="math-inline" data-tex="\{p(r \mid s,a),\, p(s&#x27; \mid s,a)\}"></span>。</p>
+<p><strong>无模型方法</strong>：动作价值的定义为</p>
+<div class="lecture-equation" id="lecture-equation-7"><div class="math-block" data-tex="q_{\pi_k}(s,a) = \mathbb{E}[G_t \mid S_t = s, A_t = a]
+= \mathbb{E}[R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \cdots \mid S_t = s, A_t = a],"></div></div>
+<p>即从<span class="math-inline" data-tex="(s,a)"></span>出发的期望回报。由于<span class="math-inline" data-tex="q_{\pi_k}(s,a)"></span>是期望，可以用MC方法估计：从<span class="math-inline" data-tex="(s,a)"></span>出发，遵循策略<span class="math-inline" data-tex="\pi_k"></span>与环境交互，收集<span class="math-inline" data-tex="n"></span>个episode，每个episode的回报为<span class="math-inline" data-tex="g^{(i)}_{\pi_k}(s,a)"></span>，则：</p>
+<div class="lecture-equation is-numbered" id="eq:mf_q"><div class="math-block" data-tex="q_{\pi_k}(s,a) = \mathbb{E}[G_t \mid S_t = s, A_t = a] \approx \frac{1}{n} \sum_{i=1}^{n} g^{(i)}_{\pi_k}(s,a)."></div><a class="lecture-equation-number" href="#eq:mf_q" aria-label="公式 2">(2)</a></div>
+<p>根据大数定律，若episode数量<span class="math-inline" data-tex="n"></span>足够大，该近似将足够准确。</p>
+<p>MC强化学习的核心思想就是：用无模型方法估计动作价值（式<a href="#eq:mf_q" data-reference-type="eqref" data-reference="eq:mf_q">(2)</a>），替代策略迭代中基于模型的方法（式<a href="#eq:mb_q" data-reference-type="eqref" data-reference="eq:mb_q">(1)</a>）。</p>
+<h3 class="unnumbered" tabindex="-1" id="mc-basic-算法">5.2.2 MC Basic 算法 <a class="header-anchor" href="#mc-basic-算法" aria-label="章节链接">&#8203;</a></h3>
+<p>现在可以给出第一个MC强化学习算法。从初始策略<span class="math-inline" data-tex="\pi_0"></span>出发，在第<span class="math-inline" data-tex="k"></span>次迭代中（<span class="math-inline" data-tex="k = 0,1,2,\ldots"></span>）执行以下两步：</p>
+<p><strong>步骤1：策略评估。</strong>对所有<span class="math-inline" data-tex="(s,a)"></span>估计<span class="math-inline" data-tex="q_{\pi_k}(s,a)"></span>。具体地，对每个<span class="math-inline" data-tex="(s,a)"></span>，收集足够多的episode，用这些episode的平均回报<span class="math-inline" data-tex="q_k(s,a)"></span>来近似<span class="math-inline" data-tex="q_{\pi_k}(s,a)"></span>。</p>
+<p><strong>步骤2：策略改进。</strong>对所有<span class="math-inline" data-tex="s \in \mathcal{S}"></span>，求解<span class="math-inline" data-tex="\pi_{k+1}(s) = \arg\max_{\pi} \sum_a \pi(a \mid s) q_k(s,a)"></span>。贪心最优策略为<span class="math-inline" data-tex="\pi_{k+1}(a_k^* \mid s) = 1"></span>，其中<span class="math-inline" data-tex="a_k^* = \arg\max_a q_k(s,a)"></span>。</p>
+<div class="definitionbox lecture-box">
+<div class="lecture-box-title">
+<p>定义</p>
+</div>
+<p><strong>算法 5.1：MC Basic（策略迭代的无模型变体）</strong></p>
+<p><strong>初始化：</strong>初始策略<span class="math-inline" data-tex="\pi_0"></span>。<br />
+<strong>目标：</strong>搜索最优策略。</p>
+<p>对于第<span class="math-inline" data-tex="k"></span>次迭代（<span class="math-inline" data-tex="k = 0,1,2,\ldots"></span>），执行：</p>
+<ul>
+<li><p>对于每个状态<span class="math-inline" data-tex="s \in \mathcal{S}"></span>，执行：</p>
+<ul>
+<li><p>对于每个动作<span class="math-inline" data-tex="a \in \mathcal{A}(s)"></span>，执行：</p>
+<ul>
+<li><p>收集足够多的从<span class="math-inline" data-tex="(s,a)"></span>出发、遵循<span class="math-inline" data-tex="\pi_k"></span>的episode。</p></li>
+<li><p><strong>策略评估：</strong> <span class="math-inline" data-tex="q_{\pi_k}(s,a) \approx q_k(s,a) ="></span> 所有从<span class="math-inline" data-tex="(s,a)"></span>出发的episode的平均回报。</p></li>
+<li><p><strong>策略改进：</strong> <span class="math-inline" data-tex="a_k^*(s) = \arg\max_a q_k(s,a)"></span>，<br />
+<span class="math-inline" data-tex="\pi_{k+1}(a \mid s) = 1"></span> 若 <span class="math-inline" data-tex="a = a_k^*"></span>，否则 <span class="math-inline" data-tex="\pi_{k+1}(a \mid s) = 0"></span>。</p></li>
+</ul></li>
+</ul></li>
+</ul>
+</div>
+<p>MC Basic与策略迭代非常相似，唯一区别在于：MC Basic直接从经验样本中计算动作价值，而策略迭代先计算状态价值，再基于系统模型计算动作价值。需要注意的是，无模型算法必须直接估计<strong>动作价值</strong>——若估计的是状态价值，仍需借助系统模型（式<a href="#eq:mb_q" data-reference-type="eqref" data-reference="eq:mb_q">(1)</a>）才能得到动作价值。</p>
+<p>由于策略迭代是收敛的，当有足够样本时MC Basic也是收敛的。即对于每个<span class="math-inline" data-tex="(s,a)"></span>，若有足够多从<span class="math-inline" data-tex="(s,a)"></span>出发的episode，则这些episode的平均回报可以准确近似<span class="math-inline" data-tex="(s,a)"></span>的动作价值。实际中通常无法为每个<span class="math-inline" data-tex="(s,a)"></span>提供足够的episode，因此动作价值的近似可能不够准确；但算法通常仍能工作——这类似于截断策略迭代的情形。</p>
+<p>MC Basic过于简单，样本效率低下，因此不实用。引入该算法的目的是让读者把握MC强化学习的核心思想，为理解后续更复杂的算法打下基础。</p>
+<h3 class="unnumbered" tabindex="-1" id="示例分析">5.2.3 示例分析 <a class="header-anchor" href="#示例分析" aria-label="章节链接">&#8203;</a></h3>
+<p><strong>简单示例：逐步实现</strong></p>
+<p>考虑图5.3所示的<span class="math-inline" data-tex="3 \times 3"></span>网格世界。奖励设置为<span class="math-inline" data-tex="r_{\text{boundary}} = r_{\text{forbidden}} = -1"></span>，<span class="math-inline" data-tex="r_{\text{target}} = 1"></span>，折扣因子<span class="math-inline" data-tex="\gamma = 0.9"></span>。初始策略<span class="math-inline" data-tex="\pi_0"></span>在<span class="math-inline" data-tex="s_1"></span>和<span class="math-inline" data-tex="s_3"></span>处并非最优。</p>
+<p>下面仅展示<span class="math-inline" data-tex="s_1"></span>处的动作价值计算。<span class="math-inline" data-tex="s_1"></span>处有5个可能的动作。由于该示例的策略和模型都是确定性的，多次运行会产生相同的轨迹，因此每个动作价值的估计只需要一个episode。</p>
+<p>遵循<span class="math-inline" data-tex="\pi_0"></span>，分别从<span class="math-inline" data-tex="(s_1, a_1), (s_1, a_2), \ldots, (s_1, a_5)"></span>出发，得到以下episode：</p>
+<ul>
+<li><p>从<span class="math-inline" data-tex="(s_1, a_1)"></span>出发：episode为<span class="math-inline" data-tex="s_1 \xrightarrow{a_1} s_1 \xrightarrow{a_1} s_1 \xrightarrow{a_1} \cdots"></span>，动作价值为</p>
+<div class="lecture-equation" id="lecture-equation-9"><div class="math-block" data-tex="q_{\pi_0}(s_1, a_1) = -1 + \gamma(-1) + \gamma^2(-1) + \cdots = -\frac{1}{1-\gamma}."></div></div></li>
+<li><p>从<span class="math-inline" data-tex="(s_1, a_2)"></span>出发：episode为<span class="math-inline" data-tex="s_1 \xrightarrow{a_2} s_2 \xrightarrow{a_3} s_5 \xrightarrow{a_3} \cdots"></span>，动作价值为</p>
+<div class="lecture-equation" id="lecture-equation-10"><div class="math-block" data-tex="q_{\pi_0}(s_1, a_2) = 0 + \gamma \cdot 0 + \gamma^2 \cdot 0 + \gamma^3 \cdot 1 + \gamma^4 \cdot 1 + \cdots = \frac{\gamma^3}{1-\gamma}."></div></div></li>
+<li><p>从<span class="math-inline" data-tex="(s_1, a_3)"></span>出发：episode为<span class="math-inline" data-tex="s_1 \xrightarrow{a_3} s_4 \xrightarrow{a_2} s_5 \xrightarrow{a_3} \cdots"></span>，动作价值为</p>
+<div class="lecture-equation" id="lecture-equation-11"><div class="math-block" data-tex="q_{\pi_0}(s_1, a_3) = 0 + \gamma \cdot 0 + \gamma^2 \cdot 0 + \gamma^3 \cdot 1 + \gamma^4 \cdot 1 + \cdots = \frac{\gamma^3}{1-\gamma}."></div></div></li>
+<li><p>从<span class="math-inline" data-tex="(s_1, a_4)"></span>出发：episode为<span class="math-inline" data-tex="s_1 \xrightarrow{a_4} s_1 \xrightarrow{a_1} s_1 \xrightarrow{a_1} \cdots"></span>，动作价值为</p>
+<div class="lecture-equation" id="lecture-equation-12"><div class="math-block" data-tex="q_{\pi_0}(s_1, a_4) = -1 + \gamma(-1) + \gamma^2(-1) + \cdots = -\frac{1}{1-\gamma}."></div></div></li>
+<li><p>从<span class="math-inline" data-tex="(s_1, a_5)"></span>出发：episode为<span class="math-inline" data-tex="s_1 \xrightarrow{a_5} s_1 \xrightarrow{a_1} s_1 \xrightarrow{a_1} \cdots"></span>，动作价值为</p>
+<div class="lecture-equation" id="lecture-equation-13"><div class="math-block" data-tex="q_{\pi_0}(s_1, a_5) = 0 + \gamma(-1) + \gamma^2(-1) + \cdots = -\frac{\gamma}{1-\gamma}."></div></div></li>
+</ul>
+<p>比较五个动作价值可知，<span class="math-inline" data-tex="q_{\pi_0}(s_1, a_2) = q_{\pi_0}(s_1, a_3) = \frac{\gamma^3}{1-\gamma} &gt; 0"></span>是最大值。因此改进后的策略为<span class="math-inline" data-tex="\pi_1(a_2 \mid s_1) = 1"></span>或<span class="math-inline" data-tex="\pi_1(a_3 \mid s_1) = 1"></span>。显然该改进策略在<span class="math-inline" data-tex="s_1"></span>处是最优的。该简单示例仅需一次迭代即可获得最优策略。</p>
+<p><strong>综合示例：Episode长度与稀疏奖励</strong></p>
+<p>接下来通过<span class="math-inline" data-tex="5 \times 5"></span>网格世界（图5.4）讨论MC Basic的一些有趣性质。奖励设置为<span class="math-inline" data-tex="r_{\text{boundary}} = -1"></span>，<span class="math-inline" data-tex="r_{\text{forbidden}} = -10"></span>，<span class="math-inline" data-tex="r_{\text{target}} = 1"></span>，<span class="math-inline" data-tex="\gamma = 0.9"></span>。</p>
+<p>首先，episode长度对最终最优策略有重要影响。当episode长度太短时，策略和价值估计都不是最优的：</p>
+<ul>
+<li><p>当episode长度为1时，只有与目标相邻的状态具有非零价值，其他状态价值为零——因为每个episode太短，无法到达目标或获得正奖励。</p></li>
+<li><p>随着episode长度增加，策略和价值估计逐渐逼近最优值。当episode长度达到15时，可以获得最优策略；当长度达到30时，价值估计也已非常接近最优；当长度为100时，价值估计几乎完全准确。</p></li>
+</ul>
+<p>随着episode长度增加，一个有趣的空间模式出现：离目标更近的状态比离目标更远的状态更早获得非零价值。原因是：从某状态出发，智能体至少需要走一定步数才能到达目标并获得正奖励。若episode长度小于所需的最小步数，回报必然为零，估计的状态价值也为零。在该示例中，episode长度必须不小于15（从最左下角状态到达目标所需的最小步数）。</p>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>备注</p>
+</div>
+<p>虽然上述分析表明每个episode必须足够长，但episode并不需要无限长。当episode长度为30时，算法已能找到最优策略，尽管价值估计尚未完全达到最优值。</p>
+</div>
+<p>上述分析还与一个重要奖励设计问题——<strong>稀疏奖励（sparse reward）</strong>——密切相关。稀疏奖励是指在到达目标之前无法获得任何正奖励的情形。稀疏奖励设置要求episode足够长才能到达目标，当状态空间很大时这一要求难以满足，从而降低学习效率。解决该问题的一种简单技术是设计<strong>非稀疏奖励</strong>：例如在上述网格世界中，可以重新设计奖励，使智能体到达目标附近状态时就能获得小的正奖励，从而在目标周围形成“吸引场”，帮助智能体更容易地找到目标。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="mc-exploring-starts">
+<h2 class="unnumbered" tabindex="-1" id="mc-exploring-starts">5.3 MC Exploring Starts <a class="header-anchor" href="#mc-exploring-starts" aria-label="章节链接">&#8203;</a></h2>
+<p>接下来扩展MC Basic算法，得到另一个稍微复杂但样本效率更高的MC强化学习算法。</p>
+<h3 class="unnumbered" tabindex="-1" id="更高效地利用样本">5.3.1 更高效地利用样本 <a class="header-anchor" href="#更高效地利用样本" aria-label="章节链接">&#8203;</a></h3>
+<p>MC强化学习的一个重要方面是如何更高效地利用样本。假设有遵循策略<span class="math-inline" data-tex="\pi"></span>的一个episode：</p>
+<div class="lecture-equation" id="lecture-equation-14"><div class="math-block" data-tex="s_1 \xrightarrow{a_2} s_2 \xrightarrow{a_4} s_1 \xrightarrow{a_2} s_2 \xrightarrow{a_3} s_5 \xrightarrow{a_1} \cdots"></div></div>
+<p>其中下标表示状态或动作的索引而非时间步。每个状态-动作对在episode中出现一次称为对该状态-动作对的一次<strong>访问（visit）</strong>。</p>
+<p>采用不同的策略来利用这些访问：</p>
+<p><strong>初始访问策略（initial-visit）</strong>：只使用episode来估计其起始状态-动作对的动作价值。上例中仅估计<span class="math-inline" data-tex="(s_1, a_2)"></span>的价值。MC Basic采用的就是这种策略。但该策略样本效率不高——episode中还访问了<span class="math-inline" data-tex="(s_2, a_4), (s_2, a_3), (s_5, a_1)"></span>等状态-动作对，这些访问也可以用来估计相应的动作价值。</p>
+<p>具体地，可以将原始episode分解为多个子episode：</p>
+<div class="lecture-equation" id="lecture-equation-15"><div class="math-block" data-tex="\begin{align*}
+    &amp; s_1 \xrightarrow{a_2} s_2 \xrightarrow{a_4} s_1 \xrightarrow{a_2} s_2 \xrightarrow{a_3} s_5 \xrightarrow{a_1} \cdots \quad \text{[原始episode]} \\
+    &amp; s_2 \xrightarrow{a_4} s_1 \xrightarrow{a_2} s_2 \xrightarrow{a_3} s_5 \xrightarrow{a_1} \cdots \quad \text{[从$(s_2, a_4)$出发的子episode]} \\
+    &amp; s_1 \xrightarrow{a_2} s_2 \xrightarrow{a_3} s_5 \xrightarrow{a_1} \cdots \quad \text{[从$(s_1, a_2)$出发的子episode]} \\
+    &amp; s_2 \xrightarrow{a_3} s_5 \xrightarrow{a_1} \cdots \quad \text{[从$(s_2, a_3)$出发的子episode]} \\
+    &amp; s_5 \xrightarrow{a_1} \cdots \quad \text{[从$(s_5, a_1)$出发的子episode]}
+\end{align*}"></div></div>
+<p>状态-动作对被访问后生成的轨迹可以视为新的episode，用于估计更多的动作价值，从而更高效地利用样本。</p>
+<p>此外，一个状态-动作对在一个episode中可能被多次访问。例如上面<span class="math-inline" data-tex="(s_1, a_2)"></span>被访问了两次。若只计算首次访问，称为<strong>首次访问策略（first-visit）</strong>；若计算每次访问，称为<strong>每次访问策略（every-visit）</strong>。</p>
+<p>就样本利用效率而言，每次访问策略最优。若一个episode足够长以至于能多次访问所有状态-动作对，则仅凭这个episode就足以估计所有动作价值。但每次访问策略获得的样本之间存在相关性——第二次访问开始的轨迹仅仅是第一次访问开始的轨迹的子集。不过若两次访问在轨迹中相距足够远，相关性不会太强。</p>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>补充内容：多次访问相关性的量化分析</p>
+</div>
+<p>下面从数学上量化每次访问策略中多次访问之间的相关性，并给出首次访问与每次访问的方差比较。</p>
+<p><strong>1. 同episode内两次访问的回报分解</strong></p>
+<p>设在同一episode中，状态-动作对<span class="math-inline" data-tex="(s,a)"></span>在第<span class="math-inline" data-tex="i"></span>步和第<span class="math-inline" data-tex="j"></span>步被访问（<span class="math-inline" data-tex="i &lt; j"></span>），两次访问间隔<span class="math-inline" data-tex="d = j - i"></span>步。对应的回报分别为<span class="math-inline" data-tex="G_i"></span>和<span class="math-inline" data-tex="G_j"></span>。由回报的递归定义，<span class="math-inline" data-tex="G_i"></span>可分解为从第<span class="math-inline" data-tex="i"></span>步到第<span class="math-inline" data-tex="j"></span>步的<span class="math-inline" data-tex="d"></span>步累积回报加上第<span class="math-inline" data-tex="j"></span>步之后的剩余部分：</p>
+<div class="lecture-equation is-numbered" id="eq:return_decomp"><div class="math-block" data-tex="G_i = \underbrace{\sum_{k=0}^{d-1} \gamma^k R_{i+k+1}}_{A_{ij}} + \gamma^{d} \, G_j,"></div><a class="lecture-equation-number" href="#eq:return_decomp" aria-label="公式 3">(3)</a></div>
+<p>其中<span class="math-inline" data-tex="A_{ij}"></span>为<span class="math-inline" data-tex="(s,a)"></span>在第<span class="math-inline" data-tex="i"></span>步访问后到第<span class="math-inline" data-tex="j"></span>步访问前累积的<span class="math-inline" data-tex="d"></span>步折扣回报。注意<span class="math-inline" data-tex="A_{ij}"></span>不包含<span class="math-inline" data-tex="s_j"></span>处的奖励（该奖励已纳入<span class="math-inline" data-tex="G_j"></span>），因为<span class="math-inline" data-tex="G_j"></span>的定义时刻从<span class="math-inline" data-tex="t=j"></span>开始，即<span class="math-inline" data-tex="G_j = R_{j+1} + \gamma R_{j+2} + \cdots"></span>。</p>
+<p><strong>2. 相关性的定量表达</strong></p>
+<p>由式<a href="#eq:return_decomp" data-reference-type="eqref" data-reference="eq:return_decomp">(3)</a>，可计算<span class="math-inline" data-tex="G_i"></span>与<span class="math-inline" data-tex="G_j"></span>的条件协方差。利用马尔可夫性：给定<span class="math-inline" data-tex="S_j = s"></span>（第<span class="math-inline" data-tex="j"></span>步访问时的状态为<span class="math-inline" data-tex="s"></span>），未来的回报<span class="math-inline" data-tex="G_j"></span>与过去累积的<span class="math-inline" data-tex="A_{ij}"></span>条件独立。因此：</p>
+<div class="lecture-equation is-numbered" id="eq:cov_decomp"><div class="math-block" data-tex="\begin{aligned}
+\operatorname{Cov}\bigl(G_i, G_j \mid s,a\bigr)
+&amp;= \mathbb{E}\bigl[(A_{ij} + \gamma^d G_j - q_\pi)(G_j - q_\pi) \mid s,a\bigr] \\
+&amp;= \mathbb{E}\bigl[A_{ij}(G_j - q_\pi) \mid s,a\bigr] + \gamma^d \operatorname{Var}(G_j \mid s,a) .
+\end{aligned}"></div><a class="lecture-equation-number" href="#eq:cov_decomp" aria-label="公式 4">(4)</a></div>
+<p>其中<span class="math-inline" data-tex="q_\pi = q_\pi(s,a)"></span>为真实动作价值。</p>
+<p>第一项可进一步分解。记<span class="math-inline" data-tex="p_\pi^{(d)}(s&#x27; \mid s)"></span>为从状态<span class="math-inline" data-tex="s"></span>出发经过<span class="math-inline" data-tex="d"></span>步转移后到达<span class="math-inline" data-tex="s&#x27;"></span>的概率（遵循策略<span class="math-inline" data-tex="\pi"></span>），<span class="math-inline" data-tex="a&#x27;_j"></span>为第<span class="math-inline" data-tex="j"></span>步实际执行的动作。则：</p>
+<div class="lecture-equation" id="lecture-equation-18"><div class="math-block" data-tex="\mathbb{E}\bigl[A_{ij}(G_j - q_\pi) \mid s,a\bigr]
+= \sum_{s&#x27;} p_\pi^{(d)}(s&#x27; \mid s) \sum_{a&#x27;} \pi(a&#x27; \mid s&#x27;) \mathbb{E}\bigl[A_{ij} \mid s,a, S_j=s&#x27;, A_j=a&#x27;\bigr] \cdot \bigl(q_\pi(s&#x27;,a&#x27;) - q_\pi(s,a)\bigr)."></div></div>
+<p>虽然该耦合项一般不为零，但其大小受限于<span class="math-inline" data-tex="|q_\pi(\cdot,\cdot) - q_\pi(s,a)|"></span>。在许多实际问题中，若两次访问的中间状态在价值意义上与<span class="math-inline" data-tex="s"></span>差异有限，该项的量级相对较小。</p>
+<p><strong>衰减上界的简化估计</strong>：令<span class="math-inline" data-tex="\bar{A}_d = \max_{i,j} |\mathbb{E}[A_{ij} \mid s,a]|"></span>为<span class="math-inline" data-tex="d"></span>步累积奖励期望的最大绝对值，令<span class="math-inline" data-tex="\Delta_q"></span>为动作价值函数的最大差异。则：</p>
+<div class="lecture-equation is-numbered" id="eq:cov_bound"><div class="math-block" data-tex="\bigl|\operatorname{Cov}(G_i, G_j)\bigr| \le \bigl(\bar{A}_d \cdot \Delta_q + \gamma^d \operatorname{Var}(G_j)\bigr)."></div><a class="lecture-equation-number" href="#eq:cov_bound" aria-label="公式 5">(5)</a></div>
+<p>由于<span class="math-inline" data-tex="\bar{A}_d = O\bigl(\frac{1 - \gamma^d}{1-\gamma}\bigr)"></span>是<span class="math-inline" data-tex="d"></span>的有界函数，当<span class="math-inline" data-tex="\gamma^d \ll 1"></span>时交叉项被<span class="math-inline" data-tex="\gamma^d"></span>主导。因此<strong>多次访问之间的协方差以<span class="math-inline" data-tex="\gamma^d"></span>为主衰减项</strong>，即：</p>
+<div class="lecture-equation is-numbered" id="eq:cov_approx"><div class="math-block" data-tex="\operatorname{Cov}\bigl(G_i, G_j \mid s,a\bigr) \approx \gamma^{|i-j|} \cdot \operatorname{Var}\bigl(G \mid s,a\bigr)."></div><a class="lecture-equation-number" href="#eq:cov_approx" aria-label="公式 6">(6)</a></div>
+<p><strong>3. 相关系数</strong></p>
+<p>令<span class="math-inline" data-tex="\rho_d = \operatorname{Corr}(G_i, G_j)"></span>为间隔<span class="math-inline" data-tex="d"></span>步的两次访问的相关系数。由式<a href="#eq:cov_approx" data-reference-type="eqref" data-reference="eq:cov_approx">(6)</a>，近似有：</p>
+<div class="lecture-equation" id="lecture-equation-21"><div class="math-block" data-tex="\rho_d \approx \gamma^d."></div></div>
+<p>例如，当<span class="math-inline" data-tex="\gamma = 0.9"></span>时：</p>
+<div class="center">
+<div class="note-table" tabindex="0" role="region" aria-label="讲义数据表">
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">间隔<span class="math-inline" data-tex="d"></span></th>
+<th style="text-align: center;">1</th>
+<th style="text-align: center;">2</th>
+<th style="text-align: center;">5</th>
+<th style="text-align: center;">10</th>
+<th style="text-align: center;">20</th>
+<th style="text-align: center;">50</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><span class="math-inline" data-tex="\rho_d"></span></td>
+<td style="text-align: center;">0.90</td>
+<td style="text-align: center;">0.81</td>
+<td style="text-align: center;">0.59</td>
+<td style="text-align: center;">0.35</td>
+<td style="text-align: center;">0.12</td>
+<td style="text-align: center;">0.005</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>可见相关性随间隔<span class="math-inline" data-tex="d"></span>呈指数衰减。间隔超过约<span class="math-inline" data-tex="\frac{-\ln 0.1}{\ln(1/\gamma)} \approx 22"></span>步后（对<span class="math-inline" data-tex="\gamma=0.9"></span>），相关系数降至<span class="math-inline" data-tex="0.1"></span>以下，样本可视为近似独立。</p>
+<p><strong>4. 有效样本量与方差比较</strong></p>
+<p>设共运行<span class="math-inline" data-tex="n"></span>个episode，每个episode平均包含<span class="math-inline" data-tex="M"></span>次对<span class="math-inline" data-tex="(s,a)"></span>的访问。首次访问策略使用<span class="math-inline" data-tex="n"></span>个样本；每次访问策略使用<span class="math-inline" data-tex="nM"></span>个样本，但样本间存在相关性。</p>
+<p>对于每次访问策略，估计量<span class="math-inline" data-tex="\hat{q}_{\text{ev}} = \frac{1}{nM} \sum_{i=1}^{nM} G_{(i)}"></span>的方差为（假设<span class="math-inline" data-tex="M"></span>保持不变以简化分析）：</p>
+<div class="lecture-equation is-numbered" id="eq:var_every"><div class="math-block" data-tex="\operatorname{Var}(\hat{q}_{\text{ev}})
+= \frac{\sigma^2}{nM} \left(1 + \frac{2}{M} \sum_{1 \le i &lt; j \le M} \rho_{|i-j|}\right)
+\approx \frac{\sigma^2}{nM} \left(1 + 2\sum_{d=1}^{M-1} \frac{M-d}{M} \gamma^{\Delta d}\right),"></div><a class="lecture-equation-number" href="#eq:var_every" aria-label="公式 7">(7)</a></div>
+<p>其中<span class="math-inline" data-tex="\sigma^2 = \operatorname{Var}(G \mid s,a)"></span> and <span class="math-inline" data-tex="\Delta d &gt;=d"></span>。定义<strong>方差膨胀因子（Variance Inflation Factor, VIF）</strong>为每次访问方差与独立同分布方差的比值：</p>
+<div class="lecture-equation" id="lecture-equation-23"><div class="math-block" data-tex="\operatorname{VIF}_M = 1 + 2\sum_{d=1}^{M-1} \frac{M-d}{M} \gamma^{\Delta d}."></div></div>
+<p>对于首次访问策略，<span class="math-inline" data-tex="\operatorname{Var}(\hat{q}_{\text{fv}}) = \sigma^2 / n"></span>。因此：</p>
+<div class="lecture-equation is-numbered" id="eq:var_ratio"><div class="math-block" data-tex="\frac{\operatorname{Var}(\hat{q}_{\text{ev}})}{\operatorname{Var}(\hat{q}_{\text{fv}})}
+= \frac{1}{M} \cdot \operatorname{VIF}_M."></div><a class="lecture-equation-number" href="#eq:var_ratio" aria-label="公式 8">(8)</a></div>
+<p>当<span class="math-inline" data-tex="M \to \infty"></span>时，<span class="math-inline" data-tex="\operatorname{VIF}_M \to 1 + \frac{2\gamma}{1-\gamma} = \frac{1+\gamma}{1-\gamma}"></span>。因此方差比趋近于：</p>
+<div class="lecture-equation" id="lecture-equation-25"><div class="math-block" data-tex="\frac{\operatorname{Var}(\hat{q}_{\text{ev}})}{\operatorname{Var}(\hat{q}_{\text{fv}})} \to \frac{1+\gamma}{M(1-\gamma)}."></div></div>
+<p><strong>效率判别准则</strong>：每次访问策略的方差低于首次访问策略当且仅当：</p>
+<div class="lecture-equation" id="lecture-equation-26"><div class="math-block" data-tex="M &gt; \frac{1+\gamma}{1-\gamma}."></div></div>
+<p>即每个episode中对同一<span class="math-inline" data-tex="(s,a)"></span>的平均访问次数超过该阈值时，每次访问策略更优。</p>
+<p>典型取值：</p>
+<div class="center">
+<div class="note-table" tabindex="0" role="region" aria-label="讲义数据表">
+<table>
+<thead>
+<tr>
+<th style="text-align: center;"><span class="math-inline" data-tex="\gamma"></span></th>
+<th style="text-align: center;">0.8</th>
+<th style="text-align: center;">0.9</th>
+<th style="text-align: center;">0.95</th>
+<th style="text-align: center;">0.98</th>
+<th style="text-align: center;">0.99</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">阈值<span class="math-inline" data-tex="\frac{1+\gamma}{1-\gamma}"></span></td>
+<td style="text-align: center;">9</td>
+<td style="text-align: center;">19</td>
+<td style="text-align: center;">39</td>
+<td style="text-align: center;">99</td>
+<td style="text-align: center;">199</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>当<span class="math-inline" data-tex="\gamma"></span>较大（接近1）时，阈值较高，首次访问策略在episode较短时更有优势；当<span class="math-inline" data-tex="\gamma"></span>较小时，每次访问策略很快就能凭借样本数量优势获得更低的方差。</p>
+<p><strong>5. 结论</strong></p>
+<p>上述分析给出以下定量结论：</p>
+<ul>
+<li><p><strong>相关性衰减</strong>：同episode内两次<span class="math-inline" data-tex="(s,a)"></span>访问的回报相关系数近似为<span class="math-inline" data-tex="\gamma^d"></span>，以折扣因子为底数呈指数衰减。</p></li>
+<li><p><strong>有效样本折扣</strong>：当每个episode对<span class="math-inline" data-tex="(s,a)"></span>访问<span class="math-inline" data-tex="M"></span>次时，有效独立样本数约为<span class="math-inline" data-tex="n_{\text{eff}} = \frac{nM(1-\gamma)}{1+\gamma}"></span>，而非<span class="math-inline" data-tex="nM"></span>。</p></li>
+<li><p><strong>效率阈值</strong>：仅当<span class="math-inline" data-tex="M &gt; \frac{1+\gamma}{1-\gamma}"></span>时，每次访问策略的估计方差才低于首次访问策略。这一结果解释了为什么在折扣因子接近1的长期规划任务中，首次访问策略往往更可取。</p></li>
+</ul>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="更高效地更新策略">5.3.2 更高效地更新策略 <a class="header-anchor" href="#更高效地更新策略" aria-label="章节链接">&#8203;</a></h3>
+<p>MC强化学习的另一个方面是何时更新策略。有两种策略：</p>
+<p><strong>第一种策略</strong>（MC Basic采用）：在策略评估步骤中，先收集所有从同一状态-动作对出发的episode，然后用这些episode的平均回报来近似动作价值。其缺点在于：智能体必须等待所有episode收集完成后才能更新估计。</p>
+<p><strong>第二种策略</strong>：用单个episode的回报来近似对应的动作价值。这样可以在收到每个episode时立即获得粗略估计，然后以逐episode的方式改进策略。该策略属于第4讲介绍的广义策略迭代的范畴——即使价值估计还不够准确，也可以更新策略。</p>
+<h3 class="unnumbered" tabindex="-1" id="算法描述">5.3.3 算法描述 <a class="header-anchor" href="#算法描述" aria-label="章节链接">&#8203;</a></h3>
+<p>将5.3.1节和5.3.2节的技术结合起来增强MC Basic的效率，就得到了<strong>MC Exploring Starts</strong>算法。</p>
+<div class="definitionbox lecture-box">
+<div class="lecture-box-title">
+<p>定义</p>
+</div>
+<p><strong>算法 5.2：MC Exploring Starts（MC Basic的高效变体）</strong></p>
+<p><strong>初始化：</strong>对所有<span class="math-inline" data-tex="(s,a)"></span>，初始化策略<span class="math-inline" data-tex="\pi_0(a \mid s)"></span>和初始值<span class="math-inline" data-tex="q(s,a)"></span>；<br />
+<span class="math-inline" data-tex="\text{Returns}(s,a) = 0"></span>，<span class="math-inline" data-tex="\text{Num}(s,a) = 0"></span>。<br />
+<strong>目标：</strong>搜索最优策略。</p>
+<p>对每个episode，执行：</p>
+<ul>
+<li><p><strong>Episode生成：</strong>选择一个起始状态-动作对<span class="math-inline" data-tex="(s_0, a_0)"></span>，并确保所有对都可能被选中（exploring starts条件）。遵循当前策略，生成长度为<span class="math-inline" data-tex="T"></span>的episode：<span class="math-inline" data-tex="s_0, a_0, r_1, \ldots, s_{T-1}, a_{T-1}, r_T"></span>。</p></li>
+<li><p><strong>每个episode的初始化：</strong><span class="math-inline" data-tex="g \leftarrow 0"></span>。</p></li>
+<li><p>对episode中的每一步，<span class="math-inline" data-tex="t = T-1, T-2, \ldots, 0"></span>，执行：</p>
+<ul>
+<li><p><span class="math-inline" data-tex="g \leftarrow \gamma g + r_{t+1}"></span></p></li>
+<li><p><span class="math-inline" data-tex="\text{Returns}(s_t, a_t) \leftarrow \text{Returns}(s_t, a_t) + g"></span></p></li>
+<li><p><span class="math-inline" data-tex="\text{Num}(s_t, a_t) \leftarrow \text{Num}(s_t, a_t) + 1"></span></p></li>
+<li><p><strong>策略评估：</strong> <span class="math-inline" data-tex="q(s_t, a_t) \leftarrow \text{Returns}(s_t, a_t) / \text{Num}(s_t, a_t)"></span></p></li>
+<li><p><strong>策略改进：</strong> <span class="math-inline" data-tex="\pi(a \mid s_t) = 1"></span> 若 <span class="math-inline" data-tex="a = \arg\max_a q(s_t, a)"></span>，否则 <span class="math-inline" data-tex="\pi(a \mid s_t) = 0"></span>。</p></li>
+</ul></li>
+</ul>
+</div>
+<p>MC Exploring Starts采用了每次访问策略。在计算从每个状态-动作对出发的折扣回报时，过程从终止状态开始逆向回到起始状态，这种技术可以提高算法效率，但也使算法更加复杂。正因如此，我们先介绍了不含这些技术的MC Basic，以揭示MC强化学习的核心思想。</p>
+<p>Exploration starts条件要求从每个状态-动作对出发有足够多的episode。只有每个状态-动作对被充分探索，才能准确估计其动作价值（大数定律），从而成功找到最优策略。否则，若某个动作未被充分探索，其动作价值可能被不准确地估计，即使它确实是最好的动作，也可能不被策略选中。MC Basic和MC Exploring Starts都需要这一条件，但它在许多应用中（尤其涉及与环境的物理交互时）难以满足。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="mc-varepsilon-greedy无需exploring-starts的学习">
+<h2 class="unnumbered" tabindex="-1" id="mc-varepsilon-greedy无需exploring-starts的学习">5.4 MC <span class="math-inline" data-tex="\varepsilon"></span>-Greedy：无需Exploring Starts的学习 <a class="header-anchor" href="#mc-varepsilon-greedy无需exploring-starts的学习" aria-label="章节链接">&#8203;</a></h2>
+<p>接下来扩展MC Exploring Starts算法，移除exploring starts条件。该条件本质上要求每个状态-动作对被足够多次访问，这也可以基于软策略（soft policies）来实现。</p>
+<h3 class="unnumbered" tabindex="-1" id="varepsilon-greedy-策略">5.4.1 <span class="math-inline" data-tex="\varepsilon"></span>-greedy 策略 <a class="header-anchor" href="#varepsilon-greedy-策略" aria-label="章节链接">&#8203;</a></h3>
+<p>一个策略若在任意状态下有正概率选择任意动作，则称为<strong>软策略（soft policy）</strong>。考虑一个极端情形：仅有一个episode。使用软策略时，一个足够长的episode可以多次访问每个状态-动作对，因此不需要从不同状态-动作对出发生成大量episode，exploring starts要求因而可以被移除。</p>
+<p>一种常见的软策略是<strong><span class="math-inline" data-tex="\varepsilon"></span>-greedy策略</strong>。<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略是一种随机策略，它有更高的概率选择贪心动作，并以相同的非零概率选择其他任何动作。具体地，设<span class="math-inline" data-tex="\varepsilon \in [0,1]"></span>，对应的<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略形式为：</p>
+<div class="lecture-equation is-numbered" id="eq:egreedy"><div class="math-block" data-tex="\pi(a \mid s) =
+\begin{cases}
+1 - \dfrac{|\mathcal{A}(s)| - 1}{|\mathcal{A}(s)|} \,\varepsilon, &amp; \text{对于贪心动作}, \\[10pt]
+\dfrac{1}{|\mathcal{A}(s)|} \,\varepsilon, &amp; \text{对于其他 $|\mathcal{A}(s)| - 1$ 个动作},
+\end{cases}"></div><a class="lecture-equation-number" href="#eq:egreedy" aria-label="公式 9">(9)</a></div>
+<p>其中<span class="math-inline" data-tex="|\mathcal{A}(s)|"></span>表示状态<span class="math-inline" data-tex="s"></span>关联的动作数量。</p>
+<p>当<span class="math-inline" data-tex="\varepsilon = 0"></span>时，<span class="math-inline" data-tex="\varepsilon"></span>-greedy退化为贪心策略；当<span class="math-inline" data-tex="\varepsilon = 1"></span>时，选择任意动作的概率均为<span class="math-inline" data-tex="1/|\mathcal{A}(s)|"></span>。</p>
+<p>贪心动作的被选概率始终大于其他动作，因为对于任意<span class="math-inline" data-tex="\varepsilon \in [0,1]"></span>：</p>
+<div class="lecture-equation" id="lecture-equation-28"><div class="math-block" data-tex="1 - \frac{|\mathcal{A}(s)| - 1}{|\mathcal{A}(s)|} \,\varepsilon = 1 - \varepsilon + \frac{\varepsilon}{|\mathcal{A}(s)|} \geq \frac{\varepsilon}{|\mathcal{A}(s)|}."></div></div>
+<p>虽然<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略是随机的，但按如下方式选择动作：首先生成<span class="math-inline" data-tex="[0,1]"></span>上的均匀随机数<span class="math-inline" data-tex="x"></span>。若<span class="math-inline" data-tex="x \leq \varepsilon"></span>，则在<span class="math-inline" data-tex="\mathcal{A}(s)"></span>中随机均匀选择一个动作（可能再次选到贪心动作）；若<span class="math-inline" data-tex="x &gt; \varepsilon"></span>，则选择贪心动作。这样，选择贪心动作的总概率为<span class="math-inline" data-tex="1 - \varepsilon + \varepsilon / |\mathcal{A}(s)|"></span>，选择其他任何动作的概率为<span class="math-inline" data-tex="\varepsilon / |\mathcal{A}(s)|"></span>。</p>
+<h3 class="unnumbered" tabindex="-1" id="算法描述-1">5.4.2 算法描述 <a class="header-anchor" href="#算法描述-1" aria-label="章节链接">&#8203;</a></h3>
+<p>要将<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略集成到MC学习中，只需将策略改进步骤从贪心改为<span class="math-inline" data-tex="\varepsilon"></span>-greedy。</p>
+<p>具体地，MC Basic或MC Exploring Starts中的策略改进步骤求解：</p>
+<div class="lecture-equation" id="lecture-equation-29"><div class="math-block" data-tex="\pi_{k+1}(s) = \arg\max_{\pi \in \Pi} \sum_a \pi(a \mid s) q_{\pi_k}(s,a),"></div></div>
+<p>其中<span class="math-inline" data-tex="\Pi"></span>表示所有可能策略的集合。该问题的解为贪心策略。</p>
+<p>现在，将策略改进步骤改为求解：</p>
+<div class="lecture-equation" id="lecture-equation-30"><div class="math-block" data-tex="\pi_{k+1}(s) = \arg\max_{\pi \in \Pi_\varepsilon} \sum_a \pi(a \mid s) q_{\pi_k}(s,a),"></div></div>
+<p>其中<span class="math-inline" data-tex="\Pi_\varepsilon"></span>表示给定<span class="math-inline" data-tex="\varepsilon"></span>值下所有<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略的集合。这样将策略强制为<span class="math-inline" data-tex="\varepsilon"></span>-greedy的。该问题的解为式<a href="#eq:egreedy" data-reference-type="eqref" data-reference="eq:egreedy">(9)</a>，其中<span class="math-inline" data-tex="a_k^* = \arg\max_a q_{\pi_k}(s,a)"></span>。</p>
+<div class="definitionbox lecture-box">
+<div class="lecture-box-title">
+<p>定义</p>
+</div>
+<p><strong>算法 5.3：MC <span class="math-inline" data-tex="\varepsilon"></span>-Greedy（MC Exploring Starts的变体）</strong></p>
+<p><strong>初始化：</strong>对所有<span class="math-inline" data-tex="(s,a)"></span>，初始化策略<span class="math-inline" data-tex="\pi_0(a \mid s)"></span>和初始值<span class="math-inline" data-tex="q(s,a)"></span>；<br />
+<span class="math-inline" data-tex="\text{Returns}(s,a) = 0"></span>，<span class="math-inline" data-tex="\text{Num}(s,a) = 0"></span>；<span class="math-inline" data-tex="\varepsilon \in (0,1]"></span>。<br />
+<strong>目标：</strong>搜索最优策略。</p>
+<p>对每个episode，执行：</p>
+<ul>
+<li><p><strong>Episode生成：</strong>选择一个起始状态-动作对<span class="math-inline" data-tex="(s_0, a_0)"></span>（不需要exploring starts条件）。遵循当前策略，生成长度为<span class="math-inline" data-tex="T"></span>的episode：<span class="math-inline" data-tex="s_0, a_0, r_1, \ldots, s_{T-1}, a_{T-1}, r_T"></span>。</p></li>
+<li><p><strong>每个episode的初始化：</strong><span class="math-inline" data-tex="g \leftarrow 0"></span>。</p></li>
+<li><p>对episode中的每一步，<span class="math-inline" data-tex="t = T-1, T-2, \ldots, 0"></span>，执行：</p>
+<ul>
+<li><p><span class="math-inline" data-tex="g \leftarrow \gamma g + r_{t+1}"></span></p></li>
+<li><p><span class="math-inline" data-tex="\text{Returns}(s_t, a_t) \leftarrow \text{Returns}(s_t, a_t) + g"></span></p></li>
+<li><p><span class="math-inline" data-tex="\text{Num}(s_t, a_t) \leftarrow \text{Num}(s_t, a_t) + 1"></span></p></li>
+<li><p><strong>策略评估：</strong> <span class="math-inline" data-tex="q(s_t, a_t) \leftarrow \text{Returns}(s_t, a_t) / \text{Num}(s_t, a_t)"></span></p></li>
+<li><p><strong>策略改进：</strong> 令<span class="math-inline" data-tex="a^* = \arg\max_a q(s_t, a)"></span>，则</p>
+<div class="lecture-equation" id="lecture-equation-31"><div class="math-block" data-tex="\pi(a \mid s_t) =
+            \begin{cases}
+            1 - \dfrac{|\mathcal{A}(s_t)| - 1}{|\mathcal{A}(s_t)|} \,\varepsilon, &amp; a = a^*, \\[10pt]
+            \dfrac{1}{|\mathcal{A}(s_t)|} \,\varepsilon, &amp; a \neq a^* .
+            \end{cases}"></div></div></li>
+</ul></li>
+</ul>
+</div>
+<p>若在策略改进步骤中用<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略替换贪心策略，还能保证获得最优策略吗？答案是“是”也是“否”。“是”是指：当有足够样本时，该算法可以收敛到<span class="math-inline" data-tex="\Pi_\varepsilon"></span>中的最优<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略。“否”是指：该策略仅在<span class="math-inline" data-tex="\Pi_\varepsilon"></span>中是最优的，但在<span class="math-inline" data-tex="\Pi"></span>中可能不是最优的。然而，如果<span class="math-inline" data-tex="\varepsilon"></span>足够小，<span class="math-inline" data-tex="\Pi_\varepsilon"></span>中的最优策略会接近<span class="math-inline" data-tex="\Pi"></span>中的最优策略。</p>
+<h3 class="unnumbered" tabindex="-1" id="示例分析-1">5.4.3 示例分析 <a class="header-anchor" href="#示例分析-1" aria-label="章节链接">&#8203;</a></h3>
+<p>考虑图5.5所示的网格世界。目标是为每个状态找到最优策略。MC <span class="math-inline" data-tex="\varepsilon"></span>-Greedy算法的每次迭代生成一个一百万步的episode（这里故意考虑仅用一个episode的极端情形）。奖励设置为<span class="math-inline" data-tex="r_{\text{boundary}} = r_{\text{forbidden}} = -1"></span>，<span class="math-inline" data-tex="r_{\text{target}} = 1"></span>，<span class="math-inline" data-tex="\gamma = 0.9"></span>。</p>
+<p>初始策略是均匀策略（每个动作的概率均为0.2）。<span class="math-inline" data-tex="\varepsilon = 0.5"></span>的最优<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略经过两次迭代即可得到。虽然每次迭代仅使用一个episode，但由于所有状态-动作对都能被访问到，其价值可以被准确估计，策略逐步改进。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="varepsilon-greedy策略的探索与利用">
+<h2 class="unnumbered" tabindex="-1" id="varepsilon-greedy策略的探索与利用">5.5 <span class="math-inline" data-tex="\varepsilon"></span>-Greedy策略的探索与利用 <a class="header-anchor" href="#varepsilon-greedy策略的探索与利用" aria-label="章节链接">&#8203;</a></h2>
+<p><strong>探索（exploration）</strong>与<strong>利用（exploitation）</strong>是强化学习中的基本权衡。探索意味着策略尽可能多地尝试不同动作，从而充分访问和评估所有动作。利用意味着改进后的策略应选择动作价值最大的贪心动作。然而，由于当前时刻获得的动作价值可能因探索不充分而不够准确，我们需要在利用的同时保持探索，以避免错过最优动作。</p>
+<p><span class="math-inline" data-tex="\varepsilon"></span>-greedy策略提供了一种平衡探索与利用的方式。一方面，它以更高概率选择贪心动作以利用当前估计的价值；另一方面，它也有机会选择其他动作以持续探索。</p>
+<p>利用与最优性相关——最优策略应当是贪心的。<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略的基本思想是以牺牲最优性/利用为代价来增强探索。要增强利用和最优性，需减小<span class="math-inline" data-tex="\varepsilon"></span>；要增强探索，需增大<span class="math-inline" data-tex="\varepsilon"></span>。</p>
+<h3 class="unnumbered" tabindex="-1" id="varepsilon-greedy策略的最优性"><span class="math-inline" data-tex="\varepsilon"></span>-Greedy策略的最优性 <a class="header-anchor" href="#varepsilon-greedy策略的最优性" aria-label="章节链接">&#8203;</a></h3>
+<p>下面通过<span class="math-inline" data-tex="5 \times 5"></span>网格世界示例展示：随着<span class="math-inline" data-tex="\varepsilon"></span>增大，<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略的最优性变差。奖励设置为<span class="math-inline" data-tex="r_{\text{boundary}} = -1"></span>，<span class="math-inline" data-tex="r_{\text{forbidden}} = -10"></span>，<span class="math-inline" data-tex="r_{\text{target}} = 1"></span>，<span class="math-inline" data-tex="\gamma = 0.9"></span>。</p>
+<ul>
+<li><p><span class="math-inline" data-tex="\varepsilon = 0"></span>时为贪心最优策略，状态价值最高。目标状态的价值也达到最大。</p></li>
+<li><p>随着<span class="math-inline" data-tex="\varepsilon"></span>增大，状态价值逐渐降低，<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略的最优性变差。值得注意的是，当<span class="math-inline" data-tex="\varepsilon"></span>大到0.5时，目标状态的价值反而变得最小——这是因为<span class="math-inline" data-tex="\varepsilon"></span>较大时，从目标区域出发的智能体有更高概率进入周边禁区并收到负奖励。</p></li>
+<li><p>如图5.7所示，当<span class="math-inline" data-tex="\varepsilon = 0.1"></span>时，最优<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略与最优贪心策略一致。但当<span class="math-inline" data-tex="\varepsilon"></span>增大到0.2时，获得的<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略与最优贪心策略不再一致。因此，若希望获得与最优贪心策略一致的<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略，<span class="math-inline" data-tex="\varepsilon"></span>的值应足够小。</p></li>
+</ul>
+<p>为什么<span class="math-inline" data-tex="\varepsilon"></span>较大时<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略与最优贪心策略不一致？以目标状态为例：贪心情形下，目标状态的最优策略是保持不动以获得正奖励；但当<span class="math-inline" data-tex="\varepsilon"></span>较大时，有高概率进入禁区并获得负奖励，因此此时目标状态的最优策略是逃离而非停留。</p>
+<h3 class="unnumbered" tabindex="-1" id="varepsilon-greedy策略的探索能力"><span class="math-inline" data-tex="\varepsilon"></span>-Greedy策略的探索能力 <a class="header-anchor" href="#varepsilon-greedy策略的探索能力" aria-label="章节链接">&#8203;</a></h3>
+<p>下面通过示例说明：<span class="math-inline" data-tex="\varepsilon"></span>越大，<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略的探索能力越强。</p>
+<p>当<span class="math-inline" data-tex="\varepsilon = 1"></span>时（均匀策略），探索能力最强——在任意状态有0.2的概率选择任意动作。从<span class="math-inline" data-tex="(s_1, a_1)"></span>出发生成的一个episode，当episode足够长时（如100万步），可以多次访问所有状态-动作对，且访问次数几乎均匀分布。</p>
+<p>当<span class="math-inline" data-tex="\varepsilon = 0.5"></span>时，探索能力弱于<span class="math-inline" data-tex="\varepsilon = 1"></span>的情形。虽然episode足够长时每个动作仍能被访问到，但访问次数的分布极不均匀——某些动作被访问超过25万次，而大多数动作仅被访问几百甚至几十次。</p>
+<p>以上示例表明：<span class="math-inline" data-tex="\varepsilon"></span>减小时，<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略的探索能力下降。一种有用的技术是：初始时设<span class="math-inline" data-tex="\varepsilon"></span>较大以增强探索，然后逐步减小<span class="math-inline" data-tex="\varepsilon"></span>以保证最终策略的最优性。</p>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>备注</p>
+</div>
+<p><span class="math-inline" data-tex="\varepsilon"></span>-greedy策略不仅用于MC强化学习，也用于其他强化学习算法（如第7讲将介绍的时序差分学习）。探索与利用的权衡是贯穿整个强化学习领域的核心主题。</p>
+</div>
+</section>
+<section class="document-section note-panel" aria-labelledby="本章小结">
+<h2 class="unnumbered" tabindex="-1" id="本章小结">5.6 本章小结 <a class="header-anchor" href="#本章小结" aria-label="章节链接">&#8203;</a></h2>
+<p>本章介绍了本书中第一个无模型强化学习算法系列。首先通过均值估计问题引入了MC估计的思想；然后依次介绍了三种MC算法：</p>
+<ul>
+<li><p><strong>MC Basic：</strong>最简单的MC强化学习算法。该算法通过将策略迭代中基于模型的策略评估步骤替换为无模型的MC估计组件而得到。给定足够样本，该算法可收敛到最优策略和最优状态价值。</p></li>
+<li><p><strong>MC Exploring Starts：</strong>MC Basic的变体。通过采用首次访问或每次访问策略更高效地利用样本，并从MC Basic得到该算法。</p></li>
+<li><p><strong>MC <span class="math-inline" data-tex="\varepsilon"></span>-Greedy：</strong>MC Exploring Starts的变体。在策略改进步骤中搜索最优<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略而非贪心策略，从而增强了策略的探索能力，移除了exploring starts条件。</p></li>
+</ul>
+<p>最后，通过分析<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略的性质介绍了探索与利用的权衡：增大<span class="math-inline" data-tex="\varepsilon"></span>可增强探索能力但降低利用/最优性，减小<span class="math-inline" data-tex="\varepsilon"></span>可更好利用贪心动作但探索能力受损。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="常见问题解答">
+<h2 class="unnumbered" tabindex="-1" id="常见问题解答">5.7 常见问题解答 <a class="header-anchor" href="#常见问题解答" aria-label="章节链接">&#8203;</a></h2>
+<ul>
+<li><p><strong>Q：什么是蒙特卡洛估计？</strong></p>
+<p>A：蒙特卡洛估计是指使用随机样本来解决近似问题的一大类技术。</p></li>
+<li><p><strong>Q：什么是均值估计问题？</strong></p>
+<p>A：均值估计问题是指基于随机样本来计算随机变量期望值的问题。</p></li>
+<li><p><strong>Q：如何求解均值估计问题？</strong></p>
+<p>A：有两种方法——基于模型和无模型。若随机变量的概率分布已知，可根据定义直接计算期望；若概率分布未知，可使用MC估计来近似期望，当样本数量足够大时该近似非常准确。</p></li>
+<li><p><strong>Q：为什么均值估计问题对强化学习很重要？</strong></p>
+<p>A：状态价值和动作价值都定义为回报的期望，因此估计状态价值或动作价值本质上就是均值估计问题。</p></li>
+<li><p><strong>Q：无模型MC强化学习的核心思想是什么？</strong></p>
+<p>A：核心思想是将策略迭代算法改造为无模型算法。策略迭代基于系统模型计算价值，而MC强化学习将策略迭代中基于模型的策略评估步骤替换为无模型的MC策略评估步骤。</p></li>
+<li><p><strong>Q：什么是初始访问、首次访问和每次访问策略？</strong></p>
+<p>A：它们是利用episode中样本的不同策略。一个episode可能访问许多状态-动作对。初始访问策略用整个episode仅估计起始状态-动作对的动作价值。每次访问和首次访问策略能更好地利用样本——若每次访问状态-动作对时都用其后轨迹估计其动作价值，则为每次访问策略；若只使用首次访问，则为首次访问策略。</p></li>
+<li><p><strong>Q：什么是exploring starts？为什么它很重要？</strong></p>
+<p>A：Exploring starts要求从每个状态-动作对出发生成无限多（或足够多）的episode。理论上该条件是找到最优策略所必需的——只有每个动作价值被充分探索，才能准确评估所有动作并正确选择最优动作。</p></li>
+<li><p><strong>Q：用什么思想避免exploring starts？</strong></p>
+<p>A：基本思想是让策略变“软”。软策略是随机的，使一个episode能访问许多状态-动作对，从而不需要从每个状态-动作对出发的大量episode。</p></li>
+<li><p><strong>Q：<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略可以是最优的吗？</strong></p>
+<p>A：答案既是“是”也是“否”。“是”是指：若有足够样本，MC <span class="math-inline" data-tex="\varepsilon"></span>-Greedy算法可收敛到最优<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略。“否”是指：收敛的策略仅在所有<span class="math-inline" data-tex="\varepsilon"></span>-greedy策略中是最优的（对相同的<span class="math-inline" data-tex="\varepsilon"></span>值）。</p></li>
+<li><p><strong>Q：能否用一个episode访问所有状态-动作对？</strong></p>
+<p>A：可以。若策略是软的（如<span class="math-inline" data-tex="\varepsilon"></span>-greedy）且episode足够长，一个episode即可访问所有状态-动作对。</p></li>
+<li><p><strong>Q：MC Basic、MC Exploring Starts和MC <span class="math-inline" data-tex="\varepsilon"></span>-Greedy之间是什么关系？</strong></p>
+<p>A：MC Basic是最简单的MC强化学习算法，它揭示了无模型MC强化学习的基本思想。MC Exploring Starts是MC Basic的变体，调整了样本使用策略。MC <span class="math-inline" data-tex="\varepsilon"></span>-Greedy又是MC Exploring Starts的变体，移除了exploring starts要求。因此，虽然基本思想简单，但当追求更好性能时，复杂性随之增加。将核心思想与可能分散初学者注意力的复杂性分开，对于理解至关重要。</p></li>
+</ul>
+
+</section>
+</div>
+<details class="lecture-original note-details" @toggle="toggleOriginal">
+  <summary>对照原版 PDF<span>保留原页码与讲义目录</span></summary>
+  <div class="lecture-original-content">
+    <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
+    <p><a :href="pdfUrl" target="_blank" rel="noopener">在新窗口打开原版 PDF</a></p>
+    <ClientOnly><PdfViewer v-if="showOriginal" :src="pdfUrl" title="蒙特卡洛方法" :outline="outline" /></ClientOnly>
+  </div>
+</details>
 </article>

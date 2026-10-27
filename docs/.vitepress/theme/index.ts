@@ -49,3 +49,4 @@ import './styles/coastal.css'
 import './styles/interiors.css'
 
 import './styles/reader-navigation.css'
+import './styles/academic-reading.css'
