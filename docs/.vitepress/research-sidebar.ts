@@ -3,7 +3,11 @@ export const researchSidebar = [
   {
     "text": "每日调研",
     "collapsed": false,
-        "items": [
+            "items": [
+      {
+        "text": "rollout 的算力经济学：一条训练样本值多少 token",
+        "link": "/research/2026-10-28-rollout-compute-economics"
+      },
       {
         "text": "解读 Claude Code 团队的七层代码审查：风险分级、收敛与迁移边界",
         "link": "/research/2026-10-26-agent-code-review-layers"

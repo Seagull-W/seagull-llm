@@ -1,5 +1,24 @@
 [
   {
+    "date": "2026-10-28",
+    "slug": "rollout-compute-economics",
+    "title": "rollout 的算力经济学：一条训练样本值多少 token",
+    "description": "把 LLM 强化学习的预算算清楚：组内全对全错的样本为何等于白算、长尾与异步如何用新鲜度换吞吐、截断和损失聚合怎样改变有效梯度，以及什么时候增加采样已经换不到能力。",
+    "route": "/research/2026-10-28-rollout-compute-economics",
+    "source_urls": [
+      "https://arxiv.org/abs/2503.14476",
+      "https://arxiv.org/abs/2505.24298",
+      "https://arxiv.org/abs/2509.19128",
+      "https://arxiv.org/abs/2507.01663",
+      "https://arxiv.org/abs/2507.18071",
+      "https://arxiv.org/abs/2510.13786",
+      "https://arxiv.org/abs/2504.13837",
+      "https://github.com/THUDM/slime"
+    ],
+    "window_end": "2026-10-28T00:00:00+08:00",
+    "origin": "manual"
+  },
+  {
     "date": "2026-10-26",
     "slug": "agent-code-review-layers",
     "title": "解读 Claude Code 团队的七层代码审查：风险分级、收敛与迁移边界",
