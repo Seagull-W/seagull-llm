@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-10-29",
+    "slug": "prm-process-reward",
+    "title": "过程奖励到底有没有用：步骤级信号的可信度账",
+    "description": "把过程奖励模型的证据放在一起看：2023 年的正向结果在什么条件下成立、自动标注如何把结果噪声搬进步骤标签、BoN 评测为何会虚高，以及 2026 年的压力测试怎样把 PRM 打回流畅度检测器。",
+    "route": "/research/2026-10-29-prm-process-reward",
+    "source_urls": [
+      "https://arxiv.org/abs/2305.20050",
+      "https://arxiv.org/abs/2501.07301",
+      "https://arxiv.org/abs/2412.06559",
+      "https://arxiv.org/abs/2501.03124",
+      "https://arxiv.org/abs/2603.06621",
+      "https://arxiv.org/abs/2502.01456",
+      "https://arxiv.org/abs/2312.08935"
+    ],
+    "window_end": "2026-10-29T00:00:00+08:00",
+    "origin": "manual"
+  },
+  {
     "date": "2026-10-28",
     "slug": "rollout-compute-economics",
     "title": "rollout 的算力经济学：一条训练样本值多少 token",

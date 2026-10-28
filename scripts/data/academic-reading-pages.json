@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1587,
+  "character_count": 1593,
   "pages": [
     {
       "path": "/linux-notes/linux-isolation.md",
@@ -54,6 +54,10 @@
     {
       "path": "/research/2026-10-28-rollout-compute-economics.md",
       "title": "rollout 的算力经济学：一条训练样本值多少 token"
+    },
+    {
+      "path": "/research/2026-10-29-prm-process-reward.md",
+      "title": "过程奖励到底有没有用：步骤级信号的可信度账"
     },
     {
       "path": "/rl-book/cha4对话模板与监督微调.md",

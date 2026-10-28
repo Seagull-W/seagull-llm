@@ -3,7 +3,11 @@ export const researchSidebar = [
   {
     "text": "每日调研",
     "collapsed": false,
-            "items": [
+                "items": [
+      {
+        "text": "过程奖励到底有没有用：步骤级信号的可信度账",
+        "link": "/research/2026-10-29-prm-process-reward"
+      },
       {
         "text": "rollout 的算力经济学：一条训练样本值多少 token",
         "link": "/research/2026-10-28-rollout-compute-economics"
