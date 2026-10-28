@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1577,
+  "character_count": 1587,
   "pages": [
     {
       "path": "/linux-notes/linux-isolation.md",
@@ -50,6 +50,10 @@
     {
       "path": "/research/2026-10-26-agent-code-review-layers.md",
       "title": "解读 Claude Code 团队的七层代码审查：风险分级、收敛与迁移边界"
+    },
+    {
+      "path": "/research/2026-10-28-rollout-compute-economics.md",
+      "title": "rollout 的算力经济学：一条训练样本值多少 token"
     },
     {
       "path": "/rl-book/cha4对话模板与监督微调.md",
