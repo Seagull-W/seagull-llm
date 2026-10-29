@@ -3,7 +3,11 @@ export const researchSidebar = [
   {
     "text": "每日调研",
     "collapsed": false,
-                    "items": [
+                        "items": [
+      {
+        "text": "近期后训练论文速览：按问题分组的卡片式调研（2026-09～10）",
+        "link": "/research/2026-10-30-post-training-papers-2026-10"
+      },
       {
         "text": "小模型的强化学习结论，能推到几百 B 吗",
         "link": "/research/2026-10-29-rl-scale-transfer"

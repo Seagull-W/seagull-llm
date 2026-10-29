@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1597,
+  "character_count": 1599,
   "pages": [
     {
       "path": "/linux-notes/linux-isolation.md",
@@ -62,6 +62,10 @@
     {
       "path": "/research/2026-10-29-rl-scale-transfer.md",
       "title": "小模型的强化学习结论，能推到几百 B 吗"
+    },
+    {
+      "path": "/research/2026-10-30-post-training-papers-2026-10.md",
+      "title": "近期后训练论文速览：按问题分组的卡片式调研（2026-09～10）"
     },
     {
       "path": "/rl-book/cha4对话模板与监督微调.md",

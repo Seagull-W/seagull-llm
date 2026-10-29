@@ -1,5 +1,28 @@
 [
   {
+    "date": "2026-10-30",
+    "slug": "post-training-papers-2026-10",
+    "title": "近期后训练论文速览：按问题分组的卡片式调研（2026-09～10）",
+    "description": "把两个月内与后训练相关的论文压成卡片：每篇只留结论、关键证据、成立边界与相邻关系，组内先给共同问题，末尾列出值得跟进的三条线索。",
+    "route": "/research/2026-10-30-post-training-papers-2026-10",
+    "source_urls": [
+      "https://arxiv.org/abs/2610.35716",
+      "https://arxiv.org/abs/2610.26469",
+      "https://arxiv.org/abs/2610.06360",
+      "https://arxiv.org/abs/2609.04108",
+      "https://arxiv.org/abs/2609.31900",
+      "https://arxiv.org/abs/2609.01422",
+      "https://arxiv.org/abs/2609.39436",
+      "https://arxiv.org/abs/2610.09679",
+      "https://arxiv.org/abs/2610.16593",
+      "https://arxiv.org/abs/2610.23181",
+      "https://arxiv.org/abs/2610.07405",
+      "https://arxiv.org/abs/2610.01509"
+    ],
+    "window_end": "2026-10-30T00:00:00+08:00",
+    "origin": "manual"
+  },
+  {
     "date": "2026-10-29",
     "slug": "rl-scale-transfer",
     "title": "小模型的强化学习结论，能推到几百 B 吗",
