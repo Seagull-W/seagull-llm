@@ -3,7 +3,11 @@ export const researchSidebar = [
   {
     "text": "每日调研",
     "collapsed": false,
-                "items": [
+                    "items": [
+      {
+        "text": "小模型的强化学习结论，能推到几百 B 吗",
+        "link": "/research/2026-10-29-rl-scale-transfer"
+      },
       {
         "text": "过程奖励到底有没有用：步骤级信号的可信度账",
         "link": "/research/2026-10-29-prm-process-reward"

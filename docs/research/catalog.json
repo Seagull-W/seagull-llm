@@ -1,6 +1,26 @@
 [
   {
     "date": "2026-10-29",
+    "slug": "rl-scale-transfer",
+    "title": "小模型的强化学习结论，能推到几百 B 吗",
+    "description": "把“能不能泛化”拆成算法、配方、现象三层：哪些结论跨规模成立、哪些在 4B 与 14B 之间就翻转，以及 RL 计算规模的证据目前实际覆盖到多大。",
+    "route": "/research/2026-10-29-rl-scale-transfer",
+    "source_urls": [
+      "https://arxiv.org/abs/2504.15077",
+      "https://arxiv.org/abs/2601.12186",
+      "https://arxiv.org/abs/2506.13923",
+      "https://arxiv.org/abs/2512.20760",
+      "https://arxiv.org/abs/2511.00710",
+      "https://arxiv.org/abs/2510.13786",
+      "https://arxiv.org/abs/2506.10947",
+      "https://arxiv.org/abs/2501.12948",
+      "https://arxiv.org/abs/2503.14476"
+    ],
+    "window_end": "2026-10-29T00:00:00+08:00",
+    "origin": "manual"
+  },
+  {
+    "date": "2026-10-29",
     "slug": "prm-process-reward",
     "title": "过程奖励到底有没有用：步骤级信号的可信度账",
     "description": "把过程奖励模型的证据放在一起看：2023 年的正向结果在什么条件下成立、自动标注如何把结果噪声搬进步骤标签、BoN 评测为何会虚高，以及 2026 年的压力测试怎样把 PRM 打回流畅度检测器。",
