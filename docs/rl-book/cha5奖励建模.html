@@ -21,10 +21,10 @@ import './reward-academic.css'
 <figure class="note-diagram" aria-label="从人类偏好到奖励信号">
   <p class="note-diagram-title">从人类偏好到奖励信号</p>
   <div class="note-flow">
-    <div class="note-flow-step tone-0"><strong>偏好对</strong><span>同一问题：chosen / rejected</span></div>
-    <div class="note-flow-step tone-1"><strong>奖励模型</strong><span>分别输出标量分数</span></div>
-    <div class="note-flow-step tone-2"><strong>偏好概率</strong><span>sigmoid 连接分数差与偏好</span></div>
-    <div class="note-flow-step tone-0"><strong>训练损失</strong><span>优化偏好的负对数似然</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="pair" /><strong>偏好对</strong><span>同一问题：chosen / rejected</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="score" /><strong>奖励模型</strong><span>分别输出标量分数</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="sigmoid" /><strong>偏好概率</strong><span>sigmoid 连接分数差与偏好</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="gradient" /><strong>训练损失</strong><span>优化偏好的负对数似然</span></div>
   </div>
   <figcaption>Bradley–Terry 模型比较的是同一提示下两个回答的分数差。</figcaption>
 </figure>

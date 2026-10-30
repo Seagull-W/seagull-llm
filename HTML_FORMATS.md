@@ -23,6 +23,12 @@ HTML 源文件使用 `data-design="linux-notebook"` 标记，页内按实际内�
 
 共用视觉由 `docs/.vitepress/theme/styles/notebook-design.css` 维护，样式限定在上述页面标记内，不改变调研页面。设计必须实际查看桌面、窄屏和暗色模式；构建通过不能替代视觉检查。
 
+### 文章流程图（2026-10-30）
+
+`figure.note-diagram` 内的 `note-flow` 使用白色阅读底、石墨灰文字与单一靛蓝强调色，共用样式在 `theme/styles/note-flow.css`。节点左对齐，以细线箭头和步骤号表达顺序；并列维度使用 `note-flow note-flow-options`，以分隔线区分，不显示箭头或步骤号。按文章可用宽度自动切换纵向布局，深色模式同步适配。
+
+节点采用 `<div class="note-flow-step"><NoteFlowIcon kind="dialogue" /><strong>结构化对话</strong><span>角色、消息与轮次</span></div>`。`NoteFlowIcon` 为同步注册、服务端渲染的轻量 SVG 组件，不需要 `ClientOnly`。图形在 `components/flow-glyphs.ts` 集中维护，由作者根据节点含义明确选择；不按位置轮换图标或颜色，不再使用 `tone-0/1/2`。SVG 仅作辅助，节点文字和图注必须能独立说明内容。添加图形时使用统一线宽、视框和颜色变量，不在图中绘制正文文字。
+
 LLM 科普书目前整体撤下：源文件保留，但不参与站点构建、导航、首页、卡片、标签、全文搜索与翻页。未经用户明确要求，不重新添加入口。此状态优先于下方保留的科普书格式约定。
 
 ## 文件与路由

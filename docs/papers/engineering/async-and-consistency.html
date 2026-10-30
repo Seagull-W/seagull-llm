@@ -18,10 +18,10 @@
 <figure class="note-diagram" aria-label="异步系统要保留对应关系">
   <p class="note-diagram-title">异步系统要保留对应关系</p>
   <div class="note-flow">
-    <div class="note-flow-step tone-0"><strong>采样请求</strong><span>任务与版本标识</span></div>
-    <div class="note-flow-step tone-1"><strong>推理输出</strong><span>回答与行为概率</span></div>
-    <div class="note-flow-step tone-2"><strong>训练消费</strong><span>样本、权重与 staleness</span></div>
-    <div class="note-flow-step tone-0"><strong>一致性检查</strong><span>定位格式与数值偏差</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="document" /><strong>采样请求</strong><span>任务与版本标识</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="dialogue" /><strong>推理输出</strong><span>回答与行为概率</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="checkpoint" /><strong>训练消费</strong><span>样本、权重与 staleness</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="check" /><strong>一致性检查</strong><span>定位格式与数值偏差</span></div>
   </div>
   <figcaption>任务、生成时的策略版本和训练时的样本必须能够重新关联。</figcaption>
 </figure>

@@ -8,6 +8,7 @@ import './styles/native-html.css'
 import './styles/notebook-design.css'
 import ChapterCards from '../components/ChapterCards.vue'
 import TagsIndex from '../components/TagsIndex.vue'
+import NoteFlowIcon from '../components/NoteFlowIcon.vue'
 
 // 首页 / 全局必需组件：同步导入
 import SeagullLens from '../components/SeagullLens.vue'
@@ -31,6 +32,7 @@ export default {
   enhanceApp({ app }) {
     app.component('ChapterCards', ChapterCards)
     app.component('TagsIndex', TagsIndex)
+    app.component('NoteFlowIcon', NoteFlowIcon)
     app.component('TokenDemo', TokenDemo)
     app.component('AttentionViz', AttentionViz)
     app.component('WordEmbedViz', WordEmbedViz)
@@ -50,3 +52,4 @@ import './styles/interiors.css'
 
 import './styles/reader-navigation.css'
 import './styles/academic-reading.css'
+import './styles/note-flow.css'

@@ -13,10 +13,10 @@
 <figure class="note-diagram" aria-label="Rust 并发的两条组织路线">
   <p class="note-diagram-title">Rust 并发的两条组织路线</p>
   <div class="note-flow note-flow-options">
-    <div class="note-flow-step tone-0"><strong>创建线程</strong><span>spawn 与 join</span></div>
-    <div class="note-flow-step tone-1"><strong>消息传递</strong><span>channel 转移数据</span></div>
-    <div class="note-flow-step tone-2"><strong>共享状态</strong><span>Arc 与 Mutex</span></div>
-    <div class="note-flow-step tone-0"><strong>安全边界</strong><span>Send / Sync 与所有权</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="branch" /><strong>创建线程</strong><span>spawn 与 join</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="channel" /><strong>消息传递</strong><span>channel 转移数据</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="network" /><strong>共享状态</strong><span>Arc 与 Mutex</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="lock" /><strong>安全边界</strong><span>Send / Sync 与所有权</span></div>
   </div>
   <figcaption>选择任务间如何交换数据，再理解所有权与线程安全约束。</figcaption>
 </figure>

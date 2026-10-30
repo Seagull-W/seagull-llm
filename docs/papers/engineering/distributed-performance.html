@@ -18,10 +18,10 @@
 <figure class="note-diagram" aria-label="先分清资源，再谈吞吐">
   <p class="note-diagram-title">先分清资源，再谈吞吐</p>
   <div class="note-flow note-flow-options">
-    <div class="note-flow-step tone-0"><strong>训练资源</strong><span>并行、显存与优化器</span></div>
-    <div class="note-flow-step tone-1"><strong>生成资源</strong><span>KV cache 与采样</span></div>
-    <div class="note-flow-step tone-2"><strong>环境资源</strong><span>容器与任务执行</span></div>
-    <div class="note-flow-step tone-0"><strong>端到端</strong><span>调度、传输与等待</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="chip" /><strong>训练资源</strong><span>并行、显存与优化器</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="tokens" /><strong>生成资源</strong><span>KV cache 与采样</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="container" /><strong>环境资源</strong><span>容器与任务执行</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="clock" /><strong>端到端</strong><span>调度、传输与等待</span></div>
   </div>
   <figcaption>训练、生成、环境执行三套资源预算，共同影响端到端性能。</figcaption>
 </figure>

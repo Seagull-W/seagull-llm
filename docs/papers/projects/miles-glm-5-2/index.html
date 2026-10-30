@@ -18,10 +18,10 @@
 <figure class="note-diagram" aria-label="终端 Agent 的异步训练链">
   <p class="note-diagram-title">终端 Agent 的异步训练链</p>
   <div class="note-flow">
-    <div class="note-flow-step tone-0"><strong>终端任务</strong><span>环境与交互反馈</span></div>
-    <div class="note-flow-step tone-1"><strong>异步采样</strong><span>rollout 与版本关联</span></div>
-    <div class="note-flow-step tone-2"><strong>GRPO / TIS</strong><span>核对更新算法</span></div>
-    <div class="note-flow-step tone-0"><strong>运行排错</strong><span>Slurm、Ray、KV 与 replay</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="code" /><strong>终端任务</strong><span>环境与交互反馈</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="trajectories" /><strong>异步采样</strong><span>rollout 与版本关联</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="gradient" /><strong>GRPO / TIS</strong><span>核对更新算法</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="monitor" /><strong>运行排错</strong><span>Slurm、Ray、KV 与 replay</span></div>
   </div>
   <figcaption>终端环境、采样和大型训练系统共同构成参考运行。</figcaption>
 </figure>

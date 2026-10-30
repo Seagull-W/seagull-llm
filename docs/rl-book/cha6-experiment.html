@@ -12,10 +12,10 @@
 <figure class="note-diagram" aria-label="沿数据流阅读 GRPO 实验">
   <p class="note-diagram-title">沿数据流阅读 GRPO 实验</p>
   <div class="note-flow">
-    <div class="note-flow-step tone-0"><strong>Prompt 批次</strong><span>prompts_per_step</span></div>
-    <div class="note-flow-step tone-1"><strong>组内采样</strong><span>num_rollouts 个回答</span></div>
-    <div class="note-flow-step tone-2"><strong>奖励与优势</strong><span>同一问题内比较</span></div>
-    <div class="note-flow-step tone-0"><strong>策略更新</strong><span>裁剪目标与梯度累积</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="dialogue" /><strong>Prompt 批次</strong><span>prompts_per_step</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="branch" /><strong>组内采样</strong><span>num_rollouts 个回答</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="advantage" /><strong>奖励与优势</strong><span>同一问题内比较</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="gradient" /><strong>策略更新</strong><span>裁剪目标与梯度累积</span></div>
   </div>
   <figcaption>先追踪一轮训练的输入输出，再进入配置、源码与显存分析。</figcaption>
 </figure>

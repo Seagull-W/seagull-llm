@@ -40,14 +40,6 @@
 .VPDoc .vp-doc [data-design] .note-panel .custom-block.tip { border-left-color: var(--note-green); background: #e8f7f0; }
 .VPDoc .vp-doc [data-design] .note-diagram { margin: 26px 0; padding: 24px 28px 20px; border: 1px solid var(--note-line); border-radius: 14px; background: #f0f5fc; }
 .VPDoc .vp-doc [data-design] .note-diagram-title { color: var(--vp-c-text-1); font-size: 17px; font-weight: 650; margin: 0 0 18px; }
-.note-flow { display: flex; gap: 20px; }
-.note-flow-step { position: relative; display: flex; flex: 1 1 0; flex-direction: column; justify-content: center; align-items: center; gap: 6px; padding: 18px 12px; min-width: 0; border: 1px solid #c7d9f4; border-radius: 10px; background: #e6efff; color: #1f51a1; text-align: center; }
-.note-flow-step:not(:last-child)::after { content: '›'; position: absolute; right: -16px; top: 50%; transform: translateY(-50%); font-size: 26px; color: #8aa0b9; font-weight: 400; }
-.note-flow-options .note-flow-step::after { display: none; }
-.note-flow-step strong { font-size: 15px; line-height: 1.5; }
-.note-flow-step span { font-size: 12px; line-height: 1.7; opacity: .88; }
-.note-flow-step.tone-1 { background: #dcf6ef; border-color: #b3e2d5; color: #096954; }
-.note-flow-step.tone-2 { background: #fff0d9; border-color: #eed8b5; color: #87520a; }
 .VPDoc .vp-doc [data-design] figcaption { margin: 14px 0 0; color: var(--vp-c-text-2); font-size: 13px; line-height: 1.8; text-align: center; }
 .VPDoc .vp-doc [data-design] .note-figure { margin: 24px 0; padding: 16px; background: #f8fafd; border: 1px solid var(--note-line); border-radius: 12px; }
 .VPDoc .vp-doc [data-design] .note-figure img { display: block; max-width: 100%; height: auto; margin: 0 auto; border-radius: 4px; }
@@ -87,9 +79,6 @@
 .dark .VPDoc .vp-doc [data-design] :is(.note-diagram,.note-figure,.note-details,.chapter-card,.note-table th,mjx-container[display='true'],.note-compare) { background: var(--vp-c-bg-soft); }
 .dark .VPDoc .vp-doc [data-design] .chapter-card:hover { background: #213650; }
 .dark .VPDoc .vp-doc [data-design] .note-table tr:nth-child(2n) { background: #182436; }
-.dark [data-design] .note-flow-step { background: #1c355b; border-color: #355780; color: #b3d1fc; }
-.dark [data-design] .note-flow-step.tone-1 { background: #173c36; border-color: #2b6055; color: #a2ddcb; }
-.dark [data-design] .note-flow-step.tone-2 { background: #3b3020; border-color: #685232; color: #efd1a2; }
 .dark .note-compare-label { color: #a2ddcb; }
 .dark .neutral .note-compare-label { color: #b3d1fc; }
 .dark .VPDoc .vp-doc [data-design] .note-panel .custom-block.warning { background: #3b3020; }
@@ -102,8 +91,6 @@
   .VPDoc .vp-doc [data-design] .note-hero { padding: 28px 24px; border-radius: 16px; }
   .VPDoc .vp-doc [data-design] .note-panel { padding: 24px; }
   .VPDoc .vp-doc [data-design] .note-diagram { padding: 22px; }
-  .note-flow { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
-  .note-flow-step::after { display: none; }
   .note-comparison { grid-template-columns: minmax(0,1fr); }
   .VPDoc .vp-doc [data-design] .chapter-cards { grid-template-columns: minmax(0,1fr); }
 }
@@ -116,8 +103,6 @@
   .note-jump { gap: 6px; }
   .VPDoc .vp-doc [data-design] .note-jump a { padding: 7px 9px; font-size: 12px; }
   .VPDoc .vp-doc [data-design] .note-diagram { padding: 18px 14px; }
-  .note-flow-step { padding: 14px 10px; }
-  .note-flow-step strong { font-size: 14px; }
 }
 @media print {
   .VPDoc .vp-doc [data-design] .note-hero { background: #fff; color: #000; border: 1px solid #bbb; }

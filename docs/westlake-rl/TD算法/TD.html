@@ -9,10 +9,10 @@
 <figure class="note-diagram" aria-label="比较 TD 控制算法时，先看策略">
   <p class="note-diagram-title">比较 TD 控制算法时，先看策略</p>
   <div class="note-flow">
-    <div class="note-flow-step tone-0"><strong>当前状态</strong><span>观察状态与动作</span></div>
-    <div class="note-flow-step tone-1"><strong>估计目标</strong><span>Sarsa / Q-learning 的差异</span></div>
-    <div class="note-flow-step tone-2"><strong>TD 误差</strong><span>目标减去当前估计</span></div>
-    <div class="note-flow-step tone-0"><strong>更新价值</strong><span>用步长混合新旧信息</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="state" /><strong>当前状态</strong><span>观察状态与动作</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="target" /><strong>估计目标</strong><span>Sarsa / Q-learning 的差异</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="advantage" /><strong>TD 误差</strong><span>目标减去当前估计</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="gradient" /><strong>更新价值</strong><span>用步长混合新旧信息</span></div>
   </div>
   <figcaption>目标策略与行为策略是否一致，决定这里所说的 on-policy / off-policy。</figcaption>
 </figure>

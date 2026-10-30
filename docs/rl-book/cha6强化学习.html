@@ -14,10 +14,10 @@
 <figure class="note-diagram" aria-label="把强化学习放回训练闭环">
   <p class="note-diagram-title">把强化学习放回训练闭环</p>
   <div class="note-flow">
-    <div class="note-flow-step tone-0"><strong>采样轨迹</strong><span>策略生成回答</span></div>
-    <div class="note-flow-step tone-1"><strong>评价与优势</strong><span>把回报变为学习信号</span></div>
-    <div class="note-flow-step tone-2"><strong>策略更新</strong><span>在约束下优化目标</span></div>
-    <div class="note-flow-step tone-0"><strong>再次采样</strong><span>使用更新后的策略</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="trajectories" /><strong>采样轨迹</strong><span>策略生成回答</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="advantage" /><strong>评价与优势</strong><span>把回报变为学习信号</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="gradient" /><strong>策略更新</strong><span>在约束下优化目标</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="loop" /><strong>再次采样</strong><span>使用更新后的策略</span></div>
   </div>
   <figcaption>奖励提供评价，优势决定相对方向，策略梯度负责更新。</figcaption>
 </figure>

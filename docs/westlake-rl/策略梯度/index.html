@@ -14,10 +14,10 @@
 <figure class="note-diagram" aria-label="策略梯度的推导路线">
   <p class="note-diagram-title">策略梯度的推导路线</p>
   <div class="note-flow">
-    <div class="note-flow-step tone-0"><strong>参数化策略</strong><span>用参数描述动作概率</span></div>
-    <div class="note-flow-step tone-1"><strong>标量目标</strong><span>明确优化什么</span></div>
-    <div class="note-flow-step tone-2"><strong>梯度推导</strong><span>连接回报与参数变化</span></div>
-    <div class="note-flow-step tone-0"><strong>采样估计</strong><span>REINFORCE 等方法</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="branch" /><strong>参数化策略</strong><span>用参数描述动作概率</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="score" /><strong>标量目标</strong><span>明确优化什么</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="gradient" /><strong>梯度推导</strong><span>连接回报与参数变化</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="trajectories" /><strong>采样估计</strong><span>REINFORCE 等方法</span></div>
   </div>
   <figcaption>先确定优化指标，随后推导梯度，最后用采样估计落实为算法。</figcaption>
 </figure>

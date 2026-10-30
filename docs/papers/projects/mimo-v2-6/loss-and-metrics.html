@@ -16,11 +16,11 @@
 </nav>
 <figure class="note-diagram" aria-label="联合解释训练曲线">
   <p class="note-diagram-title">联合解释训练曲线</p>
-  <div class="note-flow">
-    <div class="note-flow-step tone-0"><strong>Loss 与梯度</strong><span>观察更新数值</span></div>
-    <div class="note-flow-step tone-1"><strong>KL 与 Reward</strong><span>观察策略和反馈</span></div>
-    <div class="note-flow-step tone-2"><strong>任务与吞吐</strong><span>检查分布和系统变化</span></div>
-    <div class="note-flow-step tone-0"><strong>Benchmark</strong><span>联系实际能力表现</span></div>
+  <div class="note-flow note-flow-options">
+    <div class="note-flow-step"><NoteFlowIcon kind="gradient" /><strong>Loss 与梯度</strong><span>观察更新数值</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="score" /><strong>KL 与 Reward</strong><span>观察策略和反馈</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="clock" /><strong>任务与吞吐</strong><span>检查分布和系统变化</span></div>
+    <div class="note-flow-step"><NoteFlowIcon kind="compare" /><strong>Benchmark</strong><span>联系实际能力表现</span></div>
   </div>
   <figcaption>单条曲线的升降不足以证明训练成功或失败，需要交叉检查。</figcaption>
 </figure>
