@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1600,
+  "character_count": 1620,
   "pages": [
     {
       "path": "/linux-notes/linux-isolation.md",
@@ -146,6 +146,10 @@
     {
       "path": "/papers/graph-gpo/index.md",
       "title": "Graph-GPO：基于状态转移图的信用分配"
+    },
+    {
+      "path": "/papers/mai-gym/index.md",
+      "title": "MAI-Gym：GUI 智能体的一体化评测与在线 RL 平台"
     },
     {
       "path": "/papers/projects/coverage.md",
