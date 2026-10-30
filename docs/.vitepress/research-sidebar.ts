@@ -5,7 +5,7 @@ export const researchSidebar = [
     "collapsed": false,
                         "items": [
       {
-        "text": "近期后训练论文速览：按问题分组的卡片式调研（2026-09～10）",
+        "text": "后训练的四个争点：奖励可信、信号交接、预算分配与评测口径（2026-09～10）",
         "link": "/research/2026-10-30-post-training-papers-2026-10"
       },
       {
