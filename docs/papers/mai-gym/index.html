@@ -1,0 +1,877 @@
+<article class="native-document format-paper" data-format="paper" aria-label="MAI-Gym：GUI 智能体的一体化评测与在线 RL 平台" data-design="linux-notebook">
+<header class="document-intro note-hero">
+<p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
+<h1 id="mai-gym" tabindex="-1">MAI-Gym：GUI 智能体的一体化评测与在线 RL 平台 <a class="header-anchor" href="#mai-gym" aria-label="文章链接">&#8203;</a></h1>
+<p class="note-deck">在一个平台上统一移动端、计算机与网页的 GUI 智能体评测、轨迹采样与在线 RL，并用合成应用与任务训练出 9B 模型。</p>
+<div class="note-chips"><span>论文与项目随谈</span><span>论文精读</span><span>GRPO</span><span>GUI Agent</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+<a href="#background"><span>01</span>一、问题背景</a>
+<a href="#preliminaries"><span>02</span>二、预备知识</a>
+<a href="#maigym"><span>03</span>三、MAI-Gym</a>
+<a href="#experiments"><span>04</span>四、实验</a>
+<a href="#related-work"><span>05</span>五、相关工作</a>
+<a href="#conclusion"><span>06</span>六、结论与发布物</a>
+<a href="#appendix-notes"><span>07</span>附：附录要点</a>
+<a href="#figures-reading"><span>08</span>附二：配图补读与贡献—证据对照</a>
+</nav>
+<section class="document-section note-panel" aria-labelledby="background">
+<h2 id="background" tabindex="-1">一、问题背景 <a class="header-anchor" href="#background" aria-label="章节链接">&#8203;</a></h2>
+<p>将可验证奖励强化学习（RLVR）应用于GUI智能体的两个根本挑战：</p>
+<ol>
+<li>GUI环境扩展成本高，且难以维持一致性：单个实例无法并发，且由此容易导致评测和训练彼此独立且逐渐偏离</li>
+<li>真实 GUI 学习需要基于一致且可重置环境状态的多样化任务</li>
+</ol>
+<p>将<strong>可扩展执行</strong>与<strong>环境和任务自动合成</strong>相结合是关键。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="preliminaries">
+<h2 id="preliminaries" tabindex="-1">二、预备知识 <a class="header-anchor" href="#preliminaries" aria-label="章节链接">&#8203;</a></h2>
+<h3 id="executable-tasks" tabindex="-1">2.1 GUI智能体的可执行任务 <a class="header-anchor" href="#executable-tasks" aria-label="章节链接">&#8203;</a></h3>
+<p>环境 <span class="math-inline" data-tex="\mathcal{E}"></span> 是智能体在其中执行动作的软件系统，如 Android 设备、桌面虚拟机或浏览器应用。一个可执行任务定义为</p>
+<div class="math-block" data-tex="x = (\mathcal{E}, s_0, g, V),"></div>
+<p>其中包含初始状态 <span class="math-inline" data-tex="s_0"></span>、自然语言指令 <span class="math-inline" data-tex="g"></span> 和验证器 <span class="math-inline" data-tex="V"></span>。初始状态包含回合开始前加载的应用记录、文件、账户和设置（如当前日期）。初始状态本身也是任务的一部分：同一指令在不同 <span class="math-inline" data-tex="s_0"></span> 下可能对应不同的正确结果。每次尝试都在独立隔离的 <span class="math-inline" data-tex="\mathcal{E}"></span> 实例中运行，并重置到 <span class="math-inline" data-tex="s_0"></span>。</p>
+<p><strong>验证。</strong> 验证器检查最终状态 <span class="math-inline" data-tex="s_T"></span>，并在需要时检查轨迹 <span class="math-inline" data-tex="\tau"></span>。我们将任务要求表示为二元判据 <span class="math-inline" data-tex="b_j(s_T,\tau)\in\{0,1\}"></span>，各判据权重为 <span class="math-inline" data-tex="w_j&gt;0"></span>，其中子集 <span class="math-inline" data-tex="\mathcal{C}"></span> 为必须满足的判据。奖励和任务成功定义为</p>
+<div class="math-block" data-tex="r = \frac{\sum_j w_j b_j}{\sum_j w_j} \in [0,1], \qquad S = \prod_{j\in\mathcal{C}} b_j,"></div>
+<p>因此，奖励允许部分得分，而成功要求满足全部必需判据。判据可以通过读取应用或系统状态的代码检查，也可以由视觉语言模型（VLM）评判；MAI-Gym 同时支持两者。</p>
+<h3 id="harness-actions" tabindex="-1">2.2 智能体运行框架和动作空间 <a class="header-anchor" href="#harness-actions" aria-label="章节链接">&#8203;</a></h3>
+<p><strong>运行框架</strong>是连接策略与环境的代码，运行框架既参与构建上下文<span class="math-inline" data-tex="c_t"></span>（依据指令、交互历史与当前观察），也承担调研策略将模型输出解析为<em>动作</em>并执行。</p>
+<p><strong>GUI与CLI动作</strong>，一个<em>步骤</em>对应一次模型决策，可输出一组有序的 GUI 与 CLI
+动作；步数限制和历史窗口都按步骤计数。terminate 动作结束回合，并给出最终回答及声称的成功
+或失败状态。</p>
+<div class="note-table" tabindex="0"><table>
+<thead>
+<tr>
+<th>智能体</th>
+<th>观测 <span class="math-inline" data-tex="o_t"></span></th>
+<th>上下文 <span class="math-inline" data-tex="c_t"></span></th>
+<th>动作 <span class="math-inline" data-tex="y_t"></span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GUI 智能体</td>
+<td>截图</td>
+<td>最近 <span class="math-inline" data-tex="k"></span> 张截图 + 文本历史</td>
+<td>点击、输入、拖拽等</td>
+</tr>
+<tr>
+<td>CLI 智能体</td>
+<td>命令输出</td>
+<td>文本历史，通常经过摘要</td>
+<td>Shell 命令</td>
+</tr>
+<tr>
+<td><strong>MAI-Gym</strong></td>
+<td><strong>截图 + 命令输出</strong></td>
+<td><strong>由运行框架定制</strong></td>
+<td><strong>批量 GUI + CLI 动作</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>动作沿用Qwen-UI-Agent的，见下表：</p>
+<div class="note-table" tabindex="0"><table>
+<thead>
+<tr>
+<th>动作</th>
+<th>定义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>GUI 动作</strong></td>
+<td></td>
+</tr>
+<tr>
+<td><code>click</code></td>
+<td>在坐标 <span class="math-inline" data-tex="(x,y)"></span> 处点击。</td>
+</tr>
+<tr>
+<td><code>double_click</code></td>
+<td>在坐标 <span class="math-inline" data-tex="(x,y)"></span> 处双击；触屏上为连续轻触两次。</td>
+</tr>
+<tr>
+<td><code>long_press</code></td>
+<td>在坐标 <span class="math-inline" data-tex="(x,y)"></span> 处长按。</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>输入指定文本内容。</td>
+</tr>
+<tr>
+<td><code>hotkey</code></td>
+<td>按下组合键，如 <code>ctrl+c</code>。</td>
+</tr>
+<tr>
+<td><code>open</code></td>
+<td>打开指定应用。</td>
+</tr>
+<tr>
+<td><code>drag</code></td>
+<td>从起点坐标 <span class="math-inline" data-tex="(x_1,y_1)"></span> 拖拽至终点坐标 <span class="math-inline" data-tex="(x_2,y_2)"></span>。</td>
+</tr>
+<tr>
+<td><code>system_button</code></td>
+<td>按下系统按钮，可选 <code>back</code>、<code>home</code>、<code>menu</code> 和 <code>enter</code>。</td>
+</tr>
+<tr>
+<td><code>wait</code></td>
+<td>等待指定秒数。</td>
+</tr>
+<tr>
+<td><strong>CLI 动作</strong></td>
+<td></td>
+</tr>
+<tr>
+<td><code>cli_command</code></td>
+<td>在当前 CLI 环境执行 bash 命令。</td>
+</tr>
+<tr>
+<td><strong>API 动作</strong></td>
+<td></td>
+</tr>
+<tr>
+<td><code>api_call</code></td>
+<td>使用指定参数调用 API。</td>
+</tr>
+<tr>
+<td><strong>交互与控制动作</strong></td>
+<td></td>
+</tr>
+<tr>
+<td><code>ask_user</code></td>
+<td>向用户请求信息。</td>
+</tr>
+<tr>
+<td><code>terminate</code></td>
+<td>结束任务，给出最终回答和 <code>success</code> 或 <code>failed</code> 状态。</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="online-rl" tabindex="-1">2.3 在线智能体强化学习 <a class="header-anchor" href="#online-rl" aria-label="章节链接">&#8203;</a></h3>
+<h4 id="online-rl-rollout" tabindex="-1">在线强化学习与轨迹采样 <a class="header-anchor" href="#online-rl-rollout" aria-label="章节链接">&#8203;</a></h4>
+<p><strong>轨迹采样（Rollout）</strong> 是智能体针对任务的一次完整尝试：</p>
+<ol>
+<li>
+<p>将环境重置至初始状态 <span class="math-inline" data-tex="s_0"></span>。</p>
+</li>
+<li>
+<p>策略根据当前上下文 <span class="math-inline" data-tex="c_t"></span> 逐步采样动作：</p>
+<div class="math-block" data-tex="y_t \sim \pi_\theta(\cdot \mid c_t)"></div>
+</li>
+<li>
+<p>执行 <code>terminate</code> 或达到最大步数后，结束本轮尝试，得到轨迹：</p>
+<div class="math-block" data-tex="\tau = (c_1,y_1,\ldots,c_T,y_T)"></div>
+</li>
+<li>
+<p>根据任务执行结果计算终局奖励 <span class="math-inline" data-tex="r"></span>。</p>
+</li>
+</ol>
+<p><strong>在线强化学习（Online RL）</strong> 使用当前策略实时采集轨迹，并在任务池 <span class="math-inline" data-tex="\mathcal{X}"></span> 上最大化期望奖励：</p>
+<div class="math-block" data-tex="J(\theta) = \mathbb{E}_{x\sim\mathcal{X}} \mathbb{E}_{\tau\sim\pi_\theta(\cdot\mid x)} [r(x,\tau)]"></div>
+<p>与使用固定数据集的离线训练不同，在线 RL 每次更新策略后都需要重新采样轨迹，因此依赖持续、大规模的环境重置、隔离与实例供应。</p>
+<h4 id="grpo-advantage" tabindex="-1">GRPO 与组相对优势估计 <a class="header-anchor" href="#grpo-advantage" aria-label="章节链接">&#8203;</a></h4>
+<p>采用 <strong>GRPO（Group Relative Policy Optimization，组相对策略优化）</strong>，通过组内奖励比较估计优势，无需单独训练价值函数（Critic）。</p>
+<p>对于同一任务，使用当前策略独立采样 <span class="math-inline" data-tex="G"></span> 条轨迹，分别获得终局奖励 <span class="math-inline" data-tex="r_1,\ldots,r_G"></span>。</p>
+<p>轨迹 <span class="math-inline" data-tex="i"></span> 的优势定义为：</p>
+<div class="math-block" data-tex="A_i = \frac{r_i-\operatorname{mean}(r_{1:G})} {\operatorname{std}(r_{1:G})+\delta}"></div>
+<p>其中：</p>
+<ul>
+<li><span class="math-inline" data-tex="r_i"></span>：第 <span class="math-inline" data-tex="i"></span> 条轨迹的终局奖励。</li>
+<li><span class="math-inline" data-tex="\operatorname{mean}(r_{1:G})"></span>：组内奖励均值。</li>
+<li><span class="math-inline" data-tex="\operatorname{std}(r_{1:G})"></span>：组内奖励标准差。</li>
+<li><span class="math-inline" data-tex="\delta&gt;0"></span>：防止分母为零的微小常数。</li>
+</ul>
+<p><strong>核心机制：</strong></p>
+<ul>
+<li><strong>相对优势</strong>：奖励高于组内均值的轨迹获得正优势，低于均值的获得负优势。</li>
+<li><strong>词元级共享</strong>：同一轨迹中由策略生成的所有词元共享该轨迹的优势值。</li>
+<li><strong>零梯度问题</strong>：如果组内所有轨迹奖励相同，则优势全部为零，无法提供有效的策略梯度学习信号。</li>
+<li><strong>采样预算优化</strong>：优先将采样资源分配给当前策略能够部分成功、但尚未稳定解决的任务，以提高训练效率。</li>
+</ul>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="maigym">
+<h2 id="maigym" tabindex="-1">三、MAI-Gym <a class="header-anchor" href="#maigym" aria-label="章节链接">&#8203;</a></h2>
+<h3 id="architecture" tabindex="-1">3.1 系统架构 <a class="header-anchor" href="#architecture" aria-label="章节链接">&#8203;</a></h3>
+<figure class="note-figure"><img src="./figures/图2.png" alt="MAI-Gym 共享轨迹采样路径、环境管理器、部署后端与四个扩展点的系统架构。"><figcaption>MAI-Gym 共享轨迹采样路径、环境管理器、部署后端与四个扩展点的系统架构。</figcaption></figure>
+<p>首先，所有工作负载(即不同形式的任务：采集数据、训练模型、评估)<em>共享一条轨迹采样路径和一个智能体运行框架</em>，因此评测、数据采集和训练使用同一个智能体（左侧）。</p>
+<p>其次，智能体<em>仅通过环境管理器</em>访问所有环境；管理器提供统一接口，隐藏环境与部署细节（中部）。部署后端承载移动端、计算机和网页实例（右侧），仪表盘报告系统状态（底部）。</p>
+<p><strong>保持采样路径和agent harness一致</strong>，尽可能保证不同工作负载下运行机制相近，从而避免因为框架差异导致系统性偏差。</p>
+<blockquote>
+<p><strong>环境管理器</strong>:环境管理器提供五种操作：请求实例、观测、重置到任务、执行步骤和评估（附录 A.2）。在这些操作背后，它供应并分配实例，管理从初始化到重置和清理的整个会话，注册任务，通过<em>代码验证器或 VLM 评判计算奖励</em>，持久化轨迹，并向仪表盘报告状态。环境适配器将这些操作转换为各环境的原生 API，同时保留基准自身的任务初始化与验证方式；适配器完全不涉及 RL。部署后端在 Kubernetes 或 Docker 上承载实例，或连接现有手机、计算机和浏览器会话。</p>
+</blockquote>
+<p>图2标出来四个拓展点：添加harness框架，添加任务，集成环境（通过适配器Adapter集成新的环境），定制环境（对可接入的环境做扩展定制）。</p>
+<h3 id="rollout-sampling" tabindex="-1">3.2 可扩展的高效轨迹采样 <a class="header-anchor" href="#rollout-sampling" aria-label="章节链接">&#8203;</a></h3>
+<p>GUI轨迹采样的成本：</p>
+<ol>
+<li>每次尝试需要一套初始状态精确的独立手机/桌面；</li>
+<li>一次训练需要大量此类实例，且有故障率；</li>
+<li>每次尝试需要数十次多模态推理调用后，验证器才返回奖励。</li>
+</ol>
+<p>MAI-Gym的工作，一是在Andorid、桌面虚拟机和浏览器这三种任务上做了针对性优化，降低了重置耗时（中位数）；二是对大规模快速供应做了优化；三是高效多轮推理，分为Rollout和Training两部分，细节见下图：</p>
+<figure class="note-figure"><img src="./figures/图3.png" alt="多轮推理中窗口式历史管理与训练样本划分的示意图。"><figcaption>多轮推理中窗口式历史管理与训练样本划分的示意图。</figcaption></figure>
+<blockquote>
+<p>一些前置知识，每一轮上下文含文本和截图，旧截图解除占用是通过占位符的方式，当本轮上下文前缀改变时就需要重新计算KV缓存。</p>
+</blockquote>
+<p>对于Rollout的部分，K为一个窗口的轮数，0为相邻窗口重叠数，当K+1时开启新窗口，KV缓存重新计算，1~K-O的截图变为占位符，此时新的窗口至少能看见O+1轮完整上下文，K+2开始复用KV缓存。相比last-k降低了KV缓存更新的频率，保留了一定的重叠窗口。论文取K=10,O=2。</p>
+<figure class="note-figure"><img src="./figures/图2_补充.png" alt="窗口式轨迹划分中各窗口覆盖的轮次、重叠轮次与训练区间。"><figcaption>窗口式轨迹划分中各窗口覆盖的轮次、重叠轮次与训练区间。</figcaption></figure>
+<p>对于Training部分，采用相同的窗口划分样本（如1~K，K-O+1~2K-O），这是为了让模型训练上下文和rollout阶段尽量保持一致，用loss mask保证第二个样本中与上一个样本的重叠部分不计算loss。</p>
+<h3 id="evaluation-diagnostics" tabindex="-1">3.3 评测与诊断 <a class="header-anchor" href="#evaluation-diagnostics" aria-label="章节链接">&#8203;</a></h3>
+<p>支持本地checkpoint和API测评，在移动端/计算机/网页提供了3/4/3个benchmark。</p>
+<p>这里还提供了仪表盘，检测环境与具体任务，从而区分智能体失败/环境故障等。</p>
+<p>支持通过外部智能体查询评估基准测试轨迹。</p>
+<h3 id="env-task-synthesis" tabindex="-1">3.4 环境与任务合成 <a class="header-anchor" href="#env-task-synthesis" aria-label="章节链接">&#8203;</a></h3>
+<p>诊断指出该练什么，合成提供练什么。合成覆盖可执行任务 <span class="math-inline" data-tex="x=(\mathcal{E},s_0,g,V)"></span> 的全部四项：模拟应用给出 <span class="math-inline" data-tex="\mathcal{E}"></span>，跨应用世界构建给出一致的 <span class="math-inline" data-tex="s_0"></span>，任务与验证器合成给出 <span class="math-inline" data-tex="g"></span> 和经过执行测试的 <span class="math-inline" data-tex="V"></span>。每个阶段都是一项<em>智能体技能</em>，即 Claude Code 这类编程智能体遵循的一组指令；技能与其产出的应用、任务一起发布。</p>
+<figure class="note-figure"><img src="./figures/图4.png" alt="七个真实移动应用与对应克隆应用的界面对照。"><figcaption>七个真实移动应用与对应克隆应用的界面对照。</figcaption></figure>
+<p><strong>环境合成：模拟应用。</strong> 模拟应用是后端可重置的独立应用，使同一条工作流可以在无副作用的前提下重复数千次。按是否有真实应用作为参照分两类：</p>
+<div class="note-table" tabindex="0"><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>构造方式</th>
+<th>数量</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>真实应用克隆</td>
+<td>编程智能体参考真实应用从零重建</td>
+<td>7 个：12306、建设银行、滴滴、美团、大众点评、抖音、小红书</td>
+<td>转账、下单、发帖等动作不可撤销，无法在真机上反复练；克隆在可重置后端上复现预订、下单、支付等主流程</td>
+</tr>
+<tr>
+<td>新颖应用</td>
+<td>无真实参照，全新构造</td>
+<td>42 个（HTML5 模板上的确定性状态机）</td>
+<td>任何模型都不可能在训练中见过，用来测&quot;仅凭奖励能否学会陌生界面&quot;</td>
+</tr>
+</tbody>
+</table></div>
+<p>克隆的正确性靠人工比对：测试人员在克隆与真实应用上执行同一任务并对照过程中的界面（附录 A.7.1）。新颖应用是运行在 Chromium 中的确定性状态机——相同 <span class="math-inline" data-tex="s_0"></span> 与动作序列必然产生相同结果，因此重置与奖励是精确的；流水线先在无浏览器条件下测逻辑，再在 Chromium 中运行同一份代码，并用参考解、重置测试和两次运行的一致性检查来验收（附录 A.7.2）。42 个新颖应用含 840 个任务、3,196 项针对应用状态、动作历史和提交答案的可执行检查。</p>
+<figure class="note-figure"><img src="./figures/图5.png" alt="跨应用世界构建、任务生成与验证器合成的三阶段流程。"><figcaption>跨应用世界构建、任务生成与验证器合成的三阶段流程。</figcaption></figure>
+<p><strong>跨应用世界构建。</strong> 真实任务的前提是 <span class="math-inline" data-tex="s_0"></span> 里已经存在完成任务所需的证据和资源，所以顺序是&quot;先造世界，再写任务&quot;。人物设定（身份、角色、目标）与情境（时间线、事件、约束）合成共享同一批人物、事件和事实的文件与应用记录：项目说明、预算表、邮件往来、日历条目分别描述同一项目的不同侧面。共享上下文使任务必须以取证为前提——不是&quot;创建一个叫<em>预算审查</em>的日程&quot;，而是&quot;把预算审查挪到修订版表格截止日的次日&quot;，需要读邮件、表格和日历。缺资源时流水线回填并验证更新后的世界；初始化模板把这套世界灌进运行中的实例（移动端填应用数据，计算机端填桌面工作区），得到的即为可复现的 <span class="math-inline" data-tex="s_0"></span>。</p>
+<p><strong>任务与验证器合成。</strong> 三步，核心目标是让 <span class="math-inline" data-tex="V"></span> 检查&quot;用户要求的结果&quot;，而不是&quot;某一种解法碰巧采用的做法&quot;：</p>
+<ol>
+<li><strong>有依据的失败驱动生成</strong>：从世界中抽取跨文件、跨应用的共享事实，组合出串联 取证→判断→执行 的任务；汇总失败轨迹的诊断报告指定新任务该补哪些能力；审查环节删除重复任务、澄清歧义指令、核对每个被要求的结果是否有世界信息支撑。</li>
+<li><strong>先定要求，再生成验证器</strong>：任务规范含指令、所需资源引用、成功判据，以及记录支持事实、计算过程与期望值的内部答案上下文——策略看不到答案上下文。随后两次互不读取对方输出的独立调用分别生成<em>标准完成代码</em>（把环境直接置为完成态）与<em>验证器代码</em>；奖励审计比对验证器与规范，查漏掉的要求、无依据的条件和错误的期望值。</li>
+<li><strong>先执行，再验收</strong>：在真实运行实例上按&quot;初始→完成→重置&quot;执行 <span class="math-inline" data-tex="V"></span>，必须依次得 <span class="math-inline" data-tex="0"></span>、<span class="math-inline" data-tex="1"></span>、<span class="math-inline" data-tex="0"></span>，再依要求核对实际环境状态，修复或丢弃未通过的候选。标准完成代码只能证明 <span class="math-inline" data-tex="V"></span> 可被满足，不能证明 GUI 可解，因此还要多个模型经智能体接口试跑，轨迹审查检查可执行性、难度、指令清晰度与奖励投机风险；通过的任务太少就继续生成候选。</li>
+</ol>
+<p>发布 2,000 个任务，MobileWorld 与 OSWorld 各 1,000（附录 A.6）。模型参与造题与审题，但在线 RL 的奖励只来自验证器执行。</p>
+<blockquote>
+<p>三个阶段的共同约束是&quot;可重置、可重放&quot;：克隆要对真实副作用做回滚，新颖应用被限定为确定性状态机，跨应用世界要能重灌同一份 <span class="math-inline" data-tex="s_0"></span>。只有这三件事成立，同一任务被反复尝试数千次后 <span class="math-inline" data-tex="s_0"></span> 与 <span class="math-inline" data-tex="V"></span> 才仍给出同一个判定。</p>
+</blockquote>
+<h3 id="online-rl-training" tabindex="-1">3.5 在线 RL 训练 <a class="header-anchor" href="#online-rl-training" aria-label="章节链接">&#8203;</a></h3>
+<p>与评测同构，一条命令启动：<code>mai-gym train --config configs/mai-gym-9b.yaml</code>。YAML 指定策略检查点、任务池及其环境、算法与超参、采样预算与并发、历史窗口、训练后端与并行（附录 A.5）。训练器基于 slime，用 Megatron-LM 训练、SGLang 采样，支持 GRPO、DAPO、GSPO、REINFORCE++、SAO、PPO；各算法共用同一份记录（轨迹、奖励、策略生成词元的对数概率）。主方案是 GRPO。</p>
+<p>相比文本 RL，GUI 训练在三处更难，对应三个机制：</p>
+<div class="note-table" tabindex="0"><table>
+<thead>
+<tr>
+<th>难点</th>
+<th>机制</th>
+<th>要点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>采样昂贵，预算应只花在还能教会策略的任务上</td>
+<td>策略自适应任务采样</td>
+<td>按历史成功率分配尝试次数；整组尝试齐了才算优势</td>
+</tr>
+<tr>
+<td>轨迹长且截图密集，训练不该反复重编码同一段历史</td>
+<td>窗口式打包</td>
+<td>每个采样窗口成为一条训练样本，损失只落在新增轮次</td>
+</tr>
+<tr>
+<td>训练器必须看到与推理引擎完全相同的输入</td>
+<td>训练–采样一致性</td>
+<td>启动检查 + 词元级对数概率的 <span class="math-inline" data-tex="k_3"></span> KL 判停</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>策略自适应任务采样。</strong> GRPO 只从组内奖励有差异的尝试中学习，对恒成功或恒失败的任务采样纯属浪费。每轮采样前调度器按历史尝试估计各任务成功率：未见任务和&quot;有时能解&quot;的任务拿满 <span class="math-inline" data-tex="G=8"></span> 次；策略从未解出的任务与成功率超过 <span class="math-inline" data-tex="\eta"></span> 的已掌握任务拿较小但非零的预算（<span class="math-inline" data-tex="\eta=0.8"></span>，分别为 4 次和 2 次），以便策略变化后重新检查。只有某任务的全部尝试都处理完毕才计算其优势，因此完成顺序和轨迹长度不会使组内基线产生偏差。</p>
+<p><strong>窗口式打包。</strong> 轨迹的每个窗口成为一条因果训练序列，训练器按窗口而非按步骤编码截图。两种常见替代各有权衡：<em>逐步</em>把每步当独立样本，每次都重编码共享历史；<em>轨迹级</em>把整条轨迹打包成一条序列，只在上下文恰好延伸前一条时精确，长且多图的轨迹很快超出显存。窗口介于两者之间——损失只作用于窗口新增步骤：<span class="math-inline" data-tex="K=10,O=2"></span> 时第一个样本训第 1–10 轮，第二个样本只训第 11–18 轮，第 9–10 轮仅作上下文，没有输出被重复训练。窗口重放采样时的精确词元；若各轮不构成一致的词元前缀，打包器回退到逐步样本。控显存靠三件事：截图以压缩形式到达训练器、仅在对应微批次调度时解码；视觉塔选择性激活重算；上下文、流水线、数据并行可配。</p>
+<p><strong>训练–采样一致性。</strong> 训练正确性取决于它与采样的接近程度：训练器若以不同方式重建提示词或处理图像，策略就在从未见过的输入上被更新。启动时检查已知的多模态处理故障；运行时逐响应词元比较两阶段的对数概率，用 KL 的 <span class="math-inline" data-tex="k_3"></span> 估计量决定运行是否继续——与平均绝对差不同，<span class="math-inline" data-tex="k_3"></span> 由少数严重不一致的词元主导，因此突然上升通常指向生成内核损坏、打包历史错位，或两端版本不一致。</p>
+<p>主要超参（附录 A.4）：GRPO，组大小 8，逐词元损失，学习率恒为 <span class="math-inline" data-tex="10^{-6}"></span>，KL 系数 <span class="math-inline" data-tex="10^{-3}"></span> <strong>加在损失上而非奖励上</strong>，无熵奖励，Adam 权重衰减 0.1、<span class="math-inline" data-tex="(\beta_1,\beta_2)=(0.9,0.98)"></span>，微批次为单条序列且计数单位是窗口，历史 <span class="math-inline" data-tex="K=10"></span>、<span class="math-inline" data-tex="O=2"></span>。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="experiments">
+<h2 id="experiments" tabindex="-1">四、实验 <a class="header-anchor" href="#experiments" aria-label="章节链接">&#8203;</a></h2>
+<h3 id="experiment-setup" tabindex="-1">4.1 设置 <a class="header-anchor" href="#experiment-setup" aria-label="章节链接">&#8203;</a></h3>
+<p><strong>训练 MAI-Gym-9B。</strong> 从 Qwen3.5-9B 出发，两阶段：先在移动端与桌面混合数据上监督微调预热，使模型学会遵循混合 GUI 与 CLI 指令；RL 阶段在<strong>一次运行</strong>中把移动端与计算机任务联合训练。这点与常见方案不同——后者在各领域分别 RL，再用参数平均合并专家，而 MAI-Gym 共享一条采样路径，一次运行即可从两个域抽任务、只训一个策略。具体设置：GRPO，合成流水线产出的 5,000 个任务（任务来自 MobileWorld 与 OSWorld 环境），仅用代码验证器奖励，策略自适应采样，<span class="math-inline" data-tex="K=10,O=2"></span>，512 块 GPU，并发环境峰值 20,000，约 96 小时。</p>
+<p><strong>基准与口径。</strong> 七个基准，3 移动 + 4 计算机：</p>
+<div class="note-table" tabindex="0"><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>基准</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>任务 OOD</td>
+<td>MobileWorld（仅 GUI）、OSWorld-Verified</td>
+<td>环境与训练共享，任务不共享</td>
+</tr>
+<tr>
+<td>环境 OOD</td>
+<td>AndroidWorld、MobileGym、MacAgentBench、MyPCBench</td>
+<td>环境完全未参与训练</td>
+</tr>
+<tr>
+<td>环境 OOD</td>
+<td>OSWorld 2.0</td>
+<td>另含 31 个训练环境没有的自托管网站与长时程工作流</td>
+</tr>
+</tbody>
+</table></div>
+<p>评测走训练时同一个运行框架（温度 0、每任务 3 次尝试），各基准用自己的验证器和指标，OSWorld 2.0 报二元准确率／部分得分，MobileGym 报部分得分。汇总用无权平均：移动均值取 3 个、计算机均值取 4 个，跨域平均是这两者的均值；任务 OOD 平均取 2 个、环境 OOD 平均取 5 个，所有平均都按 OSWorld 2.0 的二元分数与 MobileGym 的部分得分计算。</p>
+<p><strong>基线三类。</strong> 前沿模型：Claude Opus 4.8、GPT-5.5、Qwen3.8-Max（API）与开放权重的 Qwen3.8-27B；GUI 智能体模型：GUI-Owl-1.5-8B/32B、UI-Venus-2-9B、SCALECUA-Qwen3.5-9B、EvoCUA-1.5-32B、CUA-GYM-35B-A3B、CUA-GYM-397B-A17B、Qwen-CUA，其中 UI-Venus-2-9B 与 SCALECUA-Qwen3.5-9B 与本文同规模；基础模型：Qwen3.5-9B 本体。除 8 个由作者自跑的数字外，其余取自已发表报告与排行榜。</p>
+<h3 id="main-results" tabindex="-1">4.2 主要结果 <a class="header-anchor" href="#main-results" aria-label="章节链接">&#8203;</a></h3>
+<div class="note-table" tabindex="0"><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>规模</th>
+<th>访问</th>
+<th>MobileWorld</th>
+<th>AndroidWorld</th>
+<th>MobileGym</th>
+<th>OSWorld-Verified</th>
+<th>OSWorld 2.0</th>
+<th>MacAgentBench</th>
+<th>MyPCBench</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>前沿模型</em></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Claude Opus 4.8</td>
+<td>--</td>
+<td>API</td>
+<td>69.2</td>
+<td>75.0</td>
+<td>50.7</td>
+<td>83.4</td>
+<td>20.3/54.8</td>
+<td>58.4</td>
+<td>62.0</td>
+</tr>
+<tr>
+<td>GPT-5.5</td>
+<td>--</td>
+<td>API</td>
+<td>62.4</td>
+<td>74.1</td>
+<td>48.1</td>
+<td>78.7</td>
+<td>13.9/47.5</td>
+<td>66.7</td>
+<td>47.3</td>
+</tr>
+<tr>
+<td>Qwen3.8-Max</td>
+<td>2.4T-A95B</td>
+<td>API</td>
+<td>77.8</td>
+<td>85.3</td>
+<td>61.3</td>
+<td>86.1</td>
+<td>19.4/46.7</td>
+<td>74.3</td>
+<td>48.6</td>
+</tr>
+<tr>
+<td>Qwen3.8-27B</td>
+<td>27B</td>
+<td>开放</td>
+<td>70.1</td>
+<td>81.9</td>
+<td>57.5</td>
+<td>84.3</td>
+<td>19.4/48.0</td>
+<td>65.4</td>
+<td>28.5</td>
+</tr>
+<tr>
+<td><em>GUI 智能体模型</em></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>GUI-Owl-1.5-8B</td>
+<td>8B</td>
+<td>开放</td>
+<td>38.2</td>
+<td>71.6</td>
+<td>15.1</td>
+<td>52.9</td>
+<td>0.0/1.6</td>
+<td>10.2</td>
+<td>1.8</td>
+</tr>
+<tr>
+<td>GUI-Owl-1.5-32B</td>
+<td>32B</td>
+<td>开放</td>
+<td>43.9</td>
+<td>69.8</td>
+<td>20.3</td>
+<td>56.5</td>
+<td>0.9/2.5</td>
+<td>17.2</td>
+<td>6.3</td>
+</tr>
+<tr>
+<td>UI-Venus-2-9B</td>
+<td>9B</td>
+<td>开放</td>
+<td>75.2</td>
+<td>80.2</td>
+<td>52.7</td>
+<td>70.8</td>
+<td>0.0/7.5</td>
+<td>36.2</td>
+<td>6.3</td>
+</tr>
+<tr>
+<td>SCALECUA-Qwen3.5-9B</td>
+<td>9B</td>
+<td>开放</td>
+<td>12.8</td>
+<td>47.4</td>
+<td>13.5</td>
+<td>68.7</td>
+<td>0.0/2.2</td>
+<td>3.9</td>
+<td>1.1</td>
+</tr>
+<tr>
+<td>Qwen-CUA</td>
+<td>397B-A17B</td>
+<td>开放</td>
+<td>--</td>
+<td>--</td>
+<td>--</td>
+<td>86.2</td>
+<td>18.5/48.4</td>
+<td>69.2</td>
+<td>58.7</td>
+</tr>
+<tr>
+<td>EvoCUA-1.5-32B</td>
+<td>32B</td>
+<td>未发布</td>
+<td>--</td>
+<td>--</td>
+<td>--</td>
+<td>63.2</td>
+<td>--</td>
+<td>--</td>
+<td>--</td>
+</tr>
+<tr>
+<td>CUA-GYM-35B-A3B</td>
+<td>35B-A3B</td>
+<td>未发布</td>
+<td>--</td>
+<td>--</td>
+<td>--</td>
+<td>62.1</td>
+<td>--</td>
+<td>--</td>
+<td>--</td>
+</tr>
+<tr>
+<td>CUA-GYM-397B-A17B</td>
+<td>397B-A17B</td>
+<td>未发布</td>
+<td>--</td>
+<td>--</td>
+<td>--</td>
+<td>72.6</td>
+<td>--</td>
+<td>--</td>
+<td>--</td>
+</tr>
+<tr>
+<td><em>本文方法</em></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Qwen3.5-9B（基础）</td>
+<td>9B</td>
+<td>开放</td>
+<td>18.0</td>
+<td>57.8</td>
+<td>9.0</td>
+<td>41.8</td>
+<td>0.0/2.5</td>
+<td>20.7</td>
+<td>6.5</td>
+</tr>
+<tr>
+<td><strong>MAI-Gym-9B</strong></td>
+<td><strong>9B</strong></td>
+<td><strong>开放</strong></td>
+<td><strong>78.4</strong> (+60.4)</td>
+<td><strong>75.9</strong> (+18.1)</td>
+<td><strong>46.5</strong> (+37.5)</td>
+<td><strong>76.2</strong> (+34.4)</td>
+<td><strong>3.7/11.3</strong> (+3.7/+8.8)</td>
+<td><strong>41.3</strong> (+20.6)</td>
+<td><strong>15.2</strong> (+8.7)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>任务 OOD。</strong> 同一个检查点跑完七个基准，而四个 GUI 智能体基线只报计算机结果。在两个训练过的环境上，MAI-Gym-9B 得 78.4 与 76.2，是同规模最优：领先 UI-Venus-2-9B 3.2 与 5.4 个百分点，领先 GUI-Owl-1.5-8B 40.2 与 23.3 个百分点；也超过在此二基准上报数的更大模型（含 GUI-Owl-1.5-32B，以及 OSWorld-Verified 上的 EvoCUA-1.5-32B、CUA-GYM-35B-A3B、CUA-GYM-397B-A17B），仅 397B-A17B 的 Qwen-CUA 在其上更高。对前沿模型，MobileWorld 上超过 Opus 4.8（69.2）、GPT-5.5（62.4）与 Qwen3.8-Max（77.8），OSWorld-Verified 上距 GPT-5.5 仅 2.5 个百分点。训练未用任何基准任务，所以这两个分数衡量的是在训练过的环境里解新任务的能力。</p>
+<p><strong>环境 OOD。</strong> 移动端仍有竞争力但不再领先：AndroidWorld 75.9、MobileGym 46.5，分别比 UI-Venus-2-9B 低 4.3 和 6.2 个百分点（都高于 GUI-Owl-1.5-8B）。计算机侧更难：OSWorld 2.0 为 3.7/11.3，MacAgentBench 41.3，MyPCBench 15.2，均为同规模开放 GUI 智能体中已报告的最好水平。</p>
+<figure class="note-figure"><img src="./figures/图6.png" alt="基础模型、SFT 预热与联合 RL 在七个基准上的成绩和增益。"><figcaption>基础模型、SFT 预热与联合 RL 在七个基准上的成绩和增益。</figcaption></figure>
+<p><strong>SFT 与联合 RL 的增益。</strong> 图 6 把每项分数拆成基础模型、SFT 预热增益与联合 RL 增益（SFT 检查点按本文协议评测，上标 <span class="math-inline" data-tex="p"></span> 为部分得分）。SFT 贡献了大部分提升：任务 OOD 平均 29.9→66.4，环境 OOD 平均 18.8→32.3。联合 RL 再把跨域平均从 44.1 推到 50.5——移动均值 +8.7、计算机均值 +4.2，说明一次运行联合训练两个域可以同时改善两侧；两个任务 OOD 基准分别 +14.1 与 +7.8，环境 OOD 平均 +4.2，且五个环境 OOD 基准<strong>逐个</strong>都涨，说明从两个环境的合成任务学到的能力可迁移到别的环境。</p>
+<blockquote>
+<p>口径自查：基础环境 OOD 平均 <span class="math-inline" data-tex="(57.8+9.0+0.0+20.7+6.5)/5=18.8"></span>；终态环境 OOD 平均 <span class="math-inline" data-tex="(75.9+46.5+3.7+41.3+15.2)/5=36.5"></span>，与 32.3+4.2 一致；跨域平均 <span class="math-inline" data-tex="(66.9+34.1)/2=50.5"></span> 也自洽。任务 OOD 的 66.4 指 SFT 检查点的 <span class="math-inline" data-tex="(64.3+68.4)/2"></span>，不是终态均值（77.3），读表时容易混。</p>
+</blockquote>
+<figure class="note-figure"><img src="./figures/图7.png" alt="命令行工具、批量 GUI 动作与移动端自适应放大的行为案例。"><figcaption>命令行工具、批量 GUI 动作与移动端自适应放大的行为案例。</figcaption></figure>
+<p><strong>训练学到的高效行为。</strong> 图 7 三个案例：计算机侧当 CLI 是最短路径时直接调命令行——用 <code>ffprobe</code> 查视频流、<code>ffmpeg</code> 导出字幕并无损重封装，绕开媒体编辑里更长的 GUI 路径；支持批量 GUI 动作，电子表格里&quot;锁定焦点→输入区域→确认→快捷键复制&quot;可合成更少的高层动作，减少步数、观测–决策循环与用户词元成本；移动端出现模型原生的自适应放大，用应用自带双击缩放并跨页移动放大目标，读取全页视图下看不清的小字（如 PDF 里的参数数值）。这些提升不只是&quot;动作选得更准&quot;，还包括为任务选择合适的交互方式：直接 GUI、批量 GUI、外部工具。</p>
+<h3 id="analysis" tabindex="-1">4.3 分析 <a class="header-anchor" href="#analysis" aria-label="章节链接">&#8203;</a></h3>
+<p>六个问题各对应一节：基础设施能否撑住在线 GUI RL 的规模、联合 RL 是否优于专家合并、RL 增益如何随合成任务数增长、克隆里的训练能否迁移到真实应用、能否仅凭奖励学会陌生应用、GRPO 与 SAO 在 MAI-Gym 上如何比较。</p>
+<h4 id="analysis-infrastructure" tabindex="-1">4.3.1 基础设施 <a class="header-anchor" href="#analysis-infrastructure" aria-label="章节链接">&#8203;</a></h4>
+<div class="note-table" tabindex="0"><table>
+<thead>
+<tr>
+<th>环境</th>
+<th>1,000 实例启动（秒）</th>
+<th>重置 p50 / p95（秒）</th>
+<th>不计分中止（%）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>移动端</td>
+<td>328.4（≥6× 快于 KVM/裸机估算）</td>
+<td>165.0 / 184.0</td>
+<td>1.2</td>
+</tr>
+<tr>
+<td>计算机</td>
+<td>88.9</td>
+<td>37.2 / 100.1</td>
+<td>1.9</td>
+</tr>
+<tr>
+<td>浏览器</td>
+<td>94.2</td>
+<td>6.0 / 27.0</td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table></div>
+<p>启动时间指 1,000 个环境的 GUI 全部就绪；不计分中止指环境故障后重跑、未计入评测的尝试。三端都能在几分钟内拉起千级 GUI 就绪实例且中止率低；移动端 328.4 秒至少比串行 KVM 方案快 6 倍（后者为 100 批×10 个×等 20 秒的估算，≥1,980 秒）。评测方面：每任务 3 次尝试跑完七个基准约 3 小时。</p>
+<div class="note-table" tabindex="0"><table>
+<thead>
+<tr>
+<th>历史方式</th>
+<th>前缀缓存命中（%）</th>
+<th>采样步/秒</th>
+<th>训练输入词元/轨迹</th>
+<th>训练更新（秒）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>逐步</td>
+<td>42.5</td>
+<td>2.3</td>
+<td>566,375</td>
+<td>2166.4</td>
+</tr>
+<tr>
+<td>窗口式（K=10, O=2）</td>
+<td>85.9（+102.1%）</td>
+<td>1.9（−18.9%）</td>
+<td>86,855（−84.7%）</td>
+<td>810.9（−62.6%）</td>
+</tr>
+</tbody>
+</table></div>
+<p>窗口式换来的是缓存命中翻倍与训练词元降到约 1/6.5，代价是采样吞吐下降 18.9%。在本文的配置下这是更划算的交换：瓶颈在训练更新（2,166→811 秒），不在采样。</p>
+<h4 id="analysis-joint-rl" tabindex="-1">4.3.2 联合 RL 优于专家合并 <a class="header-anchor" href="#analysis-joint-rl" aria-label="章节链接">&#8203;</a></h4>
+<p>对照方案是&quot;先训两个领域专家，再按权重做参数平均合并&quot;；所有运行从同一预热检查点出发，联合 RL 用两个专家预算之和。</p>
+<div class="note-table" tabindex="0"><table>
+<thead>
+<tr>
+<th>设置</th>
+<th>MobileWorld</th>
+<th>OSWorld-Verified</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>移动端专家</td>
+<td>76.4</td>
+<td>71.4</td>
+</tr>
+<tr>
+<td>计算机专家</td>
+<td>73.5</td>
+<td>73.8</td>
+</tr>
+<tr>
+<td>合并 70/30</td>
+<td>74.4</td>
+<td>68.4</td>
+</tr>
+<tr>
+<td>合并 50/50</td>
+<td>76.4</td>
+<td>73.7</td>
+</tr>
+<tr>
+<td>合并 30/70</td>
+<td>73.5</td>
+<td>74.8</td>
+</tr>
+<tr>
+<td><strong>联合 RL</strong></td>
+<td><strong>78.4</strong></td>
+<td><strong>76.2</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>合并能保住相当一部分领域增益，但没有一种权重同时在两侧领先：MobileWorld 上最好的合并（50/50）是 76.4，OSWorld-Verified 上最好的（30/70）是 74.8，都低于联合训练的 78.4 / 76.2。合并权重比本身也在透露信息——单侧最优的权重恰好把另一侧拉下去。</p>
+<h4 id="analysis-task-scale" tabindex="-1">4.3.3 合成任务规模 <a class="header-anchor" href="#analysis-task-scale" aria-label="章节链接">&#8203;</a></h4>
+<p>从 MobileWorld 与 OSWorld 的合成任务里随机抽 500、1,000、5,000 个任务，算法、超参、采样预算全部固定。</p>
+<div class="note-table" tabindex="0"><table>
+<thead>
+<tr>
+<th>合成训练任务</th>
+<th>MobileWorld</th>
+<th>OSWorld-Verified</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.5k</td>
+<td>69.2</td>
+<td>69.7</td>
+</tr>
+<tr>
+<td>1k</td>
+<td>73.5</td>
+<td>70.9</td>
+</tr>
+<tr>
+<td>5k</td>
+<td>78.4</td>
+<td>76.2</td>
+</tr>
+</tbody>
+</table></div>
+<figure class="note-figure"><img src="./figures/图8.png" alt="合成训练任务数量与两个任务 OOD 基准成功率的关系。"><figcaption>合成训练任务数量与两个任务 OOD 基准成功率的关系。</figcaption></figure>
+<p>两个基准的任务都没参与训练，所以这是泛化随任务多样性上升；OSWorld-Verified 在 1k 处还小幅回落（70.9），5k 才明显起来。</p>
+<h4 id="analysis-sim2real" tabindex="-1">4.3.4 克隆训练迁移到真实应用 <a class="header-anchor" href="#analysis-sim2real" aria-label="章节链接">&#8203;</a></h4>
+<p>用 52 个配对任务，比较仅克隆内 RL 前后，12306 克隆与实体手机上真实 12306 的成功率。</p>
+<figure class="note-figure"><img src="./figures/图9.png" alt="克隆内 RL 前后在 12306 克隆与真实应用上的成功率对比。"><figcaption>克隆内 RL 前后在 12306 克隆与真实应用上的成功率对比。</figcaption></figure>
+<p>克隆 36.5→73.1，真实应用 28.8→48.1（+19.2 个百分点）。图 11 给出同一个能力在两边的表现：RL 后策略在克隆与真机上都正确算出&quot;下周一&quot;并设置提醒。迁移并不完整——克隆与真机的差距从 7.7 扩大到 25.0 个百分点，克隆内的增益不能直接当作真实应用的增益。</p>
+<figure class="note-figure"><img src="./figures/图11.png" alt="RL 后策略在 12306 克隆与真实手机上计算日期并设置提醒的轨迹。"><figcaption>RL 后策略在 12306 克隆与真实手机上计算日期并设置提醒的轨迹。</figcaption></figure>
+<h4 id="analysis-novel-apps" tabindex="-1">4.3.5 仅凭奖励学习陌生应用 <a class="header-anchor" href="#analysis-novel-apps" aria-label="章节链接">&#8203;</a></h4>
+<p>252 个任务训练、62 个留出任务各试一次，步数预算 60。成功率 25.8→45.2；耗尽预算的尝试 27→5；平均轨迹长度 33.3→16.4 步。全程只用验证器奖励，不给这些应用的任何示范。</p>
+<figure class="note-figure"><img src="./figures/图12.png" alt="陌生文件管理应用中 RL 前后的操作轨迹与验证结果对比。"><figcaption>陌生文件管理应用中 RL 前后的操作轨迹与验证结果对比。</figcaption></figure>
+<p>图 12 的留出任务：RL 前反复无效长按把 60 步预算烧完、只过 2/4 项检查；RL 后 5 步完成——选中 3.71 GB 的 Music 文件夹、移入 Download、打开存储页、回答&quot;同一卷内移动不释放空间&quot;（可用仍是 2.35 GB），四项检查全过。这类&quot;移动后可用空间不变&quot;的判断正是纯行为克隆难以覆盖的部分。</p>
+<h4 id="analysis-grpo-sao" tabindex="-1">4.3.6 GRPO 与 SAO <a class="header-anchor" href="#analysis-grpo-sao" aria-label="章节链接">&#8203;</a></h4>
+<p>SAO 用异步单轨迹更新替代分组采样，以学习得到的价值模型估计优势。两条曲线早期任务成功率相近，区间末尾 SAO 略低于 GRPO；计时上 SAO 减少了采样等待，但额外的评论家计算（每次演员更新配两次评论家更新）基本抵消了这部分收益，在测试配置下没有明确的总体训练时间优势。</p>
+<figure class="note-figure"><img src="./figures/图10.png" alt="GRPO 与 SAO 的任务成功率随累计演员更新次数变化的曲线。"><figcaption>GRPO 与 SAO 的任务成功率随累计演员更新次数变化的曲线。</figcaption></figure>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="related-work">
+<h2 id="related-work" tabindex="-1">五、相关工作 <a class="header-anchor" href="#related-work" aria-label="章节链接">&#8203;</a></h2>
+<p><strong>GUI 智能体的 RL。</strong> 在线 RL 已是改进 GUI 智能体的主流手段，但多数工作只针对单一领域：Android 侧的 DigiRL、DistRL、MobileRL、MobileGUI-RL 研究奖励设计、异步采集与自适应训练；网页侧的 WebRL 用自演化课程，WebAgent-R1 做端到端多轮 RL；计算机侧的 ComputerRL 用并行执行扩展 RL，DART-GUI 把训练与采样解耦，Qwen-CUA 从截图学原生计算机操作。后续系统改的是训练循环：EvoCUA-1.5 加策略感知过滤与自适应课程的异步多轮 RL，UI-Mate 把环境内训练与上下文示范结合，SCALECUA 把可验证任务合成接到高效 RL 上。UI-TARS-2、Qwen-UI-Agent、UI-Venus-2 进一步用单一策略覆盖移动端、计算机与网页，常见跨域做法仍是分域训练专家再事后合并。这些工作的产出是模型与训练方案，环境与训练栈多为自建专用。MAI-Gym 与之互补：给这些方案一个跨域的统一开放平台，并在一次 RL 运行中联合训练移动端与计算机任务。</p>
+<p><strong>GUI 训练平台与基础设施。</strong> 开放平台要么偏&quot;跑智能体&quot;，要么偏&quot;供任务&quot;：</p>
+<div class="note-table" tabindex="0"><table>
+<thead>
+<tr>
+<th>系统</th>
+<th>平台范围</th>
+<th>基准评测</th>
+<th>在线 RL（环境数）</th>
+<th>新环境</th>
+<th>奖励</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BrowserGym</td>
+<td>网页</td>
+<td>8</td>
+<td>✗</td>
+<td>✗</td>
+<td>代码</td>
+</tr>
+<tr>
+<td>WebGym</td>
+<td>网页</td>
+<td>✗</td>
+<td>256</td>
+<td>✗</td>
+<td>VLM</td>
+</tr>
+<tr>
+<td>MobileGym</td>
+<td>移动（浏览器模拟）</td>
+<td>✗</td>
+<td>256</td>
+<td>模拟应用</td>
+<td>代码</td>
+</tr>
+<tr>
+<td>GUI-Genesis</td>
+<td>移动</td>
+<td>✗</td>
+<td>✗*</td>
+<td>模拟应用</td>
+<td>代码</td>
+</tr>
+<tr>
+<td>PhoneWorld</td>
+<td>移动</td>
+<td>✗</td>
+<td>✗*</td>
+<td>模拟应用</td>
+<td>代码</td>
+</tr>
+<tr>
+<td>CUA-Gym</td>
+<td>计算机 + 网页</td>
+<td>✗</td>
+<td>✗*</td>
+<td>模拟网站</td>
+<td>代码</td>
+</tr>
+<tr>
+<td>Gym-Anything</td>
+<td>三端</td>
+<td>✗</td>
+<td>✗</td>
+<td>真实软件</td>
+<td>VLM</td>
+</tr>
+<tr>
+<td>SCALECUA</td>
+<td>计算机</td>
+<td>2</td>
+<td>600</td>
+<td>✗</td>
+<td>代码</td>
+</tr>
+<tr>
+<td><strong>MAI-Gym</strong></td>
+<td><strong>三端</strong></td>
+<td><strong>10</strong></td>
+<td><strong>20,000</strong></td>
+<td><strong>模拟应用与网站，跨应用共享世界</strong></td>
+<td><strong>代码 + VLM</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>（*已跑 RL 但未发布代码。）基础设施类平台让评测或训练可复现：BrowserGym 把网页基准统一到一个接口，WebGym、MobileGym、SCALECUA 在数百并行环境上跑在线 RL，ClawGUI 提供训练–评测–部署框架。数据类平台（CUA-Gym、Gym-Anything、GUI-Genesis、PhoneWorld）贡献环境与任务，但不发布训练代码，也不提供在既有基准上跑的方法。GUI 之外的 AgentGym、GEM 面向文本与工具环境；verl、OpenRLHF、AReaL、slime 扩展策略优化但不管理 GUI 环境——MAI-Gym 的训练器正建立在 slime 上。一致性也被单独点出：只换运行框架就能改变固定模型的分数，评测与训练各写一套代码时，测的就不是训练的那个智能体。</p>
+<p><strong>环境与任务合成。</strong> 基准自带的任务只有数百个，远不够在线 RL 消耗，于是出现两类权衡。一条路用 VLM 判成功：ZeroGUI 生成任务并用 VLM 给奖励，AutoPlay 先探索应用再提任务，OS-Genesis 反向合成轨迹；易扩展，但假阳性奖励会被策略利用。另一条路用代码判奖励，可靠但覆盖面窄：GUI-Genesis 把应用转成带可执行断言的轻量网页环境，AutoWebWorld 把环境建成有限状态机，InfiniteWeb 构建可验证网页任务，AutoEval 从移动 UI 子状态推导奖励；更大规模上有 CUA-Gym 的有依据计算机任务池、MobileGym 与 PhoneWorld 的模拟移动应用、OpenComputer 的应用专用验证器。这些系统大多从单个输入文件、或同一应用所有任务共用的一份样例数据起步。任务生成也可随学习者调整：WebRL 从失败尝试造新任务，TRACE 把反复出现的失败转成针对特定能力的环境，GenEnv 与 Agent-World 让环境与智能体共同演化。MAI-Gym 把这几条合起来用于统一 GUI 任务：先建由相互关联的文件与应用记录组成的跨应用世界再写任务；用失败诊断引导生成；在写验证器代码之前固定成功判据；验证器必须通过执行测试才被接受；模拟应用里既有测真实迁移的克隆，也有测陌生界面适应能力的新颖应用。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="conclusion">
+<h2 id="conclusion" tabindex="-1">六、结论与发布物 <a class="header-anchor" href="#conclusion" aria-label="章节链接">&#8203;</a></h2>
+<p>MAI-Gym 是面向移动端、计算机与网页的开源一体化平台，评测、数据采集与训练共享同一条轨迹采样路径和同一个智能体运行框架，所以&quot;评测的智能体&quot;就是&quot;训练的智能体&quot;；环境管理器服务十个基准，已验证 20,000 个并行实例。训练内容来自三件合成物：模拟应用、由关联文件与应用记录构成的跨应用世界、验证器经执行测试的任务。一次移动端+计算机联合 RL 得到 MAI-Gym-9B：MobileWorld 78.4、OSWorld-Verified 76.2，为 10B 以下开放 GUI 智能体的最好成绩；相对 SFT 预热，RL 在训练环境之外的五个基准上都有提升。分析结论是：联合训练优于分域专家合并，更大的合成任务池增强策略，克隆中学到的技能能迁移到真机（实体手机 28.8→48.1）。</p>
+<p>发布物：框架、合成技能、49 个模拟应用（7 克隆 + 42 新颖）、2,000 个验证过的任务、模型检查点。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="appendix-notes">
+<h2 id="appendix-notes" tabindex="-1">附：附录要点 <a class="header-anchor" href="#appendix-notes" aria-label="章节链接">&#8203;</a></h2>
+<ul>
+<li><strong>环境契约（附录 A.2）</strong>：每个适配器实现五个操作——<code>reqEnvs(spec, n)</code> 供应实例、<code>observe(h)</code> 取观测、<code>reset(h, x)</code> 按任务初始化、<code>step(h, a)</code> 执行动作、<code>eval(h, x)</code> 调用验证器；分配、会话管理、轨迹记录与奖励传递在管理器侧统一实现。会话带租约，防止被替换的工作进程继续发动作；改状态的操作带调用方标识符，重试不会让同一动作生效两次。</li>
+<li><strong>超参（附录 A.4）</strong>：GRPO 目标为裁剪代理目标，奖励经组内标准化后逐词元共享；KL 系数 <span class="math-inline" data-tex="10^{-3}"></span> 作用在损失上，奖励本身不受 KL 惩罚；无熵奖励；学习率恒为 <span class="math-inline" data-tex="10^{-6}"></span>；微批次为单序列，计数单位是窗口；训练 Megatron-LM、采样 SGLang；评测温度 0、每任务 3 次。</li>
+<li><strong>训练配置（附录 A.5）</strong>：单个 YAML 涵盖模型检查点、任务池与环境、算法（<code>name</code>、<code>group_size</code>、<code>learning_rate</code>、<code>kl_loss_coef</code>、<code>per_token_loss</code>、<code>reward_allocation</code>）、采样（<code>success_threshold</code> 即 <span class="math-inline" data-tex="\eta"></span>、<code>fail_budget</code>、<code>mastered_budget</code>）、rollout（并发、会话数、温度、步数上限、上下文预算）、history（<code>window</code>、<code>overlap</code>、<code>token_native_history</code>、<code>windowwise_train</code>）、观测传输（<code>oss</code> 或内联）、训练后端与并行配置。凭据不写入文件，加载时从环境读取。</li>
+<li><strong>仪表盘（附录 A.1）</strong>：四块视图——实例群容量/使用历史/会话；运行、评测轨迹与训练批次；基准与分数；任务及验证器结果、动作回放、模型输出。作用是把&quot;分数低&quot;拆成智能体失败、环境故障还是超时。</li>
+<li><strong>合成任务示例（附录 A.6）</strong>：桌面侧两个演示文稿任务——比较印刷样张需从工单、手写笔记和确认邮件里取设置；完成研讨会幻灯片需计划文档、预算工作簿与差旅估算，验证器检查幻灯片文字、日期、图表数据和计算总额。移动侧的行道树清查任务，计数与单位换算规则由生成的应用内规程文件决定。</li>
+<li><strong>新颖应用的验收（附录 A.7.2）</strong>：每条参考动作序列必须在步数上限内完成任务；验证套件另查重置是否恢复状态、是否拒绝未操作与随机动作状态、有浏览器与无浏览器两次执行是否一致。</li>
+</ul>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="figures-reading">
+<h2 id="figures-reading" tabindex="-1">附二：配图补读与贡献—证据对照 <a class="header-anchor" href="#figures-reading" aria-label="章节链接">&#8203;</a></h2>
+<p>前面正文里嵌进的图都是机制图与结果图，另有四张图只在文字里提过：图 1（全文总览）、图 13（仪表盘）、图 14 与图 15（合成任务示例）。这四张读一遍，可以顺便核对全文的数字口径。</p>
+<figure class="note-figure"><img src="./figures/图1.png" alt="MAI-Gym 的三端环境、四项平台能力、训练闭环与模型成绩总览。"><figcaption>MAI-Gym 的三端环境、四项平台能力、训练闭环与模型成绩总览。</figcaption></figure>
+<p><strong>图 1：一句话结构。</strong> 左栏是环境侧——移动端（MobileWorld、AndroidWorld、MobileGym 与模拟应用）与计算机／网页侧（OSWorld、OSWorld 2.0、MacAgentBench、MyPCBench），向中间送截图、收回批量动作。中栏是 MAI-Gym 的四个能力，正好对应全文四个数字：<code>01</code> 一键评测 <strong>10</strong> 个基准、<code>02</code> 并行轨迹采样 <strong>20K</strong> 环境、<code>03</code> 智能体 RL 训练 <strong>2K</strong> 开放可执行任务 × <strong>6</strong> 种算法、<code>04</code> 面向模型弱点的任务／环境合成；底部闭环是 Evaluate → Diagnose → Synthesize → Retrain。右栏把 MobileWorld 与 OSWorld-Verified 的成功率对参数量画成散点，9B 的点落在高分位——这就是摘要里&quot;低于 10B 的开放 GUI 智能体中最好&quot;的那句话的图形版。与图 2 的分工：图 1 讲平台提供哪四种能力，图 2 讲这些能力为什么能共用一条采样路径。</p>
+<figure class="note-figure"><img src="./figures/图13.png" alt="实例群、运行记录、基准对比与轨迹诊断四类仪表盘视图。"><figcaption>实例群、运行记录、基准对比与轨迹诊断四类仪表盘视图。</figcaption></figure>
+<p><strong>图 13：仪表盘四视图</strong>，对应 3.3 节提出的三个问题。</p>
+<ul>
+<li>(a) 实例群：容量快照（会话数、硬上限、步速）、活动曲线（会话数与 steps/s 随时间）、会话清单（leased／free／busy／invalid）——回答&quot;实例群是否健康&quot;。</li>
+<li>(b) 运行：一次训练 run 下的评测记录与 rollout 记录各自带尝试数、已评分数与得分——回答&quot;哪些任务解释了分数&quot;。</li>
+<li>(c) 基准对比：按检查点并排列分数，每个分数可追到具体 run。</li>
+<li>(d) 轨迹诊断：任务指令、逐步截图（出错步标红）、该步的动作参数与模型预测（JSON）——回答&quot;哪一步出错&quot;，也是区分智能体失败、环境故障与超时的落点。</li>
+</ul>
+<figure class="note-figure"><img src="./figures/图14.png" alt="比较印刷样张与完成研讨会幻灯片的桌面合成任务及检查项。"><figcaption>比较印刷样张与完成研讨会幻灯片的桌面合成任务及检查项。</figcaption></figure>
+<p><strong>图 14：两个桌面合成任务</strong>（附录 A.6）。左 (a) 比较印刷样张：读工单、手写笔记与确认邮件，在 Calc 里汇总三份样张的印刷设置，为每份样张在演示文稿里加一页，最后把表格导出 CSV、演示文稿导出 PDF；右 (b) 完成研讨会开场幻灯片：用计划文档、预算工作簿、差旅估算补齐日期／地点／演讲者／预算项，在 Calc 里做预算柱状图插进演示文稿，并算出差旅总额另存新文件。两栏的检查项都只落在&quot;文件里能读出来的数值与页数&quot;上：CSV 与幻灯片的数值、每份样张一页、PDF 含三个标签、图表类别与数值、摘要里的差旅合计。这正是 3.4 节&quot;先定要求再写验证器&quot;的可见样本——验证器查的是结果，不是某条操作路径。</p>
+<figure class="note-figure"><img src="./figures/图15.png" alt="移动端行道树清查任务的指令依赖与调查规程文件。"><figcaption>移动端行道树清查任务的指令依赖与调查规程文件。</figcaption></figure>
+<p><strong>图 15：移动端&quot;行道树清查&quot;</strong>。左侧指令是一串依赖：按 <code>Street_Tree_Inventory_Protocol_2023.pdf</code> 的方法分析下载目录里三份调查，摘要表每条街道一行、加一行总计，最后回邮件给出各街数据、总计与最后调查日期。右侧就是那份规程的截图：种植点只能记 tree／vacant／stump 三态（树桩在被林业部门清除前不算空位），胸径在离地 4.5 英尺（137 厘米）处量，单位英寸保留一位小数，厘米要先除以 2.54。</p>
+<p>这张图解释了合成任务与&quot;问答式&quot;任务的差别：单位换算规则、三态定义这些知识不在模型参数里，而在任务自带的文件里，策略必须先检索到规程、再按规程换算。4.3.3 里任务池从 0.5k 扩到 5k 带来 +9.2／+6.5 的提升，靠的正是这类&quot;证据在环境里&quot;的任务多样性。</p>
+<p><strong>贡献四条与证据位置。</strong> 引言的四条贡献可以在正文里逐条对上：</p>
+<div class="note-table" tabindex="0"><table>
+<thead>
+<tr>
+<th>贡献（引言）</th>
+<th>证据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>统一、可扩展的评测与在线 RL 平台</td>
+<td>3.1 共享采样路径与四个扩展点；3.2 重置／供应／多轮推理；4.3.1（三端各 1,000 实例启动耗时、20,000 并行、7 基准 ×3 尝试约 3 小时）</td>
+</tr>
+<tr>
+<td>应用与任务自动合成</td>
+<td>3.4（模拟应用、跨应用世界、经执行测试的验证器）；4.3.3 任务规模曲线；4.3.5 新颖应用 25.8→45.2</td>
+</tr>
+<tr>
+<td>&lt;10B 最强开源 GUI 智能体</td>
+<td>4.2 表（MobileWorld 78.4、OSWorld-Verified 76.2）；4.3.2 联合 RL 与专家合并的对照</td>
+</tr>
+<tr>
+<td>开放资源</td>
+<td>49 个模拟应用（7 克隆 + 42 新颖）、2,000 个任务（MobileWorld 与 OSWorld 各 1,000，均带经执行测试的验证器）、框架与合成技能、模型检查点、附录 A.5 的完整 YAML</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>摘要、引言与正文的数字全部一致（78.4／76.2／28.8→48.1／20,000／2,000）。唯一需要留神的是引言里&quot;<span class="math-inline" data-tex="52"></span> 个任务&quot;只出现在 4.3.4 的克隆迁移实验，而七个基准的评测是每任务 3 次尝试——两个 52 与 3 不是同一层面的计数，别混着引用。</p>
+</blockquote>
+
+</section>
+</article>

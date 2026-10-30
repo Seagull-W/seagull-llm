@@ -15,7 +15,7 @@ const fileFor = route => `docs${route.endsWith('/') ? route + 'index' : route}.m
 const navItems = papersSidebar.flatMap(group => group.items)
 
 test('every paper and project has matching navigation, card and metadata', () => {
-  assert.equal(navItems.length, 24)
+  assert.equal(navItems.length, 25)
   assert.equal(cards.length, navItems.length)
   assert.equal(new Set(cards.map(card => card.link)).size, cards.length)
   for (const item of navItems) {

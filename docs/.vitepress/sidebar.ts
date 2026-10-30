@@ -55,6 +55,10 @@ export const papersSidebar = [
       {
         "text": "Graph-GPO：基于状态转移图的信用分配",
         "link": "/papers/graph-gpo/"
+      },
+      {
+        "text": "MAI-Gym：GUI 智能体的一体化评测与在线 RL 平台",
+        "link": "/papers/mai-gym/"
       }
     ]
   },
