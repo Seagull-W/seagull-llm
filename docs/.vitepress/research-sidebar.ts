@@ -5,6 +5,10 @@ export const researchSidebar = [
     "collapsed": false,
                         "items": [
       {
+        "text": "主流 RL 框架的架构分歧：控制面、训练-推理耦合与环境边界",
+        "link": "/research/2026-10-31-rl-framework-architecture"
+      },
+      {
         "text": "后训练的四个争点：奖励可信、信号交接、预算分配与评测口径（2026-09～10）",
         "link": "/research/2026-10-30-post-training-papers-2026-10"
       },

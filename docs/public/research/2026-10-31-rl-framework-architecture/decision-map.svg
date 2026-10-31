@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" viewBox="0 0 920 660" role="img" aria-labelledby="title desc">
+<style>text{font-family:"Noto Sans CJK SC","Microsoft YaHei",sans-serif;fill:#203349;font-size:14px}.h{font-size:22px;font-weight:700}.small{font-size:12px}.axis{font-size:15px;font-weight:600}.label{font-size:15px;font-weight:600}</style>
+<rect width="920" height="660" rx="16" fill="#f6f8fc"/>
+<title id="title">主流强化学习框架的三处结构决策</title><desc id="desc">横轴是训练推理耦合，纵轴是环境边界，圆点颜色表示控制面。每个框架标出一个注明的代表路径，不代表所有模式。</desc>
+<text x="30" y="40" class="h">同一套坐标，三处独立决策</text>
+<text x="30" y="66">位置表示注明的代表路径；框架可跨列，颜色不是性能等级。</text>
+<rect x="174" y="118" width="712" height="420" fill="white" stroke="#ced8e5"/>
+<path d="M411 118V538M648 118V538M174 258H886M174 398H886" stroke="#ced8e5" stroke-dasharray="5 5"/>
+<text x="195" y="104" class="axis">共置，分时使用 GPU</text><text x="434" y="104" class="axis">设备分离，仍可同步</text><text x="688" y="104" class="axis">生成与更新重叠</text>
+<text x="25" y="177" class="axis">训练侧拥有循环</text><text x="25" y="201" class="small">奖励／自定义 rollout</text>
+<text x="25" y="315" class="axis">显式环境边界</text><text x="25" y="339" class="small">步骤接口／远端任务</text>
+<text x="25" y="455" class="axis">外部 agent 运行</text><text x="25" y="479" class="small">网关／轨迹协议连接</text>
+<circle cx="193" cy="146" r="5" fill="#4168b7"/><text x="205" y="150" class="label">TRL</text><text x="205" y="168" class="small">启用 vLLM 的共置路径</text>
+<circle cx="193" cy="190" r="5" fill="#008577"/><text x="205" y="194" class="label">verl</text><text x="205" y="212" class="small">Hybrid Engine 路径</text>
+<circle cx="193" cy="231" r="5" fill="#008577"/><text x="205" y="235" class="label">OpenRLHF</text><text x="205" y="253" class="small">Hybrid 推荐路径</text>
+<circle cx="433" cy="166" r="5" fill="#008577"/><text x="445" y="170" class="label">slime</text><text x="445" y="188" class="small">默认分离；另可共置</text>
+<circle cx="193" cy="301" r="5" fill="#008577"/><text x="205" y="305" class="label">NeMo-RL</text><text x="205" y="323" class="small">共置环境 actor 路径</text>
+<circle cx="433" cy="301" r="5" fill="#008577"/><text x="445" y="305" class="label">ROLL</text><text x="445" y="323" class="small">分离资源的同步路径</text>
+<circle cx="193" cy="354" r="5" fill="#008577"/><text x="205" y="358" class="label">SkyRL</text><text x="205" y="376" class="small">默认共置路径</text>
+<circle cx="670" cy="316" r="5" fill="#aa6b26"/><text x="682" y="320" class="label">AReaL</text><text x="682" y="338" class="small">论文完全异步路径</text>
+<circle cx="193" cy="443" r="5" fill="#008577"/><text x="205" y="447" class="label">Agent Lightning</text><text x="205" y="465" class="small">共置的跨步 rollout</text>
+<text x="434" y="437" class="small">Agent 解耦不自动意味着</text><text x="434" y="459" class="small">训练与推理 GPU 同时运行。</text>
+<text x="30" y="568" class="axis">颜色：算法控制仍可集中，执行方式不同</text>
+<circle cx="38" cy="594" r="5" fill="#4168b7"/><text x="52" y="599">Trainer 进程循环</text>
+<circle cx="257" cy="594" r="5" fill="#008577"/><text x="271" y="599">控制器 + Ray 工作进程</text>
+<circle cx="561" cy="594" r="5" fill="#aa6b26"/><text x="575" y="599">论文中的独立生成／训练调度</text>
+<text x="30" y="633" class="small">本文自绘 · 对应正文固定版本；图示路径不是默认配置大全，完整模式见对照表。</text></svg>

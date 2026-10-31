@@ -1,5 +1,28 @@
 [
   {
+    "date": "2026-10-31",
+    "slug": "rl-framework-architecture",
+    "title": "主流 RL 框架的架构分歧：控制面、训练-推理耦合与环境边界",
+    "description": "把 verl、OpenRLHF、TRL、slime、AReaL、ROLL 等放在同一组结构决策上比较：谁在控制调度、权重怎么过河、异步到什么程度、环境放在哪一侧，以及每种选择的代价。",
+    "route": "/research/2026-10-31-rl-framework-architecture",
+    "source_urls": [
+      "https://arxiv.org/abs/2409.19256",
+      "https://arxiv.org/abs/2505.24298",
+      "https://arxiv.org/abs/2507.01663",
+      "https://arxiv.org/abs/2509.19128",
+      "https://arxiv.org/abs/2608.17528",
+      "https://verl.readthedocs.io/en/latest/single_controller.html",
+      "https://verl.readthedocs.io/en/latest/blog/v0.7.html",
+      "https://openrlhf.readthedocs.io/en/latest/architecture.html",
+      "https://thudm.github.io/slime/blogs/introducing_slime.html",
+      "https://areal-ai.io/docs/en/algorithms/async.html",
+      "https://docs.nvidia.com/nemo/rl/latest/about/overview.html",
+      "https://docs.skyrl.ai/docs/getting-started/overview"
+    ],
+    "window_end": "2026-10-31T00:00:00+08:00",
+    "origin": "manual"
+  },
+  {
     "date": "2026-10-30",
     "slug": "post-training-papers-2026-10",
     "title": "后训练的四个争点：奖励可信、信号交接、预算分配与评测口径（2026-09～10）",
