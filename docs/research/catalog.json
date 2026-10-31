@@ -3,7 +3,7 @@
     "date": "2026-10-31",
     "slug": "rl-framework-architecture",
     "title": "主流 RL 框架的架构分歧：控制面、训练-推理耦合与环境边界",
-    "description": "把 verl、OpenRLHF、TRL、slime、AReaL、ROLL 等放在同一组结构决策上比较：谁在控制调度、权重怎么过河、异步到什么程度、环境放在哪一侧，以及每种选择的代价。",
+    "description": "九个框架各用一句话讲清理念与落地方式，再把三处结构决策摊开比较：谁表达算法流程、权重怎么过河、异步到什么程度、环境放在哪一侧。",
     "route": "/research/2026-10-31-rl-framework-architecture",
     "source_urls": [
       "https://arxiv.org/abs/2409.19256",
