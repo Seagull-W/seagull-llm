@@ -1,18 +1,18 @@
 import DefaultTheme from 'vitepress/theme'
 import { defineAsyncComponent } from 'vue'
 import Layout from './Layout.vue'
-import './styles/custom.css'
-import './styles/reading.css'
-import './styles/sections.css'
 import './styles/native-html.css'
 import './styles/notebook-design.css'
+import './styles/custom.css'
+import './styles/reader-navigation.css'
+import './styles/academic-reading.css'
+import './styles/note-flow.css'
 import ChapterCards from '../components/ChapterCards.vue'
 import TagsIndex from '../components/TagsIndex.vue'
 import NoteFlowIcon from '../components/NoteFlowIcon.vue'
 
 // 首页 / 全局必需组件：同步导入
 import SeagullLens from '../components/SeagullLens.vue'
-import HilbertQuote from '../components/HilbertQuote.vue'
 
 // 章节页专用重组件：异步注册，Vite 自动按组件 split chunk。
 // 首页主 bundle 不再含这些组件代码（含 NextTokenViz → useModelManager →
@@ -41,15 +41,5 @@ export default {
     app.component('GenerationWalkthrough', GenerationWalkthrough)
     app.component('EvidenceWalkthrough', EvidenceWalkthrough)
     app.component('SeagullLens', SeagullLens)
-    app.component('HilbertQuote', HilbertQuote)
   }
 }
-
-import './styles/navigation.css'
-
-import './styles/coastal.css'
-import './styles/interiors.css'
-
-import './styles/reader-navigation.css'
-import './styles/academic-reading.css'
-import './styles/note-flow.css'

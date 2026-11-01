@@ -13,6 +13,8 @@ jobs:
       PYTHONUTF8: '1'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -24,6 +26,7 @@ jobs:
       - run: node scripts/test-public-content.mjs
       - run: node scripts/check-research-content.mjs
       - run: npm run build
+      - run: node scripts/test-content-discovery.mjs --built
       - uses: actions/upload-artifact@v4
         with:
           name: website-dist

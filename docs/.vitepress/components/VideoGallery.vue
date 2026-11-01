@@ -24,6 +24,7 @@ const videos = computed(() => props.preview ? scienceVideos.slice(0, 3) : scienc
       <a
         v-for="video in videos"
         :key="video.bvid"
+        :id="preview ? undefined : video.bvid"
         class="video-card"
         :href="`https://www.bilibili.com/video/${video.bvid}/`"
         target="_blank"

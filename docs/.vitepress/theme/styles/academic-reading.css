@@ -13,7 +13,6 @@
   --vp-c-bg: #172126; --vp-c-bg-alt: #1c292f; --vp-c-bg-soft: #223239;
   --vp-c-text-1: #e0e6e6; --vp-c-text-2: #adbdc1; --vp-c-divider: #3c4c53; --vp-c-brand-1: #98cbd0;
 }
-.Layout.Layout.academic-reading .VPDoc .content-container { max-width: 820px !important; }
 .Layout.Layout.academic-reading .VPDoc .vp-doc,
 .Layout.Layout.academic-reading .VPDoc .vp-doc :is(.native-document, .linux-note-content) {
   font-family: var(--reading-serif); font-size: 18px; line-height: 1.95; font-synthesis: none;

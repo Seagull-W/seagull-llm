@@ -1,66 +1,52 @@
 <script setup lang="ts">
-
+import { computed, ref } from 'vue'
 import { withBase } from 'vitepress'
-import { data as issues } from '../data/research.data'
-
-defineProps<{ sections: { title: string; details: string; link: string }[] }>()
+import { data as pages } from '../data/tagged-pages.data'
+import { sections, contextFor } from '../content-catalog'
+const active = ref('')
+const updates = computed(() => pages.filter(p => !active.value || (active.value === 'notes' ? !['research','videos'].includes(p.section) : p.section === active.value)).slice(0, 4))
+function search() { window.dispatchEvent(new Event('seagull-search')) }
 </script>
-
 <template>
   <div class="home-dashboard">
-    <section class="research-panel" aria-labelledby="home-research-title">
-      <header class="panel-heading">
-        <div><h2 id="home-research-title">每日调研</h2><p>论文与社区进展，持续更新</p></div>
-        <a :href="withBase('/research/')">全部调研</a>
-      </header>
-      <div class="research-window" tabindex="0" role="region" aria-label="最近三期每日调研">
-        <a v-for="(issue, index) in issues.slice(0, 3)" :key="issue.url" class="research-item" :href="withBase(issue.url)">
-          <div class="issue-date"><time :datetime="issue.date">{{ issue.date }}</time><span v-if="index === 0">最新</span></div>
-          <h3>{{ issue.title }}</h3>
-          <p>{{ issue.description }}</p>
-        </a>
-        <p v-if="!issues.length" class="empty">新的调研正在整理中。</p>
-      </div>
+    <div class="home-discover"><button class="home-search" aria-haspopup="dialog" @click="search"><span aria-hidden="true">⌕</span> 搜索笔记、论文、主题…<span class="search-key">Ctrl K</span></button><a :href="withBase('/tags')">全部内容 <span aria-hidden="true">→</span></a></div>
+    <section class="home-sections" aria-labelledby="home-sections-title">
+      <header class="home-heading"><h2 id="home-sections-title">从这里开始</h2></header>
+      <nav class="section-grid" aria-label="内容栏目"><a v-for="s in sections.filter(s => s.id !== 'videos')" :key="s.id" :href="withBase('/' + s.id + '/')"><h3>{{ s.title }} <span aria-hidden="true">→</span></h3><p>{{ s.description }}</p></a></nav>
     </section>
-    <section class="sections-panel" aria-labelledby="home-sections-title">
-      <header class="panel-heading">
-        <div><h2 id="home-sections-title">学习栏目</h2><p>选择一个主题，继续阅读</p></div>
-      </header>
-      <div class="sections-window" tabindex="0" role="region" aria-label="学习栏目">
-        <a v-for="section in sections" :key="section.link" class="section-card" :href="withBase(section.link)">
-          <h3>{{ section.title }}</h3><p>{{ section.details }}</p><span>进入栏目</span>
-        </a>
-      </div>
+    <section class="home-updates" aria-labelledby="home-updates-title">
+      <header class="home-heading"><h2 id="home-updates-title">最近更新</h2><a :href="withBase('/tags')">全部更新 →</a></header>
+      <div class="update-filters" aria-label="更新类型"><button v-for="filter in [{id:'',title:'全部'},{id:'notes',title:'笔记与论文'},{id:'research',title:'调研'},{id:'videos',title:'视频'}]" :key="filter.id" :aria-pressed="active === filter.id" @click="active = filter.id">{{ filter.title }}</button></div>
+      <div class="update-grid"><a v-for="page in updates" :key="page.url" :href="withBase(page.url)"><div class="update-meta"><span>{{ contextFor(page) }}</span><time :datetime="page.updated">{{ page.updated }}</time></div><h3>{{ page.title }}</h3><p>{{ page.description }}</p></a></div>
     </section>
   </div>
 </template>
-
 <style scoped>
-.home-dashboard { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 28px; max-width: 1152px; margin: 0 auto 56px; padding: 0 2px; }
-.research-panel, .sections-panel { min-width: 0; }
-.research-panel { background: var(--vp-c-bg-alt); border: 1px solid var(--vp-c-border); border-radius: 16px; overflow: hidden; }
-.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 94px; padding: 18px 22px; border-bottom: 1px solid var(--vp-c-divider); }
-.home-dashboard h2 { margin: 0; padding: 0; border: 0; background: none; font-size: 21px; line-height: 1.5; letter-spacing: 0; }
-.home-dashboard p { margin: 4px 0 0; color: var(--vp-c-text-2); font-size: 13px; line-height: 1.7; }
-.panel-heading > a { flex: none; font-size: 13px; color: var(--vp-c-brand-1); }
-.home-dashboard a { background-image: none; text-decoration: none; }
-.research-window, .sections-window { height: 440px; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: var(--vp-c-border-hover) transparent; }
-.research-window { padding: 0 20px; }
-.research-item { display: block; padding: 20px 2px; border-bottom: 1px solid var(--vp-c-divider); color: var(--vp-c-text-1); }
-.research-item:last-child { border-bottom: 0; }
-.issue-date { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--vp-c-text-2); }
-.issue-date span { padding: 0 7px; border-radius: 4px; color: var(--vp-c-brand-1); background: var(--vp-c-bg-soft); }
-.home-dashboard h3 { margin: 8px 0 0; font-size: 16px; line-height: 1.6; color: var(--vp-c-text-1); letter-spacing: 0; }
-.research-item:hover h3, .section-card:hover h3 { color: var(--vp-c-brand-1); }
-.sections-panel .panel-heading { padding-inline: 2px; }
-.scroll-buttons { display: flex; gap: 8px; }
-.scroll-buttons button { width: 32px; height: 32px; border: 1px solid var(--vp-c-border); border-radius: 8px; color: var(--vp-c-text-1); }
-.sections-window { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 14px; padding: 16px 5px 6px 2px; }
-.section-card { display: flex; flex-direction: column; padding: 18px; min-height: 200px; border: 1px solid var(--vp-c-border); border-top: 3px solid var(--vp-c-brand-3); border-radius: 12px; background: var(--glass-bg); }
-.section-card h3 { margin-top: 0; }
-.section-card > span { margin-top: auto; padding-top: 16px; font-size: 12px; color: var(--vp-c-brand-1); }
-.home-dashboard :focus-visible { outline: 2px solid var(--vp-c-brand-1); outline-offset: -3px; }
-.empty { padding: 20px; }
-@media (max-width: 959px) { .home-dashboard { grid-template-columns: minmax(0, 1fr); gap: 24px; } .research-window { height: 400px; } .sections-window { height: 320px; } }
-@media (max-width: 479px) { .panel-heading { padding-inline: 16px; } .research-window { padding-inline: 14px; } .sections-window { grid-template-columns: minmax(0, 1fr); } .section-card { min-height: 160px; } }
+.home-dashboard { max-width:1120px; margin:auto; }
+.home-dashboard a { text-decoration:none; font-weight:400; }
+.home-dashboard h2,.home-dashboard h3 { margin:0; padding:0; border:0; }
+.home-dashboard p { margin-bottom:0; }
+.home-discover { display:flex; align-items:center; gap:24px; margin:0 0 34px; }
+.home-search { flex:1; display:flex; align-items:center; text-align:left; gap:10px; padding:14px 18px; border:1px solid var(--vp-c-divider); border-radius:8px; background:var(--vp-c-bg-alt); color:var(--vp-c-text-2); font-size:15px; min-height:54px; }
+.home-search > span:first-child { font-size:25px; color:var(--vp-c-brand-1); }
+.search-key { margin-left:auto; font-size:11px; opacity:.7; }
+.home-discover > a,.home-heading > a { font-size:13px; color:var(--vp-c-brand-1); flex:none; white-space:nowrap; }
+.home-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.home-heading h2 { font-size:22px; font-weight:600; line-height:1.5; }
+.section-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0 28px; border-top:1px solid var(--vp-c-divider); }
+.section-grid > a { display:block; padding:18px 0; border-bottom:1px solid var(--vp-c-divider); }
+.section-grid h3 { display:flex; justify-content:space-between; gap:12px; font-size:16px; font-weight:600; }
+.section-grid h3 span { color:var(--vp-c-brand-1); font-weight:400; }
+.section-grid p { font-size:12px; color:var(--vp-c-text-2); margin-top:6px; line-height:1.7; }
+.home-updates { margin-top:42px; }
+.update-filters { display:flex; gap:20px; border-bottom:1px solid var(--vp-c-divider); }
+.update-filters button { padding:0 0 12px; font-size:13px; color:var(--vp-c-text-2); border-bottom:2px solid transparent; }
+.update-filters button[aria-pressed='true'] { color:var(--vp-c-brand-1); border-color:currentColor; }
+.update-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 36px; }
+.update-grid > a { padding:22px 0; border-bottom:1px solid var(--vp-c-divider); }
+.update-meta { display:flex; flex-wrap:wrap; gap:4px 12px; color:var(--vp-c-text-2); font-size:11px; }
+.update-grid h3 { font-size:18px; line-height:1.65; margin:8px 0; font-weight:600; }
+.update-grid p { font-size:13px; line-height:1.8; color:var(--vp-c-text-2); display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.home-dashboard a:hover h3 { color:var(--vp-c-brand-1); }
+@media(max-width:767px) { .section-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 20px; } .home-discover { gap:14px; margin-bottom:24px; } .home-discover > a { line-height:1.7; } .search-key { display:none; } .home-search { font-size:13px; padding:10px 12px; } .home-heading h2 { font-size:20px; } .section-grid p { font-size:11px; } .section-grid h3 { font-size:15px; } .update-grid { grid-template-columns:1fr; } .home-updates { margin-top:32px; } }
 </style>

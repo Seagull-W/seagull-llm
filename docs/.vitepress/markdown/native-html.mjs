@@ -1,5 +1,35 @@
 import matter from 'gray-matter'
 import { parse } from '@vue/compiler-dom'
+import { existsSync, readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+
+const imageDimensions = new Map()
+function prepareImages(html, env) {
+  return html.replace(/<img\b[^>]*>/g, markup => {
+    let attributes = ''
+    if (!/\bloading=/.test(markup)) attributes += ' loading="lazy"'
+    if (!/\bdecoding=/.test(markup)) attributes += ' decoding="async"'
+    const src = markup.match(/\ssrc="([^"]+)"/)?.[1]
+    if (src && env.path && !/^(?:https?:|data:|\/\/)/.test(src) && !/\b(?:width|height)=/.test(markup)) {
+      const file = src.startsWith('/') ? resolve('docs/public', src.slice(1)) : resolve(dirname(env.path), src)
+      if (!imageDimensions.has(file)) {
+        let size
+        if (existsSync(file)) {
+          const bytes = readFileSync(file)
+          if (bytes.length > 24 && bytes.subarray(1, 4).toString() === 'PNG') size = [bytes.readUInt32BE(16), bytes.readUInt32BE(20)]
+          else if (file.endsWith('.svg')) {
+            const box = bytes.toString().match(/viewBox="[\d.-]+[ ,]+[\d.-]+[ ,]+([\d.]+)[ ,]+([\d.]+)"/)
+            if (box) size = [box[1], box[2]]
+          }
+        }
+        imageDimensions.set(file, size)
+      }
+      const size = imageDimensions.get(file)
+      if (size) attributes += ` width="${size[0]}" height="${size[1]}"`
+    }
+    return markup.replace(/\s*\/?>$/, attributes + '>')
+  })
+}
 
 // HTML is compiled into the page's Vue template, including SSR. No iframe,
 // runtime fetch, v-html, or second scrolling document is involved.
@@ -52,7 +82,7 @@ export default function nativeHtml(md, base = '/') {
   const render = md.render.bind(md)
   md.render = (source, env = {}) => {
     const { data, content } = matter(source)
-    if (data.contentFormat !== 'html') return mathBaselines(render(source, env))
+    if (data.contentFormat !== 'html') return prepareImages(mathBaselines(render(source, env)), env)
     if (/<!--\s*@include:/.test(content)) {
       throw new Error('HTML source must be expanded with VitePress processIncludes before rendering.')
     }
@@ -75,6 +105,10 @@ export default function nativeHtml(md, base = '/') {
         // otherwise overflow changes the baseline to the box's bottom edge.
         return mathBaselines(rendered.trim().replace(/^<p>|<\/p>$/g, ''))
       })
+    // Browsers insert tbody around bare rows; compile the same structure so
+    // hydration and the shared table controls see one consistent DOM.
+    html = html.replace(/(<table\b[^>]*>)(\s*(?:<tr\b[\s\S]*?<\/tr>\s*)+)(<\/table>)/g, '$1<tbody>$2</tbody>$3')
+    html = prepareImages(html, env)
     const info = inspectHtml(html)
     // Root-relative links and public assets must also work under GitHub Pages.
     // Keep relative assets static so Vite can hash and bundle them as usual.

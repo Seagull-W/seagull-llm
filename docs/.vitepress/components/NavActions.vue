@@ -11,13 +11,12 @@ const { isDark } = useData()
         <template v-else><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></template>
       </svg><span class="action-label">主题</span>
     </button>
-    <a href="https://github.com/Seagull-W/seagull-llm" target="_blank" rel="noopener noreferrer" aria-label="GitHub 仓库（新窗口）">GitHub</a>
   </div>
 </template>
 
 <style scoped>
 .seagull-nav-actions { display: flex; align-items: center; flex: none; gap: 8px; padding-left: 10px; }
-button, a { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 36px; padding: 0 8px; border: 1px solid var(--vp-c-divider); border-radius: 8px; color: var(--vp-c-text-1); font-size: 13px; white-space: nowrap; }
+button, a { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 40px; padding: 0 8px; border: 0; border-radius: 6px; color: var(--vp-c-text-1); font-size: 13px; white-space: nowrap; }
 button:hover, a:hover { border-color: var(--vp-c-brand-1); color: var(--vp-c-brand-1); }
 button:focus-visible, a:focus-visible { outline: 2px solid var(--vp-c-brand-1); outline-offset: 2px; }
 @media (max-width: 639px) { .action-label { display: none; } .seagull-nav-actions { gap: 4px; padding-left: 4px; } }

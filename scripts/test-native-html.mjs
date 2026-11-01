@@ -58,6 +58,11 @@ test('ordinary Markdown retains its existing renderer', () => {
   assert.match(md.render('# Daily research\n\n## Update\n\nA paragraph.', env), /<h2/)
   assert.notEqual(env.frontmatter.contentFormat, 'html')
 })
+test('native figures reserve their size and bare table rows hydrate consistently', () => {
+  const html = md.render('---\ncontentFormat: html\n---\n<h1>Example</h1><img src="./figures/RLInfra.png"><table><tr><th>列</th></tr><tr><td>数据</td></tr></table>', { path: resolve('docs/papers/deepseek-r1/index.md') })
+  assert.match(html, /loading="lazy" decoding="async" width="1800" height="902"/)
+  assert.match(html, /<table><tbody><tr><th>列<\/th><\/tr><tr><td>数据<\/td><\/tr><\/tbody><\/table>/)
+})
 test('editable HTML formulas compile to accessible static math', () => {
   const env = {}
   const html = md.render('---\ncontentFormat: html\n---\n<h1>Math</h1><span class="math-inline" data-tex="x &lt; y"></span><div class="math-block" data-tex="\\frac{a}{b}"></div>', env)

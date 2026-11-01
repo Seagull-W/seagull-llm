@@ -17,7 +17,6 @@
 .VPDoc .format-paper :where(figure, img) { margin-inline: auto; }
 
 /* Experiments: configuration and results need wider, aligned columns. */
-.Layout:has(.format-lab) .VPDoc .content-container { max-width: 860px !important; }
 .VPDoc .format-lab .document-section > h2 { border-left: 3px solid var(--section-accent); padding-left: 14px; }
 .VPDoc .format-lab table { font-variant-numeric: tabular-nums; }
 
@@ -32,14 +31,12 @@
 
 /* Linux: preserve the original mechanism diagrams and section panels. */
 .section-linux-notes { --section-accent: #2563eb; --section-tint: var(--vp-c-bg-soft); }
-.Layout:has(.format-system) .VPDoc .content-container { max-width: 940px !important; }
 .VPDoc .format-system .linux-note-content { padding: 0; max-width: none; background: transparent; }
 .VPDoc .format-system .linux-note-content .hero h1 { color: #fff; -webkit-text-fill-color: #fff; font-size: clamp(26px, 3vw, 36px); }
 .VPDoc .format-system .linux-note-content .hero p { color: #d8e5f7; }
 .VPDoc .format-system .linux-note-content table { width: 100%; max-width: 100%; }
 .VPDoc .format-system .linux-note-content :where(th, td) { white-space: normal; }
 .VPDoc .format-system .linux-note-content h2 { margin-top: 0; padding-top: 0; }
-.VPDoc .format-system .linux-note-content .header-anchor { font-size: 0; }
 .dark .format-system .linux-note-content {
   --bg: var(--vp-c-bg); --paper: var(--vp-c-bg-alt); --ink: var(--vp-c-text-1);
   --muted: var(--vp-c-text-2); --line: var(--vp-c-divider); --shadow: none;
@@ -50,6 +47,9 @@
 .dark .VPDoc .format-system .linux-note-content .pane[style] { background: var(--vp-c-bg-soft) !important; }
 .dark .VPDoc .format-system .linux-note-content pre { background: #152033; }
 .dark .VPDoc .format-system .linux-note-content pre code { background: transparent; color: #e7f1ff; }
+.dark .VPDoc .linux-note-content :is(.core,.mblue,.pill) { background:#23465a; color:#c2e2f5; }
+.dark .VPDoc .linux-note-content :is(.mgreen,.pill.green) { background:#1e493e; color:#b6ead4; }
+.dark .VPDoc .linux-note-content :is(.morange,.warn) { background:#4b3b24; color:#f2d7a8; }
 
 @media (max-width: 640px) {
   .native-document .document-intro { margin-bottom: 24px; }

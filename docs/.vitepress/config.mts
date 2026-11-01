@@ -194,6 +194,11 @@ const config = withMermaid({
   // GitHub Pages 子路径部署时设置 BASE 环境变量（如 /seagull-llm/），本地 dev 默认 '/'
   base: (typeof process !== 'undefined' && process.env.BASE) || '/',
   cleanUrls: true,
+  // Reading order is explicit in RelatedReading, rather than sidebar adjacency.
+  transformPageData(page) {
+    page.frontmatter.prev = false
+    page.frontmatter.next = false
+  },
   // 科普书暂时整体撤出公开站点，保留源文件以便后续继续写作。
   srcExclude: ['llm-book/**'],
 
@@ -225,15 +230,16 @@ const config = withMermaid({
 
     // --- 导航栏 ---
     nav: [
-      { text: '首页', link: '/' },
-      { text: '标签索引', link: '/tags' },
+      { text: '全部内容', link: '/tags' },
+      { text: '学习笔记', activeMatch: '/(?:rl-book|westlake-rl|rust-notes|linux-notes)/', items: [
+        { text: 'RL 学习笔记', link: '/rl-book/' },
+        { text: '西湖强化学习', link: '/westlake-rl/' },
+        { text: 'Rust 笔记', link: '/rust-notes/' },
+        { text: 'Linux 笔记', link: '/linux-notes/' }
+      ] },
+      { text: '论文与项目', link: '/papers/' },
       { text: '调研', link: '/research/' },
-      { text: '科普视频', link: '/videos/' },
-      { text: '论文与项目随谈', link: '/papers/' },
-      { text: 'RL 学习笔记', link: '/rl-book/' },
-      { text: '西湖 RL 笔记', link: '/westlake-rl/' },
-      { text: 'Rust 学习笔记', link: '/rust-notes/' },
-      { text: 'linux学习笔记', link: '/linux-notes/' }
+      { text: '视频', link: '/videos/' }
     ],
 
     // --- 侧边栏（扁平结构，数组形式）---
@@ -241,29 +247,8 @@ const config = withMermaid({
 
     // --- 右侧大纲 ---
     outline: {
-      level: [2, 6], // 显示 h2–h6，包含算法推导和公式等深层小节
+      level: [2, 3],
       label: '本页目录'
-    },
-
-    // --- 搜索 ---
-    search: {
-      provider: 'local', // 本地搜索，无需外部服务
-      options: {
-        translations: {
-          button: {
-            buttonText: '搜索文档',
-            buttonAriaLabel: '搜索文档'
-          },
-          modal: {
-            noResultsText: '无法找到相关结果',
-            resetButtonTitle: '清除查询条件',
-            footer: {
-              selectText: '选择',
-              navigateText: '切换'
-            }
-          }
-        }
-      }
     },
 
     // --- 底部翻页 ---
@@ -279,14 +264,9 @@ const config = withMermaid({
     sidebarMenuLabel: '菜单',
     returnToTopLabel: '回到顶部',
 
-    // --- 社交链接 ---
-    socialLinks: [
-      { icon: 'github', link: 'https://github.com/Seagull-W/seagull-llm' }
-    ],
-
     // --- 页脚 ---
     footer: {
-      message: '基于 VitePress 构建',
+      message: '<a href="https://github.com/Seagull-W/seagull-llm">GitHub</a> · 基于 VitePress 构建',
       copyright: 'Copyright © 2026'
     },
 
