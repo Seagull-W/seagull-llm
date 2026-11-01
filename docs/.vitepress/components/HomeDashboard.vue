@@ -1,10 +1,19 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, shallowRef } from 'vue'
 import { withBase } from 'vitepress'
 import { data as pages } from '../data/tagged-pages.data'
 import { sections, contextFor } from '../content-catalog'
 const active = ref('')
-const updates = computed(() => pages.filter(p => !active.value || (active.value === 'notes' ? !['research','videos'].includes(p.section) : p.section === active.value)).slice(0, 4))
+const featured = shallowRef(pages.slice(0, 4))
+onMounted(() => {
+  const pool = [...pages]
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[pool[i], pool[j]] = [pool[j], pool[i]]
+  }
+  featured.value = pool.slice(0, 4)
+})
+const updates = computed(() => active.value ? pages.filter(p => active.value === 'notes' ? !['research','videos'].includes(p.section) : p.section === active.value).slice(0, 4) : featured.value)
 function search() { window.dispatchEvent(new Event('seagull-search')) }
 </script>
 <template>
@@ -15,9 +24,9 @@ function search() { window.dispatchEvent(new Event('seagull-search')) }
       <nav class="section-grid" aria-label="内容栏目"><a v-for="s in sections.filter(s => s.id !== 'videos')" :key="s.id" :href="withBase('/' + s.id + '/')"><h3>{{ s.title }} <span aria-hidden="true">→</span></h3><p>{{ s.description }}</p></a></nav>
     </section>
     <section class="home-updates" aria-labelledby="home-updates-title">
-      <header class="home-heading"><h2 id="home-updates-title">最近更新</h2><a :href="withBase('/tags')">全部更新 →</a></header>
-      <div class="update-filters" aria-label="更新类型"><button v-for="filter in [{id:'',title:'全部'},{id:'notes',title:'笔记与论文'},{id:'research',title:'调研'},{id:'videos',title:'视频'}]" :key="filter.id" :aria-pressed="active === filter.id" @click="active = filter.id">{{ filter.title }}</button></div>
-      <div class="update-grid"><a v-for="page in updates" :key="page.url" :href="withBase(page.url)"><div class="update-meta">{{ contextFor(page) }}</div><h3>{{ page.title }}</h3><p>{{ page.description }}</p></a></div>
+      <header class="home-heading"><h2 id="home-updates-title">{{ active ? '最近更新' : '内容推荐' }}</h2><a :href="withBase('/tags')">{{ active ? '全部更新 →' : '全部内容 →' }}</a></header>
+      <div class="update-filters" aria-label="内容类型"><button v-for="filter in [{id:'',title:'全部'},{id:'notes',title:'笔记与论文'},{id:'research',title:'调研'},{id:'videos',title:'视频'}]" :key="filter.id" :aria-pressed="active === filter.id" @click="active = filter.id">{{ filter.title }}</button></div>
+      <div class="update-grid"><a v-for="page in updates" :key="page.url" :href="withBase(page.url)"><div class="update-meta"><span>{{ contextFor(page) }}</span><time v-if="page.section === 'research'" :datetime="page.updated">{{ page.updated }}</time></div><h3>{{ page.title }}</h3><p>{{ page.description }}</p></a></div>
     </section>
   </div>
 </template>

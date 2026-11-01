@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { withBase } from 'vitepress'
-defineProps<{ items: { title: string; link: string; description: string; label?: string }[] }>()
+defineProps<{ items: { title: string; link: string; description: string; label?: string; date?: string }[] }>()
 </script>
 <template>
   <nav class="chapter-cards" aria-label="文章列表">
     <a v-for="item in items" :key="item.link" class="chapter-card" :href="withBase(item.link)">
-      <span v-if="item.label" class="chapter-card-meta">{{ item.label }}</span>
+      <span v-if="item.label || item.date" class="chapter-card-meta"><span v-if="item.label">{{ item.label }}</span><time v-if="item.date" :datetime="item.date">{{ item.date }}</time></span>
       <span class="chapter-card-title">{{ item.title }}<span class="chapter-card-arrow" aria-hidden="true">→</span></span>
       <span class="chapter-card-description">{{ item.description }}</span>
     </a>
