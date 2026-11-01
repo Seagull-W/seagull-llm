@@ -17,7 +17,7 @@ function search() { window.dispatchEvent(new Event('seagull-search')) }
     <section class="home-updates" aria-labelledby="home-updates-title">
       <header class="home-heading"><h2 id="home-updates-title">最近更新</h2><a :href="withBase('/tags')">全部更新 →</a></header>
       <div class="update-filters" aria-label="更新类型"><button v-for="filter in [{id:'',title:'全部'},{id:'notes',title:'笔记与论文'},{id:'research',title:'调研'},{id:'videos',title:'视频'}]" :key="filter.id" :aria-pressed="active === filter.id" @click="active = filter.id">{{ filter.title }}</button></div>
-      <div class="update-grid"><a v-for="page in updates" :key="page.url" :href="withBase(page.url)"><div class="update-meta"><span>{{ contextFor(page) }}</span><time :datetime="page.updated">{{ page.updated }}</time></div><h3>{{ page.title }}</h3><p>{{ page.description }}</p></a></div>
+      <div class="update-grid"><a v-for="page in updates" :key="page.url" :href="withBase(page.url)"><div class="update-meta">{{ contextFor(page) }}</div><h3>{{ page.title }}</h3><p>{{ page.description }}</p></a></div>
     </section>
   </div>
 </template>

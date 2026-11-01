@@ -57,7 +57,11 @@ export function catalogLoader(fullText = false) {
         const htmlFile = include ? resolve(dirname(file), include[1]) : ''
         if (htmlFile && existsSync(htmlFile)) source = readFileSync(htmlFile, 'utf8')
         const fm = page.frontmatter
-        const date = [dates.get('docs/' + relative), dates.get('docs/' + relative.replace(/\.md$/, '.html')), String(fm.updated || fm.date || '').slice(0, 10)].filter(Boolean).sort().at(-1) || ''
+        // Research is chronological: editing an older report must not promote it.
+        const researchDate = sectionFor(page.url)?.id === 'research'
+          ? (fm.date instanceof Date ? fm.date.toISOString().slice(0, 10) : String(fm.date || '').slice(0, 10)) || page.url.match(/^\/research\/(\d{4}-\d{2}-\d{2})-/)?.[1]
+          : ''
+        const date = researchDate || [dates.get('docs/' + relative), dates.get('docs/' + relative.replace(/\.md$/, '.html')), String(fm.updated || fm.date || '').slice(0, 10)].filter(Boolean).sort().at(-1) || ''
         catalog.push({ title: String(fm.title), url: page.url, description: String(fm.description || ''), tags: topicTags(fm.tags || []), section: sectionFor(page.url)?.id || '', kind: kindFor(page.url), updated: date })
         if (fullText) documents.push({ url: page.url, sections: searchSections(source, Boolean(htmlFile)) })
       }

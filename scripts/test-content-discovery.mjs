@@ -37,6 +37,15 @@ test('full text finds commands and groups matches by article with useful context
   assert.equal(new Set(approximation.map(r => r.page.url)).size, approximation.length)
   assert.ok(approximation.every(r => r.matches.length <= 2))
 })
+test('research stays newest first by publication date after older reports are edited', () => {
+  const research = pages.filter(p => p.section === 'research')
+  assert.ok(research.length > 0)
+  assert.ok(research.every((p, i) => !i || research[i - 1].updated >= p.updated))
+  assert.ok(research.every(p => p.updated === p.url.match(/^\/research\/(\d{4}-\d{2}-\d{2})-/)[1]))
+  const oldReport = inputs.find(p => p.url === '/research/2026-10-14-llm-post-training-agentic-rl')
+  const edited = catalogLoader().transform([{ ...oldReport, frontmatter: { ...oldReport.frontmatter, updated: '2099-01-01' } }])
+  assert.equal(edited.find(p => p.section === 'research').updated, '2026-10-14')
+})
 test('topic aliases and explicit course order do not create arbitrary sequences', () => {
   assert.deepEqual(topicTags(['Agent', '智能体', '论文精读']), ['智能体'])
   assert.ok(topicTags(['GUI Agent']).includes('智能体'))

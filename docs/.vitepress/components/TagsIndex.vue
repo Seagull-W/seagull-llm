@@ -18,7 +18,7 @@ const filtered = computed(() => {
   return pages.filter(page => (!section.value || page.section === section.value) && (!kind.value || page.kind === kind.value) && (!selected.value || page.tags.includes(selected.value)) && terms.every(term => fold([page.title, page.description, ...page.tags].join(' ')).includes(term)))
     .sort((a, b) => sort.value === 'relevance' && terms.length ? metadataScore(b, terms) - metadataScore(a, terms) || newestFirst(a, b) : newestFirst(a, b))
 })
-const cards = computed(() => filtered.value.map(page => ({ title: page.title, link: page.url, description: page.description, label: contextFor(page), date: page.updated })))
+const cards = computed(() => filtered.value.map(page => ({ title: page.title, link: page.url, description: page.description, label: contextFor(page) })))
 function readUrl() {
   const url = new URL(location.href)
   query.value = url.searchParams.get('q') || ''
