@@ -237,7 +237,7 @@ const config = withMermaid({
         { text: 'Rust 笔记', link: '/rust-notes/' },
         { text: 'Linux 笔记', link: '/linux-notes/' }
       ] },
-      { text: '论文与项目', link: '/papers/' },
+      { text: '论文与项目解读', link: '/papers/' },
       { text: '调研', link: '/research/' },
       { text: '视频', link: '/videos/' }
     ],
