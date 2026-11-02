@@ -1,6 +1,7 @@
 import { normalizeContentPath } from './public-content'
 
 export const sections = [
+  { id: 'cs336', title: 'CS336学习笔记', description: '从课程讲义到作业源码与 GPU 实验' },
   { id: 'rl-book', title: 'RL 学习笔记', description: '从监督微调到奖励建模与训练实验' },
   { id: 'westlake-rl', title: '西湖强化学习', description: '概念笔记、数学推导与课程讲义' },
   { id: 'papers', title: '论文与项目', description: '论文精读、后训练项目与工程实践' },
@@ -19,6 +20,13 @@ export const readingSeries = [
   { title: '西湖强化学习 · 课程讲义', paths: [
     '/westlake-rl/强化学习基本概念与贝尔曼方程', '/westlake-rl/最优状态价值与贝尔曼最优方程',
     '/westlake-rl/值迭代与策略迭代', '/westlake-rl/蒙特卡洛方法', '/westlake-rl/随机近似/课程讲义'
+  ] },
+  { title: 'CS336 · 课程讲义', paths: [
+    '/cs336/lecture-01', '/cs336/lecture-02', '/cs336/lecture-03',
+    '/cs336/lecture-04', '/cs336/lecture-05', '/cs336/lecture-06'
+  ] },
+  { title: 'CS336 · 作业与实现', paths: [
+    '/cs336/a1-bpe', '/cs336/a1-transformer', '/cs336/a2-benchmark'
   ] }
 ]
 const aliases: Record<string, string> = { agent: '智能体', agents: '智能体', Agent: '智能体', LLM: '大语言模型', '大模型': '大语言模型', SFT: '监督微调' }
@@ -37,6 +45,8 @@ export function contextFor(page: ContentEntry) {
 export function kindFor(url: string) {
   const path = normalizeContentPath(url)
   if (path === '/videos') return '视频'
+  if (path.startsWith('/cs336/lecture-')) return '课程讲义'
+  if (path.startsWith('/cs336/a2-')) return '实验'
   if (readingSeries[1].paths.includes(path)) return '课程讲义'
   if (path.startsWith('/research/')) return '调研'
   if (/^\/papers\/(deepseek-r1|gigpo|graph-gpo|mai-gym)$/.test(path)) return '论文精读'

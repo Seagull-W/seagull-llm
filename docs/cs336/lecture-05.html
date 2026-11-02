@@ -1,0 +1,41 @@
+<script setup>
+import { withBase } from 'vitepress'
+</script>
+
+<article class="native-document format-course" data-format="course" data-design="linux-notebook" aria-label="第 5 讲 · GPU 执行与显存访问">
+<header class="document-intro note-hero">
+<p class="note-kicker">CS336学习笔记 <span>课程讲义</span></p>
+<h1 id="lecture-05" tabindex="-1">第 5 讲 · GPU 执行与显存访问 <a class="header-anchor" href="#lecture-05" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">从线程块和显存层次讲到分块矩阵乘法，解释为什么数据复用能缩短运行时间。</p>
+</header>
+<nav class="note-jump" aria-label="本篇导读"><a href="#execution">线程、线程块与 SM</a><a href="#memory">一次计算中的数据搬运</a><a href="#tiles">分块矩阵乘法</a><a href="#fusion">把中间结果留在片上</a></nav>
+<section class="document-section note-panel" aria-labelledby="execution">
+<h2 id="execution" tabindex="-1">线程、线程块与 SM <a class="header-anchor" href="#execution" aria-label="章节链接">&#8203;</a></h2>
+<p>矩阵有许多可以同时计算的输出元素。CUDA 程序把工作分给线程，再把线程组成线程块。一个线程块由一个流式多处理器（SM）执行，块内的线程可以使用共享内存并同步。NVIDIA GPU 把线程按 32 个一组的 warp 调度；同一 warp 内的线程若走不同分支，各分支可能要依次执行。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="memory">
+<h2 id="memory" tabindex="-1">一次计算中的数据搬运 <a class="header-anchor" href="#memory" aria-label="章节链接">&#8203;</a></h2>
+<p>输入通常放在全局显存。线程从显存取数，在寄存器中计算，最后把结果写回。如果许多线程读取相邻地址，硬件有机会合并内存访问。如果一个块里的线程反复需要同一份数据，可以先把它放进共享内存。寄存器和共享内存的容量有限，留在片上的数据需要分批安排。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="tiles">
+<h2 id="tiles" tabindex="-1">分块矩阵乘法 <a class="header-anchor" href="#tiles" aria-label="章节链接">&#8203;</a></h2>
+<p>设 C = AB。计算 C 的一个小块时，先取 A 的一块和 B 的一块。块内多个输出元素复用这些输入，各自累加点积的部分和。沿公共维移到下一对输入块，直到点积算完，最后把输出块写回显存。分块的好处来自输入复用；块取得太大，又可能放不下。</p>
+<p>这正好对应第 2 讲的计算强度。乘加次数近似相同，分块减少了从显存重复取数的次数，每搬一个字节能完成更多运算。GPU 的 Tensor Core 和 TPU 的矩阵单元都擅长规则的矩阵运算，但具体的数据布局、片上容量和执行方式取决于硬件。</p>
+<figure class="note-diagram"><div class="note-flow">
+<div class="note-flow-step"><NoteFlowIcon kind="table" /><strong>加载输入块</strong><span>在公共维上取一段 A 和 B</span></div>
+<div class="note-flow-step"><NoteFlowIcon kind="loop" /><strong>复用和累加</strong><span>多个输出共享读入的元素</span></div>
+<div class="note-flow-step"><NoteFlowIcon kind="chip" /><strong>写回输出块</strong><span>遍历公共维后写入显存</span></div>
+</div><figcaption>图中按一个输出块展开。矩阵的其他输出块可由其他线程块计算。</figcaption></figure>
+</section>
+<section class="document-section note-panel" aria-labelledby="fusion">
+<h2 id="fusion" tabindex="-1">把中间结果留在片上 <a class="header-anchor" href="#fusion" aria-label="章节链接">&#8203;</a></h2>
+<p>再看注意力。直接实现会先算出每对位置的分数，再做 softmax，最后乘 V。FlashAttention 把查询、键和值分块，处理下一块时更新行最大值、归一化因子和加权和，因此无须把整张分数矩阵写回显存。它仍计算精确注意力，主要节省的是中间矩阵的读写。</p>
+<p>接下来要知道一次读写优化到底省了多少时间。第 6 讲先划定计时区间，再用逐行 softmax 说明多个操作怎样合成一次内核调用。</p>
+<p><a href="https://github.com/stanford-cs336/lectures/blob/main/lecture_05.pdf">第 5 讲原始幻灯片</a></p>
+</section>
+<details class="note-details"><summary>本篇原始文件（下载）</summary>
+<ul>
+<li><a download :href="withBase('/cs336/sources/lectures/lecture_05.pdf')">lecture_05.pdf</a></li>
+</ul>
+</details>
+</article>

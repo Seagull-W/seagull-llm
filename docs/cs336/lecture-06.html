@@ -1,0 +1,41 @@
+<script setup>
+import { withBase } from 'vitepress'
+</script>
+
+<article class="native-document format-course" data-format="course" data-design="linux-notebook" aria-label="第 6 讲 · GPU 计时、剖析与 Triton">
+<header class="document-intro note-hero">
+<p class="note-kicker">CS336学习笔记 <span>课程讲义与阅读</span></p>
+<h1 id="lecture-06" tabindex="-1">第 6 讲 · GPU 计时、剖析与 Triton <a class="header-anchor" href="#lecture-06" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">GPU 异步执行内核。先用 CUDA 事件测耗时，再用性能剖析找到反复读写显存的操作，最后实现逐行 softmax。</p>
+</header>
+<nav class="note-jump" aria-label="本篇导读"><a href="#timing">CUDA 异步执行与计时</a><a href="#profile">用 profiler 定位耗时</a><a href="#softmax">逐行 softmax 与算子融合</a><a href="#extensions">从行归约到分块矩阵乘法</a></nav>
+<section class="document-section note-panel" aria-labelledby="timing">
+<h2 id="timing" tabindex="-1">CUDA 异步执行与计时 <a class="header-anchor" href="#timing" aria-label="章节链接">&#8203;</a></h2>
+<p>上一讲的分块和融合都能减少显存读写。要测出它们省下多少时间，先得知道 GPU 什么时候执行完毕。Python 发出 CUDA 操作后可以继续向下执行。若在函数返回时立刻读取主机时钟，一部分 GPU 工作可能仍留在队列里。第 6 讲的 <code>benchmark()</code> 先预热并同步，再在同一 CUDA 流中记录起止事件；等 GPU 执行完成后，读出两个事件间的毫秒数。</p><figure class="note-diagram"><div class="note-flow"><div class="note-flow-step"><NoteFlowIcon kind="loop" /><strong>预热</strong><span>运行同一个操作，然后同步</span></div>
+<div class="note-flow-step"><NoteFlowIcon kind="clock" /><strong>记录事件</strong><span>开始事件、执行操作、结束事件</span></div>
+<div class="note-flow-step"><NoteFlowIcon kind="check" /><strong>读取间隔</strong><span>等待完成，重复取样并求均值</span></div></div><figcaption>简化自 lecture_06.py 的 benchmark()。讲稿默认预热一次、测量三次。</figcaption></figure><p>A2 关心的是另一段时间。从 Python 调用模型，到内核执行完、主机拿到结果，一共用了多久？作业脚本用主机时钟计时，每一步结束时都等 GPU 完成。和讲稿里的毫秒数比较前，得先看两者各自计入了哪些工作，用的是什么单位。<a href="/cs336/a2-benchmark#protocol">A2 · 计时边界</a></p>
+</section>
+<section class="document-section note-panel" aria-labelledby="profile">
+<h2 id="profile" tabindex="-1">用 profiler 定位耗时 <a class="header-anchor" href="#profile" aria-label="章节链接">&#8203;</a></h2>
+<p>若一个 GELU 表达式由多个逐元素算子组成，分别求幂、缩放和相加，可能需要多次启动 kernel，并把临时张量写回显存。总时间只能表明哪一种实现更快。要判断差异来自启动次数还是每次执行的成本，需要看 profiler 里的算子、调用次数与 GPU 时间线。</p><p>讲稿用同一份输入比较朴素表达式、内置实现和编译后的实现。先检查三者的计算结果是否一致，再预热、多测几次，最后用 profiler 看较慢的实现把时间花在了哪里。如果首次调用触发编译，把它也算进去，测得的耗时就包含了编译开销。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="softmax">
+<h2 id="softmax" tabindex="-1">逐行 softmax 与算子融合 <a class="header-anchor" href="#softmax" aria-label="章节链接">&#8203;</a></h2>
+<p>设一行有三个分数 1、2、2。softmax 将它们变成和为 1 的权重。先减去行最大值 2，得到 −1、0、0；再取指数，得到 e⁻¹、1、1。三个数都除以同一个和 e⁻¹ + 2，结果约为 0.155、0.422、0.422。减去最大值相当于把每个指数都乘以同一个常数，归一化后这个因子会约掉。</p>
+<p>算这三个数时，只需要这一行的数据。代码里的 <code>tl.max</code> 求的就是上例中的 2，<code>tl.sum</code> 求的是 e⁻¹ + 2。两者都沿列做归约，把一行的多个元素合成一个数。</p>
+<p>如果两个算子之间的临时结果要先写入显存、随后又被读出，就可以尝试把它们合成一个内核。以注意力中的 softmax 为例，各行可以独立归一化。讲稿的 <code>triton_softmax_kernel</code> 给每一行分配一个 Triton program。它一次读取该行，对行内元素减去最大值，取指数，按行求和并相除，最后只写回归一化结果。减最大值保持 softmax 的比例，同时避免大正数的指数溢出。</p><details class="note-details"><summary>展开讲稿中的读取与归约片段</summary><pre v-pre><code>x_row = tl.load(x_ptrs, mask=col_offsets &lt; num_cols, other=float("-inf"))
+x_row = x_row - tl.max(x_row, axis=0)
+numerator = tl.exp(x_row)
+denominator = tl.sum(numerator, axis=0)
+y_row = numerator / denominator</code></pre></details><p>例如实际有 6 列，处理块取 8 个位置。最后两列用掩码填为负无穷，指数为零，对分母没有贡献；写回时也只存前 6 列。该例要求整行能被一个块容纳。融合减少中间结果的显存往返，具体收益仍取决于行宽、并行度和硬件。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="extensions">
+<h2 id="extensions" tabindex="-1">从行归约到分块矩阵乘法 <a class="header-anchor" href="#extensions" aria-label="章节链接">&#8203;</a></h2>
+<p>同一讲的行求和例子引出更长的行，矩阵乘法加 ReLU 则改为分块加载矩阵、沿公共维累加，再将激活与最终写回合并。一行能放进块里时，求和可以一次完成。行更长时，要分段求部分和再合并。矩阵乘法也沿公共维分段，不过每次累加的是一小块输出。完整代码与执行轨迹见原讲稿。<a href="https://stanford-cs336.github.io/lectures/?trace=lecture_06">第 6 讲可执行讲稿</a></p>
+</section>
+<details class="note-details"><summary>本篇原始文件（下载）</summary>
+<ul>
+<li><a download :href="withBase('/cs336/sources/lectures/lecture_06.py')">lecture_06.py</a></li>
+</ul>
+</details>
+</article>

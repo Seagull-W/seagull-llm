@@ -1,0 +1,45 @@
+<script setup>
+import { withBase } from 'vitepress'
+</script>
+
+<article class="native-document format-course" data-format="course" data-design="linux-notebook" aria-label="第 2 讲 · 张量、显存与计算量">
+<header class="document-intro note-hero">
+<p class="note-kicker">CS336学习笔记 <span>课程讲义</span></p>
+<h1 id="lecture-02" tabindex="-1">第 2 讲 · 张量、显存与计算量 <a class="header-anchor" href="#lecture-02" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">从一批词元的形状出发，计算嵌入和线性层占用的显存，再估算矩阵乘法的运算量。</p>
+</header>
+<nav class="note-jump" aria-label="本篇导读"><a href="#shape">一批文本的形状</a><a href="#memory">一个张量占多少显存</a><a href="#flops">一次线性变换要算多少次</a><a href="#intensity">运算量和运行时间</a></nav>
+<section class="document-section note-panel" aria-labelledby="shape">
+<h2 id="shape" tabindex="-1">一批文本的形状 <a class="header-anchor" href="#shape" aria-label="章节链接">&#8203;</a></h2>
+<p>把 B 条等长序列放进同一批，每条含 T 个词元，输入就是形状为 [B,T] 的整数张量。用每个编号查嵌入表，每个位置得到一个宽度为 d 的向量，形状随之变为 [B,T,d]。B 表示批量，T 表示位置，d 表示同一位置有多少个特征。</p>
+<figure class="note-diagram"><div class="note-flow">
+<div class="note-flow-step"><NoteFlowIcon kind="tokens" /><strong>词元编号</strong><span>B 条序列，每条长 T</span></div>
+<div class="note-flow-step"><NoteFlowIcon kind="table" /><strong>查嵌入表</strong><span>每个编号取一个 d 维向量</span></div>
+<div class="note-flow-step"><NoteFlowIcon kind="code" /><strong>线性投影</strong><span>每个位置得到 h 个输出</span></div>
+</div><figcaption>B 和 T 保留下来，线性层只改变最后一维。</figcaption></figure>
+</section>
+<section class="document-section note-panel" aria-labelledby="memory">
+<h2 id="memory" tabindex="-1">一个张量占多少显存 <a class="header-anchor" href="#memory" aria-label="章节链接">&#8203;</a></h2>
+<p>对连续、紧密存放的张量，所需字节数等于元素个数乘以每个元素的字节数。例如 B = 4、T = 512、d = 768 时，嵌入输出有 1,572,864 个元素。float32 每个元素占 4 字节，这一个输出就占 6 MiB；换成每元素 2 字节的 bf16，同形状输出占 3 MiB。</p>
+<p>在 PyTorch 里，<code>numel()</code> 数的是整个张量的元素，<code>element_size()</code> 给出单个元素占用的字节数。第 2 讲的张量大小函数用一行把这两个量相乘：</p>
+<pre v-pre><code>return x.numel() * x.element_size()</code></pre>
+<p>把上例的 float32 嵌入代入，函数返回 6,291,456 字节。除以 1024² 才是 6 MiB。换成 bf16 时，元素数和形状都不变，减半的是每个元素占用的字节数。</p>
+<p>训练时还得存模型参数、梯度、供反向传播使用的激活和优化器状态。前面的 6 MiB 只算了一个张量。对峰值显存的估算，要看这些张量哪些在同一时刻仍然存在。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="flops">
+<h2 id="flops" tabindex="-1">一次线性变换要算多少次 <a class="header-anchor" href="#flops" aria-label="章节链接">&#8203;</a></h2>
+<p>将 B 和 T 合并，输入可看成 (BT) × d 的矩阵。若输出宽度为 h，权重矩阵就是 d × h。输出有 BTh 个元素，每个元素是两个长度为 d 的向量的点积。把一次乘法和一次加法算作两次浮点运算，前向计算量约为 2BTdh FLOPs。</p>
+<p>反向传播还需要输入梯度和权重梯度，两者各自又是一次矩阵乘法。对于需要这两种梯度的线性层，前向和反向合计约为前向计算量的三倍。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="intensity">
+<h2 id="intensity" tabindex="-1">运算量和运行时间 <a class="header-anchor" href="#intensity" aria-label="章节链接">&#8203;</a></h2>
+<p>同样做一次乘加，从显存读一个数只用一次，和把它留在片上反复使用，耗时可能不同。计算强度衡量每搬运一个字节做了多少次浮点运算。逐元素操作通常很快就把时间花在读写上；矩阵乘法可以复用同一份数据，更有机会利用计算单元。</p>
+<p>现在可以读第 3 讲的 Transformer 块了：每个子层接收什么形状的张量，要产生多宽的输出，又为此增加多少参数？</p>
+<p><a href="https://stanford-cs336.github.io/lectures/?trace=lecture_02">第 2 讲可执行讲稿</a></p>
+</section>
+<details class="note-details"><summary>本篇原始文件（下载）</summary>
+<ul>
+<li><a download :href="withBase('/cs336/sources/lectures/lecture_02.py')">lecture_02.py</a></li>
+</ul>
+</details>
+</article>

@@ -1,0 +1,61 @@
+<script setup>
+import { withBase } from 'vitepress'
+</script>
+
+<article class="native-document format-lab" data-format="lab" data-design="linux-notebook" aria-label="A2 · GPU 计时与预热实验">
+<header class="document-intro note-hero">
+<p class="note-kicker">CS336学习笔记 <span>作业与实现</span></p>
+<h1 id="a2-benchmark" tabindex="-1">A2 · GPU 计时与预热实验 <a class="header-anchor" href="#a2-benchmark" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">先写一个计时循环，再用同一个模型练习预热、重复测量，以及前向、反向和完整训练步的计时。</p>
+</header>
+<nav class="note-jump" aria-label="本篇导读"><a href="#protocol">给一个训练步计时</a><a href="#warmup">固定前向计算，改变预热次数</a><a href="#modes">固定预热次数，加入反向传播</a><a href="#open">进程启动与预热</a></nav>
+<section class="document-section note-panel" aria-labelledby="protocol">
+<h2 id="protocol" tabindex="-1">给一个训练步计时 <a class="header-anchor" href="#protocol" aria-label="章节链接">&#8203;</a></h2>
+<p>测一次训练步的墙钟时间，起点是主机准备提交这一步，终点是这一步的 GPU 工作全部完成。假设主机提交任务后就读时钟，而 GPU 仍在执行，那么这段时间只能告诉我们提交有多快。要测整步耗时，需要在两次读时钟之间等待设备完成。</p>
+<p>先确定一步里包含哪些运算。同一个模型可以按三种模式运行。<code>forward</code> 在无梯度模式下只做前向；<code>for_bac</code> 再计算损失和反向传播；<code>full</code> 还执行 AdamW 更新。计时输入是预先在设备上生成的随机 token，模型构建和数据读取都在计时区间外。</p><p>在 <code>benchmark.py</code> 里，预热结束时先同步。进入正式测量后，每步都等 GPU 完成再记录主机耗时，单位为秒。脚本默认 batch 为 4、上下文为 512、测量 10 步，small 配置有 128,625,408 个参数。报告记录的是本地单卡结果。</p><pre v-pre><code>t0 = timeit.default_timer()
+step()
+torch.cuda.synchronize()
+times.append(timeit.default_timer() - t0)</code></pre><p>时钟在调用前启动，等同步返回才停止，所以 Python 调度、GPU 执行和主机等待都算在这一步里。第 6 讲用 CUDA 事件读的是设备流里两个事件的间隔。<a href="/cs336/lecture-06#timing">第 6 讲 · CUDA 事件计时</a></p>
+
+<details class="note-details"><summary>运行一次前向计时</summary><p>数据来源为 A2 的 <code>write_up.md</code>，计时逻辑位于同目录的 <code>benchmark.py</code>。在配置好作业 GPU 环境后，可分别调整下例中的预热次数。</p><pre v-pre><code>uv run python benchmark.py --model-size small --mode forward --context-length 512 --batch-size 4 --warmup 1 --num-steps 10</code></pre></details>
+</section>
+<section class="document-section note-panel" aria-labelledby="warmup">
+<h2 id="warmup" tabindex="-1">固定前向计算，改变预热次数 <a class="header-anchor" href="#warmup" aria-label="章节链接">&#8203;</a></h2>
+<p>先只运行 small 模型的 forward，保持输入、模型和测量步数相同，只改变正式计时前预热几步。下表是这组实验留下的单卡记录。想看一步平均跑多久，读均值。想看十步之间差得多不多，读标准差。变异系数把标准差除以均值，方便比较不同配置下的相对波动。</p><div class="note-table" role="region" aria-label="预热步数、均值（秒）、标准差（秒）、变异系数" tabindex="0"><table>
+<thead><tr><th scope="col">预热步数</th><th scope="col">均值（秒）</th><th scope="col">标准差（秒）</th><th scope="col">变异系数</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0.145029</td><td>0.110388</td><td>76.1%</td></tr>
+<tr><td>1</td><td>0.110275</td><td>0.001186</td><td>1.1%</td></tr>
+<tr><td>2</td><td>0.110091</td><td>0.000548</td><td>0.5%</td></tr>
+<tr><td>5</td><td>0.109715</td><td>0.000242</td><td>0.2%</td></tr>
+</tbody></table></div><p>以第一行为例，0.110388 ÷ 0.145029 ≈ 0.761，所以变异系数为 76.1%。这个数描述十步耗时的相对波动。预热一步后，标准差降到 0.001186 秒，用同样的算法得到约 1.1%。</p><p>从 0 次到 1 次预热，均值下降约 35 毫秒；再增加一次，均值只变了约 0.18 毫秒。这个差别可能来自第一步的额外开销。原表只记录了汇总值，还分不清开销来自初始化、缓存，还是其他因素。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="modes">
+<h2 id="modes" tabindex="-1">固定预热次数，加入反向传播 <a class="header-anchor" href="#modes" aria-label="章节链接">&#8203;</a></h2>
+<p>测过前向之后，再把反向传播和优化器更新逐步加回来。三种模式都先预热 5 步，再计时 10 步。表中沿用作业记录的数值。</p><div class="note-table" role="region" aria-label="模式、small 均值（秒）、small 变异系数、medium 均值（秒）" tabindex="0"><table>
+<thead><tr><th scope="col">模式</th><th scope="col">small 均值（秒）</th><th scope="col">small 变异系数</th><th scope="col">medium 均值（秒）</th></tr></thead>
+<tbody>
+<tr><td>forward</td><td>0.109715</td><td>0.2%</td><td>0.335881</td></tr>
+<tr><td>for_bac</td><td>0.372372</td><td>11.3%</td><td>12.009977</td></tr>
+<tr><td>full</td><td>0.401314</td><td>0.5%</td><td>15.529772</td></tr>
+</tbody></table></div><p>small 的前向加反向这一组波动最大，完整训练步却只有 0.5%。各模式是分开跑的。两行均值相减，只能粗估多出来的耗时，没法据此找出哪个 kernel 最慢。medium 从前向到前向加反向，耗时从约 0.34 秒升到约 12 秒。要解释这次变化，还得对照同一次运行的硬件利用率、显存压力和时间线。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="open">
+<h2 id="open" tabindex="-1">进程启动与预热 <a class="header-anchor" href="#open" aria-label="章节链接">&#8203;</a></h2>
+<blockquote>前后程序的warmup是否会相互影响？</blockquote><p>后续可把冷启动和进程内稳态分开测。用多个新进程轮换运行 0 次和 1 次预热的配置，保存每一步的原始时间，同时记录温度、频率及其他负载。比较各进程的首步与后续各步，可以检验这项猜想。原作业没有记录这项对照的结果。</p><p>报告另列有 Nsight 的 kernel 占比与调用次数问题，当时这部分只有题目。这里保留为待分析项。</p>
+</section>
+<details class="note-details"><summary>本篇原始文件（下载）</summary>
+<ul>
+<li><a download :href="withBase('/cs336/sources/assignment2/cs336_assignment2_systems.pdf')">cs336_assignment2_systems.pdf</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/benchmark.py')">benchmark.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/run_benchmarks.py')">run_benchmarks.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/write_up.md')">write_up.md</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/assignment2_systems_manual_guide.md')">assignment2_systems_manual_guide.md</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/mixed_precision_accumulation.py')">mixed_precision_accumulation.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/writeup_figures/full/bac-optim-data.png')">writeup_figures/full/bac-optim-data.png</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/writeup_figures/full/small-forward-data.png')">writeup_figures/full/small-forward-data.png</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/writeup_figures/full/small-forward-pic.png')">writeup_figures/full/small-forward-pic.png</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/LICENSE')">LICENSE</a></li>
+</ul>
+</details>
+</article>

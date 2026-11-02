@@ -1,0 +1,81 @@
+<script setup>
+import { withBase } from 'vitepress'
+</script>
+
+<article class="native-document format-lab" data-format="lab" data-design="linux-notebook" aria-label="A1 · 从 RoPE 到 Transformer 块">
+<header class="document-intro note-hero">
+<p class="note-kicker">CS336学习笔记 <span>作业与实现</span></p>
+<h1 id="a1-transformer" tabindex="-1">A1 · 从 RoPE 到 Transformer 块 <a class="header-anchor" href="#a1-transformer" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">从位置索引算出旋转角度，将它用到多头注意力的 Q 和 K 上，再把注意力和前馈网络接回残差路径。</p>
+</header>
+<nav class="note-jump" aria-label="本篇导读"><a href="#relative">位置差怎样进入注意力分数</a><a href="#angles">按位置生成旋转角度</a><a href="#rotation">把角度用于向量</a><a href="#heads">多头注意力的输入与输出</a><a href="#residual">两次残差相加</a><a href="#checks">验证旋转和注意力输出</a></nav>
+<section class="document-section note-panel" aria-labelledby="relative">
+<h2 id="relative" tabindex="-1">位置差怎样进入注意力分数 <a class="header-anchor" href="#relative" aria-label="章节链接">&#8203;</a></h2>
+<p>分词器给词元分配编号，同一个词元出现在句子的第 2 位和第 8 位时编号相同。因果掩码能挡住未来位置，但对于已经可见的两个键，单靠查询与键的内容点积，没有一项直接表示“离我几步”。旋转位置编码（RoPE）给 Q 和 K 加上与位置有关的旋转，再用旋转后的向量算点积。</p>
+<p>先用二维向量看原因。令 R(α) 表示逆时针旋转 α 弧度的矩阵，ω 是这一对坐标的频率。位置 m 的查询转 mω，位置 n 的键转 nω。把旋转移到点积的一侧时，转置相当于反向旋转，两个角度就相减了：</p>
+<div class="math-block" data-tex="(R(m\omega)q)^\top R(n\omega)k=q^\top R(-m\omega)R(n\omega)k=q^\top R((n-m)\omega)k"></div>
+<p>例如取 q = k = (1, 0)，ω = 1。查询在位置 3、键在位置 2 时，点积是 cos(2−3)。同时把它们移到位置 8 和 7，点积仍是 cos(−1)。固定内容时才有这种平移性质；换一对查询和键，分数还会随内容改变。</p>
+<p>一个头有多对坐标，每对采用不同频率。距离增加一步，高频分量转过较大的角度，低频分量转过较小的角度。注意力分数把各对坐标的点积相加，所以同一距离会在多个角度尺度上体现。A1 的实现要求头维度为偶数，正是因为旋转需要将坐标两两配对。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="angles">
+<h2 id="angles" tabindex="-1">按位置生成旋转角度 <a class="header-anchor" href="#angles" aria-label="章节链接">&#8203;</a></h2>
+<p>将上面的二维旋转推广到一个完整的头。若头维度为 D，第 j 对坐标的频率是 θ 的 −2j/D 次幂，其中 j 从 0 数起。位置索引乘以频率，就得到这一对坐标的旋转角。设头维度为 4，查询或键的四个分量按相邻维度分成两对，每对使用一个角度。作业的 <code>cs336_basics/cha3/RoPE.py</code> 里有一条注释：“每一行是对应token嵌入的d_k/2对二维分量的旋转角度”。这里的行号代表序列位置。同一个词在句子里出现两次，位置不同，查的也是不同的行。</p><figure class="note-diagram"><div class="note-flow"><div class="note-flow-step"><NoteFlowIcon kind="tokens" /><strong>序列位置 m</strong><span>用整数行号查表</span></div>
+<div class="note-flow-step"><NoteFlowIcon kind="table" /><strong>查到两个角度</strong><span>头维度为 4，每两维一组</span></div>
+<div class="note-flow-step"><NoteFlowIcon kind="pair" /><strong>旋转并拼回</strong><span>输出仍有 4 个分量</span></div></div><figcaption>沿一个注意力头读 RoPE。不同头共享位置，输入的 Q、K 取值各不相同。</figcaption></figure><p>沿用四维的例子，取底数 10000。两个频率是 1 和 0.01；在位置 3，对应角度就是 3 和 0.03 弧度。在位置 0，两角都为零，旋转应原样返回。这个边界例子也能帮助检查正余弦或配对次序有没有写反。</p><details class="note-details"><summary>展开原实现中的角度计算</summary><pre v-pre><code>k=torch.arange(0,d_k/2,1)
+freq=theta**(-2*k/d_k)
+#位置为m的token的嵌入每次旋转m*freq
+i=torch.arange(0,max_seq_len,1)
+</code></pre><p>随后以 <code>i.unsqueeze(1)*freq.unsqueeze(0)</code> 广播出位置 × 频率的二维表。代码将正弦、余弦注册为 buffer，随模块保存。</p></details>
+</section>
+<section class="document-section note-panel" aria-labelledby="rotation">
+<h2 id="rotation" tabindex="-1">把角度用于向量 <a class="header-anchor" href="#rotation" aria-label="章节链接">&#8203;</a></h2>
+<p>角度表只回答“转多少”。要把位置编进查询向量，还要把每对坐标绕原点转过这个角度。设一对坐标为 (u, v)，旋转角度为 α，则新坐标为</p>
+<div class="math-block" data-tex="(u',v')=(u\cos\alpha-v\sin\alpha,\;u\sin\alpha+v\cos\alpha)"></div>
+<p>用刚才的位置 3 做一次前向计算。若查询是 (1, 0, 1, 0)，前两个分量转 3 弧度，得到 (cos 3, sin 3)；后两个转 0.03 弧度，得到 (cos 0.03, sin 0.03)。两对向量各自仍是单位长度。把位置改成 0，结果应当与输入逐项相同。</p>
+<p>A1 用同一组张量操作完成所有位置的旋转。下面摘出计算两对坐标的几行：</p>
+<pre v-pre><code>x_reshaped=x.contiguous().view(*x.shape[:-1],-1,2)
+x1=x_reshaped[...,0]
+x2=x_reshaped[...,1]
+
+rotated_x1 = x1 *  cos_tensor- x2 * sin_tensor
+rotated_x2 = x2 *  cos_tensor+ x1 * sin_tensor</code></pre>
+<p>这里的 <code>x1</code> 同时取出了各对的第一个坐标，<code>x2</code> 取出了第二个。因此四维例子中，<code>x1</code> 是 (1, 1)，<code>x2</code> 是 (0, 0)。两行乘加正好是上面的旋转公式。最后沿末维把两组结果交错拼回去，就恢复了原来的头维度。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="heads">
+<h2 id="heads" tabindex="-1">多头注意力的输入与输出 <a class="header-anchor" href="#heads" aria-label="章节链接">&#8203;</a></h2>
+<p>在 <code>Causal_Multi_Head_Self_Attention.py</code> 中，Q、K、V 分别从输入投影出来。令 B 为批量、T 为序列长度、H 为头数，单头宽度 D 等于模型宽度除以 H。上一节的旋转用在 Q 和 K 上。为了让同一套代码处理整批序列，先把模型宽度拆成 H 个头，再沿每个头的最后一维成对旋转。</p><div class="note-table" role="region" aria-label="步骤、形状、代码为何这样安排" tabindex="0"><table>
+<thead><tr><th scope="col">步骤</th><th scope="col">形状</th><th scope="col">代码为何这样安排</th></tr></thead>
+<tbody>
+<tr><td>投影、拆头</td><td>[B,T,H,D] → [B,H,T,D]</td><td>把 T 放到倒数第二维，方便逐头计算注意力。</td></tr>
+<tr><td>位置索引</td><td>[B,T] → [B,1,T]</td><td>增加的轴让角度表在 H 个头上广播。</td></tr>
+<tr><td>旋转 Q 与 K</td><td>[B,H,T,D] → 同形</td><td>末维拆成 D/2 对，逐对旋转。V 继续携带要加权汇总的内容。</td></tr>
+<tr><td>遮挡未来位置</td><td>[T,T]</td><td>上三角屏蔽未来 token，保留对角线和过去。</td></tr>
+<tr><td>拼合各头</td><td>[B,H,T,D] → [B,T,H·D]</td><td>先转置，再用 contiguous 整理内存，最后作输出投影。</td></tr>
+</tbody></table></div><p>源码中的 <code>unsqueeze_</code> 会就地改变传入位置张量的形状。核对注意力输出时也要留意调用者：如果它还要用这份位置索引，拿到的已经是改变形状后的张量。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="residual">
+<h2 id="residual" tabindex="-1">两次残差相加 <a class="header-anchor" href="#residual" aria-label="章节链接">&#8203;</a></h2>
+<p><code>transformer_block.py</code> 里的两次残差相加只占两行。第一行把注意力分支的输出加回 x，第二行把前馈分支的输出加回 z。两次 RMSNorm 都作用于分支输入，位置与课程图里右侧的结构一致。</p><pre v-pre><code>z=x+self.MHA(self.RMSNorm1(x), token_positions)
+output=z+self.SwiGLU(self.RMSNorm2(z))</code></pre><p>两个子层都必须返回与输入相同的形状，否则无法逐元素相加。SwiGLU 内部可以改变隐藏宽度，最后一层投影负责回到模型宽度。<a href="/cs336/lecture-03#width">第 3 讲 · 前馈宽度的参数预算</a></p>
+</section>
+<section class="document-section note-panel" aria-labelledby="checks">
+<h2 id="checks" tabindex="-1">验证旋转和注意力输出 <a class="header-anchor" href="#checks" aria-label="章节链接">&#8203;</a></h2>
+<p>原作业的 <code>tests/test_model.py</code> 将这两个层次分开验证。<code>test_rope</code> 将指定位置的旋转结果与快照比较，绝对容差为 1e-5。<code>test_multihead_self_attention_with_rope</code> 再检查完整注意力输出。若前者正确而后者出错，优先沿拆头、位置广播、因果遮罩和合头顺序排查。</p><p>可以先用位置 0 检查恒等变换。再把 (1,0,1,0) 放在位置 3，逐项核对两对坐标的角度。如果只检查长度是否保持不变，把两对坐标的频率写反也可能过关。最后固定 Q 和 K，把两个位置同时加 5，再比较旋转前后两组位置对应的点积。这一步专门检验相对位移。<a href="/cs336/lecture-03#positions">回看讲义中相对位置的推导</a></p>
+</section>
+<details class="note-details"><summary>本篇原始文件（下载）</summary>
+<ul>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_assignment1_basics.pdf')">cs336_assignment1_basics.pdf</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/Causal_Multi_Head_Self_Attention.py')">cs336_basics/cha3/Causal_Multi_Head_Self_Attention.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/linear_and_embedding_module.py')">cs336_basics/cha3/linear_and_embedding_module.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/RMSnorm.py')">cs336_basics/cha3/RMSnorm.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/RoPE.py')">cs336_basics/cha3/RoPE.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/run_transformer_lm.py')">cs336_basics/cha3/run_transformer_lm.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/Scaled_Dot_Product_Attention.py')">cs336_basics/cha3/Scaled_Dot_Product_Attention.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/softmax.py')">cs336_basics/cha3/softmax.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/SwiGLU.py')">cs336_basics/cha3/SwiGLU.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/transformer_block.py')">cs336_basics/cha3/transformer_block.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/tests/test_model.py')">tests/test_model.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/LICENSE')">LICENSE</a></li>
+</ul>
+</details>
+</article>

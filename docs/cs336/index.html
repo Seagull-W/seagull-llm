@@ -1,0 +1,33 @@
+<div class="native-document format-directory" data-format="directory" data-design="linux-notebook" aria-label="CS336学习笔记">
+<header class="document-intro note-hero">
+<p class="note-kicker">Stanford · Spring 2026</p>
+<h1 id="cs336" tabindex="-1">CS336学习笔记 <a class="header-anchor" href="#cs336" aria-label="栏目链接">&#8203;</a></h1>
+<p class="note-deck">先把文本切成词元，组成一批训练样本，再搭建 Transformer。模型能运行以后，接下来要弄清一次计算在 GPU 上怎样执行、怎样计时。</p>
+</header>
+<section class="document-section note-panel" aria-labelledby="lectures">
+<h2 id="lectures" tabindex="-1">课程讲义 · 第 1–6 讲 <a class="header-anchor" href="#lectures" aria-label="章节链接">&#8203;</a></h2>
+<ChapterCards :items="[
+  { label: '模型基础', title: '第 1 讲 · 分词与下一词预测', description: '把一段文本编码成整数序列，用相邻位置构造训练样本，再用 BPE 缩短序列。', link: '/cs336/lecture-01' },
+  { label: '模型基础', title: '第 2 讲 · 张量、显存与计算量', description: '从一批词元的形状出发，计算嵌入和线性层占用的显存，再估算矩阵乘法的运算量。', link: '/cs336/lecture-02' },
+  { label: '模型基础', title: '第 3 讲 · Transformer 架构与超参数', description: '一个词元的向量依次经过注意力和前馈层。残差连接保留输入，RoPE 编入位置，SwiGLU 的中间宽度取决于参数预算。', link: '/cs336/lecture-03' },
+  { label: '模型基础', title: '第 4 讲 · 注意力变体与混合专家', description: '长序列会增加注意力计算，宽前馈层会增加每个词元的开销。两类稀疏计算分别作用于位置和专家。', link: '/cs336/lecture-04' },
+  { label: '训练系统', title: '第 5 讲 · GPU 执行与显存访问', description: '从线程块和显存层次讲到分块矩阵乘法，解释为什么数据复用能缩短运行时间。', link: '/cs336/lecture-05' },
+  { label: '训练系统', title: '第 6 讲 · GPU 计时、剖析与 Triton', description: 'GPU 异步执行内核。先用 CUDA 事件测耗时，再用性能剖析找到反复读写显存的操作，最后实现逐行 softmax。', link: '/cs336/lecture-06' }
+]" />
+</section>
+<section class="document-section note-panel" aria-labelledby="assignments">
+<h2 id="assignments" tabindex="-1">作业与实现 <a class="header-anchor" href="#assignments" aria-label="章节链接">&#8203;</a></h2>
+<p>A1 先训练分词器，把文本变成整数序列，再给注意力层加入位置信息。A2 用搭好的模型测量一个训练步的耗时。</p>
+<ChapterCards :items="[
+  { title: 'A1 · 字节级 BPE 的训练与编码', description: '从相邻字节的频数训练合并规则，用同一组规则编码新文本，再把词元还原成 UTF-8 字节。', link: '/cs336/a1-bpe' },
+  { title: 'A1 · 从 RoPE 到 Transformer 块', description: '从位置索引算出旋转角度，将它用到多头注意力的 Q 和 K 上，再把注意力和前馈网络接回残差路径。', link: '/cs336/a1-transformer' },
+  { title: 'A2 · GPU 计时与预热实验', description: '先写一个计时循环，再用同一个模型练习预热、重复测量，以及前向、反向和完整训练步的计时。', link: '/cs336/a2-benchmark' }
+]" />
+</section>
+<section class="document-section note-panel" aria-labelledby="materials">
+<h2 id="materials" tabindex="-1">完整课表与原始材料 <a class="header-anchor" href="#materials" aria-label="章节链接">&#8203;</a></h2>
+<ChapterCards :items="[
+  { label: '课程附录', title: 'CS336 课程地图', description: '17 讲课件和五份作业的对照表，可按讲次查找原始幻灯片、可执行讲稿和对应的中文讲义。', link: '/cs336/course-map' }
+]" />
+</section>
+</div>

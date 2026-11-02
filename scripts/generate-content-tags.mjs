@@ -5,6 +5,7 @@ import { readContent } from './content-source.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../docs')
 const categories = {
+  cs336: 'CS336',
   'llm-book': '大语言模型', 'rl-book': 'RLHF', 'westlake-rl': '强化学习',
   papers: '论文与项目随谈', research: '每日调研', 'rust-notes': 'Rust', 'linux-notes': 'Linux', videos: '科普视频', adr: '网站开发'
 }

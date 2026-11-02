@@ -1,0 +1,37 @@
+<script setup>
+import { withBase } from 'vitepress'
+</script>
+
+<article class="native-document format-course" data-format="course" data-design="linux-notebook" aria-label="第 4 讲 · 注意力变体与混合专家">
+<header class="document-intro note-hero">
+<p class="note-kicker">CS336学习笔记 <span>课程讲义</span></p>
+<h1 id="lecture-04" tabindex="-1">第 4 讲 · 注意力变体与混合专家 <a class="header-anchor" href="#lecture-04" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">长序列会增加注意力计算，宽前馈层会增加每个词元的开销。两类稀疏计算分别作用于位置和专家。</p>
+</header>
+<nav class="note-jump" aria-label="本篇导读"><a href="#context">序列长度带来的代价</a><a href="#alternatives">少看一些位置，或递推一个状态</a><a href="#experts">让不同词元经过不同的前馈层</a></nav>
+<section class="document-section note-panel" aria-labelledby="context">
+<h2 id="context" tabindex="-1">序列长度带来的代价 <a class="header-anchor" href="#context" aria-label="章节链接">&#8203;</a></h2>
+<p>第 3 讲里，每个查询都和允许看到的键计算点积。长度为 T 的因果序列有 T(T+1)/2 对可见的位置。序列从 4 个词元增至 8 个，可见配对从 10 对增至 36 对。即使模型宽度不变，序列长度也会改变一次前向的工作量。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="alternatives">
+<h2 id="alternatives" tabindex="-1">少看一些位置，或递推一个状态 <a class="header-anchor" href="#alternatives" aria-label="章节链接">&#8203;</a></h2>
+<p>限制可见位置是一种做法。例如每个位置只看最近 W 个词元，当 T 远大于 W 时，要计算的配对数约为 TW。代价是单层中一个位置无法直接访问窗口以外的词元。稀疏注意力的一个设计问题，就是怎样选择值得保留的位置。</p>
+<p>线性注意力走另一条路。若相似度能写为查询特征和键特征的内积，就可以先累计键特征与值的乘积（以及归一化所需的键特征之和），再让当前查询读取这些累计量。因果形式只需随新词元更新状态。它改变了相似度的计算，一般不会逐项重现标准 softmax 注意力。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="experts">
+<h2 id="experts" tabindex="-1">让不同词元经过不同的前馈层 <a class="header-anchor" href="#experts" aria-label="章节链接">&#8203;</a></h2>
+<p>在普通 Transformer 中，每个词元都经过同一个前馈网络。混合专家层准备多个前馈网络，由路由器给每个词元打分，只运行分数靠前的几个专家，并按路由权重合并输出。例如共有 8 个专家、每个词元选 2 个，就能增加总参数量，而单个词元只需经过被选中的两组网络。</p>
+<p>如果多数词元都挤到同一专家，那一组计算会拖慢整个批次，其余专家也得不到足够的训练样本。把专家分布到不同设备时，还要把词元发送到选中专家所在的设备。计算次数、负载分布和通信量需要分别考虑。第 5 讲从单张加速卡开始，解释数据实际怎样移动。</p>
+<figure class="note-diagram"><div class="note-flow">
+<div class="note-flow-step"><NoteFlowIcon kind="tokens" /><strong>输入词元</strong><span>每个位置有一个隐藏向量</span></div>
+<div class="note-flow-step"><NoteFlowIcon kind="branch" /><strong>专家选择</strong><span>路由器打分，选择部分前馈网络</span></div>
+<div class="note-flow-step"><NoteFlowIcon kind="pair" /><strong>合并输出</strong><span>按选中专家的权重相加</span></div>
+</div><figcaption>只画出一个词元。一个批次中的不同词元可以被分到不同设备上的专家。</figcaption></figure>
+<p><a href="https://github.com/stanford-cs336/lectures/blob/main/lecture_04.pdf">第 4 讲原始幻灯片</a></p>
+</section>
+<details class="note-details"><summary>本篇原始文件（下载）</summary>
+<ul>
+<li><a download :href="withBase('/cs336/sources/lectures/lecture_04.pdf')">lecture_04.pdf</a></li>
+</ul>
+</details>
+</article>

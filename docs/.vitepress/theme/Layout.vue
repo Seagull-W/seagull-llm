@@ -16,7 +16,7 @@ const { frontmatter, page } = useData()
 const academicReading = computed(() => usesAcademicReading('/' + page.value.relativePath, frontmatter.value))
 const sectionClass = computed(() => {
   const section = page.value.relativePath?.split('/')[0]
-  return ['research', 'papers', 'rl-book', 'westlake-rl', 'rust-notes', 'linux-notes', 'videos'].includes(section) ? 'section-' + section : ''
+  return ['research', 'papers', 'rl-book', 'westlake-rl', 'rust-notes', 'linux-notes', 'cs336', 'videos'].includes(section) ? 'section-' + section : ''
 })
 </script>
 <template>

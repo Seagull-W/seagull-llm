@@ -1,0 +1,43 @@
+<script setup>
+import { withBase } from 'vitepress'
+</script>
+
+<article class="native-document format-course" data-format="course" data-design="linux-notebook" aria-label="第 1 讲 · 分词与下一词预测">
+<header class="document-intro note-hero">
+<p class="note-kicker">CS336学习笔记 <span>课程讲义</span></p>
+<h1 id="lecture-01" tabindex="-1">第 1 讲 · 分词与下一词预测 <a class="header-anchor" href="#lecture-01" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">把一段文本编码成整数序列，用相邻位置构造训练样本，再用 BPE 缩短序列。</p>
+</header>
+<nav class="note-jump" aria-label="本篇导读"><a href="#prediction">下一个词元</a><a href="#bytes">从字符到字节</a><a href="#bpe">从字节到 BPE 词表</a></nav>
+<section class="document-section note-panel" aria-labelledby="prediction">
+<h2 id="prediction" tabindex="-1">下一个词元 <a class="header-anchor" href="#prediction" aria-label="章节链接">&#8203;</a></h2>
+<p>假设一句话以“今天”开头，语言模型要为接下来可能出现的词元分配概率。词元（token）是分词器规定的单位，可以是一个字、一个词的一部分，甚至一个字节。</p>
+<p>训练时，文本本身就提供了答案。假设一段文本编码为四个词元 a、b、c、d，输入序列取 a、b、c，对应的预测目标就是 b、c、d。模型预测 c 时能看到 a、b，不能提前看到 c。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="bytes">
+<h2 id="bytes" tabindex="-1">从字符到字节 <a class="header-anchor" href="#bytes" aria-label="章节链接">&#8203;</a></h2>
+<p>要把上面的 a、b 换成任意语言的文本，可以先用 UTF-8 把字符串编码成字节。字节只有 256 种取值，能直接充当整数编号。讲稿里的 🌍 编码后占四个字节 F0 9F 8C 8D。若一个字节就是一个词元，单这个字符就占去四个序列位置。</p>
+<p>把这个过程写成 Python，只需先编码，再逐字节取整数。原讲稿中的两行分别对应这两个动作：</p>
+<pre v-pre><code>string_bytes = string.encode("utf-8")
+indices = list(map(int, string_bytes))</code></pre>
+<p>当输入只有 🌍 时，第一行给出四个 UTF-8 字节，第二行得到 <code>[240, 159, 140, 141]</code>。这四个整数是字节值。后面用 BPE 合并字节时，词表会给新词元分配另外的编号。</p>
+<p>字节编码能表示生僻字和表情，却可能把同一段文本拉得很长。衡量分词效果时，可以把原文的 UTF-8 字节数除以词元数。同一段文本下，这个比值越大，模型需要处理的序列越短。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="bpe">
+<h2 id="bpe" tabindex="-1">从字节到 BPE 词表 <a class="header-anchor" href="#bpe" aria-label="章节链接">&#8203;</a></h2>
+<p>BPE 从单字节词表开始。在允许合并的范围内，统计每一对相邻符号的出现次数，把最频繁的一对合成一个新符号，再重新计算受影响的计数。例如训练材料反复出现 ab，合并 a 和 b 后，原来占两个位置的 ab 就能用一个编号表示。继续合并，新符号还可以参与下一轮。</p>
+<p>可以手算一轮。假设预分词之后得到两次 <code>aba</code> 和一次 <code>ab</code>。在三个片段内分别计数，<code>a b</code> 出现三次，<code>b a</code> 出现两次。合并前者后，两个 <code>aba</code> 都变成 <code>[ab, a]</code>，最后那个 <code>ab</code> 单独成为一个词元。下一轮统计的就是这些新序列中的相邻对。</p>
+<p>训练分词器得到词表和有先后顺序的合并规则。编码新文本时沿用这些规则；解码时把每个编号对应的字节依次拼回去，再按 UTF-8 解码。切分后的长度 T 决定模型一次需要处理多少位置。第 2 讲从这个长度出发，计算一批样本占多少显存。</p>
+<figure class="note-diagram"><div class="note-flow">
+<div class="note-flow-step"><NoteFlowIcon kind="tokens" /><strong>字节</strong><span>每种字节有自己的编号</span></div>
+<div class="note-flow-step"><NoteFlowIcon kind="pair" /><strong>合并</strong><span>把频繁相邻的一对记作新词元</span></div>
+<div class="note-flow-step"><NoteFlowIcon kind="table" /><strong>词表</strong><span>保存新编号和合并顺序</span></div>
+</div><figcaption>一次合并会改变相邻的符号对，下一轮统计以合并后的序列为准。</figcaption></figure>
+<p><a href="https://stanford-cs336.github.io/lectures/?trace=lecture_01">第 1 讲可执行讲稿</a></p>
+</section>
+<details class="note-details"><summary>本篇原始文件（下载）</summary>
+<ul>
+<li><a download :href="withBase('/cs336/sources/lectures/lecture_01.py')">lecture_01.py</a></li>
+</ul>
+</details>
+</article>

@@ -6,7 +6,7 @@ test('all public text collections receive academic reading typography', () => {
   const pages = readingPages()
   assert.ok(pages.length >= 71)
   assert.deepEqual([...new Set(pages.map(p => p.path.split('/')[1]))].sort(),
-    ['linux-notes', 'papers', 'research', 'rl-book', 'rust-notes', 'westlake-rl'])
+    ['cs336', 'linux-notes', 'papers', 'research', 'rl-book', 'rust-notes', 'westlake-rl'])
   for (const path of ['/westlake-rl/随机近似/课程讲义', '/rl-book/cha6强化学习',
     '/papers/projects/intellect-3/', '/rust-notes/多线程并发编程',
     '/linux-notes/linux-isolation', '/research/2026-10-26-agent-code-review-layers']) {

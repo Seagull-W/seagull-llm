@@ -222,6 +222,31 @@ export const linuxNotesSidebar = [
 
 // VitePress 多侧边栏：按路径前缀匹配
 export const sidebar = {
+  '/cs336/': [
+    {
+      text: '课程讲义', collapsed: false,
+      items: [
+        { text: '第 1 讲 · 分词与下一词预测', link: '/cs336/lecture-01' },
+        { text: '第 2 讲 · 张量、显存与计算量', link: '/cs336/lecture-02' },
+        { text: '第 3 讲 · Transformer 架构与超参数', link: '/cs336/lecture-03' },
+        { text: '第 4 讲 · 注意力变体与混合专家', link: '/cs336/lecture-04' },
+        { text: '第 5 讲 · GPU 执行与显存访问', link: '/cs336/lecture-05' },
+        { text: '第 6 讲 · GPU 计时、剖析与 Triton', link: '/cs336/lecture-06' }
+      ]
+    },
+    {
+      text: '作业与实现', collapsed: false,
+      items: [
+        { text: 'A1 · 字节级 BPE 的训练与编码', link: '/cs336/a1-bpe' },
+        { text: 'A1 · 从 RoPE 到 Transformer 块', link: '/cs336/a1-transformer' },
+        { text: 'A2 · GPU 计时与预热实验', link: '/cs336/a2-benchmark' }
+      ]
+    },
+    {
+      text: '课程资料', collapsed: false,
+      items: [{ text: 'CS336 课程地图', link: '/cs336/course-map' }]
+    }
+  ],
   '/research/': researchSidebar,
   '/papers/': papersSidebar,
   '/rl-book/': rlBookSidebar,

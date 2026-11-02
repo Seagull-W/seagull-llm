@@ -1,6 +1,6 @@
 import { isPublicContent, normalizeContentPath } from '../public-content'
 
-const readingSections = new Set(['papers', 'rl-book', 'westlake-rl', 'rust-notes', 'linux-notes', 'research'])
+const readingSections = new Set(['papers', 'rl-book', 'westlake-rl', 'rust-notes', 'linux-notes', 'cs336', 'research'])
 
 // Use source paths so SSR, client navigation and subdirectory deployments agree.
 export function usesAcademicReading(path: string, metadata: Record<string, any>): boolean {

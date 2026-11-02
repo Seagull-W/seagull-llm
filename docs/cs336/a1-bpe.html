@@ -1,0 +1,45 @@
+<script setup>
+import { withBase } from 'vitepress'
+</script>
+
+<article class="native-document format-lab" data-format="lab" data-design="linux-notebook" aria-label="A1 · 字节级 BPE 的训练与编码">
+<header class="document-intro note-hero"><p class="note-kicker">CS336学习笔记 <span>作业与实现</span></p>
+<h1 id="a1-bpe" tabindex="-1">A1 · 字节级 BPE 的训练与编码 <a class="header-anchor" href="#a1-bpe" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">从相邻字节的频数训练合并规则，用同一组规则编码新文本，再把词元还原成 UTF-8 字节。</p></header>
+<nav class="note-jump" aria-label="本篇导读"><a href="#bytes">词元为什么从字节开始</a><a href="#train">手算两轮合并</a><a href="#encode">用学到的规则编码新文本</a><a href="#boundaries">边界、特殊词元与解码</a><a href="#check">分别检验训练和往返编码</a></nav>
+<section class="document-section note-panel" aria-labelledby="bytes">
+<h2 id="bytes" tabindex="-1">词元为什么从字节开始 <a class="header-anchor" href="#bytes" aria-label="章节链接">&#8203;</a></h2>
+<p>分词器要把任意文本变成模型可以接收的整数。若给每个字符单独编一个号，就得决定如何处理词表之外的字符。字节级 BPE 从 256 个单字节符号开始，任何 UTF-8 字符串都能拆成这些符号。代价是一个汉字常要占三个位置。BPE 的做法是给常见的相邻组合分配新编号，这样原文仍可恢复，常见片段却能占更少的位置。</p><p>训练要学出两件东西：词表保存“编号对应哪串字节”，合并表保存“哪两个符号先合并”。例如词表里同时有 ab 和 bc，输入 abc 可以切成 [ab,c] 或 [a,bc]。光知道词表，无法决定采用哪一种。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="train">
+<h2 id="train" tabindex="-1">手算两轮合并 <a class="header-anchor" href="#train" aria-label="章节链接">&#8203;</a></h2>
+<p>假设预分词后有三份 aba 和一份 aca。只统计各片段内部的相邻对：ab 和 ba 各出现三次，ac 和 ca 各一次。作业实现取最高频；若并列，用字节对的字典序取较大者。因此第一轮选 (b,a)，三份 aba 都变成 [a,ba]。第二轮 (a,ba) 出现三次，胜过只出现一次的 (a,c) 和 (c,a)，于是得到词元 aba。</p><p>为什么每次都要重算受影响的相邻对？第一轮之后，原来的 a、b 已经不相邻；a 的右边现在是一整个 ba。保留旧计数就可能学到一条已经用不上的规则。原实现以不同的预分词片段为键、以重复次数为权重。下面的加法让出现三次的片段一次贡献三票：</p><pre v-pre><code>pair_freq[key[i],key[i+1]]+=pretoken_freq[key]</code></pre><p>合并时扫描每种片段，从左往右替换。片段一旦改变，就扣除它的旧相邻对，再按同一权重加入新相邻对，删除计数为零的项。这里更新的是计数，每轮仍会扫描片段。另一个容易混淆的情况是 aaa：统计时相邻的 aa 有两对，但一次替换不能重复使用中间的 a，所以这一轮只得到 [aa,a]。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="encode">
+<h2 id="encode" tabindex="-1">用学到的规则编码新文本 <a class="header-anchor" href="#encode" aria-label="章节链接">&#8203;</a></h2>
+<p>现在固定刚才的两条规则 (b,a)、(a,ba)。新片段 ababa 最初是 [a,b,a,b,a]。按优先级使用第一条规则，两处 ba 都可以合并，得到 [a,ba,ba]。再用第二条规则，结果是 [aba,ba]。若训练时没有注册特殊词元，且初始编号就是字节值，这两个新词元的编号依次是 ba = 256、aba = 257，最终输出 [257,256]。</p><p>编码阶段不重新统计这段文本的频数。作业里的 <code>apply_merge</code> 按训练顺序找第一条能用的规则，从左向右合并第一处匹配，然后重新从规则表开头找。一次替换使序列变短，直到没有可用规则为止。核心替换保留了匹配位置两边的符号：</p><pre v-pre><code>token_bytes=token_bytes[:i]+[A+B]+token_bytes[i+2:]</code></pre>
+</section>
+<section class="document-section note-panel" aria-labelledby="boundaries">
+<h2 id="boundaries" tabindex="-1">边界、特殊词元与解码 <a class="header-anchor" href="#boundaries" aria-label="章节链接">&#8203;</a></h2>
+<p>相邻统计有边界。训练时先分出特殊标记，再在普通文本里预分词；不同片段之间不参加合并。编码器也先识别特殊标记，将它直接映射为单个 ID。作业中按长度从大到小匹配特殊标记，避免较短的标记抢先吃掉较长标记的前缀。</p><p>解码时先查每个编号的字节串，全部拼好后才按 UTF-8 解码。比如“你”的字节为 E4 BD A0，单个词元可能只包含其中一个字节。逐个词元解码会把原本合法的字符拆坏。作业的 <code>decode</code> 对最后仍不合法的字节串采用替换字符。</p><p>同样的边界问题也出现在流式编码中。若把 ba 任意切成两段 b 和 a，分别编码就错过了第一条合并规则。因此原实现特别说明，<code>encode_iterable</code> 依赖调用者在安全边界分块。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="check">
+<h2 id="check" tabindex="-1">分别检验训练和往返编码 <a class="header-anchor" href="#check" aria-label="章节链接">&#8203;</a></h2>
+<p>把训练语料写成 <code>aba!aba!aba!aca</code>，单个感叹号各自成为预分词片段，不增加相邻对。实际运行本地训练器时，注册一个特殊标记、词表上限取 259，得到的两条规则确实是 (b,a)、(a,ba)。特殊标记占用了编号 256，因此这次训练中新词元的编号比上面不预留特殊标记的手算例子大一。</p>
+<p>同一份语料若传入空的特殊标记列表、词表上限取 258，本地实现返回空合并表。原因在预分词之前：<code>train_bpe.py</code> 将标记拼成分隔表达式后直接调用 <code>re.split</code>，空表达式会在字符之间也切开，后面就数不到相邻对。符合算法定义的处理应当是：没有特殊标记时，整段文本直接进入普通预分词。这个例子能区分“语料没有重复组合”和“组合在统计之前就被切散了”。</p>
+<p>可以先把 [257,256] 查回字节串 aba、ba，拼接得到 ababa。这能检查编码与解码是否配套，却不能单独证明训练时选对了合并顺序。作业的 <code>test_train_bpe</code> 另外逐项比较学得的合并规则；词表则核对编号集合和字节串集合。特殊标记另有 <code>test_train_bpe_special_tokens</code>。</p><p>在本地 A1 的 <code>cs336_basics/cha2</code> 中，<code>train_bpe.py</code> 实现训练，<code>tokenizer.py</code> 实现编码与解码。现有 TinyStories 示例用 Base64 保存词表中的字节串，用十六进制保存每条规则的两端。加载时要还原字节并保留规则顺序，才能复用上面学到的分词器。</p>
+</section>
+<details class="note-details"><summary>本篇原始文件（下载）</summary>
+<ul>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_assignment1_basics.pdf')">cs336_assignment1_basics.pdf</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha2/train_bpe.py')">cs336_basics/cha2/train_bpe.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha2/tokenizer.py')">cs336_basics/cha2/tokenizer.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha2/encoder/readme.md')">cs336_basics/cha2/encoder/readme.md</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha2/encoder/vocab.json')">cs336_basics/cha2/encoder/vocab.json</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha2/encoder/merges.txt')">cs336_basics/cha2/encoder/merges.txt</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/tests/test_train_bpe.py')">tests/test_train_bpe.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/tests/test_tokenizer.py')">tests/test_tokenizer.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/LICENSE')">LICENSE</a></li>
+</ul>
+</details>
+</article>
