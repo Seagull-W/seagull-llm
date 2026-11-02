@@ -1,6 +1,6 @@
 ---
 title: A1 · 从 RoPE 到 Transformer 块
-description: 从位置索引算出旋转角度，将它用到多头注意力的 Q 和 K 上，再把注意力和前馈网络接回残差路径。
+description: 从位置编号、旋转与注意力分数，走到 RMSNorm、SwiGLU 和残差堆叠：逐步核对形状、手算数值、初始化与测试边界。
 tags: ["CS336","Transformer","RoPE"]
 pageClass: native-html-page
 contentFormat: html

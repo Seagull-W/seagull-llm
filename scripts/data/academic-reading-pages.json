@@ -1,8 +1,48 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1637,
+  "character_count": 1707,
   "pages": [
+    {
+      "path": "/cs336/a1-bpe.md",
+      "title": "A1 · 字节级 BPE 的训练与编码"
+    },
+    {
+      "path": "/cs336/a1-transformer.md",
+      "title": "A1 · 从 RoPE 到 Transformer 块"
+    },
+    {
+      "path": "/cs336/a2-benchmark.md",
+      "title": "A2 · GPU 计时与预热实验"
+    },
+    {
+      "path": "/cs336/course-map.md",
+      "title": "CS336 课程地图"
+    },
+    {
+      "path": "/cs336/lecture-01.md",
+      "title": "第 1 讲 · 分词与下一词预测"
+    },
+    {
+      "path": "/cs336/lecture-02.md",
+      "title": "第 2 讲 · 张量、显存与计算量"
+    },
+    {
+      "path": "/cs336/lecture-03.md",
+      "title": "第 3 讲 · Transformer 架构与超参数"
+    },
+    {
+      "path": "/cs336/lecture-04.md",
+      "title": "第 4 讲 · 注意力变体与混合专家"
+    },
+    {
+      "path": "/cs336/lecture-05.md",
+      "title": "第 5 讲 · GPU 执行与显存访问"
+    },
+    {
+      "path": "/cs336/lecture-06.md",
+      "title": "第 6 讲 · GPU 计时、剖析与 Triton"
+    },
     {
       "path": "/linux-notes/linux-isolation.md",
       "title": "Linux 隔离机制：Namespace、cgroups 与 seccomp"

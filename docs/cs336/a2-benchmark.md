@@ -1,6 +1,6 @@
 ---
 title: A2 · GPU 计时与预热实验
-description: 先写一个计时循环，再用同一个模型练习预热、重复测量，以及前向、反向和完整训练步的计时。
+description: 从同步、预热和测量边界建立可信协议，用本地数字设计下一次实验，再推混合精度、显存与分布式训练的账。
 tags: ["CS336","GPU 性能","基准测试"]
 pageClass: native-html-page
 contentFormat: html

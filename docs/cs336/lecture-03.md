@@ -1,6 +1,6 @@
 ---
 title: 第 3 讲 · Transformer 架构与超参数
-description: 一个词元的向量依次经过注意力和前馈层。残差连接保留输入，RoPE 编入位置，SwiGLU 的中间宽度取决于参数预算。
+description: 从归一化、SwiGLU 与 RoPE 的推导，读懂现代 Transformer 的设计理由，再算清超参数、数值稳定性与 KV cache 的工程代价。
 tags: ["CS336","Transformer","RoPE"]
 pageClass: native-html-page
 contentFormat: html

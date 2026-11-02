@@ -6,33 +6,186 @@ import { withBase } from 'vitepress'
 <header class="document-intro note-hero">
 <p class="note-kicker">CS336学习笔记 <span>课程讲义与阅读</span></p>
 <h1 id="lecture-03" tabindex="-1">第 3 讲 · Transformer 架构与超参数 <a class="header-anchor" href="#lecture-03" aria-label="章节链接">&#8203;</a></h1>
-<p class="note-deck">一个词元的向量依次经过注意力和前馈层。残差连接保留输入，RoPE 编入位置，SwiGLU 的中间宽度取决于参数预算。</p>
+<p class="note-deck">把现代 Transformer 的改动逐一连到原因和证据：推导归一化的梯度路径、RoPE 的相对位置与 SwiGLU 的参数预算，再算清深宽选择、数值稳定性和 KV cache 的工程代价。</p>
 </header>
-<nav class="note-jump" aria-label="本篇导读"><a href="#input">从嵌入到预测</a><a href="#block">残差连接与归一化</a><a href="#positions">旋转位置编码</a><a href="#width">前馈层与参数量</a><a href="#tradeoffs">宽度、深度与数值稳定性</a></nav>
+<nav class="note-jump" aria-label="本篇导读"><a href="#input">架构对照</a><a href="#block">归一化位置</a><a href="#rmsnorm">RMSNorm</a><a href="#glu">门控激活</a><a href="#parallel">串行与并行</a><a href="#positions">RoPE</a><a href="#width">超参数</a><a href="#stability">数值稳定性</a><a href="#gqa">KV cache</a><a href="#sparse">长上下文</a><a href="#summary">本篇要点</a></nav>
+
 <section class="document-section note-panel" aria-labelledby="input">
-<h2 id="input" tabindex="-1">从嵌入到预测 <a class="header-anchor" href="#input" aria-label="章节链接">&#8203;</a></h2>
-<p>上一讲得到了一批形状为 [B,T,d] 的嵌入。要用它预测下一个词元，每个位置都得保留自己的信息，并从前文取出有用的内容。因果自注意力在位置之间交换信息，前馈网络再单独更新每个位置的特征。这两个子层合在一起，就是一个 Transformer 块。</p>
-<p>把多个块叠起来，最后一层仍为每个位置输出一个 d 维向量。将它投影到词表大小，就得到每个候选词元的分数。训练时，位置 t 的目标是输入序列中紧随其后的词元。</p>
+<h2 id="input" tabindex="-1">从原始 Transformer 到你在 A1 里写的那个 <a class="header-anchor" href="#input" aria-label="章节链接">&#8203;</a></h2>
+<p>这一节先定位改动发生在哪里，再沿着数据经过的路径理解它们。输入嵌入的形状是 [B,T,d]，其中 B 是批量大小、T 是序列长度、d 是模型宽度。注意力负责在位置之间交换信息，前馈网络（Feed-Forward Network，FFN，也称 MLP）在每个位置上加工特征；残差连接把子层输出加回输入，使堆叠前后的形状保持一致。</p>
+<p>第 3 页回顾原始 Transformer，第 4 页列出作业采用的现代变体。下面把这两页与第 14 页的归一化类型放在一起，形成全篇索引。这里的“现代”指本讲讨论的常见配置，不是所有模型都必须遵守的标准；后面的例外恰好能帮助你判断哪些选择是数学要求，哪些只是好用的默认值。</p>
+<div class="note-table" tabindex="0"><table><thead><tr><th>设计位置</th><th>原始</th><th>现代常见选择</th><th>换它的理由</th></tr></thead><tbody>
+<tr><td>位置编码</td><td>输入加正弦、余弦向量</td><td>对 Q/K 应用 RoPE</td><td>让打分中的显式位置关系只依赖位置差</td></tr>
+<tr><td>归一化位置</td><td>Post-Norm</td><td>Pre-Norm</td><td>残差主路不穿过归一化，改善梯度传播</td></tr>
+<tr><td>归一化类型</td><td>LayerNorm</td><td>RMSNorm</td><td>少做去均值等操作，效果相当而运行更快</td></tr>
+<tr><td>前馈网络</td><td>ReLU 与两块矩阵</td><td>SwiGLU 与三块矩阵</td><td>增加乘性门控，缩窄中间层以控制预算</td></tr>
+<tr><td>偏置项</td><td>线性层和归一化含 bias</td><td>常去掉 bias</td><td>减少数据搬运；收益与参数、优化代价不匹配</td></tr>
+</tbody></table></div>
+<p>这些改动没有改变块的输入、输出宽度，却改变了块内部的计算。把 d 维输入送入一个中间宽度为 h 的 FFN，输出仍须回到 d 维，才能和残差相加。因而看模型配置时，别把模型宽度、头维和前馈宽度混成同一个数；本篇会分别算它们影响的参数量、计算量与缓存量。</p>
 </section>
+
 <section class="document-section note-panel" aria-labelledby="block">
-<h2 id="block" tabindex="-1">残差连接与归一化 <a class="header-anchor" href="#block" aria-label="章节链接">&#8203;</a></h2>
-<p>每个子层都有一条残差连接：子层加工输入 x，输出再和 x 相加。归一化放在加法之前还是之后，会改变这条路径。原始 Transformer 在子层输出与输入相加之后做 LayerNorm，作业里的 Transformer 把归一化移到子层入口。读图时从下往上，先只沿灰色箭头走，再看注意力和前馈网络两个分支。</p><figure class="note-figure"><img src="./figures/pre-post-norm.png" alt="左图两次相加后均经过 Layer Norm，右图主路径贯穿整块，归一化位于两个分支的入口。"><figcaption>第 3 讲归一化位置对照，取自本地课程整理稿。绿色方块标记归一化；原图用 Layer Norm 演示位置，A1 实现选用 RMSNorm。</figcaption></figure><p>只看一个子层，Post-Norm 写成 Norm(x + F(x))，Pre-Norm 写成 x + F(Norm(x))。对后一式求导，前面的 x 直接贡献一个恒等项。即使叠了很多层，梯度仍能沿这条路径回传。这也解释了为什么挪动归一化的位置会影响优化。至于用 LayerNorm 还是 RMSNorm，是另一个选择。</p>
+<h2 id="block" tabindex="-1">Pre-Norm 还是 Post-Norm <a class="header-anchor" href="#block" aria-label="章节链接">&#8203;</a></h2>
+<p>归一化位置要解决的问题，是深层网络怎样把梯度传回靠近输入的层。用 F 表示一个注意力或前馈子层，用 N 表示归一化，Pre-Norm 把 N 放在分支入口，Post-Norm 把它放在残差相加之后。第 10 页强调的是主残差通路是否被归一化穿过，而不是 LayerNorm 和 RMSNorm 谁更好。</p>
+<div class="math-block" data-tex="y_{\mathrm{pre}}=x+F(N(x)),\qquad y_{\mathrm{post}}=N(x+F(x))"></div>
+<div class="math-block" data-tex="J_{\mathrm{pre}}=I+J_F(N(x))J_N(x),\qquad J_{\mathrm{post}}=J_N(x+F(x))(I+J_F(x))"></div>
+<p>这里 J 是雅可比矩阵，记录输出各分量对输入各分量的导数。Pre-Norm 中的 x 求导得到恒等矩阵 I，所以反向传播除了经过子层的那一项，还能直接把上游梯度传给输入。多层相乘时，每层都选恒等项便形成一条贯通底层的路径；Post-Norm 的每条路径都必须乘归一化的雅可比，梯度的尺度与方向会不断被改变。</p>
+<p>恒等通路提供了更好的传播条件，却不等于梯度一定不会爆炸或衰减。其余导数项仍可能放大或抵消信号，学习率、初始化和层数也仍然重要。你可以先令 F 为零来检查两式：Pre-Norm 此时就是原样传递 x，Post-Norm 却仍输出 N(x)，这正是两种结构最直接的区别。</p>
+<figure class="note-figure"><img src="./figures/lecture03-p11.png" alt="左侧比较不同归一化方案的英越翻译开发集 BLEU，右侧比较 Pre-LN 与 Post-LN 的验证损失和 BLEU 曲线。"><figcaption>左图引 Salazar and Ngyuen 2019（幻灯片原文拼写），右图引 Xiong 2020。曲线还改变了 warmup 和优化器等设置，阅读时须一并看图例（第 11 页）。</figcaption></figure>
+<p>第 11 页给出的证据并不限于一句“Pre-Norm 更稳定”：右上角比较验证损失与 BLEU，右下角还展示 BERT 的验证损失。第 12 页进一步把解释分成两类，Xiong 2020 对应层间梯度衰减，Salazar and Ngyuen 对应训练中的梯度尖峰。前一张图显示 Post-LN 初始化时越靠输出梯度越大，底层相对弱；后一张图展示梯度全局范数随迭代的尖峰，不能把两种现象合称为同一条衰减曲线。</p>
+<p>读训练曲线时，还要区分收敛速度和最终效果。第 11 页右上角的验证损失在训练早期就拉开差距，说明归一化位置会改变优化过程；但图例中的优化器和预热设置并不完全相同。你若自己复现实验，应固定数据、模型规模与训练预算，再单独改变归一化位置，否则无法把曲线的全部差距归因于这一处改动。</p>
+<p>第 12 页说早期动机是移除学习率预热（warmup），本讲更关心大网络的稳定性和可用的较大学习率。这个结论并不要求你在 A1 中顺手删除预热，结构选择和训练日程应分别控制。第 13 页的折中也沿着同一思路：保留恒等主路，但给分支的输出再做归一化，限制每次加回残差的更新尺度。</p>
+<div class="math-block" data-tex="y_{\mathrm{double}}=x+N_2(F(N_1(x))),\qquad y_{\mathrm{nonres\ post}}=x+N_2(F(x))"></div>
+<p>“双归一化”同时调节分支输入和输出，“非残差 Post-Norm”只在分支输出归一化，二者都没有把整个 x 加 F 的结果送进 N。第 13 页列出 Grok、Gemma 2，并说明 Olmo 2 只用非残差 Post-Norm。多一个归一化会增加操作和数据流转，因此它是在稳定性与执行成本之间加一个调节手段，不是免费的改进。</p>
 </section>
+
+<section class="document-section note-panel" aria-labelledby="rmsnorm">
+<h2 id="rmsnorm" tabindex="-1">RMSNorm 省掉了什么 <a class="header-anchor" href="#rmsnorm" aria-label="章节链接">&#8203;</a></h2>
+<p>RMSNorm 解决的是调节特征尺度时，能不能少做一些操作。第 14 页的层归一化（Layer Normalization，LayerNorm）沿单个词元的 d 个特征求均值和方差；均方根归一化（Root Mean Square Normalization，RMSNorm）直接用平方均值定尺度。两者都不跨批次或序列求统计量，输入 [B,T,d] 的每一行有自己的分母。</p>
+<div class="math-block" data-tex="\mu=\frac1d\sum_i x_i,\quad \sigma^2=\frac1d\sum_i(x_i-\mu)^2,\quad \mathrm{LN}(x)_i=\gamma_i\frac{x_i-\mu}{\sqrt{\sigma^2+\epsilon}}+\beta_i"></div>
+<div class="math-block" data-tex="\mathrm{RMSNorm}(x)_i=\gamma_i\frac{x_i}{\sqrt{\frac1d\sum_j x_j^2+\epsilon}}"></div>
+<p>RMSNorm 省掉了均值归约、逐元素减均值和偏置 β，保留可学习增益 γ。两者渐近复杂度都还是 O(d)，所以不应宣传成计算量下降了一个数量级。忽略 ε 和增益，拿 x=(1,3) 手算，LayerNorm 输出 (−1,1)，RMSNorm 输出 (1/√5,3/√5)；后者保留了正的均值，说明它并不试图复制前者的每个数值。</p>
+<p>第 15–17 页给出的实践结论是“主要是更快，效果相当”，第 17 页也引用 Narang et al 2020 的运行时间和效果验证。第 15 页随即提出一个疑问：矩阵乘法已经占据绝大多数浮点运算，省这点归一化真的有用吗？第 16 页借 Ivanov et al 2023 的分析提醒你，FLOPs 不等于运行时间；归约、读写中间张量和启动算子的时间，不能只按加乘次数估计。</p>
+<details class="note-details"><summary>A1 实现：ε 和升到 fp32 各保护哪一步？</summary>
+<p>下面摘自 <code>RMSnorm.py</code> 的 <code>RMSNorm.forward</code>，默认 ε 为 1e−5。输入先升到 fp32，再平方和求均值，避免低精度平方先溢出；均值保持末维为 1，才能沿特征维广播。ε 加在平方根里面，避免全零或极小输入导致分母为零，但它无法修复已经变成无穷大的平方结果。</p>
+<pre v-pre><code>in_dtype = x.dtype
+x_f32 = x.to(torch.float32)
+x_square = x_f32**2
+x_mean = x_square.mean(dim=-1, keepdim=True)
+rms = torch.sqrt(x_mean + self.eps)
+x_normed = x_f32 / rms
+return x_normed.to(in_dtype) * self.weight</code></pre>
+<p>升精度与加 ε 是两道不同的保护，不能二选一。归一化后的张量转回输入类型，再乘增益，这个先后顺序也会影响实际的舍入与类型行为。具体形状和数值检查见 <a href="/cs336/a1-transformer#norm">A1 的 RMSNorm 实现</a>，不要把升精度推迟到平方之后。</p>
+</details>
+<p>第 18 页把同样的考虑扩展到线性层：从 xW+b 改成 xW，去掉 bias。未融合时，加偏置可能要额外读写一遍输出，融合后不一定新增一次完整访存遍历，因此“去 bias 必然省一个独立内核”也不准确。幻灯片给出的理由是内存与优化稳定性；第 19 页的总结则是这些参数带来的收益不足以抵消代价，而不是声称偏置在数学上没有任何表达作用。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="glu">
+<h2 id="glu" tabindex="-1">激活函数与门控线性单元 <a class="header-anchor" href="#glu" aria-label="章节链接">&#8203;</a></h2>
+<p>激活函数决定特征经过线性投影后，哪些信号被保留以及怎样参与下一步计算。第 20–21 页从整流线性单元（ReLU）讲到高斯误差线性单元（GELU）；第 23 页的 Swish 在此采用 x 乘 sigmoid(x)，也就是 SiLU。ReLU 在负半轴完全为零且原点有折角，GELU 和 SiLU 则平滑地保留一部分负输入，正输入足够大时接近原样通过。</p>
+<div class="math-block" data-tex="\mathrm{ReLU}(x)=\max(0,x),\quad \mathrm{GELU}(x)=x\Phi(x),\quad \mathrm{SiLU}(x)=x\sigma(x),\quad \sigma(x)=\frac1{1+e^{-x}}"></div>
+<p>Φ 是标准正态分布的累积分布函数，所以 GELU 的缩放系数和 SiLU 的 sigmoid 并不是同一个函数。第 21 页把原始 Transformer、T5 等列在 ReLU 下，把 GPT1/2/3、GPTJ 等列在 GELU 下。第 22–23 页进一步引入门控线性单元（Gated Linear Unit，GLU）的变体：它不只是把一种激活替换成另一种，而是在 FFN 内增加一条投影分支。</p>
+<div class="math-block" data-tex="\mathrm{FFN}(x)=\phi(xW_1)W_2,\qquad \mathrm{FFN}_{\mathrm{gated}}(x)=\bigl(\phi(xW_1)\odot xV\bigr)W_2"></div>
+<p>符号 ⊙ 表示逐元素乘法，取 φ 为 GELU 得到 GeGLU，取 SiLU 得到 SwiGLU。两个分支都由当前输入产生，一条生成特征，另一条随输入调节它的幅度，因此增加了乘性交互。这里的“门”不保证落在零到一之间，也不是硬开关；真正使用 sigmoid 作为门和使用完整的 x·sigmoid(x)，不能写成同一个公式。</p>
+<p>乘性通路也可以从反向传播理解。把单个通道的两个投影记为 a、b，输出为 φ(a)b，那么对 b 的导数是 φ(a)，对 a 的导数是 φ′(a)b。一个分支因此能够调节另一个分支的信号与梯度，这提供了比单纯逐元素激活更丰富的输入相关变换；它解释结构上的可能收益，实际收益仍须看下一段的实验。</p>
+<p>第 24 页引用 Shazeer 2020 的比较，第 25 页用 Narang et al 2020 的结果补充证据。前一页的平均分列中，ReLU 为 83.80，SwiGLU 为 84.36，而该表最高的是 ReGLU 的 84.67。你能从这里读到门控的收益，却不能读成“SwiGLU 在每个任务都第一”；第 26 页也只是总结 SwiGLU、GeGLU 的改善较一致，并指出不用门控仍能训练出有效模型。</p>
+<p>公平比较还要核对参数账。普通 FFN 的 W₁ 为 d×4d、W₂ 为 4d×d，所以忽略偏置有 8d² 个参数。门控版本把中间宽度记为 h，W₁ 和 V 各有 dh 个参数，W₂ 再有 hd 个，总计 3dh；第 23、38 页所说的宽度缩为原来的三分之二，就从这里得到。</p>
+<div class="math-block" data-tex="P_{\mathrm{FFN}}=2d(4d)=8d^2,\quad P_{\mathrm{GLU}}=dh+dh+hd=3dh,\quad h=\frac{8d}{3}"></div>
+<p>以 d=768 为手算例子，普通 FFN 的中间宽度为 3072，门控版本取 2048，两者都有 4,718,592 个参数。若门控层也取 3072，它会有 7,077,888 个参数，比原来多一半，效果差异就混入了预算差异。第 41 页把默认比例近似写成 2.66d；代码中还要选整数并考虑矩阵形状对硬件的适配，别把小数直接当作合法的张量宽度。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="parallel">
+<h2 id="parallel" tabindex="-1">串行块与并行块 <a class="header-anchor" href="#parallel" aria-label="章节链接">&#8203;</a></h2>
+<p>并行块要缩短的是同一个块内必须等待的计算链。常规串行块先做注意力，再让 MLP 读取已经加入注意力输出的残差；第 27–28 页讨论把两个子层放到同一层残差上。以下用 A 表示注意力、M 表示 MLP，写出共享归一化的并行形式，便能看出依赖关系少在哪里。</p>
+<div class="math-block" data-tex="u=x+A(N_1(x)),\quad y_{\mathrm{serial}}=u+M(N_2(u));\qquad y_{\mathrm{parallel}}=x+A(N(x))+M(N(x))"></div>
+<p>串行版本的 M 必须等 u 计算完，并行版本的 A 和 M 可以同时读取 N(x)。第 28 页列出的 GPTJ、PaLM、GPT-NeoX 使用了并行层，并说明实现得当时可共享归一化、融合矩阵乘法。在需要对子层输出做分布式归约的实现里，两路结果还可能合并同步，减少一次顺序等待；这项收益依赖具体并行方案，不能只看公式就承诺固定加速。</p>
+<p>并行不意味着少了一半参数。相同宽度的注意力矩阵与 MLP 矩阵依然都在，主要改变的是执行次序、归一化共享以及中间数据的使用方式。如果设备已经被一个大矩阵乘占满，两路同时发起也未必能各自全速运行；此时更有价值的可能是融合投影和减少通信等待。</p>
+<p>代价是同一块里的 MLP 不再直接加工刚由注意力汇集的信息，这条先后组合关系被挪到了后续层。它意味着块内表达路径受限，但第 27–28 页没有给出可引用的精度下降幅度，因此不能把“略降”写成确定实验数字。第 29 页指出多数模型仍采用串行层；选择并行块时，应连同通信、融合和最终损失一起比较。</p>
+</section>
+
 <section class="document-section note-panel" aria-labelledby="positions">
 <h2 id="positions" tabindex="-1">旋转位置编码 <a class="header-anchor" href="#positions" aria-label="章节链接">&#8203;</a></h2>
-<p>每个位置的向量经过三组投影，分别得到查询 Q、键 K 和值 V。查询与可见位置的键做点积，按头维度的平方根缩放，再经过 softmax 得到权重。用这些权重对值向量求和，当前位置便能汇集前文的信息。RoPE 为每对相邻分量设置一个频率，位置越远，旋转角度越大。设同一对分量在位置 m、n 的旋转矩阵分别为 Rₘ、Rₙ，旋转保长度，点积满足</p><div class="math-block" data-tex="(R_m q)^\top(R_n k)=q^\top R_{n-m}k"></div><p>同一个词出现在不同位置时仍使用同一个词嵌入，但旋转后的点积取决于两个位置之差。作业笔记里的角度表展示了这一步在张量上怎样实现。<a href="/cs336/a1-transformer#angles">A1 · 角度表的一行</a></p>
+<p>旋转位置编码（Rotary Position Embedding，RoPE）要让注意力打分中的显式位置信息只依赖两词之间的距离。第 30 页的正弦编码是把位置向量加到词嵌入上，第 31 页指出这样做会出现交叉项。说它“只能表示绝对位置”过强：正弦、余弦本身可以组合出相对位移，但加法形式并不保证整个内容相关的点积只依赖位置差。</p>
+<div class="math-block" data-tex="(x+p_m)^\top(y+p_n)=x^\top y+x^\top p_n+p_m^\top y+p_m^\top p_n"></div>
+<p>即使最后一项能化成相对位置，两个内容与位置的交叉项仍分别含 m、n。第 32–34 页换了一个办法：不把位置加进去，而是按位置旋转查询和键，再利用旋转矩阵的组合规律消掉共同位移。设一对二维坐标的频率为 ω，位置 m 对应角度 mω，旋转矩阵与点积满足下面的关系。</p>
+<div class="math-block" data-tex="R(\alpha)=\begin{pmatrix}\cos\alpha&amp;-\sin\alpha\\\sin\alpha&amp;\cos\alpha\end{pmatrix},\quad R(m\omega)^\top R(n\omega)=R((n-m)\omega)"></div>
+<div class="math-block" data-tex="\widetilde q_m=R(m\omega)q,\quad \widetilde k_n=R(n\omega)k,\quad \widetilde q_m^\top\widetilde k_n=q^\top R((n-m)\omega)k"></div>
+<p>推导的关键是转置把旋转角变成负数，两个旋转相乘再把角度相加。把 m、n 同时平移一个常数，差值不变，打分中的这部分位置信号也不变。这里固定的是旋转前的 q、k；真实模型中它们还会受前文内容影响，所以不要进一步声称任意移动一段文本都能使整网输出完全不变。</p>
+<p>第 33 页引 Su et al 2021，把长向量拆成许多二维平面，第 34 页用分块矩阵表示这些旋转。每对坐标用不同频率，快频率对近处变化敏感，慢频率提供更缓慢的变化。A1 的 <code>RoPE.py</code> 按下面的频率公式生成角度表；θ=10000 是所用的基数示例，不是旋转角本身。</p>
+<div class="math-block" data-tex="\omega_i=\theta^{-2i/d_k},\quad i=0,\ldots,d_k/2-1,\qquad \alpha_{m,i}=m\omega_i"></div>
+<p>手算 dₖ=4、θ=10000 时，两对坐标的频率分别为 1 和 0.01，位置 m 的角度就是 m 与 0.01m。这个例子也说明 dₖ 必须能分成二维对，不能漏掉奇数宽度的检查。频率表扩大不等于模型自动掌握更长上下文；公式可求值与训练外长度上的效果，是两件需要分开验证的事。</p>
+<details class="note-details"><summary>为什么 A1 用相邻配对，前后半拆是不是错的？</summary>
+<p>第 34 页的矩阵把相邻坐标两两旋转，A1 也将末维重塑为 [dₖ/2,2]，因此坐标 0 与 1 配对、2 与 3 配对。另一种写法把前半和后半的对应坐标配成对，只要同步置换投影权重、频率和坐标布局，数学上可以等价。错误出在拿着一套布局的权重，却只替换旋转代码：这样每个频率作用到的特征对已经变了。</p>
+<p>例如四维向量按相邻约定配成 (0,1)、(2,3)，直接前后半拆会得到 (0,2)、(1,3)。形状仍然完全合法，单看输出尺寸发现不了问题，必须检查具体坐标。完整推导、角度表和旋转实现分别见 <a href="/cs336/a1-transformer#derive">A1 的相对位置推导</a>、<a href="/cs336/a1-transformer#angles">角度表</a>与<a href="/cs336/a1-transformer#rotation">坐标旋转</a>。</p>
+</details>
+<p>第 35 页把位置变换放在每层注意力的 Q/K 投影之后，而不是只在输入端做一次。值向量 V 保留原本用于加权汇聚的内容，显式位置关系由旋转后的 Q、K 打分引入。实现解码时还要传入当前的真实位置，不能每生成一个词元就把位置重新从零开始。</p>
 </section>
+
 <section class="document-section note-panel" aria-labelledby="width">
-<h2 id="width" tabindex="-1">前馈层与参数量 <a class="header-anchor" href="#width" aria-label="章节链接">&#8203;</a></h2>
-<p>设模型宽度为 d，普通前馈层先扩到 4d，再投影回 d。忽略偏置，两块矩阵共有 8d² 个参数。SwiGLU 将输入送入两条投影，其中一条经过 SiLU，两条结果逐元素相乘，再投影回模型宽度。设中间宽度为 h，这三块矩阵共有 3dh 个参数。</p><div class="math-block" data-tex="3dh=8d^2 \quad\Rightarrow\quad h=8d/3"></div><p>例如 d = 768 时，普通层的中间宽度是 3072，等参数的门控层宽度是 2048。若直接沿用 3072，实验同时改变了激活函数和参数量。确定预算后再比较验证损失与耗时，才能判断门控带来了什么。</p>
+<h2 id="width" tabindex="-1">超参数的共识与例外 <a class="header-anchor" href="#width" aria-label="章节链接">&#8203;</a></h2>
+<p id="tradeoffs">这一节把常见默认值和真正的约束分开，帮助你在参数预算内选模型形状。第 37–41 页讨论前馈宽度，第 40 页引用 Kaplan et al 2020，说明比例在 1–10 之间有一片效果接近最优的区域。它支持从普通 FFN 的 4d、门控 FFN 的约 2.66d 开始，而不是证明这个范围内所有配置在任何规模都一样好。</p>
+<div class="note-table" tabindex="0"><table><thead><tr><th>超参数</th><th>常见起点</th><th>幻灯片中的例外或边界</th></tr></thead><tbody>
+<tr><td>前馈宽度 / 模型宽度</td><td>普通 4；门控 8/3</td><td>第 38 页：Mistral 7B、LLaMA-2 70B 为 3.5；第 39 页：T5 11B 为 64</td></tr>
+<tr><td>总查询头宽度</td><td>H·dₖ=d；常见头维 64–128</td><td>第 43 页：T5 为 128×128，相对模型宽度 1024 达到 16 倍</td></tr>
+<tr><td>模型宽度 / 层数</td><td>第 51 页概括为 100–200 的宽范围</td><td>第 44 页：T5 11B 为 33，BLOOM 为 205；并非硬边界</td></tr>
+<tr><td>词表大小</td><td>单语约 30k–50k</td><td>第 47 页：多语与生产系统常更大，如 mT5 的 250000</td></tr>
+<tr><td>预训练正则化</td><td>较新模型常不用 dropout，仍用权重衰减</td><td>第 49 页：Qwen 14B 的 dropout 为 0.1；闭源模型未说明不等于已确认不用</td></tr>
+</tbody></table></div>
+<p>前馈层的例外能直接复算。第 39 页的 T5 11B 取前馈宽度 65536、模型宽度 1024，相除得到 64；第 41 页又指出 T5 v1.1 的 GeGLU 回到 2.5 倍。能训练成功不等于预算使用最优，而换了门控结构后也不能只比较宽度倍数，必须回到前一节的 2dh 和 3dh 参数账。</p>
+<p>第 42–43 页讨论多头注意力的 H·dₖ=d，这是常见的投影尺寸约定，不是点积定义的要求。若总头宽度不同，Q/K/V 的投影可以输出 H·dₖ 维，拼接后再由输出矩阵映射回 d 维。第 43 页的 GPT3 用 96×128=12288，正好等于模型宽度；T5 用 128×128=16384，却只有 1024 的模型宽度，说明“头数必须整除模型宽度”只在直接按 d 拆头的实现中才成立。</p>
+<p>深宽比影响的是损失与系统执行共同决定的成本。第 44 页把模型宽度除以层数列成表，第 45 页说明深层必须等前一层的结果，单个请求的依赖链会变长；较宽的矩阵则更容易提供层内并行工作。流水线能让不同微批次同时处在不同层，却不能让同一词元跳过前层依赖，所以“放更多 GPU”并不自动消除深度带来的延迟。</p>
+<figure class="note-figure"><img src="./figures/lecture03-p45.png" alt="四个 GPU 各负责一层，前向和反向箭头连接相邻层，表示跨层执行的先后依赖。"><figcaption>深度的系统限制：跨设备放置各层，仍需等待前一层结果；图引 Tay et al 2021（第 45 页）。</figcaption></figure>
+<figure class="note-figure"><img src="./figures/lecture03-p46.png" alt="左图三种参数规模的曲线在一段深宽比范围内较平坦，右图比较增加宽度或层数时的计算量和任务表现。"><figcaption>左侧 Kaplan et al 2020 的曲线显示较宽的低谷，右侧 Tay et al 2021 比较扩宽与加深；不能只读出一个通用最佳比例（第 46 页）。</figcaption></figure>
+<p>第 46 页的价值在于告诉你，不必为一个狭窄的“最佳深宽比”牺牲全部工程便利。以忽略偏置的普通块为近似，注意力投影约 4d²、FFN 约 8d²，L 层的主干参数约为 12Ld²；固定预算时把 d 加倍，L 大致就要缩到四分之一。这只是用于理解形状的手算关系，不含嵌入、输出层以及特殊注意力配置，也不保证两种网络的效果相同。</p>
+<p>第 47 页把词表选择分成单语与多语场景。词表增大可以容纳更多语言和词片，却也让嵌入矩阵的 Vd 个参数随 V 线性增长，并扩大输出分类的成本。你需要把文本切分后的序列长度一起考虑：较小词表省了词表参数，却可能产生更多词元，因此不是单独缩小 V 就一定省总计算。</p>
+<p>计算词表参数时，V 在这里表示词表大小，不是前面门控分支的矩阵名。若输入嵌入与输出分类器各存一份权重，两者合计约为 2Vd；若共享权重，存储量约为 Vd。共享解决的是参数存储，输出端仍然需要计算词表分数，所以词表扩大对输出计算的影响不会随共享而消失。</p>
+<p>第 48–50 页讨论为什么预训练中 dropout 变少，权重衰减（weight decay）却没有一起消失。大量数据、较少重复遍历让传统防过拟合的直觉不再足以解释全部选择；第 49 页的表也保留了仍用 dropout 的例外。第 50 页引用 Andriushchenko et al 2023，强调权重衰减与余弦学习率日程的相互作用，所以它还影响优化动态，不能只当成防止记忆训练数据的开关。</p>
 </section>
-<section class="document-section note-panel" aria-labelledby="tradeoffs">
-<h2 id="tradeoffs" tabindex="-1">宽度、深度与数值稳定性 <a class="header-anchor" href="#tradeoffs" aria-label="章节链接">&#8203;</a></h2>
-<p>固定参数预算，较深的模型增加顺序执行的层数，较宽的模型改变矩阵形状和单步并行度。即便两种配置的参数量相近，实际吞吐也可能不同。读课件中的模型对比时，应同时记录宽度、层数、前馈宽度和运行条件。</p><p>排查训练中的数值异常，先看数值是在哪一层变大的。QK 归一化约束注意力打分的尺度，输出端的 z-loss 则约束词表 logits 的对数配分函数。下一讲把序列加长，看看注意力要多算多少次点积。<a href="https://github.com/stanford-cs336/lectures/blob/main/lecture_03.pdf">第 3 讲原始幻灯片</a></p>
+
+<section class="document-section note-panel" aria-labelledby="stability">
+<h2 id="stability" tabindex="-1">数值稳定性三板斧 <a class="header-anchor" href="#stability" aria-label="章节链接">&#8203;</a></h2>
+<p>稳定性措施要先定位自己约束的是哪个量，不能看见归一化就互相替换。第 53 页从 softmax 的指数与除法讲起，第 54–56 页再给出输出端 z-loss、注意力 QK-norm 和 logit soft-capping 三种办法。稳定 softmax 是基本实现要求，后三种则分别对配分函数、打分输入尺度和分数幅度施加约束。</p>
+<div class="math-block" data-tex="p_i=\frac{e^{z_i-a}}{\sum_j e^{z_j-a}},\qquad a=\max_j z_j"></div>
+<p>若所有输入分数 z 都有限，减去最大值后指数的输入不会大于零，至少有一项的指数等于一。它钉住的是送进 exp 的最大值，数学上不改变概率，却能避免直接指数化大分数导致溢出。全被掩码成负无穷的一行不满足这个前提，减最大值仍可能产生无效数；这类掩码错误不能靠减最大值补救。</p>
+<div class="math-block" data-tex="Z=\sum_j e^{z_j},\qquad \mathcal L=\mathcal L_{\mathrm{CE}}+\lambda(\log Z)^2,\qquad \log Z=a+\log\sum_j e^{z_j-a}"></div>
+<p>第 54 页的 z-loss 把输出词表的 log 配分函数拉向零，钉住的是整行分数的总体偏移。交叉熵只看相对差，把所有 z 同加常数不会改变概率，但 log Z 会跟着平移，所以辅助项能约束这条原本自由的方向。幻灯片引 Devlin 2014 并以 PaLM 为例；上式按最小化损失写成加号，和原页最大化对数似然时的减号对应，不能只抄符号而忽略目标方向。</p>
+<div class="math-block" data-tex="\widehat q=N(q),\quad \widehat k=N(k),\qquad s_{mn}=\frac{\widehat q_m^\top\widehat k_n}{\sqrt{d_k}}"></div>
+<p>第 55 页的 QK-norm 在注意力打分前归一化查询和键，钉住的是参与点积的输入尺度。若按头使用无增益、忽略 ε 的 RMSNorm，两者长度均为 √dₖ，缩放后的点积绝对值就不超过 √dₖ；加入可学习增益后，界限还会随增益改变。这解释了为什么 QK-norm 能缓和分数膨胀，却不能被说成无条件把所有注意力 logits 固定在某个常数范围。</p>
+<div class="math-block" data-tex="\widetilde z=c\tanh(z/c),\qquad -c&lt;\widetilde z&lt;c,\qquad \frac{d\widetilde z}{dz}=1-\tanh^2(z/c)"></div>
+<p>第 56 页的 soft-capping 取 c&gt;0，直接给有限 logits 的幅度加软上限。小分数附近近似不变，大分数逐渐饱和到正负 c；代价是饱和区的导数趋近零，同时额外算子也可能影响执行效率。它会改变概率分布，与保持概率不变的减最大值不同，因此应把效果、梯度和耗时都作为比较对象。</p>
 </section>
+
+<section class="document-section note-panel" aria-labelledby="gqa">
+<h2 id="gqa" tabindex="-1">GQA / MQA：省的是 KV cache <a class="header-anchor" href="#gqa" aria-label="章节链接">&#8203;</a></h2>
+<p>这一节解释为什么少存一些 K/V 头，会比减少少量算术更能帮助逐词解码。第 58 页考虑整段输入同时计算的预填充，第 59 页转向每次只生成一个新词元的解码。键值缓存（KV cache）保留历史位置的键和值，免去对历史词元重新投影，但新查询仍要读取这些历史 K/V 才能计算注意力。</p>
+<p>先把计数口径说清楚：设批量为一，H 个查询头，每头宽度 dₖ，且 d=H·dₖ。按乘和加各算一次 FLOP，稠密 QKᵀ 的计算量为 2T²d，之后注意力权重乘 V 也要约 2T²d。因此完整的两次注意力矩阵乘约为 4T²d；若把一次乘加记为一次，两者合计又会写成 2T²d，必须先说明口径。</p>
+<div class="math-block" data-tex="F_{QK^\top}\simeq2HT^2d_k=2T^2d,\quad F_{PV}\simeq2T^2d,\quad F_{\mathrm{decode/step}}\simeq4Td"></div>
+<p>因果掩码还会带来另一个系数差异：真正跳过上三角计算时，有效位置对为 T(T+1)/2，而不是 T²。两次乘法因此可合计约为 2T²d FLOPs；若先做完整稠密乘法再盖掩码，却没有省下这些乘法。比较复杂度时应同时说明是否利用了三角结构，本节前式采用完整稠密矩阵口径。</p>
+<figure class="note-figure"><img src="./figures/lecture03-p58.png" alt="预填充注意力的 QK 打分、softmax 和值汇聚，以及包含投影的计算量、访存量和算术强度估计。"><figcaption>原页用 b、n、h、k 表示批量、长度、头数、头维，并注明 n&lt;d；其总量估计包含投影，不能直接当作单独 QKᵀ 的 FLOPs（第 58 页）。</figcaption></figure>
+<p>预填充有很多查询，可以复用相同的键值数据；单步解码只有一个新查询，读完历史缓存后却只产出一个位置的结果。算术强度指计算量除以搬运的数据量，越低越容易受内存带宽限制。若只算普通多头注意力的单步核心，计算与缓存读取都正比于 T，fp16 下约是 4Td FLOPs 除以 4Td 字节，即常数量级，而不是无条件随 T 继续下降。</p>
+<figure class="note-figure"><img src="./figures/lecture03-p60.png" alt="增量计算的算术强度近似为序列长度除以模型宽度加批量倒数之后再取倒数，长序列会降低这一近似值。"><figcaption>在包含投影且沿用前页长度假设的估计中，算术强度为 O((n/d+1/b)⁻¹)，长度增加会加重缓存搬运的负担（第 60 页）。</figcaption></figure>
+<p>第 60 页的下降关系来自包含投影的整体近似，并沿用长度小于宽度的条件。生成完整序列时，历史缓存被重复读取，长度累积导致 O(BT²d) 级别的 K/V 访存，而投影工作累计约为 O(BTd²)。在这一近似下得到 O((T/d+1/B)⁻¹)；下面的长缓存手算则直接数元素，不把这个短序列近似外推成任意长度的性能预测。</p>
+<p>多查询注意力（Multi-Query Attention，MQA）保留 H 个查询头，只共享一组 K/V；分组查询注意力（Grouped-Query Attention，GQA）把它放宽为 G 组 K/V，每组服务若干查询头。第 61–62 页给出这两种方案，减少的是 K/V 投影宽度和历史缓存，不是把查询头全删掉。只要每个查询仍看完整历史，注意力打分与值汇聚的主要算量不会简单按 G/H 同比例减少。</p>
+<div class="math-block" data-tex="N_{\mathrm{KV,MHA}}=2THd_k,\quad N_{\mathrm{KV,GQA}}=2TGd_k,\qquad M_{\mathrm{bytes}}=2TGd_k\,s"></div>
+<p>这里 s 是每个元素的字节数，开头的 2 分别计入 K 和 V。以下取 T=8192、H=32、dₖ=128、fp16 的 s=2，按单层、单条序列手算；GQA 选 G=8 只是方便复算的示例。批量为 B、层数为 L 时再乘 BL，表中不含权重、激活、缓存分配开销与临时工作区。</p>
+<div class="note-table" tabindex="0"><table><thead><tr><th>方案</th><th>K/V 组数</th><th>缓存元素数</th><th>缓存字节数</th><th>相对普通多头</th></tr></thead><tbody>
+<tr><td>多头注意力 MHA</td><td>32</td><td>67,108,864</td><td>134,217,728 B = 128 MiB</td><td>1</td></tr>
+<tr><td>GQA（手算 G=8）</td><td>8</td><td>16,777,216</td><td>33,554,432 B = 32 MiB</td><td>1/4</td></tr>
+<tr><td>MQA</td><td>1</td><td>2,097,152</td><td>4,194,304 B = 4 MiB</td><td>1/32</td></tr>
+</tbody></table></div>
+<p>共享越多，历史键值的独立表达越少，所以这里确有质量与效率的权衡。第 63 页把 Shazeer 2019 的 MQA 总结为有时有小幅困惑度损失，把 Ainslie 2023 的 GQA 总结为损失很小或没有。它支持把组数当作调节旋钮，却不保证任意任务无损；若实现先把共享 K/V 物化复制回 H 头再存入缓存，表里算出的节省也会被自己抵消。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="sparse">
+<h2 id="sparse" tabindex="-1">长上下文的工程做法 <a class="header-anchor" href="#sparse" aria-label="章节链接">&#8203;</a></h2>
+<p>长上下文还可以从“每个查询需要看哪些位置”下手，而不只压缩 K/V 组数。第 64 页的稀疏或滑窗注意力限制连接模式，滑动窗口注意力（Sliding Window Attention，SWA）只让当前位置看附近的 W 个位置。这样注意力两次矩阵乘的计算规模从 O(T²d) 降到 O(TWd)，但窗口外的信息不再能在这一层直接被读取。</p>
+<p>局部层堆叠后可以逐层传递更远的信息，却会增加跨远距离通信所需的路径长度。第 65 页给出的 Cohere Command A 方案是每四层安排一层全注意力，让全局层提供远距离连接，其余层用局部窗口控制成本。该页还区分全局层不加显式位置编码的 NoPE 与局部层的 RoPE 加 SWA，因此“每四层一次”是这项配置的例子，不能当作所有混合模型的统一规则。</p>
+<div class="math-block" data-tex="F_{\mathrm{four\ layers}}\propto T^2d+3TWd,\qquad \frac{F_{\mathrm{hybrid}}}{F_{\mathrm{all\ full}}}\simeq\frac14+\frac{3W}{4T}"></div>
+<p>这个手算比例只比较注意力核心，沿用方阵近似，假设四层中一层全局、三层窗口相同。窗口相对序列很小时，全局层仍留下约四分之一的全注意力核心成本，而投影和 FFN 的成本没有因此消失。局部层能否只保留最近窗口的缓存，也要按层实现，不能因为多数层局部化就把全局层的历史缓存一并丢掉。</p>
+<p>第 66 页展示了更多交错方式，说明局部与全局之外还可混合不同机制。<a href="/cs336/lecture-04">第 4 讲</a>继续讨论线性注意力等替代路线，它们改变信息汇聚或状态表示，而滑窗主要是在标准注意力上删去部分连接。两者都可能降低长序列成本，但保留历史信息的方式与可访问性不同，评估时要看远距离任务需要什么，而不只看复杂度符号。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="summary">
+<h2 id="summary" tabindex="-1">本篇要点 <a class="header-anchor" href="#summary" aria-label="章节链接">&#8203;</a></h2>
+<p>读完这一讲，你应该能从一个配置项追问到它改了哪条路径、节省了什么以及付出什么代价。下面把主要选择压成速查表，便于回到 A1 实现或阅读模型配置时逐项检查。参数量相同不代表运行时间相同，某张实验表上的收益也不能脱离任务与训练设置直接搬到另一个模型。</p>
+<div class="note-table" tabindex="0"><table><thead><tr><th>改动</th><th>动机</th><th>代价或边界</th></tr></thead><tbody>
+<tr><td>Pre-Norm / 分支归一化</td><td>保留恒等梯度通路，控制更新尺度</td><td>不能代替学习率与初始化检查；双归一化增加操作</td></tr>
+<tr><td>RMSNorm、去 bias</td><td>减少归约、参数和数据搬运</td><td>实际收益依赖融合与硬件；仍需处理精度</td></tr>
+<tr><td>SwiGLU / GeGLU</td><td>乘性交互带来较一致的效果改善</td><td>三块矩阵；等参数时缩窄到约 8d/3</td></tr>
+<tr><td>并行块</td><td>缩短子层依赖，创造融合与同步机会</td><td>MLP 不读取本块刚生成的注意力结果</td></tr>
+<tr><td>RoPE</td><td>点积中的显式位置项依赖距离</td><td>频率、配对布局与位置编号必须一致</td></tr>
+<tr><td>调整深宽、词表与头维</td><td>在预算、损失和执行效率之间选形状</td><td>默认值是经验；例外须重算投影和嵌入成本</td></tr>
+<tr><td>z-loss / QK-norm / soft-capping</td><td>分别约束 log Z、Q/K 尺度与 logits 幅度</td><td>约束对象不同；软截顶改变梯度与概率</td></tr>
+<tr><td>GQA / MQA</td><td>减少 KV cache 容量与解码读取</td><td>K/V 表达共享；不等于同比减少查询计算</td></tr>
+<tr><td>滑窗加周期全局层</td><td>减少长序列连接数，保留远距离通路</td><td>局部访问受限，全局层仍有二次成本</td></tr>
+</tbody></table></div>
+</section>
+
 <details class="note-details"><summary>本篇原始文件（下载）</summary>
 <ul>
-<li><a download :href="withBase('/cs336/sources/lectures/lecture_03.pdf')">lecture_03.pdf</a></li>
+<li><a download :href="withBase('/cs336/sources/lectures/lecture_03.pdf')">lecture_03.pdf（67 页；页码均按 PDF 页序）</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/RMSnorm.py')">RMSnorm.py（RMSNorm.forward）</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/RoPE.py')">RoPE.py（频率表与相邻坐标配对）</a></li>
 </ul>
 </details>
 </article>

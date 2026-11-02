@@ -7,37 +7,196 @@ import { withBase } from 'vitepress'
 <p class="note-kicker">CS336学习笔记 <span>课程讲义</span></p>
 <h1 id="lecture-01" tabindex="-1">第 1 讲 · 分词与下一词预测 <a class="header-anchor" href="#lecture-01" aria-label="章节链接">&#8203;</a></h1>
 <p class="note-deck">把一段文本编码成整数序列，用相邻位置构造训练样本，再用 BPE 缩短序列。</p>
+<p>你已经会写矩阵乘法，却可能还没把一段文字变成一次训练更新。本讲沿着文本、词元、概率和损失这条路径走一遍，再拆开分词器的实际代码。主要材料是 <code>lecture_01.py</code>，概率推导和参数账是为理解代码补上的例子，分词结果则标明了本地运行条件。</p>
 </header>
-<nav class="note-jump" aria-label="本篇导读"><a href="#prediction">下一个词元</a><a href="#bytes">从字符到字节</a><a href="#bpe">从字节到 BPE 词表</a></nav>
+<nav class="note-jump" aria-label="本篇导读"><a href="#prediction">下一词预测</a><a href="#loss">交叉熵</a><a href="#teacher-forcing">训练与生成</a><a href="#tokenizer">分词器接口</a><a href="#tradeoff">字符与字节</a><a href="#compression">压缩率</a><a href="#bpe">BPE 合并</a><a href="#bpe-training">BPE 训练</a><a href="#roadmap">五条主线</a><a href="#notation">记号约定</a><a href="#summary">本篇要点</a></nav>
+
 <section class="document-section note-panel" aria-labelledby="prediction">
-<h2 id="prediction" tabindex="-1">下一个词元 <a class="header-anchor" href="#prediction" aria-label="章节链接">&#8203;</a></h2>
-<p>假设一句话以“今天”开头，语言模型要为接下来可能出现的词元分配概率。词元（token）是分词器规定的单位，可以是一个字、一个词的一部分，甚至一个字节。</p>
-<p>训练时，文本本身就提供了答案。假设一段文本编码为四个词元 a、b、c、d，输入序列取 a、b、c，对应的预测目标就是 b、c、d。模型预测 c 时能看到 a、b，不能提前看到 c。</p>
+<h2 id="prediction" tabindex="-1">下一词预测到底在算什么 <a class="header-anchor" href="#prediction" aria-label="章节链接">&#8203;</a></h2>
+<p>下一词预测要解决的问题，是给“已有这些内容，接下来出现什么”分配概率。这里的“词”更准确地叫词元（token），它是分词器产生的一个整数编号，不必对应完整单词。模型每走到一个位置，都给词表里的所有编号打分，再通过 softmax 把分数变成总和为 1 的概率。</p>
+<div class="math-block" data-tex="P_\theta(x_1,\ldots,x_T)=\prod_{t=1}^{T}P_\theta(x_t\mid x_{&lt;t})"></div>
+<p>左边表示整段词元序列出现的联合概率，右边把它拆成逐个位置的条件概率相乘。<code>x_t</code> 是第 t 个词元，<code>x_&lt;t</code> 是它前面的全部词元，θ 表示模型参数；乘积符号要求从第 1 项一直乘到第 T 项。第一个词元前面没有正文，可以用空前缀或约定的起始标记作为条件，训练和生成必须使用一致的约定。</p>
+<p>这是概率的链式法则，不需要假设相邻词元相互独立。手算一个三词元例子：如果模型依次给真实词元的概率是 0.5、0.25、0.1，整段概率就是 0.0125。第三项依赖前两个词元，因此模型能否利用较长上下文，影响的就是这些条件概率估计得准不准；实际模型受上下文窗口限制，只能看得到被保留下来的前缀。</p>
+<p>训练数据也不需要逐位置手工标答案，因为文本本身已经给出了下一个词元。对于编号序列 <code>[a, b, c, d]</code>，输入取 <code>[a, b, c]</code>，标签取 <code>[b, c, d]</code>，同一段内容错开一位即可。这段构造得到三个监督位置；如果还要学习开头和结尾，就需要显式考虑起始标记、结束标记和文档边界。</p>
+<pre v-pre><code># 教学示意：一段已编码的序列，不是 lecture_01.py 原码
+ids = [a, b, c, d]
+inputs = ids[:-1]   # [a, b, c]
+labels = ids[1:]    # [b, c, d]</code></pre>
+<p>输入位置 a 的输出用来预测 b，位置 b 的输出用来预测 c，位置 c 的输出用来预测 d。因果掩码（causal mask）禁止一个位置读取它右侧的输入，否则模型会直接看到待预测的答案。错开一位与遮住未来是两件都必须做的事，单独把标签右移并不能阻止信息泄漏。</p>
 </section>
-<section class="document-section note-panel" aria-labelledby="bytes">
-<h2 id="bytes" tabindex="-1">从字符到字节 <a class="header-anchor" href="#bytes" aria-label="章节链接">&#8203;</a></h2>
-<p>要把上面的 a、b 换成任意语言的文本，可以先用 UTF-8 把字符串编码成字节。字节只有 256 种取值，能直接充当整数编号。讲稿里的 🌍 编码后占四个字节 F0 9F 8C 8D。若一个字节就是一个词元，单这个字符就占去四个序列位置。</p>
-<p>把这个过程写成 Python，只需先编码，再逐字节取整数。原讲稿中的两行分别对应这两个动作：</p>
-<pre v-pre><code>string_bytes = string.encode("utf-8")
-indices = list(map(int, string_bytes))</code></pre>
-<p>当输入只有 🌍 时，第一行给出四个 UTF-8 字节，第二行得到 <code>[240, 159, 140, 141]</code>。这四个整数是字节值。后面用 BPE 合并字节时，词表会给新词元分配另外的编号。</p>
-<p>字节编码能表示生僻字和表情，却可能把同一段文本拉得很长。衡量分词效果时，可以把原文的 UTF-8 字节数除以词元数。同一段文本下，这个比值越大，模型需要处理的序列越短。</p>
+
+<section class="document-section note-panel" aria-labelledby="loss">
+<h2 id="loss" tabindex="-1">从交叉熵到困惑度 <a class="header-anchor" href="#loss" aria-label="章节链接">&#8203;</a></h2>
+<p>损失函数把“给真实答案多少概率”变成一个可以优化的数。真实标签只在正确编号处取 1，其他编号处取 0，因此交叉熵（cross-entropy）在每个位置上等于正确词元概率的负对数。整批训练通常对有效预测位置求平均，这就是每词元损失（per-token loss），而不是整段负对数概率的总和。</p>
+<div class="math-block" data-tex="\ell_t=-\ln P_\theta(x_t\mid x_{&lt;t}),\qquad L=\frac{1}{M}\sum_{t=1}^{M}\ell_t,\qquad \mathrm{PPL}=\exp(L)"></div>
+<p>这里用 M 表示参与计分的位置总数，以免把它与原文长度混淆。刚才三个概率对应的损失分别约为 0.693、1.386、2.303，平均约 1.461，困惑度（perplexity）约为 4.309。你也可以直接计算 <code>(0.5 × 0.25 × 0.1)^(-1/3)</code>，两条路径得到相同结果，因为平均负对数取指数就是正确词元概率几何平均值的倒数。</p>
+<p>若平均损失是 2.0，困惑度就是 <code>exp(2.0) ≈ 7.389</code>，通常写成约 7.4。直觉上，可以说模型平均在每个位置上把概率质量摊在约 7 个等可能候选上：一个始终给正确答案约 1/7.4 概率的模型，会得到相同损失。这里的“候选数”是等效难度，真实分布可以非常不均匀，不能据此断言模型每一步只有七个可能输出。</p>
+<p>这个换算默认使用自然对数，单位是 nat；如果损失使用以 2 为底的对数，就应当计算 <code>2^L</code>。填充位置不能混进平均值，不同长度的批次汇总时也应按有效词元数加权。更换分词器后，一个词元承载的文字变了，所以两个模型的每词元损失和困惑度不能直接横比，必须先统一评估单位与文本范围。</p>
 </section>
-<section class="document-section note-panel" aria-labelledby="bpe">
-<h2 id="bpe" tabindex="-1">从字节到 BPE 词表 <a class="header-anchor" href="#bpe" aria-label="章节链接">&#8203;</a></h2>
-<p>BPE 从单字节词表开始。在允许合并的范围内，统计每一对相邻符号的出现次数，把最频繁的一对合成一个新符号，再重新计算受影响的计数。例如训练材料反复出现 ab，合并 a 和 b 后，原来占两个位置的 ab 就能用一个编号表示。继续合并，新符号还可以参与下一轮。</p>
-<p>可以手算一轮。假设预分词之后得到两次 <code>aba</code> 和一次 <code>ab</code>。在三个片段内分别计数，<code>a b</code> 出现三次，<code>b a</code> 出现两次。合并前者后，两个 <code>aba</code> 都变成 <code>[ab, a]</code>，最后那个 <code>ab</code> 单独成为一个词元。下一轮统计的就是这些新序列中的相邻对。</p>
-<p>训练分词器得到词表和有先后顺序的合并规则。编码新文本时沿用这些规则；解码时把每个编号对应的字节依次拼回去，再按 UTF-8 解码。切分后的长度 T 决定模型一次需要处理多少位置。第 2 讲从这个长度出发，计算一批样本占多少显存。</p>
+
+<section class="document-section note-panel" aria-labelledby="teacher-forcing">
+<h2 id="teacher-forcing" tabindex="-1">为什么训练能并行，生成却要接着写 <a class="header-anchor" href="#teacher-forcing" aria-label="章节链接">&#8203;</a></h2>
+<p>训练与生成的速度差别，来自下一步输入是否已经知道。训练时，所有真实前缀都在数据里，模型预测 c 时直接接收真实的 a、b，不需要先把 b 生成出来。这叫教师强制（teacher forcing），在带因果掩码的 Transformer 中，各位置可以在同一层并行计算，再一起进入下一层。</p>
+<p>自回归生成（autoregressive generation）则要把刚刚选出的编号追加到前缀，才能确定下一步输入。给定 a，模型先采样或选取 b，再用 a、b 预测 c，这条依赖链无法靠提前填入真实标签消掉。提示词本身已经给定，可以并行处理；后续逐词元解码仍然沿时间顺序推进，缓存历史键和值只能减少重复计算。</p>
 <figure class="note-diagram"><div class="note-flow">
-<div class="note-flow-step"><NoteFlowIcon kind="tokens" /><strong>字节</strong><span>每种字节有自己的编号</span></div>
-<div class="note-flow-step"><NoteFlowIcon kind="pair" /><strong>合并</strong><span>把频繁相邻的一对记作新词元</span></div>
-<div class="note-flow-step"><NoteFlowIcon kind="table" /><strong>词表</strong><span>保存新编号和合并顺序</span></div>
-</div><figcaption>一次合并会改变相邻的符号对，下一轮统计以合并后的序列为准。</figcaption></figure>
-<p><a href="https://stanford-cs336.github.io/lectures/?trace=lecture_01">第 1 讲可执行讲稿</a></p>
+<div class="note-flow-step"><NoteFlowIcon kind="tokens" /><strong>文本变成编号</strong><span>分词器确定每个预测位置的单位</span></div>
+<div class="note-flow-step"><NoteFlowIcon kind="table" /><strong>错开输入与标签</strong><span>a、b、c 分别监督预测 b、c、d</span></div>
+<div class="note-flow-step"><NoteFlowIcon kind="pair" /><strong>条件概率变成损失</strong><span>对真实标签取负对数，再按有效位置平均</span></div>
+</div><figcaption>图示为训练的数据路径。生成时，标签位置尚无答案，选出的词元要回到输入端参与下一步预测。</figcaption></figure>
+<p>你可以拿四个词元检查实现：训练时应得到三组词表大小的分数，而不是只在整句末尾得到一组。每组分数的监督对象恰好是下一位置，且改变更后面的输入不能影响前面位置的输出。这个检查同时对应标签对齐与因果性，比只观察训练损失是否下降更能定位错误。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="tokenizer">
+<h2 id="tokenizer" tabindex="-1">分词器要满足什么 <a class="header-anchor" href="#tokenizer" aria-label="章节链接">&#8203;</a></h2>
+<p>分词器决定文本怎样成为模型可处理的编号，以及编号怎样还原成文本。讲稿 <code>lecture_01.py</code> 的 <code>Tokenizer</code> 继承抽象基类 <code>ABC</code>，用两个方法约定这一接口。它没有使用 <code>@abstractmethod</code> 装饰器，而是在未实现的方法里抛出异常，因此这里表达的是接口约定，不能把它误读为实例化时就会检查所有实现。</p>
+<pre v-pre><code>class Tokenizer(ABC):
+    """Abstract interface for a tokenizer."""
+    def encode(self, string: str) -&gt; list[int]:
+        raise NotImplementedError
+
+    def decode(self, indices: list[int]) -&gt; str:
+        raise NotImplementedError</code></pre>
+<p><code>encode</code> 接收字符串并返回整数列表，<code>decode</code> 做反向转换。本讲要求对支持的文本有 <code>decode(encode(s)) == s</code>，空格、换行、标点与大小写都要保留。若预处理先转小写或合并空格，原信息已经消失，就不能再声称恢复的是原始字符串；无损往返应当从输入边界开始定义。</p>
+<p>词表大小 V、序列长度 T 和嵌入宽度 d 是一笔相互牵连的账。嵌入（embedding）表为每个编号存一行 d 维向量，参数量是 <code>V × d</code>；若 V 为 32,000、d 为 768，就有 24,576,000 个参数。只存两字节权重约需 49.152 MB，扩大到 64,000 个词元就翻倍，梯度和优化器状态还没有计入。</p>
+<p>扩大词表通常能把常见片段合成更少的词元，但模型每个位置也要对更大的词表评分。输出层若不与输入嵌入共享权重，还要另算一份相近规模的矩阵。缩短 T 可以减少位置相关计算，普通全注意力的配对数量还随 T 的平方增长，不过词表越大、压缩越高并不自动意味着模型越好，稀有词元可能几乎学不到可靠表示。</p>
+<p>无损要求针对的是由编码器产生的合法序列，并不保证随便拼几个编号都能解码。字节分词器若只收到表情的第一个字节，原码会因 UTF-8 不完整而报错；BPE 的单个词元也可能只覆盖某个字符的一部分。因此流式输出需要积累足够字节后再解码，不能对每个词元独立解码后拼字符串，否则错误替换可能把本来完整的字符破坏掉。</p>
+<p>词表外输入怎么处理，会一路影响训练目标、生成能力和评估口径。如果把所有未登录词都替换成同一个未知标记（UNK），模型再聪明也无法从那个编号还原原来的拼写。字节回退则允许没见过的名字被拆成更小单位，代价是序列变长；选择哪种策略必须在训练模型之前确定，而不是等输出出错以后再补。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="tradeoff">
+<h2 id="tradeoff" tabindex="-1"><span id="bytes"></span>字符级与词级为什么都不合适 <a class="header-anchor" href="#tradeoff" aria-label="章节链接">&#8203;</a></h2>
+<p>三种直接的切分办法，分别在词表覆盖和序列长度上付出代价。<code>lecture_01.py</code> 的 <code>CharacterTokenizer.encode</code> 对每个 Unicode 码点调用 <code>ord</code>，解码再用 <code>chr</code> 拼回字符串。一个码点并不总等于屏幕上一个完整字形，例如组合附加符会占额外位置；这段代码采用的是 Python 遍历字符串的单位。</p>
+<pre v-pre><code># lecture_01.py：CharacterTokenizer.encode / decode 的方法体
+return list(map(ord, string))
+return "".join(map(chr, indices))
+
+# lecture_01.py：ByteTokenizer.encode 的方法体
+string_bytes = string.encode("utf-8")
+indices = list(map(int, string_bytes))
+return indices</code></pre>
+<p>在英文 ASCII 文本中，每个字符也是一个字节，字符级几乎没有缩短序列。直接把码点当编号还有稀疏问题：🌍 的编号是 127757，若按编号直接索引连续嵌入表，至少需要 127758 行，而非只为这个样本的不同字符开几行。你可以重映射成稠密编号节省空间，但那时还得处理训练字符集合之外的新码点。</p>
+<p><code>ByteTokenizer</code> 把可用 UTF-8 编码的文本表示为 0–255 的字节序列，所以基础词表固定为 256。它统一了符号集合，却没有压缩原始字节：常见汉字如“你”“好”各需 3 个字节，🌍 需要 4 个字节，部分扩展汉字也需要 4 个。解码时必须先把字节拼完整，单个字节词元不保证是独立合法的 UTF-8 字符。</p>
+<div class="note-table" role="region" aria-label="字符、字节与词级分词对照" tabindex="0"><table>
+<thead><tr><th scope="col">方案</th><th scope="col">词表与编号</th><th scope="col">序列特点</th><th scope="col">边界与代价</th></tr></thead>
+<tbody>
+<tr><td>字符级</td><td>讲稿直接用 Unicode 码点</td><td>英文常为一个字符一个词元</td><td>编号范围大；稠密重映射又有新字符覆盖问题</td></tr>
+<tr><td>字节级</td><td>256 个基础符号</td><td>UTF-8 每个字节占一个位置</td><td>能表示新词，但中文和表情序列较长</td></tr>
+<tr><td>词级</td><td>每个不同词或片段分配编号</td><td>常见长词可占一个位置</td><td>词形、人名和拼写变化使词表膨胀；UNK 丢失原文</td></tr>
+</tbody></table></div>
+<p>讲稿没有完整的 <code>WordTokenizer</code> 类，<code>word_tokenizer()</code> 只用 <code>regex.findall(r"\w+|.", string)</code> 演示切片，再说明需要建立片段到整数的映射。正则里的连续词字符会合成一块，其他匹配到的符号单独保留，所以英文长词能大幅减少位置。问题是新单词没有编号，而且这条规则不等于可靠的中文词边界分析；默认的点号还不覆盖换行，不能未经处理就把它当成任意文本的无损分词器。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="compression">
+<h2 id="compression" tabindex="-1">用同一段文本量压缩率 <a class="header-anchor" href="#compression" aria-label="章节链接">&#8203;</a></h2>
+<p>比较分词器时，先固定原文，再数它需要多少模型位置。讲稿 <code>get_compression_ratio</code> 把 UTF-8 字节数除以词元数，单位是“字节／词元”。这不是压缩文件的存储率，因为它没有计入整数编号实际占多少位，也没有计入词表本身的大小。</p>
+<pre v-pre><code># lecture_01.py：get_compression_ratio 的计算部分
+num_bytes = len(bytes(string, encoding="utf-8"))
+num_tokens = len(indices)
+return num_bytes / num_tokens</code></pre>
+<div class="note-table" role="region" aria-label="本地运行的分词长度与压缩率" tabindex="0"><table>
+<thead><tr><th scope="col">输入文本</th><th scope="col">UTF-8 字节数</th><th scope="col">字符级词元／比值</th><th scope="col">字节级词元／比值</th></tr></thead>
+<tbody>
+<tr><td><code>Hello, world!</code></td><td>13</td><td>13 ／ 1.000</td><td>13 ／ 1.000</td></tr>
+<tr><td><code>Hello, 🌍! 你好!</code></td><td>20</td><td>13 ／ 1.538</td><td>20 ／ 1.000</td></tr>
+<tr><td><code>你好</code></td><td>6</td><td>2 ／ 3.000</td><td>6 ／ 1.000</td></tr>
+</tbody></table></div>
+<p>以上为本地运行：用 Python 的 AST 从原文件提取 <code>Tokenizer</code>、两种具体分词器和 <code>get_compression_ratio</code> 的定义执行，没有改写它们的算法。六组结果都通过了往返断言，其中混合文本正是讲稿 <code>character_tokenizer()</code> 与 <code>byte_tokenizer()</code> 使用的样本。完整讲稿依赖展示框架和其他模块，本次没有运行其 <code>main()</code>；本机的两个已检查 Python 环境都缺少 <code>regex</code>，因此词级演示未运行，不报告它的实测压缩率。</p>
+<p>“你好”的字符级比值是 3，意思是每个词元平均承载三个原始字节，不代表对中文做了三倍的语义理解。对固定原文，比值从 1 提高到 2 才能直接解释为词元数量减半；不同语言样本的比值不能脱离其编码长度作同样比较。若原文长 N 字节，比值为 r，则位置数为 <code>N/r</code>，你可以用它估计固定上下文窗口大约能容纳多少原文。</p>
+<p>空字符串也揭示了这个函数的边界：分子和分母都是零，直接调用会除零。评估语料应跳过空样本，或明确另外定义空样本的统计方式。汇总多段文本时，用总字节数除以总词元数才是整体比值，简单平均每段比值会让极短样本占据过大的权重。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="bpe">
+<h2 id="bpe" tabindex="-1">BPE 的一次合并：先数对，再替换 <a class="header-anchor" href="#bpe" aria-label="章节链接">&#8203;</a></h2>
+<p>字节对编码（Byte-Pair Encoding，BPE）要在保留基础字节覆盖能力的同时，让常见片段少占几个位置。讲稿从 256 个单字节词元开始，选择出现最多的相邻词元对，把这一对替换成一个新编号。这里的“对”在第一轮确实是两个字节，后面也可能是两个已经包含多个字节的词元。</p>
+<pre v-pre><code># lecture_01.py：count_adjacent_pairs
+def count_adjacent_pairs(indices: list[int]) -&gt; dict[tuple[int, int], int]:
+    counts = defaultdict(int)
+    for index1, index2 in zip(indices, indices[1:]):
+        counts[(index1, index2)] += 1
+    return counts</code></pre>
+<p>第一行函数签名说明输入是编号列表，返回字典的键是两个整数构成的元组，值是出现次数。<code>defaultdict(int)</code> 让没见过的键从 0 开始，省掉每次判断键是否存在。<code>zip</code> 把原列表与去掉首项的列表配对，长度为 n 的序列恰好产生 n−1 对；循环体给对应键加一，返回时就得到当前序列的全部相邻对计数。</p>
+<p>手算 <code>[97, 98, 97, 98, 97]</code>，也就是字节串 <code>ababa</code>：<code>(97, 98)</code> 和 <code>(98, 97)</code> 各出现两次。若这一轮选前者，赋新编号 256，替换后变成 <code>[256, 256, 97]</code>。原来五个位置变成三个，下一轮应统计的是 <code>(256, 256)</code> 与 <code>(256, 97)</code>，不能继续拿旧计数选赢家。</p>
+<details class="note-details"><summary>展开 lecture_01.py 的 merge：从左到右做非重叠替换</summary>
+<pre v-pre><code>def merge(indices: list[int], pair: tuple[int, int], new_index: int) -&gt; list[int]:
+    new_indices = []
+    i = 0
+    while i &lt; len(indices):
+        if i + 1 &lt; len(indices) and indices[i] == pair[0] and indices[i + 1] == pair[1]:
+            new_indices.append(new_index)
+            i += 2
+        else:
+            new_indices.append(indices[i])
+            i += 1
+    return new_indices</code></pre>
+</details>
+<p><code>merge</code> 建一个新列表，避免边扫描边删除原列表造成下标错位。命中时把新编号写入并跨过两个旧位置，没命中就复制当前编号、只前进一步；条件里的长度检查保证不会读过末尾。对 <code>aaa</code>，计数函数会记录两个重叠的 <code>aa</code>，但这一轮只能替换一次，得到 <code>[aa, a]</code>，所以计数不总等于长度减少量。</p>
+<p>为什么优化版只需更新受影响的对？观察局部片段 <code>L, a, b, R</code>：把 a、b 合成 z 后，原来的 <code>(L,a)</code>、<code>(a,b)</code>、<code>(b,R)</code> 消失，增加 <code>(L,z)</code>、<code>(z,R)</code>，远处邻接关系没有改变。维护局部计数时仍需正确处理边界、相邻命中与重叠命中，防止重复扣减；讲稿的实际实现没有做这项优化，而是在每轮重新扫描整条序列，简单但慢。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="bpe-training">
+<h2 id="bpe-training" tabindex="-1">把合并串成训练，并保存规则顺序 <a class="header-anchor" href="#bpe-training" aria-label="章节链接">&#8203;</a></h2>
+<p><code>train_bpe(string, num_merges)</code> 把刚才的一轮操作重复执行，返回能用于新文本的分词器参数。它先把字符串转成 UTF-8 字节编号，创建空的合并字典，再为 0–255 号词元各存一份单字节内容。下面是 <code>lecture_01.py</code> 的循环主体，省略的只有展示注释，训练过程并不使用神经网络或梯度。</p>
+<pre v-pre><code>for i in range(num_merges):
+    counts = count_adjacent_pairs(indices)
+    pair = max(counts, key=counts.get)
+    new_index = 256 + i
+    merges[pair] = new_index
+    vocab[new_index] = vocab[pair[0]] + vocab[pair[1]]
+    indices = merge(indices, pair, new_index)</code></pre>
+<p>循环先数当前序列的对，再用 <code>max</code> 选最大频数，给新词元分配 <code>256 + i</code>。词表里的新内容是两个旧词元的字节拼接，合并字典则记录这两个旧编号怎样得到新编号。每轮都会更新 <code>indices</code>，所以下一轮允许新词元继续参与；若只剩一个词元却还要求继续合并，计数字典为空，原码的 <code>max</code> 就会报错，实际实现应设提前停止条件。</p>
+<div class="note-table" role="region" aria-label="讲稿 BPE 三轮合并的本地运行结果" tabindex="0"><table>
+<thead><tr><th scope="col">轮次</th><th scope="col">选中编号对</th><th scope="col">新编号</th><th scope="col">对应字节内容</th></tr></thead>
+<tbody><tr><td>1</td><td>(116, 104)</td><td>256</td><td><code>b'th'</code></td></tr><tr><td>2</td><td>(256, 101)</td><td>257</td><td><code>b'the'</code></td></tr><tr><td>3</td><td>(257, 32)</td><td>258</td><td><code>b'the '</code>，末尾有空格</td></tr></tbody></table></div>
+<p>表中是本地运行 <code>train_bpe("the cat in the hat", num_merges=3)</code> 的真实结果。执行方式仍是从原文件提取定义，仅把展示用的 <code>text()</code> 置为空操作；训练文本 18 字节，编码后 12 个词元，比值为 1.5。再用同一组参数编码讲稿的新文本 <code>the quick brown fox</code>，19 字节变成 16 个词元，比值为 1.1875，两段文本都能无损解码。</p>
+<p>这两个压缩率还说明，分词器训练语料与应用语料必须分开看。训练样本里重复出现的片段会被优先合并，所以在训练文本上量到的缩短程度，不保证在新领域继续成立。若你用大量英文学习合并，再拿它处理中文，就应当重新统计中文的词元长度，而不能直接沿用英文的字节／词元比值来分配上下文预算。</p>
+<p>第一轮里多个相邻对同为两次，为什么选 <code>th</code>？这份实现按扫描顺序把键放入字典，<code>max</code> 在同分时保留先遇到的键，所以结果取决于这个顺序。复现另一份 BPE 实现时，若它用字典序破同分，就可能学到不同的规则；频数相同并不意味着编号和切分必然相同。</p>
+<pre v-pre><code># lecture_01.py：BPETokenizerParams
+@dataclass(frozen=True)
+class BPETokenizerParams:
+    vocab: dict[int, bytes]             # 编号 -&gt; 字节内容
+    merges: dict[tuple[int, int], int]   # 相邻编号对 -&gt; 新编号</code></pre>
+<p><code>vocab</code> 回答“这个编号是什么意思”，<code>merges</code> 回答“文本应该按什么次序切成这些编号”。回顾 <a href="/cs336/a1-bpe">A1 的切分歧义</a>，即使词表同时包含 a、b、c、ab、bc，字符串 abc 仍可切成 <code>[ab,c]</code> 或 <code>[a,bc]</code>，两者都能还原原文。合并规则若优先合 ab，就选前者；优先合 bc 就选后者，因此无损往返不足以证明编码规则正确。</p>
+<p><code>BPETokenizer.encode</code> 先展开字节，再按 <code>merges.items()</code> 的插入顺序逐条调用 <code>merge</code>，这里的顺序就是训练的先后次序。<code>BPETokenizer.decode</code> 则按编号查 <code>vocab</code>、拼接所有字节、统一做 UTF-8 解码，不需要反向执行合并。原码保留所有 256 个基础字节，所以新词仍能编码；A1 再加入预分词边界、特殊词元与更高效的候选维护，这些规则也必须随分词器一起固定。</p>
+<p>BPE 用频数决定合并，优点是规则直接，代价是反复统计与替换。WordPiece 按训练数据似然改善选择合并，常见教学近似还要按单个片段频数归一化，代价是比原始对频数多一层评分。Unigram 从较大的候选词表出发，拟合片段概率并剪掉移除后损失增幅小的词元，代价是反复估计概率、评估切分与删词损失；这两种方法并非本讲稿的实现，比较依据见 <a href="https://huggingface.co/docs/transformers/tokenizer_summary">Hugging Face 分词算法文档</a>。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="roadmap">
+<h2 id="roadmap" tabindex="-1">这门课的五条主线 <a class="header-anchor" href="#roadmap" aria-label="章节链接">&#8203;</a></h2>
+<p>课程接下来要回答的是：给定数据和计算预算，怎样真正训练出一个语言模型。<code>lecture_01.py</code> 的 <code>why_this_course_exists()</code> 强调通过构建理解技术，同时提醒小模型上的经验未必原样迁移到大模型。能迁移的是机制与资源意识，所以你既要知道某层怎么算，也要知道它占多少空间、为什么在硬件上耗时。</p>
+<p><code>basics()</code> 问“模型怎么搭”：分词给出编号，嵌入把编号变成向量，Transformer 处理上下文，输出层产生概率，再用损失与优化器更新参数。本讲已经接通了编号与监督信号，后面会把中间的矩阵运算逐层填上。正确性是这一阶段的底线，标签错一位或因果掩码漏一块，都可能让训练曲线看起来漂亮却失去意义。</p>
+<p><code>systems()</code> 问“一步训练要多久、占多少显存”：参数之外还有激活、梯度和优化器状态，计算之外还有数据搬运。它从资源估算进入 GPU 内核、并行训练和推理，要求用计时与剖析验证瓶颈。手算一个预算例子，若每步 0.5 秒，一小时最多约 7200 步，还未扣除评估与保存时间；相同小时数下，减少搬运就可能换来更多有效更新。</p>
+<p><code>scaling_laws()</code> 问“多大的模型配多少数据”：用较小规模实验拟合规律，再决定大预算怎么花。讲稿用稠密模型训练量的粗估 <code>C ≈ 6ND</code> 连接参数量 N 与训练词元数 D，在固定 C 下把 N 翻倍，就只能把 D 减半。它举出的 <code>D ≈ 20N</code> 是特定训练计算最优设置下的经验关系，不是所有模型的配置命令；把推理成本也算进目标，最优选择还会变化。</p>
+<p><code>data()</code> 问“喂什么”：网页提取、质量过滤、去重与来源混合共同决定模型反复看到什么。若预算固定为一亿词元，重复文本也会实实在在占用这笔预算，因此清洗不是训练前可有可无的整理工作。评估数据还得与训练数据隔离，否则低损失可能来自见过答案，不能反映新文本上的能力。</p>
+<p><code>alignment()</code> 问“训完之后怎么调”：模型能续写，并不意味着会按指令给出合适答案。讲稿把后续过程概括为生成回答、由人或验证器等评分、更新模型以偏向更好的回答，并引出偏好优化与强化学习。这个阶段重新把系统问题带回来，因为训练中也要大量生成；奖励定义和生成成本会共同影响你实际能优化什么。</p>
+<p>本栏目第 1–17 讲沿这五条线展开，但它们并非互不相交的五个连续区块。按 <a href="/cs336/course-map">课程地图</a>，第 1–4 讲建立模型基础，第 5–8 讲进入硬件与并行，第 9、11 讲讲规模，第 10 讲回到推理，第 12–14 讲连接评估与数据，第 15–16 讲进入后训练，第 17 讲扩展到多模态。五个函数给你的是组织问题的方式，讲次安排则允许同一条线在新场景里再次出现。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="notation">
+<h2 id="notation" tabindex="-1">记号约定 <a class="header-anchor" href="#notation" aria-label="章节链接">&#8203;</a></h2>
+<p>统一记号是为了让你在后续各讲直接追踪张量形状，不必每次重新猜字母的含义。下面把 V 约定为词表大小，把词表集合本身写成花体记号或直接称为词表。讨论一个训练批次时，T 指输入位置数，和前面切片之前的原始词元数可能相差一位，读公式时要跟着它的定义走。</p>
+<div class="note-table" role="region" aria-label="后续讲义统一记号" tabindex="0"><table>
+<thead><tr><th scope="col">记号</th><th scope="col">含义</th><th scope="col">常见位置或关系</th></tr></thead>
+<tbody>
+<tr><td>B</td><td>批大小</td><td>同批处理的序列数</td></tr>
+<tr><td>T</td><td>序列长度</td><td>每条输入的词元位置数</td></tr>
+<tr><td>V</td><td>词表大小</td><td>合法编号通常为 0 到 V−1</td></tr>
+<tr><td>d_model</td><td>模型隐藏宽度</td><td>隐藏状态形状为 B × T × d_model</td></tr>
+<tr><td>d_ff</td><td>前馈网络中间宽度</td><td>不必等于 d_model；影响前馈层参数与计算</td></tr>
+<tr><td>H</td><td>注意力头数</td><td>本讲默认指标准多头注意力的头数</td></tr>
+<tr><td>d_k</td><td>单头查询与键的宽度</td><td>常见配置中 H × d_k = d_model</td></tr>
+</tbody></table></div>
+<p>手算一组形状：B=2、T=128、d_model=768 时，嵌入后的张量有 196608 个元素。若 H=12 且各头等宽，d_k 就是 64；若 V=32000，完整输出分数张量的形状是 <code>2 × 128 × 32000</code>，共有 8192000 个元素。输出分数已经比隐藏状态大得多，所以资源估算不能只盯着 Transformer 块内部。</p>
+<p>浮点运算次数写作 FLOPs，一次乘加按 2 FLOPs 计算，即使硬件可能用一条融合指令完成。形状为 m×k 和 k×n 的矩阵相乘，常用估算是 <code>2mkn</code> FLOPs，忽略每个内积少一次加法的差别。FLOP/s 则是每秒运算率，运算量除以持续吞吐率才得到时间，硬件峰值不能直接当作实际训练速度。</p>
+<p>这些约定会沿用到后续各讲，遇到结构变体再局部扩展。例如查询头与键值头数量不同时，应该分别写清头数，而不是把所有形状都硬套进 H。你只要先列出每个轴和计数口径，就能把本讲的词元长度一路追到下一讲的显存与计算账。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="summary">
+<h2 id="summary" tabindex="-1">本篇要点 <a class="header-anchor" href="#summary" aria-label="章节链接">&#8203;</a></h2>
+<p>一段文本的概率可以拆成逐位置条件概率的乘积，训练用错开一位的输入和标签同时监督许多位置。交叉熵只取真实标签的负对数，按有效位置平均以后再取指数，才得到对应的困惑度。训练能并行处理已知前缀，生成则要等刚选出的词元成为下一步输入。</p>
+<p>分词器决定这笔计算中的基本单位，也决定词表、嵌入参数与序列长度之间的取舍。字节级保证基础覆盖，BPE 用有顺序的频繁合并缩短常见文本，词表与合并规则必须一起保存。你现在可以手算一轮 <code>ababa</code> 的合并，也能解释为什么“能解码回去”和“切分结果正确”是两个检查。</p>
+<p>继续读 <a href="/cs336/lecture-02">第 2 讲</a> 时，把本讲的 B、T、V 和 d_model 带过去，逐项核对张量形状与资源量。想先动手，可以把本地运行样本里的英文换成中文，再比较总字节数、词元数与往返结果。后续五条主线讨论的模型、硬件、规模、数据和后训练，都建立在这些输入单位和计分口径之上。</p>
 </section>
 <details class="note-details"><summary>本篇原始文件（下载）</summary>
-<ul>
-<li><a download :href="withBase('/cs336/sources/lectures/lecture_01.py')">lecture_01.py</a></li>
-</ul>
+<ul><li><a download :href="withBase('/cs336/sources/lectures/lecture_01.py')">lecture_01.py：接口、分词实现、BPE 训练与五条课程主线</a></li></ul>
 </details>
 </article>

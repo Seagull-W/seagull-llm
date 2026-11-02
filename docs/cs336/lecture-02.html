@@ -6,40 +6,187 @@ import { withBase } from 'vitepress'
 <header class="document-intro note-hero">
 <p class="note-kicker">CS336学习笔记 <span>课程讲义</span></p>
 <h1 id="lecture-02" tabindex="-1">第 2 讲 · 张量、显存与计算量 <a class="header-anchor" href="#lecture-02" aria-label="章节链接">&#8203;</a></h1>
-<p class="note-deck">从一批词元的形状出发，计算嵌入和线性层占用的显存，再估算矩阵乘法的运算量。</p>
+<p class="note-deck">从一个张量的字节数算到一次训练步：区分参数、梯度、优化器状态与激活，用 FLOPs 和算术强度解释计算成本，再把账本代入 A2 的 small 与 medium 模型。</p>
 </header>
-<nav class="note-jump" aria-label="本篇导读"><a href="#shape">一批文本的形状</a><a href="#memory">一个张量占多少显存</a><a href="#flops">一次线性变换要算多少次</a><a href="#intensity">运算量和运行时间</a></nav>
-<section class="document-section note-panel" aria-labelledby="shape">
-<h2 id="shape" tabindex="-1">一批文本的形状 <a class="header-anchor" href="#shape" aria-label="章节链接">&#8203;</a></h2>
-<p>把 B 条等长序列放进同一批，每条含 T 个词元，输入就是形状为 [B,T] 的整数张量。用每个编号查嵌入表，每个位置得到一个宽度为 d 的向量，形状随之变为 [B,T,d]。B 表示批量，T 表示位置，d 表示同一位置有多少个特征。</p>
-<figure class="note-diagram"><div class="note-flow">
-<div class="note-flow-step"><NoteFlowIcon kind="tokens" /><strong>词元编号</strong><span>B 条序列，每条长 T</span></div>
-<div class="note-flow-step"><NoteFlowIcon kind="table" /><strong>查嵌入表</strong><span>每个编号取一个 d 维向量</span></div>
-<div class="note-flow-step"><NoteFlowIcon kind="code" /><strong>线性投影</strong><span>每个位置得到 h 个输出</span></div>
-</div><figcaption>B 和 T 保留下来，线性层只改变最后一维。</figcaption></figure>
-</section>
+<nav class="note-jump" aria-label="本篇导读"><a href="#memory">张量内存</a><a href="#shape">形状与布局</a><a href="#flops">FLOPs</a><a href="#intensity">算术强度</a><a href="#roofline">Roofline</a><a href="#ledger">训练显存账</a><a href="#backward">反向传播</a><a href="#accumulation">梯度累积</a><a href="#checkpoint">激活重算</a><a href="#apply">代入 A2</a><a href="#summary">本篇要点</a></nav>
+
 <section class="document-section note-panel" aria-labelledby="memory">
-<h2 id="memory" tabindex="-1">一个张量占多少显存 <a class="header-anchor" href="#memory" aria-label="章节链接">&#8203;</a></h2>
-<p>对连续、紧密存放的张量，所需字节数等于元素个数乘以每个元素的字节数。例如 B = 4、T = 512、d = 768 时，嵌入输出有 1,572,864 个元素。float32 每个元素占 4 字节，这一个输出就占 6 MiB；换成每元素 2 字节的 bf16，同形状输出占 3 MiB。</p>
-<p>在 PyTorch 里，<code>numel()</code> 数的是整个张量的元素，<code>element_size()</code> 给出单个元素占用的字节数。第 2 讲的张量大小函数用一行把这两个量相乘：</p>
-<pre v-pre><code>return x.numel() * x.element_size()</code></pre>
-<p>把上例的 float32 嵌入代入，函数返回 6,291,456 字节。除以 1024² 才是 6 MiB。换成 bf16 时，元素数和形状都不变，减半的是每个元素占用的字节数。</p>
-<p>训练时还得存模型参数、梯度、供反向传播使用的激活和优化器状态。前面的 6 MiB 只算了一个张量。对峰值显存的估算，要看这些张量哪些在同一时刻仍然存在。</p>
+<h2 id="memory" tabindex="-1">一个张量占多少内存 <a class="header-anchor" href="#memory" aria-label="章节链接">&#8203;</a></h2>
+<p>这一节解决最小的一笔账：给定形状和数据类型，你能算出张量的数据有多少字节。张量是按多个轴索引的一组数，形状中的每个数字表示对应轴的长度。把各轴长度相乘得到元素总数，再乘单个元素的存储大小，就得到逻辑数据量。</p>
+<div class="math-block" data-tex="M_{\mathrm{tensor}}=\left(\prod_i d_i\right)s=\operatorname{numel}(x)\operatorname{element\_size}(x)"></div>
+<p>这里的 s 以字节为单位，不能把位数直接代进去。一个字节有八位，所以 fp32 的每个数占四字节，fp16 和 bf16 都占两字节。下面只列数据本体的大小；如果使用量化，还可能要保存缩放系数和零点，不能只把参数数目乘一就结束。</p>
+<div class="note-table" tabindex="0" role="region" aria-label="数据类型与存储字节数"><table><thead><tr><th>类型</th><th>位数</th><th>字节／元素</th><th>存储与计算边界</th></tr></thead><tbody>
+<tr><td>fp32 / float32</td><td>32</td><td>4</td><td>本文训练账本的基准精度</td></tr>
+<tr><td>fp16 / float16</td><td>16</td><td>2</td><td>范围较小，讲稿中 1e−8 会下溢成零</td></tr>
+<tr><td>bf16 / bfloat16</td><td>16</td><td>2</td><td>指数位与 fp32 相同，尾数精度更低</td></tr>
+<tr><td>fp8</td><td>8</td><td>1</td><td>具体格式不同；缩放与高精度累加另算</td></tr>
+<tr><td>int8</td><td>8</td><td>1</td><td>整数存储；量化元数据另算</td></tr>
+</tbody></table></div>
+<p>取批量 B=4、序列长度 T=512、隐藏宽度 d=768，形状为 [B,T,d] 的激活有 1,572,864 个元素。fp32 下是 6,291,456 字节，除以 1024² 得到 6 MiB；bf16 下是 3 MiB。同一个 fp32 数值若按十进制单位写，则约为 6.29 MB，所以比较显卡容量和张量大小时要先统一单位。</p>
+<details class="note-details"><summary>讲稿原函数：get_memory_usage 为什么只有一行</summary>
+<pre v-pre><code># lecture_02.py / get_memory_usage
+def get_memory_usage(x: torch.Tensor):
+    return x.numel() * x.element_size()</code></pre>
+</details>
+<p><code>numel()</code> 返回逻辑元素数，<code>element_size()</code> 返回当前 dtype 的单元素字节数，这正是上面的乘法。函数不统计张量对象的元数据，也不统计 CUDA 上下文、分配器缓存或临时工作区。若两个张量共享底层存储，直接相加还会重复计数，因此这个函数适合查单张量的账，不能充当整张显卡的峰值监视器。</p>
+<p>逻辑数据量与底层存储大小不一致，还有一个常见例子：从大矩阵切出很窄的视图。这个视图的元素可能很少，却仍引用原来的整块存储，使大矩阵不能被释放。反过来，扩展视图可以让多个逻辑位置指向同一个元素，所以你在统计多个张量时，需要辨认共享关系，不能只按形状求和。</p>
+<p>讲稿还给出一个更大的权重例子：形状为 [49152,12288] 的矩阵，两个边长相乘得到 603,979,776 个元素。每元素四字节，共 2,415,919,104 字节，恰好是 2304 MiB，也就是 2.25 GiB。你不必真的分配这块内存才能验证大小，用整数乘法就能完成预算，也能避免为了查一个数字先把设备挤满。</p>
+<p>讲稿的 <code>tensors_on_gpus</code> 用 <code>x.to(device)</code> 把张量放到目标设备。迁移前后的形状与 dtype 若不变，逻辑字节数也不变，改变的是这笔内存由 CPU 还是 GPU 承担。原来的 CPU 引用若还活着，两边就可能各有一份，搬运本身也需要时间。</p>
 </section>
+
+<section class="document-section note-panel" aria-labelledby="shape">
+<h2 id="shape" tabindex="-1">形状相同，内存布局未必相同 <a class="header-anchor" href="#shape" aria-label="章节链接">&#8203;</a></h2>
+<p>要把张量账算对，还要分清逻辑形状与实际布局。步长（stride）表示沿某个轴移动一个位置，底层存储要跨过多少个元素。连续的 [4,512,768] 张量通常具有步长 (393216,768,1)，所以最后一轴相邻元素挨在一起，跨到下一条序列则要走过 512×768 个元素。</p>
+<p>转置可以只交换形状和步长，不搬动数据。例如连续的 [2,3] 矩阵步长为 (3,1)，转置后形状成为 [3,2]、步长成为 (1,3)，但仍然共用那六个数。此时把转置结果直接 <code>view(-1)</code> 往往会报错，因为按新逻辑顺序取出的数无法用一个连续的一维视图描述。</p>
+<p>常用的稳妥规则是：连续张量可以用 <code>view</code> 改形状，<code>reshape</code> 则可能在必要时复制。严格说，“view 只在连续时可用”过强，真正条件是目标形状与现有步长兼容，某些非连续张量也能成功。<a href="https://docs.pytorch.org/docs/2.15/generated/torch.Tensor.view.html">PyTorch 的 view 文档</a>给出了兼容条件；当你调用 <code>contiguous()</code> 解决布局问题时，也要把可能新增的一份数据记到账里。</p>
+<p>广播也会影响形状账，例如 [B,T,d] 与 [d] 相加，后者在语义上沿前两个轴重复。这个重复通常不要求先创建完整的 [B,T,d] 输入副本，但加法输出仍有 BTd 个元素。若你把广播后的结果保留下来供反向使用，就要按输出形状计内存，同时按输出元素数计加法次数。</p>
+<p>讲稿用 einops 给轴起名字，目的就是减少这种形状误读。<code>einsum</code> 中没出现在输出里的轴会被求和，<code>reduce</code> 明确把某个轴归约掉，而 <code>rearrange</code> 拆分、合并或重排轴。例如 <code>einops_rearrange</code> 把 [3,8] 拆成 [3,2,4]，两个头各有四个特征，元素总数仍是二十四；是否复制取决于具体布局，不能仅凭“重排”二字认定零成本。</p>
+</section>
+
 <section class="document-section note-panel" aria-labelledby="flops">
-<h2 id="flops" tabindex="-1">一次线性变换要算多少次 <a class="header-anchor" href="#flops" aria-label="章节链接">&#8203;</a></h2>
-<p>将 B 和 T 合并，输入可看成 (BT) × d 的矩阵。若输出宽度为 h，权重矩阵就是 d × h。输出有 BTh 个元素，每个元素是两个长度为 d 的向量的点积。把一次乘法和一次加法算作两次浮点运算，前向计算量约为 2BTdh FLOPs。</p>
-<p>反向传播还需要输入梯度和权重梯度，两者各自又是一次矩阵乘法。对于需要这两种梯度的线性层，前向和反向合计约为前向计算量的三倍。</p>
+<h2 id="flops" tabindex="-1">FLOPs 怎么数 <a class="header-anchor" href="#flops" aria-label="章节链接">&#8203;</a></h2>
+<p>这节要把“做了一次矩阵乘”展开成可以复算的运算次数。一次浮点运算叫 FLOP，FLOPs 是总次数，而 FLOP/s 是每秒执行的次数，描述速度。本文把乘法和加法各算一次，即使硬件用一条融合乘加指令执行，也仍然记作两个 FLOPs。</p>
+<div class="math-block" data-tex="(m\times k)(k\times n)\to(m\times n),\qquad F=mn[k+(k-1)]\approx2mkn"></div>
+<p>输出矩阵有 mn 个位置，每个位置都做一次长度为 k 的点积。这个点积包含 k 次乘法和 k−1 次加法，所以精确计数是 mn(2k−1)，常用近似才是 2mkn。讲稿 <code>arithmetic_intensity_dot_product</code> 保留了减一项，<code>tensor_operations_flops</code> 则直接用两倍乘积；两者只是计数精细程度不同。</p>
+<p>把 [B,T,d] 输入合并成 [BT,d]，投影到宽度 h，前向就是 2BTdh FLOPs。以 B=4、T=512、d=h=768 为例，结果为 2,415,919,104 FLOPs，约 2.416 GFLOPs。输出加偏置还要 BTh=1,572,864 次加法，相比主矩阵乘很少，却不是数学上的零。</p>
+<p>逐元素加法或乘法每个输出通常各需一次操作，但复合表达式要逐项展开。比如 <code>a*x+b</code> 每元素是一乘一加，记两次；长度为 k 的求和则有 k−1 次加法，不能因为结果只有一个数就记一次。反过来，改变视图可能零 FLOPs，却仍可能因布局调整产生数据搬运，计算量与耗时不是同一个量。</p>
+<p>你也可以直接从 einops 表达式读出计算量。讲稿的双输入表达式把 batch、seq1、seq2 留在输出中，把 hidden 求和，因此输出有 B×S₁×S₂ 个位置，每个位置做一个长度为 d 的点积。总量就是约 2BS₁S₂d；这个读法直接适用于注意力分数矩阵，能帮助你发现序列长度翻倍后，这部分计算会变成四倍。</p>
+<p>以一行四个数的稳定 Softmax 为例，找最大值需要三次比较，减最大值需要四次减法。接下来有四次指数求值、三次求和加法以及四次归一化除法，即使把指数暂且各记一次，也已经远多于四次操作。这个展开式更适合对照实际程序：每新增一个中间数组，还要追问它是否写回显存，以及下一步是否重新读取。</p>
+<p>Softmax 要先找最大值、做减法、取指数、求和，再除以总和。LayerNorm 要计算均值和方差，再归一化，通常还要缩放和平移。它们包含归约、指数或平方根，不能按“每元素一次”估算，更不能把一次指数函数的代价当成一次硬件加法；你需要说明采用哪种近似、是否融合，以及统计的是算法操作数还是实际指令。</p>
 </section>
+
 <section class="document-section note-panel" aria-labelledby="intensity">
-<h2 id="intensity" tabindex="-1">运算量和运行时间 <a class="header-anchor" href="#intensity" aria-label="章节链接">&#8203;</a></h2>
-<p>同样做一次乘加，从显存读一个数只用一次，和把它留在片上反复使用，耗时可能不同。计算强度衡量每搬运一个字节做了多少次浮点运算。逐元素操作通常很快就把时间花在读写上；矩阵乘法可以复用同一份数据，更有机会利用计算单元。</p>
-<p>现在可以读第 3 讲的 Transformer 块了：每个子层接收什么形状的张量，要产生多宽的输出，又为此增加多少参数？</p>
-<p><a href="https://stanford-cs336.github.io/lectures/?trace=lecture_02">第 2 讲可执行讲稿</a></p>
+<h2 id="intensity" tabindex="-1">算术强度：一个字节能支撑多少计算 <a class="header-anchor" href="#intensity" aria-label="章节链接">&#8203;</a></h2>
+<p>算术强度（arithmetic intensity）回答的是每搬运一个字节，完成多少次运算。这里把边界固定为显存与计算单元之间，并采用“输入各读一次、输出写一次”的理想数据量。缓存命中、分块重复读取、融合和临时张量会改变真实流量，所以表中结果是分析模型，不是带宽计数器的实测值。</p>
+<div class="math-block" data-tex="I=\frac{F}{Q}\quad[\mathrm{FLOP/byte}]"></div>
+<p>先看 ReLU，它对每个元素取与零的最大值。讲稿 <code>arithmetic_intensity_relu</code> 用 bf16，比较记一次操作，因此是 n 次操作除以 2n+2n 字节，得到 0.25。若统一改成 fp32，读写变为 8n 字节，同一操作口径应得到 0.125；如果另约定比较与选择合算两次，才是 2n/8n=0.25，不能把这两个口径混在同一张表里。</p>
+<div class="note-table" tabindex="0" role="region" aria-label="各算子的理想算术强度"><table><thead><tr><th>算子</th><th>运算数 F</th><th>fp32 字节数 Q</th><th>fp32 强度</th><th>讲稿 bf16 强度</th></tr></thead><tbody>
+<tr><td>ReLU，比较记一次</td><td>n</td><td>8n</td><td>1/8</td><td>1/4</td></tr>
+<tr><td>GELU，粗估二十次</td><td>约 20n</td><td>8n</td><td>约 2.5</td><td>约 5</td></tr>
+<tr><td>长度 n 的点积</td><td>2n−1</td><td>8n+4</td><td>约 1/4</td><td>约 1/2</td></tr>
+<tr><td>m×n 矩阵乘 n 向量</td><td>m(2n−1)</td><td>4(mn+n+m)</td><td>约 1/2</td><td>约 1</td></tr>
+<tr><td>m×k 乘 k×n 矩阵</td><td>约 2mkn</td><td>4(mk+kn+mn)</td><td>方阵约 N/6</td><td>方阵约 N/3</td></tr>
+</tbody></table></div>
+<p>GELU 通过平滑函数给输入加权，涉及 erf 或 tanh 及其近似实现。讲稿的 <code>arithmetic_intensity_gelu</code> 粗记每元素二十次操作，注释写 tanh 近似，但调用的是未指定近似模式的 <code>F.gelu(x)</code>，因此二十不是对实际内核的精确计数。按相同读写量算，GELU 的强度高于 ReLU；超越函数可能限制吞吐，却不意味着算术强度更低。</p>
+<p>点积需要读两条长度为 n 的向量，写一个标量，所以 fp32 数据量是 8n+4。矩阵向量乘要读 mn 个权重、n 个输入并写 m 个输出，运算约为 2mn，矩阵足够大时比值趋近二分之一。两者都缺少跨多个样本复用权重的机会，加大矩阵尺寸并不会让强度无限增加。</p>
+<p>这里的“矩阵足够大”对矩阵向量乘意味着输入和输出向量的字节数，相对权重矩阵可以忽略。若某一边非常短，就该保留分母中的向量项，不能直接套用二分之一。比如 m=n=2 时，十六次近似运算要搬三十二字节，而精确运算只有十二次；尺寸越小，减一项和额外开销越不适合省略。</p>
+<p>矩阵乘的情况不同：同一个权重可以服务多行输入，同一个输入也能用于多列输出。方阵情况下分子为 2N³，分母为 4×3N²，因此强度是 N/6，N=1024 时约为 170.7 FLOP/byte。N/2 只可能来自漏掉两个矩阵等不同流量假设；按这里列出的完整读写公式不能得到它，讲稿 bf16 的 N/3 则正好是字节数减半后的结果。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="roofline">
+<h2 id="roofline" tabindex="-1">Roofline 的两条边界与计时 <a class="header-anchor" href="#roofline" aria-label="章节链接">&#8203;</a></h2>
+<p>Roofline 模型把前面的字节数与运算数转成速度上限。设带宽为 β 字节每秒，峰值算力为 C FLOP/s，搬 Q 字节至少需 Q/β 秒，执行 F 次运算至少需 F/C 秒。假设两者能理想重叠，总时间下限取两项的较大者，对应的吞吐上限便是一条先上升、再变平的折线。</p>
+<div class="math-block" data-tex="t\ge\max(Q/\beta,F/C),\qquad P\le\min(\beta I,C),\qquad I_*=C/\beta"></div>
+<p>用一台假设设备手算：带宽 1 TB/s，也就是 10¹² byte/s，算力 50 TFLOP/s，也就是 50×10¹² FLOP/s。两条边界相交时 βI=C，拐点就是 50 FLOP/byte。强度为 0.25 的操作吞吐上限只有 0.25 TFLOP/s；强度达到 100 时，上限仍被算力压在 50 TFLOP/s，这些都是假设参数下的推导，不是本机 GPU 数字。</p>
+<p>把同一假设设备代回方阵公式，还能算出一个有用的尺寸门槛。fp32 的理想强度是 N/6，要达到五十，矩阵边长至少约为三百；这只说明流量模型不再限制它达到峰值。若换成 bf16，强度虽会翻倍，设备的峰值算力也可能变化，因此必须重新计算拐点，而不是沿用原来的五十。</p>
+<p>讲稿 <code>roofline_plots</code> 用这条折线解释带宽受限与算力受限。算子位于拐点右侧，只代表理想情况下有机会吃满算力，还需要足够的并行度、合适的矩阵形状和高效内核。短小算子的启动开销也可能占主要时间，因此用强度除以拐点得到的是理想利用率界限，不能直接冒充实测模型 FLOPs 利用率（MFU）。</p>
+<p><code>get_promised_flop_per_sec</code> 按设备名和 dtype 返回讲稿内写定的峰值表，不会测量硬件。它在没有 CUDA 时返回 1，这只是占位值，不能拿来计算 CPU 利用率；遇到不认识的 GPU 则返回 None。<code>benchmark</code> 在计时前以及每次调用后同步 CUDA，用五次调用的总时间除以五，避免只测到异步任务提交时间，但函数自身没有预热。</p>
+<p>本次编辑环境没有可用的 NVIDIA 设备入口，当前 Python 也未安装 PyTorch，所以跳过了这三个函数的执行，没有报告 CPU 或 GPU 实测速度。本文字节数来自整数算式，A2 的时间另有原始记录。你复跑时可先预热，再记录设备、dtype、形状与重复次数，用 2mkn 除以同步后的秒数求吞吐；CPU 结果只能标作 CPU 结果。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="ledger">
+<h2 id="ledger" tabindex="-1">一次训练步的四份内存 <a class="header-anchor" href="#ledger" aria-label="章节链接">&#8203;</a></h2>
+<p>训练显存账要回答哪些张量在同一时刻活着，而不只是模型文件有多大。参数是模型当前的权重，梯度是损失对参数的导数，优化器状态记录跨步累积的信息，激活则是前向产生、反向还要用的中间结果。把这四类分开，你才能判断减小批量、降低精度或换优化器究竟会省掉哪一部分。</p>
+<div class="math-block" data-tex="M_{\mathrm{train}}\approx M_{\theta}+M_{\nabla\theta}+M_{\mathrm{opt}}+M_{\mathrm{act}}+M_{\mathrm{extra}}"></div>
+<p>AdamW 为每个参数维护一阶矩 m 和二阶矩 v，两份 fp32 状态合计八字节。若参数和梯度也都是 fp32，再加四字节参数、四字节梯度，就得到每参数十六字节。额外项包括输入、临时缓冲、算子工作区和运行时占用；四大项的简单相加适合做预算，峰值仍要按存活时间实测。</p>
+<div class="note-table" tabindex="0" role="region" aria-label="fp32 AdamW 训练账本"><table><thead><tr><th>项目</th><th>字节数</th><th>什么时候需要</th></tr></thead><tbody>
+<tr><td>参数 θ</td><td>4P</td><td>前向、反向、更新期间</td></tr>
+<tr><td>梯度</td><td>4P</td><td>反向逐步产生，更新前保留</td></tr>
+<tr><td>AdamW 的 m、v</td><td>8P</td><td>初始化后跨训练步保留</td></tr>
+<tr><td>激活，一层一份的基准</td><td>4BTdL</td><td>前向保存，反向使用后释放</td></tr>
+</tbody></table></div>
+<p>这个十六字节结论有明确前提。讲稿开场的另一笔账用 bf16 参数与梯度，加 fp32 状态，所以是十二字节；若混合精度实现另外维护 fp32 主权重，还要再加四字节。自动混合精度也不保证持久保存的参数与梯度变成 bf16，应该逐类检查 dtype，而不是看到 autocast 就把整张账单除以二。</p>
+<p>讲稿 <code>deep_network</code> 的每层只有一个 D×D 权重，因而 P=D²L；D=8、L=3 时是 192 个参数。它的 <code>optimizer</code> 实际实现 AdaGrad，仅保存平方梯度累积 g2 一份状态，fp32 时四字节每参数，不是 AdamW 的八字节。代码用 <code>zeros_like(grad)</code> 初始化 g2，状态 dtype 跟着梯度走，讲义中“状态常用 fp32”的预算惯例不能替代检查真实实现。</p>
+<p>回到 small 的 d=768、L=12、B=4、T=512，若每层只保存一份 fp32 隐藏状态，激活基准为 6 MiB×12=72 MiB。真实 Transformer 每层还会保存投影结果、前馈网络中间值和归一化所需数据，可以先用系数 c 写成 c×72 MiB，并把 c 留给具体实现确定。传统注意力若保存 [B,H,T,T] 矩阵，还有随 T² 增长的部分，不能硬塞进固定的线性系数。</p>
+<p>激活不是把所有前向输出无条件留到训练结束，而是由反向公式决定要保存什么。线性层算权重梯度需要输入，所以即使输出被后续层使用完，输入也可能还不能释放；归约和归一化还可能保存统计量。反向越往前走，已经完成求导的部分越能释放，因此峰值往往出现在某个具体阶段，四类各自峰值的相加可能高估实际同时占用。</p>
+<p>预算还有一个直接用途：先判断某种优化最多能省多少。假设你只把参数从四字节压到两字节，却保持梯度、两份状态与其他张量不变，每参数总账只是从十六变成十四字节，降低八分之一。反过来，如果主要问题来自长序列的注意力激活，单独压缩权重就可能省不到真正紧张的部分，应先定位峰值对应的张量。</p>
+<p>参数账在模型确定后基本固定，激活账却随批量和序列长度继续增长。把 B 从四改成八，前述激活基准从 72 MiB 变为 144 MiB，参数账一字节也没增加。因此在已有模型、继续扩大批量或上下文的实验里，激活常决定能否训练；但在小批量或参数极大的模型上，参数和优化器仍可能是主要负担。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="backward">
+<h2 id="backward" tabindex="-1">反向传播贵在哪 <a class="header-anchor" href="#backward" aria-label="章节链接">&#8203;</a></h2>
+<p>反向约为前向两倍，原因可以直接从矩阵乘的两个梯度看出来。设 Y=XW，X 的形状为 [m,k]，W 为 [k,n]，来自后续层的梯度 G 与 Y 一样是 [m,n]。为了继续向前面的层传导梯度，要算 dX；为了更新本层参数，还要算 dW。</p>
+<div class="math-block" data-tex="\nabla_X\mathcal L=GW^\top,\quad \nabla_W\mathcal L=X^\top G,\quad F_{\mathrm{backward}}\approx4mkn=2F_{\mathrm{forward}}"></div>
+<p>第一项是 [m,n] 乘 [n,k]，第二项是 [k,m] 乘 [m,n]，每项都约 2mkn FLOPs。讲稿 <code>gradients_flops</code> 用 B=1024、D=256 的第二层验证这两个梯度，单层前向为 134,217,728 FLOPs，反向为 268,435,456 FLOPs。两者合计 402,653,184，恰是前向的三倍，这个比例说的是计算量，而非保证墙钟时间也乘三。</p>
+<p>若输入本来不需要梯度，最前面的某些 dX 计算就可以省掉。冻结参数、只训练局部模块或使用不同算子，也会改变比例。讲稿把深层线性网络推广成每步约 6NP FLOPs，其中 N 是本步样本数；在语言模型中常代入词元数 BT，但长上下文注意力、词表投影和参数共享都需要单独核对，不能把近似当成精确恒等式。</p>
+<p>A2 的 <code>for_bac</code> 包含前向、损失与反向，<code>full</code> 还执行优化器更新和清理梯度。AdamW 更新要读梯度及旧状态，计算新状态，再改写参数，即使这些逐元素运算相对大矩阵乘的 FLOPs 少，也会消耗显存带宽。讲稿 <code>train_loop</code> 在 <code>loss.backward()</code> 后调用 <code>optimizer.step()</code>，再 <code>zero_grad(set_to_none=True)</code>；统计完整训练步时，这一段不能漏掉。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="accumulation">
+<h2 id="accumulation" tabindex="-1">梯度累积怎样降低峰值 <a class="header-anchor" href="#accumulation" aria-label="章节链接">&#8203;</a></h2>
+<p>梯度累积（gradient accumulation）解决的是有效批量太大、单次前向放不下的问题。把一批数据分成若干微批，每个微批都做前向和反向，激活用完就释放，而参数梯度留着继续相加。等所有微批完成后只更新一次参数，因此有效批量保持不变，峰值激活却由微批大小决定。</p>
+<p>讲稿采用 B=64、D=1024、L=16 的简化网络，bf16 激活基准为 2×64×1024×16=2 MiB。拆成四个大小为十六的微批后，一次只需要 0.5 MiB，减少为原来的四分之一。这里缩小的是激活部分，参数、梯度以及优化器状态仍要保留，不能宣称整步显存也缩到四分之一。</p>
+<details class="note-details"><summary>按 gradient_accumulation 与 train_loop 改写的循环</summary>
+<pre v-pre><code># 教学改写：四个等大小微批；每个 loss 都按微批求均值
+optimizer.zero_grad(set_to_none=True)
+for x, y in micro_batches:  # 恰好四个微批
+    loss = loss_fn(model(x), y)
+    (loss / 4).backward()
+optimizer.step()
+optimizer.zero_grad(set_to_none=True)</code></pre>
+</details>
+<p>除以四是为了让累积结果对应整批的平均损失，否则梯度会放大四倍。微批长度不等时，应按有效样本数或有效词元数加权；各微批独立求均值再简单平均可能算错。循环中不要每次清零，也不要把四个带计算图的损失攒到末尾才反向，那样四份激活可能同时活着，失去节省显存的目的。</p>
+<p>累积通常不会减少有效批量对应的主要 FLOPs，只是分批完成同一笔工作。更多启动次数、更小的矩阵和更低的硬件利用率可能使它更慢，所以这是以执行效率换取较低峰值的一种办法。如果模型有依赖整批统计的层，微批结果也未必等价于一次处理整批，不能只检查梯度是否相加就认定训练完全相同。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="checkpoint">
+<h2 id="checkpoint" tabindex="-1">用重算换显存 <a class="header-anchor" href="#checkpoint" aria-label="章节链接">&#8203;</a></h2>
+<p>激活检查点（activation checkpointing）解决的是层数多、反向所需中间结果积累过多的问题。普通前向会留下反向需要的张量，检查点方案只保留选定边界的输入，段内中间值先丢掉。反向走到这一段时，再从保留的输入重跑前向，补出需要的激活，随后完成该段反向。</p>
+<figure class="note-diagram"><div class="note-flow">
+<div class="note-flow-step"><strong>前向到边界</strong><span>保留分段输入，丢弃段内激活</span></div>
+<div class="note-flow-step"><strong>反向到该段</strong><span>从边界重算，恢复局部中间值</span></div>
+<div class="note-flow-step"><strong>局部反向</strong><span>累积参数梯度，释放这一段</span></div>
+</div><figcaption>按讲稿 activation_checkpointing 的分段思路示意；参数与优化器状态仍然常驻。</figcaption></figure>
+<p>把 L 层分成每段 k 层，保留的边界约有 L/k 份，重算某段时还需约 k 份局部激活。若各层激活大小接近，峰值量级就是 L/k+k，取 k≈√L 得到 O(√L)。例如六十四层每八层一段，大约是八份边界加八份局部激活，而不是存六十四层；这是量级示例，精确峰值还受段端点和算子临时数据影响。</p>
+<div class="math-block" data-tex="M_{\mathrm{act}}\sim A(L/k+k),\qquad k\approx\sqrt L\Rightarrow M_{\mathrm{act}}=O(A\sqrt L)"></div>
+<p>这种分段方案通常多做约一遍前向，若原本前向加反向为 3F，新总量可粗估为 4F，即计算量增加约三分之一。讲稿还提到 O(1) 激活存储：每次从最初输入重算到目标层，只保留常数份局部张量。这个极端方案需要累计约 1+2+…+L 次层计算，达到 O(L²)，不能同时声称常数激活存储和只多一次前向。</p>
+<details class="note-details"><summary>DeepNetworkCheckpointed 的逐层调用与使用边界</summary>
+<pre v-pre><code># lecture_02.py / DeepNetworkCheckpointed.forward 原始核心
+for layer in self.layers:
+    x = torch.utils.checkpoint.checkpoint(layer, x)
+return x
+
+# 使用时的显式导入与模式选择示例
+from torch.utils.checkpoint import checkpoint
+# 放在同样的逐层循环中：
+x = checkpoint(layer, x, use_reentrant=False)</code></pre>
+</details>
+<p>讲稿实际是对每个 Block 单独设置检查点，每层之间的输入仍然保留。它主要节省 Block 内部激活，不能仅凭这段循环就声称层数复杂度已经降到 O(√L)；要得到分段结论，需把多层组成同一个检查点区域。上面的显式模式写法依据<a href="https://docs.pytorch.org/docs/2.15/checkpoint.html">PyTorch 检查点文档</a>，与讲稿省略参数的原行分开列出，避免把改写当成原码。</p>
+<p>重算必须与原前向保持一致，否则梯度就可能改变。带随机性的层要处理随机状态，依赖可变全局变量的函数也不适合随意包进检查点。验证时应比较相同权重和输入下的损失、参数梯度及峰值显存，再评估时间；单看程序没有报错，并不能证明重算后的训练语义正确。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="apply">
+<h2 id="apply" tabindex="-1">把账本代入 CS336 的模型 <a class="header-anchor" href="#apply" aria-label="章节链接">&#8203;</a></h2>
+<p>现在用 A2 的真实参数数目完成一次预算。<code>write_up.md</code> 记录 small 有 128,625,408 个参数，medium 有 423,183,360 个参数；<code>benchmark.py</code> 分别配置 d=768、十二层和 d=1024、二十四层。以下统一使用 fp32 参数、梯度与 AdamW 状态，单位 GiB 为 2³⁰ 字节，因此可以逐行用参数数目乘四、八或十六复核。</p>
+<div class="note-table" tabindex="0" role="region" aria-label="A2 两种模型的 fp32 显存预算"><table><thead><tr><th>项目</th><th>small</th><th>medium</th></tr></thead><tbody>
+<tr><td>参数 4P</td><td>514,501,632 B ≈ 0.479 GiB</td><td>1,692,733,440 B ≈ 1.576 GiB</td></tr>
+<tr><td>梯度 4P</td><td>0.479 GiB</td><td>1.576 GiB</td></tr>
+<tr><td>状态 m、v：8P</td><td>1,029,003,264 B ≈ 0.958 GiB</td><td>3,385,466,880 B ≈ 3.153 GiB</td></tr>
+<tr><td>三项合计 16P</td><td>2,058,006,528 B ≈ 1.917 GiB</td><td>6,770,933,760 B ≈ 6.306 GiB</td></tr>
+<tr><td>每层一份隐藏状态，B=4、T=512</td><td>72 MiB</td><td>192 MiB</td></tr>
+<tr><td>每层一份注意力矩阵，同批量与长度</td><td>576 MiB，H=12</td><td>1,536 MiB，H=16</td></tr>
+</tbody></table></div>
+<p>medium 单层隐藏状态为 4×512×1024×4=8 MiB，乘二十四层就是 192 MiB。它的一份注意力矩阵每层为 4×16×512²×4=64 MiB，全层合计 1.5 GiB，已经是隐藏状态基准的八倍。表中只列各一份的手算规模；实际保存多少份、能否融合省掉、何时释放，都必须检查具体实现，因此不能把表尾简单相加就当成精确峰值。</p>
+<p>把序列长度从 512 加到 1024，medium 的隐藏状态基准变成 384 MiB，而上述注意力矩阵项变成 6 GiB。参数和状态仍是原来的大小，所以同一个模型也可能因上下文翻倍突然放不下。若采用不显式保存整张注意力矩阵的实现，这项预算会变化，这也解释了为什么讨论系统优化必须同时注明算子实现。</p>
+<p>A2 原记录中，small 的 forward 为 0.109715 秒，for_bac 为 0.372372 秒；medium 则为 0.335881 秒和 12.009977 秒。medium 的 for_bac 约为自身 forward 的 35.8 倍，也约为 small 的 for_bac 的 32.3 倍，远超简单的三倍前向估算。这里的 for_bac 不是纯 backward，且 forward 模式用了 no_grad，两种计时相减也只适合作为粗略诊断，不能当成隔离测得的反向内核时间。</p>
+<p>显存压力是值得排查的可能原因，目前这些时间记录不足以证明它。尤其 for_bac 没有执行 optimizer.step，AdamW 状态若延迟初始化，此模式未必承担表中的完整十六字节账；不能拿 full 的状态预算直接解释它为什么慢。单纯显存紧张也不必然导致数量级减速，若要归因于迁移、分配等待或工作区改变，需要对应的运行轨迹。</p>
+<p>还有一个容易误读的数：原记录中 medium 的 full 为 15.529772 秒，比 for_bac 多约 3.52 秒。这个差值含更新以及不同运行状态带来的影响，不能单凭它计算 AdamW 的每参数操作耗时。真正隔离更新成本时，应先让状态完成初始化，再在同一模型、同一精度与同一同步口径下单独计时。</p>
+<p>复查时先保持模型和测量协议不变，只缩小 B 或 T，并记录峰值已分配显存、保留显存以及逐算子时间。若减速随显存需求下降而消失，再检查数据迁移、分配和内核选择；若仍存在，则检查同步、计算实现与设备状态。还应核对 for_bac 在多次调用间未清梯度的语义，以及首次状态初始化是否混入计时；这些是待做的诊断，不是本文已完成的实验。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="summary">
+<h2 id="summary" tabindex="-1">本篇要点：三条可以带走的公式 <a class="header-anchor" href="#summary" aria-label="章节链接">&#8203;</a></h2>
+<p>你现在可以从形状开始，独立写出一份训练资源预算。先给每类张量列元素数、dtype 和存活阶段，再给主要矩阵乘列输入输出形状，最后把运算次数除以搬运字节数。下面三条公式分别回答占多少、算多少和搬得是否划算，使用时把各自的前提一起带上。</p>
+<div class="math-block" data-tex="\text{显存：}\quad M(x)=\operatorname{numel}(x)s,\qquad M_{\mathrm{train}}\approx16P+M_{\mathrm{act}}+M_{\mathrm{extra}}\quad(\mathrm{fp32\ AdamW})"></div>
+<div class="math-block" data-tex="\text{计算：}\quad F_{\mathrm{matmul}}\approx2mkn,\qquad F_{\mathrm{forward+backward}}\approx3F_{\mathrm{forward}}"></div>
+<div class="math-block" data-tex="\text{强度：}\quad I=F/Q,\qquad P_{\mathrm{achievable}}\le\min(C,\beta I),\qquad I_*=C/\beta"></div>
+<p>十六字节不含激活，三倍前向不含优化器更新，roofline 也只是上限。你可以拿 small 的六 MiB 单张量练习，把批量、序列长度或精度各改一次，检查哪一项变化以及变化多少。等这些账能对上，再去看 kernel 融合、混合精度和并行训练，就能具体说出优化省掉的是哪次搬运、哪份存储或哪段重复计算。</p>
 </section>
 <details class="note-details"><summary>本篇原始文件（下载）</summary>
 <ul>
-<li><a download :href="withBase('/cs336/sources/lectures/lecture_02.py')">lecture_02.py</a></li>
+<li><a download :href="withBase('/cs336/sources/lectures/lecture_02.py')">lecture_02.py：张量、算术强度与训练账本</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/benchmark.py')">assignment2/benchmark.py：模型配置与计时模式</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/write_up.md')">assignment2/write_up.md：参数数目与原始时间记录</a></li>
 </ul>
 </details>
 </article>

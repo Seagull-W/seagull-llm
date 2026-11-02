@@ -6,76 +6,168 @@ import { withBase } from 'vitepress'
 <header class="document-intro note-hero">
 <p class="note-kicker">CS336学习笔记 <span>作业与实现</span></p>
 <h1 id="a1-transformer" tabindex="-1">A1 · 从 RoPE 到 Transformer 块 <a class="header-anchor" href="#a1-transformer" aria-label="章节链接">&#8203;</a></h1>
-<p class="note-deck">从位置索引算出旋转角度，将它用到多头注意力的 Q 和 K 上，再把注意力和前馈网络接回残差路径。</p>
+<p class="note-deck">从位置编号、旋转与注意力分数，走到 RMSNorm、SwiGLU 和残差堆叠：逐步核对形状、手算数值、初始化与测试边界。</p>
+<p>记 B 为批量，T 为序列长，d 为模型宽度，H 为头数，d_k=d/H，h 为前馈宽度，V 为词表大小。数值均为手算示例。</p>
 </header>
-<nav class="note-jump" aria-label="本篇导读"><a href="#relative">位置差怎样进入注意力分数</a><a href="#angles">按位置生成旋转角度</a><a href="#rotation">把角度用于向量</a><a href="#heads">多头注意力的输入与输出</a><a href="#residual">两次残差相加</a><a href="#checks">验证旋转和注意力输出</a></nav>
+<nav class="note-jump" aria-label="本篇导读"><a href="#relative">位置不是词元编号</a><a href="#derive">RoPE 为什么只跟位置差有关</a><a href="#angles">按位置生成角度表</a><a href="#rotation">把一对坐标转过去</a><a href="#scores">缩放点积注意力</a><a href="#heads">多头：拆、转、合</a><a href="#norm">RMSNorm：平方之前先升精度</a><a href="#ffn">SwiGLU 的宽度从哪来</a><a href="#residual">块、残差与堆叠</a><a href="#init">初始化与那些容易忽略的默认值</a><a href="#checks">怎么验：先对坐标，再对整块</a><a href="#summary">本篇要点</a></nav>
+
 <section class="document-section note-panel" aria-labelledby="relative">
-<h2 id="relative" tabindex="-1">位置差怎样进入注意力分数 <a class="header-anchor" href="#relative" aria-label="章节链接">&#8203;</a></h2>
-<p>分词器给词元分配编号，同一个词元出现在句子的第 2 位和第 8 位时编号相同。因果掩码能挡住未来位置，但对于已经可见的两个键，单靠查询与键的内容点积，没有一项直接表示“离我几步”。旋转位置编码（RoPE）给 Q 和 K 加上与位置有关的旋转，再用旋转后的向量算点积。</p>
-<p>先用二维向量看原因。令 R(α) 表示逆时针旋转 α 弧度的矩阵，ω 是这一对坐标的频率。位置 m 的查询转 mω，位置 n 的键转 nω。把旋转移到点积的一侧时，转置相当于反向旋转，两个角度就相减了：</p>
+<h2 id="relative" tabindex="-1">位置不是词元编号 <a class="header-anchor" href="#relative" aria-label="章节链接">&#8203;</a></h2>
+<p>词表 ID 决定查哪行嵌入，位置决定旋转角度。ID=[42,7,42] 的位置为 [0,1,2]，同一 ID 可有不同位置。<code>RoPE.py · forward</code> 的 docstring 特意说，<code>token_positions</code> 与 token-word 映射没有必然联系。</p>
+<p>因果掩码（causal mask）只挡未来，不直接给出“隔几步”；网络仍可能从可见范围获得顺序线索。</p>
+<p>绝对正弦位置编码（sinusoidal positional encoding）先把位置向量加到嵌入上，再投影 Q、K。正弦支持位移关系，但点积里的内容与位置交叉项并不只依赖位置差。旋转位置编码（Rotary Position Embedding，RoPE）则直接旋转 Q、K；固定它们的内容后，点积中的位置因素严格只依赖 n−m。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="derive">
+<h2 id="derive" tabindex="-1">RoPE 为什么只跟位置差有关 <a class="header-anchor" href="#derive" aria-label="章节链接">&#8203;</a></h2>
+<p>用二维旋转看两个位置怎样在点积里相减。</p>
+<div class="math-block" data-tex="R(\alpha)=\begin{pmatrix}\cos\alpha&amp;-\sin\alpha\\\sin\alpha&amp;\cos\alpha\end{pmatrix},\qquad R(\alpha)^\top=\begin{pmatrix}\cos\alpha&amp;\sin\alpha\\-\sin\alpha&amp;\cos\alpha\end{pmatrix}=R(-\alpha)"></div>
+<p>转置交换两个非对角元素；余弦是偶函数，cos(−α)=cos α，正弦是奇函数，sin(−α)=−sin α，所以新矩阵恰好反向旋转。由角度加法公式，R(a)R(b)=R(a+b)，故 R(α)ᵀR(α)=I，旋转保长度。</p>
 <div class="math-block" data-tex="(R(m\omega)q)^\top R(n\omega)k=q^\top R(-m\omega)R(n\omega)k=q^\top R((n-m)\omega)k"></div>
-<p>例如取 q = k = (1, 0)，ω = 1。查询在位置 3、键在位置 2 时，点积是 cos(2−3)。同时把它们移到位置 8 和 7，点积仍是 cos(−1)。固定内容时才有这种平移性质；换一对查询和键，分数还会随内容改变。</p>
-<p>一个头有多对坐标，每对采用不同频率。距离增加一步，高频分量转过较大的角度，低频分量转过较小的角度。注意力分数把各对坐标的点积相加，所以同一距离会在多个角度尺度上体现。A1 的实现要求头维度为偶数，正是因为旋转需要将坐标两两配对。</p>
+<p>手算 q=k=(1,0)、ω=1。位置 3 与 2 的点积为 cos 3 cos 2+sin 3 sin 2=cos(−1)≈0.540302；整体移到 8 与 7，仍是 cos(−1)。这里必须是<strong>同一对 q、k 内容不变</strong>。上游表示改变时不保证成立；多维情形累加各对贡献。</p>
 </section>
+
 <section class="document-section note-panel" aria-labelledby="angles">
-<h2 id="angles" tabindex="-1">按位置生成旋转角度 <a class="header-anchor" href="#angles" aria-label="章节链接">&#8203;</a></h2>
-<p>将上面的二维旋转推广到一个完整的头。若头维度为 D，第 j 对坐标的频率是 θ 的 −2j/D 次幂，其中 j 从 0 数起。位置索引乘以频率，就得到这一对坐标的旋转角。设头维度为 4，查询或键的四个分量按相邻维度分成两对，每对使用一个角度。作业的 <code>cs336_basics/cha3/RoPE.py</code> 里有一条注释：“每一行是对应token嵌入的d_k/2对二维分量的旋转角度”。这里的行号代表序列位置。同一个词在句子里出现两次，位置不同，查的也是不同的行。</p><figure class="note-diagram"><div class="note-flow"><div class="note-flow-step"><NoteFlowIcon kind="tokens" /><strong>序列位置 m</strong><span>用整数行号查表</span></div>
-<div class="note-flow-step"><NoteFlowIcon kind="table" /><strong>查到两个角度</strong><span>头维度为 4，每两维一组</span></div>
-<div class="note-flow-step"><NoteFlowIcon kind="pair" /><strong>旋转并拼回</strong><span>输出仍有 4 个分量</span></div></div><figcaption>沿一个注意力头读 RoPE。不同头共享位置，输入的 Q、K 取值各不相同。</figcaption></figure><p>沿用四维的例子，取底数 10000。两个频率是 1 和 0.01；在位置 3，对应角度就是 3 和 0.03 弧度。在位置 0，两角都为零，旋转应原样返回。这个边界例子也能帮助检查正余弦或配对次序有没有写反。</p><details class="note-details"><summary>展开原实现中的角度计算</summary><pre v-pre><code>k=torch.arange(0,d_k/2,1)
+<h2 id="angles" tabindex="-1">按位置生成角度表 <a class="header-anchor" href="#angles" aria-label="章节链接">&#8203;</a></h2>
+<p>角度表预算位置×频率，前向按位置取行。摘自 <code>RoPE.py · RotaryPositionalEmbedding.__init__</code>：</p>
+<pre v-pre><code>assert d_k%2==0
+k=torch.arange(0,d_k/2,1)
 freq=theta**(-2*k/d_k)
-#位置为m的token的嵌入每次旋转m*freq
 i=torch.arange(0,max_seq_len,1)
-</code></pre><p>随后以 <code>i.unsqueeze(1)*freq.unsqueeze(0)</code> 广播出位置 × 频率的二维表。代码将正弦、余弦注册为 buffer，随模块保存。</p></details>
+angles=i.unsqueeze(1)*freq.unsqueeze(0)</code></pre>
+<p>令 L=max_seq_len。k 和 freq 都是 [d_k/2]，i 是 [L]；两个 unsqueeze 分别得到 [L,1]、[1,d_k/2]，广播相乘得到 [L,d_k/2]。偶数断言保证每个坐标都有配对伙伴。d_k=4、θ=10000 时，k=[0,1]，freq=[1,0.01]，第 3 行角度为 [3,0.03] 弧度。</p>
+<p>相邻频率之比恒为 θ^(−2/d_k)，所以是几何级数。波长 λ_k=2π/freq_k，范围从 2π 到 2π·θ^((d_k−2)/d_k)，有限维度的末项并未达到 2πθ。10000 是沿用<a href="https://arxiv.org/abs/1706.03762">原 Transformer 正弦编码</a>的尺度选择，不是推导强制的常数，也不是上下文长度上限。</p>
+<p>源码用 <code>register_buffer("sin",sinTensor,persistent=True)</code>，余弦同样注册。它们进入 state_dict，跟随 <code>.to(device)</code>；这里常量不求梯度，也不进优化器的 parameters()。buffer 本身并不强制禁止梯度。</p>
+<p>L 是查表硬上限：合法位置为 0…L−1，索引 L 就越界，表不会自动扩展；负索引会从末尾取行，也应拒绝。</p>
+<figure class="note-diagram"><div class="note-flow"><div class="note-flow-step"><NoteFlowIcon kind="tokens" /><strong>位置 [B,1,T]</strong><span>整数索引，与词表 ID 分开</span></div><div class="note-flow-step"><NoteFlowIcon kind="table" /><strong>查正弦与余弦</strong><span>[B,1,T,d_k/2]，广播到各头</span></div><div class="note-flow-step"><NoteFlowIcon kind="pair" /><strong>逐对旋转 Q、K</strong><span>仍为 [B,H,T,d_k]，V 不旋转</span></div></div><figcaption>据 RoPE.py 与注意力 forward 绘制；省略投影，展示位置的跨头广播。</figcaption></figure>
 </section>
+
 <section class="document-section note-panel" aria-labelledby="rotation">
-<h2 id="rotation" tabindex="-1">把角度用于向量 <a class="header-anchor" href="#rotation" aria-label="章节链接">&#8203;</a></h2>
-<p>角度表只回答“转多少”。要把位置编进查询向量，还要把每对坐标绕原点转过这个角度。设一对坐标为 (u, v)，旋转角度为 α，则新坐标为</p>
-<div class="math-block" data-tex="(u',v')=(u\cos\alpha-v\sin\alpha,\;u\sin\alpha+v\cos\alpha)"></div>
-<p>用刚才的位置 3 做一次前向计算。若查询是 (1, 0, 1, 0)，前两个分量转 3 弧度，得到 (cos 3, sin 3)；后两个转 0.03 弧度，得到 (cos 0.03, sin 0.03)。两对向量各自仍是单位长度。把位置改成 0，结果应当与输入逐项相同。</p>
-<p>A1 用同一组张量操作完成所有位置的旋转。下面摘出计算两对坐标的几行：</p>
-<pre v-pre><code>x_reshaped=x.contiguous().view(*x.shape[:-1],-1,2)
+<h2 id="rotation" tabindex="-1">把一对坐标转过去 <a class="header-anchor" href="#rotation" aria-label="章节链接">&#8203;</a></h2>
+<p>把旋转翻译成张量操作时，先核对坐标怎样配对。</p>
+<div class="math-block" data-tex="(u',v')=(u\cos\alpha-v\sin\alpha,\ u\sin\alpha+v\cos\alpha)"></div>
+<details class="note-details"><summary>RoPE.py · forward：拆对、乘加、拼回的原实现</summary><pre v-pre><code>sin_tensor=self.sin[token_positions]
+cos_tensor=self.cos[token_positions]
+x_reshaped=x.contiguous().view(*x.shape[:-1],-1,2)
 x1=x_reshaped[...,0]
 x2=x_reshaped[...,1]
-
 rotated_x1 = x1 *  cos_tensor- x2 * sin_tensor
-rotated_x2 = x2 *  cos_tensor+ x1 * sin_tensor</code></pre>
-<p>这里的 <code>x1</code> 同时取出了各对的第一个坐标，<code>x2</code> 取出了第二个。因此四维例子中，<code>x1</code> 是 (1, 1)，<code>x2</code> 是 (0, 0)。两行乘加正好是上面的旋转公式。最后沿末维把两组结果交错拼回去，就恢复了原来的头维度。</p>
+rotated_x2 = x2 *  cos_tensor+ x1 * sin_tensor
+return torch.stack([rotated_x1,rotated_x2],-1).view_as(x)</code></pre></details>
+<p>末维拆成 [d_k/2,2]，x1、x2 分别取各对第一、第二分量。例如 (1,0,1,0) 拆成 (1,1) 与 (0,0)。两行乘加就是旋转；stack 交错拼回，view_as 恢复形状。前面可能刚做 transpose；contiguous 保证 view 可用，准确说 view 拒绝的是不兼容的步幅，并非所有非连续张量。</p>
+<p>在位置 3，手算结果是 (cos 3,sin 3,cos 0.03,sin 0.03)≈<strong>(−0.989992,0.141120,0.999550,0.029996)</strong>。位置 0 的 sin 为 0、cos 为 1，应该逐项原样返回，这是最省事的自检。</p>
+<p>还有前后半拆分的 GPT-NeoX 风格：四维时配 (x₀,x₂)、(x₁,x₃)，本实现则配 (x₀,x₁)、(x₂,x₃)。同一输入会给出不同结果。两者都保长度，但权重布局必须匹配；<code>test_rope</code> 的固定快照只接受其对应约定，不能“看起来在转”就算对。</p>
 </section>
+
+<section class="document-section note-panel" aria-labelledby="scores">
+<h2 id="scores" tabindex="-1">缩放点积注意力 <a class="header-anchor" href="#scores" aria-label="章节链接">&#8203;</a></h2>
+<p>旋转后的 Q、K 打分，经 softmax 变成权重，再加权 V。Q、K 为 […,T_q,d_k]、[…,T_k,d_k]，分数为 […,T_q,T_k]；乘 […,T_k,d_v] 的 V 得 […,T_q,d_v]。</p>
+<div class="math-block" data-tex="\operatorname{Attention}(Q,K,V)=\operatorname{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}+M\right)V"></div>
+<p>假设 q_i、k_i 独立、零均值、单位方差，各维乘积不相关，则每项量级约 1，Var(q_i k_i)=1，Var(Σq_i k_i)=d_k。d_k=64 时，点积标准差约 8，缩放后约 1。训练后的表示未必严格满足这些假设。过大的分数差会让 softmax 接近单点选择，导数 p_i(δ_ij−p_j) 接近 0。</p>
+<pre v-pre><code>score=torch.matmul(Q,K.transpose(-2,-1))
+score=score/torch.sqrt(torch.tensor(d_k,dtype=Q.dtype,device=Q.device))
+if mask is not None:
+    score=score.masked_fill_(~mask,float('-inf'))
+attn_weights=softmax(score,dim=-1)
+return attn_weights@V</code></pre>
+<p><code>Scaled_Dot_Product_Attention.py · scaled_dot_product_attention</code> 约定 True=允许，因此对 ~mask 填 −∞。有合法键时 exp(−∞)=0；有限负数只是近似，依赖精度与分数尺度。<code>masked_fill_</code> 是原地写：本路径未复用旧 score；新增分支时须确认 autograd 不需要其旧值，否则可能触发版本检查。</p>
+<p><code>softmax.py · softmax</code> 用 <code>x.max(dim=dim,keepdim=True).values</code> 取每行最大值，再算 exp(x−max)/sum(exp(x−max))。减同一有限数保持比例、避免上溢：[1000,1001] 化为 [−1,0]，概率约 [0.268941,0.731059]。带 dim 的 max 返回 values 与 indices，keepdim 保留广播轴。</p>
+<p><strong>整行全屏蔽会产生 NaN：</strong>最大值也是 −∞，相减出现 −∞−(−∞)。因果掩码保留对角线，不会触发；padding 掩码可能造成全屏蔽行，须另定义输出策略。</p>
+</section>
+
 <section class="document-section note-panel" aria-labelledby="heads">
-<h2 id="heads" tabindex="-1">多头注意力的输入与输出 <a class="header-anchor" href="#heads" aria-label="章节链接">&#8203;</a></h2>
-<p>在 <code>Causal_Multi_Head_Self_Attention.py</code> 中，Q、K、V 分别从输入投影出来。令 B 为批量、T 为序列长度、H 为头数，单头宽度 D 等于模型宽度除以 H。上一节的旋转用在 Q 和 K 上。为了让同一套代码处理整批序列，先把模型宽度拆成 H 个头，再沿每个头的最后一维成对旋转。</p><div class="note-table" role="region" aria-label="步骤、形状、代码为何这样安排" tabindex="0"><table>
-<thead><tr><th scope="col">步骤</th><th scope="col">形状</th><th scope="col">代码为何这样安排</th></tr></thead>
-<tbody>
-<tr><td>投影、拆头</td><td>[B,T,H,D] → [B,H,T,D]</td><td>把 T 放到倒数第二维，方便逐头计算注意力。</td></tr>
-<tr><td>位置索引</td><td>[B,T] → [B,1,T]</td><td>增加的轴让角度表在 H 个头上广播。</td></tr>
-<tr><td>旋转 Q 与 K</td><td>[B,H,T,D] → 同形</td><td>末维拆成 D/2 对，逐对旋转。V 继续携带要加权汇总的内容。</td></tr>
-<tr><td>遮挡未来位置</td><td>[T,T]</td><td>上三角屏蔽未来 token，保留对角线和过去。</td></tr>
-<tr><td>拼合各头</td><td>[B,H,T,D] → [B,T,H·D]</td><td>先转置，再用 contiguous 整理内存，最后作输出投影。</td></tr>
-</tbody></table></div><p>源码中的 <code>unsqueeze_</code> 会就地改变传入位置张量的形状。核对注意力输出时也要留意调用者：如果它还要用这份位置索引，拿到的已经是改变形状后的张量。</p>
+<h2 id="heads" tabindex="-1">多头：拆、转、合 <a class="header-anchor" href="#heads" aria-label="章节链接">&#8203;</a></h2>
+<p>沿 <code>Causal_Multi_Head_Self_Attention.py · forward</code> 接起注意力路径；d=8、H=2 时，每头 d_k=4。</p>
+<div class="note-table" role="region" aria-label="多头注意力形状表" tabindex="0"><table><thead><tr><th>步骤</th><th>输入 → 输出</th><th>操作与约束</th></tr></thead><tbody>
+<tr><td>Q、K、V 投影</td><td>[B,T,d] → 各 [B,T,d]</td><td>三个独立的 d×d 矩阵，无偏置</td></tr>
+<tr><td>拆头</td><td>[B,T,d] → [B,T,H,d_k] → [B,H,T,d_k]</td><td>view 拆末轴，transpose 交换 T、H</td></tr>
+<tr><td>位置广播、旋转</td><td>[B,T] → [B,1,T] → 查表 [B,1,T,d_k/2]</td><td>在 H 轴广播；Q、K 形状不变，V 原样保留</td></tr>
+<tr><td>分数与掩码</td><td>QKᵀ → [B,H,T,T]；mask 为 [T,T]</td><td>掩码广播到批次与头；softmax 后乘 V</td></tr>
+<tr><td>合头</td><td>[B,H,T,d_k] → [B,T,H,d_k] → [B,T,d]</td><td>transpose → contiguous → view</td></tr>
+<tr><td>输出投影</td><td>[B,T,d] → [B,T,d]</td><td>d×d 矩阵混合各头输出</td></tr>
+</tbody></table></div>
+<p>拆头调用 <code>view(*Q.shape[:-1],H,d_k).transpose(-2,-3)</code>；合头是 <code>transpose(-3,-2).contiguous().view(...)</code>。</p>
+<p>transpose(−2,−3) 把 T 和 H 对调。<code>token_positions.unsqueeze_(-2)</code> 却还会修改调用方传入的张量：[B,T] 变成 [B,1,T]，重复传递可能继续增轴。可改用非原地 unsqueeze。位置 [1,T] 也能跨批次广播。</p>
+<p>源码用 <code>triu(...,diagonal=1)</code> 标出严格上三角，再取反，得到包含对角线的下三角允许矩阵。</p>
+<p>合头先换回 T、H，contiguous 整理内存，view 合并 H 与 d_k，拼起同一位置的各头。省掉 contiguous，view 通常会报错；改用 reshape 则可能隐式拷贝。四个投影共 4d² 个参数，与头数无关。</p>
 </section>
+
+<section class="document-section note-panel" aria-labelledby="norm">
+<h2 id="norm" tabindex="-1">RMSNorm：平方之前先升精度 <a class="header-anchor" href="#norm" aria-label="章节链接">&#8203;</a></h2>
+<p>注意力入口的均方根归一化（Root Mean Square Normalization，RMSNorm）沿末维调尺度，保持 [B,T,d]。</p>
+<div class="math-block" data-tex="y_i=g_i\frac{x_i}{\sqrt{\frac1d\sum_{j=1}^{d}x_j^2+\epsilon}}"></div>
+<p>层归一化（LayerNorm）减均值、用中心化方差；RMSNorm 不减均值，少一次归约（reduce）。ε=1e−5 加在平方均值之后、平方根里面，不是 √mean(x²)+ε。</p>
+<pre v-pre><code>in_dtype = x.dtype
+x_f32 = x.to(torch.float32)
+x_square=x_f32**2
+x_mean=x_square.mean(dim=-1,keepdim=True)
+rms=torch.sqrt(x_mean+self.eps)
+x_normed=x_f32/rms
+return x_normed.to(in_dtype)*self.weight</code></pre>
+<p><code>RMSnorm.py · forward</code> 在平方前转 fp32，因为 fp16 最大有限数是 65504，而 256²=65536，单个分量到 256 附近就可能溢出。增益 weight 为 [d]，全 1 初始化不额外缩放坐标。</p>
+<p>这里<strong>先降精度再乘增益</strong>，参考实现先乘再降，fp16 舍入不同；weight 为 fp32 时还会提升精度。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="ffn">
+<h2 id="ffn" tabindex="-1">SwiGLU 的宽度从哪来 <a class="header-anchor" href="#ffn" aria-label="章节链接">&#8203;</a></h2>
+<p>门控多出一块矩阵，前馈隐藏宽度必须按参数预算来算。SwiGLU 是使用 SiLU 的门控线性单元（Swish Gated Linear Unit）；SiLU 是 Sigmoid Linear Unit，SiLU(t)=t·sigmoid(t)。</p>
+<pre v-pre><code>x_w1=self.w1.forward(x)
+x_w3=self.w3.forward(x)
+return self.w2.forward(F.silu(x_w1)*x_w3)</code></pre>
+<p><code>SwiGLU.py · forward</code> 的 w1、w3 都把 [B,T,d] 变成 [B,T,h]；SiLU 保持形状，再与另一支逐元素相乘，w2 映回 [B,T,d]。SiLU 正大值近似线性，负大值趋零但可为负；门不只是 0/1 开关。</p>
+<p>docstring 的参数账是：普通宽度 4d 的两层前馈有 d·4d+4d·d=8d²；本实现三块无偏置矩阵分别为 [d,h]、[h,d]、[d,h]，共 3dh。令 3dh=8d²，得 h=8d/3。d=768、h=2048 时参数为 4,718,592；h=3072 则有 7,077,888，多 50%，同时改变了门控与参数量。</p>
+<p>d_ff 由调用者给定，代码不会按 8d/3 自动反算。这一点在 A2 的模型表里能看得很清楚：small 仍然写 d_ff=3072，正好是 4d，把它直接当作三块矩阵的隐藏宽度，于是 SwiGLU 落成 3·4d²=12d²，比参数对齐的 8d² 多出 50%。按这个约定重算参数量，small 得 7,680,000（嵌入）+12×9,438,720（每块含 4d² 注意力、3d·d_ff 前馈与两个 RMSNorm）+7,680,000（输出投影）+768（末层归一化）=128,625,408，与 `benchmark.py` 打印的 128,625,408 逐位相同；换成 h=2048 就只有 100,313,856。所以读到论文里的 h=8d/3 时，先确认那个实现对 d_ff 的定义，别把两种约定下的 d_ff 直接对比。</p>
+</section>
+
 <section class="document-section note-panel" aria-labelledby="residual">
-<h2 id="residual" tabindex="-1">两次残差相加 <a class="header-anchor" href="#residual" aria-label="章节链接">&#8203;</a></h2>
-<p><code>transformer_block.py</code> 里的两次残差相加只占两行。第一行把注意力分支的输出加回 x，第二行把前馈分支的输出加回 z。两次 RMSNorm 都作用于分支输入，位置与课程图里右侧的结构一致。</p><pre v-pre><code>z=x+self.MHA(self.RMSNorm1(x), token_positions)
-output=z+self.SwiGLU(self.RMSNorm2(z))</code></pre><p>两个子层都必须返回与输入相同的形状，否则无法逐元素相加。SwiGLU 内部可以改变隐藏宽度，最后一层投影负责回到模型宽度。<a href="/cs336/lecture-03#width">第 3 讲 · 前馈宽度的参数预算</a></p>
+<h2 id="residual" tabindex="-1">块、残差与堆叠 <a class="header-anchor" href="#residual" aria-label="章节链接">&#8203;</a></h2>
+<p>两个分支必须返回 [B,T,d] 才能接回残差。<code>transformer_block.py · forward</code>：</p>
+<pre v-pre><code>z=x+self.MHA(self.RMSNorm1(x), token_positions)
+output=z+self.SwiGLU(self.RMSNorm2(z))</code></pre>
+<p>这是前置归一化（Pre-Norm）。y=x+F(Norm(x)) 的雅可比为 I+J_F·J_Norm；深层反传连乘时有恒等路径，梯度可绕过分支的归一化与非线性。这不保证梯度永不消失或爆炸。后置归一化（Post-Norm）为 Norm(x+F(x))，雅可比是 J_Norm·(I+J_F)，主路径也经过归一化。</p>
+<p><code>run_transformer_lm.py · TransformerLM.forward</code> 先把整数 [B,T] 查成 [B,T,d]；ModuleList 注册各层，<code>for layer in self.layers: x = layer(x)</code> 才实际逐层执行。再经 Final_RMS、lm_head 得 [B,T,V] 的 logits（未归一化分数）。</p>
+<p>B=4、T=512、V=10000、fp32 时，仅 logits 就占 4×512×10000×4=<strong>81,920,000 字节</strong>，即 81.92 MB 或 78.125 MiB，不含梯度与其他状态。源码注释说 lm_head 常与 embedding 共用参数，但此处独立创建两个 Parameter，没有权重绑定；嵌入为 [V,d]、本 Linear 为 [d,V]，真要共享还须处理转置关系。</p>
 </section>
+
+<section class="document-section note-panel" aria-labelledby="init">
+<h2 id="init" tabindex="-1">初始化与那些容易忽略的默认值 <a class="header-anchor" href="#init" aria-label="章节链接">&#8203;</a></h2>
+<p>初始化的设置要同时看三件事：权重的尺度、存储方向，以及参数有没有被注册进模块。</p>
+<p><code>linear_and_embedding_module.py · Linear.__init__</code> 使用 [in,out] 权重，前向为 x@weight；注意它不是常见的 [out,in]。σ=√(2/(in+out))，截断范围 ±3σ。σ 是截断前标准差，截断后方差略小。embedding 则按 N(0,1) 截断到 [−3,3]。</p>
+<p>注释摘录了 <code>mean is more than 2 std from [a, b]</code> 警告，但<strong>mean=0、std=1、a=−3、b=3 不会触发它</strong>。<a href="https://github.com/pytorch/pytorch/blob/main/torch/nn/init.py">PyTorch 初始化源码</a>判断的是 mean&lt;a−2std 或 mean&gt;b+2std，而非“截断边界离均值超过 2σ”。代入得 0&lt;−5 或 0&gt;5，均为假；无需改成 ±2。真有警告须查实际传参。</p>
+<p>nn.Parameter 赋给模块属性后默认 requires_grad=True，注册到 parameters() 和 state_dict；普通 Tensor 不自动注册。<code>embedding.forward</code> 的 <code>self.weight[token_ids]</code> 是花式索引；反向按行 scatter-add（散射累加）。例如 ID=[2,2]，两处上游梯度分别为 a、b，weight 第 2 行就收到 a+b，整数 ID 本身没有梯度。</p>
+</section>
+
 <section class="document-section note-panel" aria-labelledby="checks">
-<h2 id="checks" tabindex="-1">验证旋转和注意力输出 <a class="header-anchor" href="#checks" aria-label="章节链接">&#8203;</a></h2>
-<p>原作业的 <code>tests/test_model.py</code> 将这两个层次分开验证。<code>test_rope</code> 将指定位置的旋转结果与快照比较，绝对容差为 1e-5。<code>test_multihead_self_attention_with_rope</code> 再检查完整注意力输出。若前者正确而后者出错，优先沿拆头、位置广播、因果遮罩和合头顺序排查。</p><p>可以先用位置 0 检查恒等变换。再把 (1,0,1,0) 放在位置 3，逐项核对两对坐标的角度。如果只检查长度是否保持不变，把两对坐标的频率写反也可能过关。最后固定 Q 和 K，把两个位置同时加 5，再比较旋转前后两组位置对应的点积。这一步专门检验相对位移。<a href="/cs336/lecture-03#positions">回看讲义中相对位置的推导</a></p>
+<h2 id="checks" tabindex="-1">怎么验：先对坐标，再对整块 <a class="header-anchor" href="#checks" aria-label="章节链接">&#8203;</a></h2>
+<p>从局部查到组合，才能定位错误。以下为验证方法，本次未运行作业测试。</p>
+<ol><li>位置 0 恒等：检查旋转结果逐项等于输入，</li><li>固定同一对 q、k，把 m、n 同时加 5，检查点积不变；位置须在表内。</li><li>取 d_k=4、θ=10000、位置 3、x=(1,0,1,0)，逐项对照 (−0.989992,0.141120,0.999550,0.029996)，锁定频率、配对和符号。</li></ol>
+<p>前两项还不够：错误配对也能保平移点积。“长度不变”更弱，频率分错坐标仍能通过。<code>tests/test_model.py · test_rope</code> 使用 <code>numpy_snapshot.assert_match(output, atol=1e-5)</code>，约束具体坐标约定。</p>
+<p><code>test_multihead_self_attention_with_rope</code> 若失败，沿“拆头 → 位置广播 → 掩码 → 合头”排查：T/H 是否换对，位置是否重复 unsqueeze，对角线是否保留，合并的是不是同一位置的所有头。容差为 1e−5。</p>
+<p><code>test_scaled_dot_product_attention</code> 检查基础 Q/K/V/mask 输出；专门将张量改为<strong>四个轴、2 个头</strong>的是 <code>test_4d_scaled_dot_product_attention</code>，它拆出 head=2，Q/K/V 与掩码均为四维，容差 1e−5。“四维”不是 d_k=4；共享 [T,T] 掩码的广播还须另验。</p>
+<p>随后验证 RMSNorm、SwiGLU、块和整模型。快照加载给定权重，不覆盖初始化、低精度溢出和全屏蔽行。</p>
 </section>
-<details class="note-details"><summary>本篇原始文件（下载）</summary>
-<ul>
-<li><a download :href="withBase('/cs336/sources/assignment1/cs336_assignment1_basics.pdf')">cs336_assignment1_basics.pdf</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/Causal_Multi_Head_Self_Attention.py')">cs336_basics/cha3/Causal_Multi_Head_Self_Attention.py</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/linear_and_embedding_module.py')">cs336_basics/cha3/linear_and_embedding_module.py</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/RMSnorm.py')">cs336_basics/cha3/RMSnorm.py</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/RoPE.py')">cs336_basics/cha3/RoPE.py</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/run_transformer_lm.py')">cs336_basics/cha3/run_transformer_lm.py</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/Scaled_Dot_Product_Attention.py')">cs336_basics/cha3/Scaled_Dot_Product_Attention.py</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/softmax.py')">cs336_basics/cha3/softmax.py</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/SwiGLU.py')">cs336_basics/cha3/SwiGLU.py</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/transformer_block.py')">cs336_basics/cha3/transformer_block.py</a></li>
+
+<section class="document-section note-panel" aria-labelledby="summary">
+<h2 id="summary" tabindex="-1">本篇要点 <a class="header-anchor" href="#summary" aria-label="章节链接">&#8203;</a></h2>
+<p>位置生成角度，旋转把位置差引入 Q/K 打分；缩放、掩码与 softmax 得到加权 V 的系数，合头投影后接回残差。RMSNorm 控制尺度，SwiGLU 扩宽并门控，堆叠后输出 logits。每步都要对上坐标、形状和数值。</p>
+<div class="note-table" role="region" aria-label="原注释与系统化解释" tabindex="0"><table><thead><tr><th>原注释</th><th>系统化了什么</th></tr></thead><tbody>
+<tr><td>RoPE.py：位置“和token-word映射表没有必然联系”</td><td>区分词表 ID 与位置；固定内容才可讨论平移不变。</td></tr>
+<tr><td>RoPE.py：“注册到buffer中，且存在state_dict中”</td><td>分开保存、设备迁移、梯度与优化器参数注册。</td></tr>
+<tr><td>Causal_Multi_Head_Self_Attention.py：“torch.triu, when diagonal=1”</td><td>严格上三角取反，True=允许；对角线避免因果行全屏蔽。</td></tr>
+<tr><td>linear_and_embedding_module.py：“nn.Parameter与普通tensor的区别”及 init 警告</td><td>注册与默认梯度是两回事；按真实触发条件排除 ±3σ 的误解。</td></tr>
+<tr><td>softmax.py：“tensor.max()返回values and indices”</td><td>限定带 dim 的调用，解释 values、keepdim 及全 −∞ 行。</td></tr>
+</tbody></table></div>
+</section>
+<details class="note-details"><summary>本篇原始文件（下载）</summary><ul>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/RoPE.py')">RoPE.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/Scaled_Dot_Product_Attention.py')">Scaled_Dot_Product_Attention.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/Causal_Multi_Head_Self_Attention.py')">Causal_Multi_Head_Self_Attention.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/RMSnorm.py')">RMSnorm.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/SwiGLU.py')">SwiGLU.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/linear_and_embedding_module.py')">linear_and_embedding_module.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/softmax.py')">softmax.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/transformer_block.py')">transformer_block.py</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment1/cs336_basics/cha3/run_transformer_lm.py')">run_transformer_lm.py</a></li>
 <li><a download :href="withBase('/cs336/sources/assignment1/tests/test_model.py')">tests/test_model.py</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment1/LICENSE')">LICENSE</a></li>
-</ul>
-</details>
+</ul></details>
 </article>

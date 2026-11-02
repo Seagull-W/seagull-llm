@@ -6,56 +6,164 @@ import { withBase } from 'vitepress'
 <header class="document-intro note-hero">
 <p class="note-kicker">CS336学习笔记 <span>作业与实现</span></p>
 <h1 id="a2-benchmark" tabindex="-1">A2 · GPU 计时与预热实验 <a class="header-anchor" href="#a2-benchmark" aria-label="章节链接">&#8203;</a></h1>
-<p class="note-deck">先写一个计时循环，再用同一个模型练习预热、重复测量，以及前向、反向和完整训练步的计时。</p>
+<p class="note-deck">从同步、预热和测量边界建立可信协议，用本地数字设计下一次实验，再推混合精度、显存与分布式训练的账。</p>
+<p>实测值仅取自 <code>write_up.md</code>；公式代入均为手算，不是新增实验。记录覆盖作业 §2 的部分内容，剖析、显存与后续实现的缺口会连同验证办法一起交代。</p>
 </header>
-<nav class="note-jump" aria-label="本篇导读"><a href="#protocol">给一个训练步计时</a><a href="#warmup">固定前向计算，改变预热次数</a><a href="#modes">固定预热次数，加入反向传播</a><a href="#open">进程启动与预热</a></nav>
+<nav class="note-jump" aria-label="本篇导读"><a href="#protocol">计时协议</a><a href="#warmup">预热机制</a><a href="#numbers">读数字</a><a href="#anomaly">异常诊断</a><a href="#mixed">浮点累加</a><a href="#autocast">autocast</a><a href="#norm">归一化</a><a href="#memory">显存账</a><a href="#profile">剖析</a><a href="#map">理论账</a><a href="#summary">要点</a></nav>
 <section class="document-section note-panel" aria-labelledby="protocol">
-<h2 id="protocol" tabindex="-1">给一个训练步计时 <a class="header-anchor" href="#protocol" aria-label="章节链接">&#8203;</a></h2>
-<p>测一次训练步的墙钟时间，起点是主机准备提交这一步，终点是这一步的 GPU 工作全部完成。假设主机提交任务后就读时钟，而 GPU 仍在执行，那么这段时间只能告诉我们提交有多快。要测整步耗时，需要在两次读时钟之间等待设备完成。</p>
-<p>先确定一步里包含哪些运算。同一个模型可以按三种模式运行。<code>forward</code> 在无梯度模式下只做前向；<code>for_bac</code> 再计算损失和反向传播；<code>full</code> 还执行 AdamW 更新。计时输入是预先在设备上生成的随机 token，模型构建和数据读取都在计时区间外。</p><p>在 <code>benchmark.py</code> 里，预热结束时先同步。进入正式测量后，每步都等 GPU 完成再记录主机耗时，单位为秒。脚本默认 batch 为 4、上下文为 512、测量 10 步，small 配置有 128,625,408 个参数。报告记录的是本地单卡结果。</p><pre v-pre><code>t0 = timeit.default_timer()
-step()
-torch.cuda.synchronize()
-times.append(timeit.default_timer() - t0)</code></pre><p>时钟在调用前启动，等同步返回才停止，所以 Python 调度、GPU 执行和主机等待都算在这一步里。第 6 讲用 CUDA 事件读的是设备流里两个事件的间隔。<a href="/cs336/lecture-06#timing">第 6 讲 · CUDA 事件计时</a></p>
+<h2 id="protocol" tabindex="-1">一次训练步到底怎么计时 <a class="header-anchor" href="#protocol" aria-label="章节链接">&#8203;</a></h2>
+<p>你量的是提交任务，还是 GPU 做完一整步？CUDA 异步执行，<code>step()</code> 返回时 GPU 可能才开始。主机时钟读时间，<code>torch.cuda.synchronize()</code> 等当前设备先前提交的工作完成。</p>
+<p><code>benchmark.py</code> 先建模型、AdamW 和设备上的随机输入，再预热、计时。默认 B=4、T=512、V=10000；[B,T] 输入变成 [B,T,V] logits，展平为 [BT,V] 求标量 loss。创建与数据准备不计时。</p>
+<div class="note-table" tabindex="0"><table><thead><tr><th>模式</th><th>一步的边界</th><th>容易漏看的差异</th></tr></thead><tbody>
+<tr><td>forward</td><td>torch.no_grad 下 model(x)</td><td>不建自动求导图，不等于训练前向</td></tr>
+<tr><td>for_bac</td><td>前向 + loss + backward()</td><td>源码不清梯度，预热和测量持续累加 .grad</td></tr>
+<tr><td>full</td><td>再加 optimizer.step() 与 zero_grad(set_to_none=True)</td><td>清梯度也计时，下一步重新产生梯度</td></tr>
+</tbody></table></div>
+<details class="note-details"><summary>benchmark.py · benchmark() 的实际计时与汇总</summary><pre v-pre><code>with nvtx.range('warmup'):
+    for _ in range(warmup):
+        step()
+    torch.cuda.synchronize()  # flush warmup work before the clock starts
 
-<details class="note-details"><summary>运行一次前向计时</summary><p>数据来源为 A2 的 <code>write_up.md</code>，计时逻辑位于同目录的 <code>benchmark.py</code>。在配置好作业 GPU 环境后，可分别调整下例中的预热次数。</p><pre v-pre><code>uv run python benchmark.py --model-size small --mode forward --context-length 512 --batch-size 4 --warmup 1 --num-steps 10</code></pre></details>
+times = []
+for _ in range(num_steps):
+    t0 = timeit.default_timer()
+    step()
+    torch.cuda.synchronize()
+    times.append(timeit.default_timer() - t0)
+
+# main() 中
+mean = statistics.fmean(times)
+std = statistics.stdev(times) if len(times) &gt; 1 else 0.0
+cv = (std / mean * 100.0) if mean &gt; 0 else 0.0
+print("RESULT_JSON\t" + json.dumps(result, allow_nan=False))</code></pre></details>
+<p><code>timeit.default_timer()</code> 使用高分辨率单调时钟；<code>time.time()</code> 是可能受校时影响的日历时间。墙钟包含 Python 调度、GPU 执行和同步等待；<a href="/cs336/lecture-06#timing">CUDA 事件</a>只读设备流内的间隔，但提交不及时造成的设备空闲也可能落在区间里。</p>
+<p><code>RESULT_JSON\t{...}</code> 含配置、统计量和逐步 <code>times</code>。<code>run_benchmarks.py</code> 每组启动新进程，却未把 times 导出 CSV，需另存 JSON。进程隔离分配器，不重置温度、频率和外部负载。</p>
+<div class="note-table" tabindex="0"><table><thead><tr><th>原注释 / docstring / 代码</th><th>系统化了什么</th></tr></thead><tbody>
+<tr><td>every step … synchronize()</td><td>每个样本以设备完成为终点；上一轮工作不跨入下一轮</td></tr>
+<tr><td>timeit.default_timer()</td><td>用适合量间隔的时钟，避免把日历时间当计时基准</td></tr>
+<tr><td>warmup … before measurement</td><td>把首次路径与稳态路径分开，不能把初始化摊成训练成本</td></tr>
+<tr><td>RESULT_JSON</td><td>配置与原始样本可追溯；汇总表不是完整证据</td></tr>
+<tr><td>forward-only: no autograd graph …</td><td>无图前向少了保存激活的工作，模式相减只是近似</td></tr>
+<tr><td>compute attention scores … / 三段 NVTX</td><td>把 QKᵀ、softmax、PV 分开定位，避免只看到一个 attention 名字</td></tr>
+<tr><td>VOCAB_SIZE / Table 1</td><td>固定 V=10000 与模型配置，才有可比的计算形状</td></tr>
+<tr><td>cross_entropy(logits.view(-1, VOCAB_SIZE), x.view(-1))</td><td>标签就是输入，未做下一 token 的错位；只检查形状与梯度路径</td></tr>
+</tbody></table></div>
+<p>标签值得停一下：语言建模通常用前 T−1 个位置预测后 T−1 个 token，这里预测自身。形状与梯度路径足以驱动计时，loss 却不能评价语言建模质量。</p>
 </section>
 <section class="document-section note-panel" aria-labelledby="warmup">
-<h2 id="warmup" tabindex="-1">固定前向计算，改变预热次数 <a class="header-anchor" href="#warmup" aria-label="章节链接">&#8203;</a></h2>
-<p>先只运行 small 模型的 forward，保持输入、模型和测量步数相同，只改变正式计时前预热几步。下表是这组实验留下的单卡记录。想看一步平均跑多久，读均值。想看十步之间差得多不多，读标准差。变异系数把标准差除以均值，方便比较不同配置下的相对波动。</p><div class="note-table" role="region" aria-label="预热步数、均值（秒）、标准差（秒）、变异系数" tabindex="0"><table>
-<thead><tr><th scope="col">预热步数</th><th scope="col">均值（秒）</th><th scope="col">标准差（秒）</th><th scope="col">变异系数</th></tr></thead>
-<tbody>
-<tr><td>0</td><td>0.145029</td><td>0.110388</td><td>76.1%</td></tr>
-<tr><td>1</td><td>0.110275</td><td>0.001186</td><td>1.1%</td></tr>
-<tr><td>2</td><td>0.110091</td><td>0.000548</td><td>0.5%</td></tr>
-<tr><td>5</td><td>0.109715</td><td>0.000242</td><td>0.2%</td></tr>
-</tbody></table></div><p>以第一行为例，0.110388 ÷ 0.145029 ≈ 0.761，所以变异系数为 76.1%。这个数描述十步耗时的相对波动。预热一步后，标准差降到 0.001186 秒，用同样的算法得到约 1.1%。</p><p>从 0 次到 1 次预热，均值下降约 35 毫秒；再增加一次，均值只变了约 0.18 毫秒。这个差别可能来自第一步的额外开销。原表只记录了汇总值，还分不清开销来自初始化、缓存，还是其他因素。</p>
+<h2 id="warmup" tabindex="-1">预热把哪些工作搬出了时钟 <a class="header-anchor" href="#warmup" aria-label="章节链接">&#8203;</a></h2>
+<p>预热要走正式测量的路径。docstring 的四类机制如下；本地没有逐项耗时，不能各填一个毫秒数。</p>
+<div class="note-table" tabindex="0"><table><thead><tr><th>机制</th><th>首次发生什么</th><th>为何后续较少发生 / 如何量时间</th></tr></thead><tbody>
+<tr><td>lazy init，惰性初始化</td><td>首次使用某条路径时加载模块、创建库句柄；CUDA 上下文也可能早在建输入时初始化</td><td>进程内复用；用新进程与预热后的 API 时间线比较，具体耗时本地未测</td></tr>
+<tr><td>cuDNN autotune，算法调优</td><td>启用相应调优且遇到适用算子时试多个算法</td><td>相同形状复用选择；换形状可能重来。本模型是否触发也未证实，须查 cuDNN 调用</td></tr>
+<tr><td>caching，缓存</td><td>冷缓存装入代码、数据或库内元数据</td><td>复用减少冷启动；硬件缓存会被逐出，不能保证永远热。比较首步与稳态缓存指标</td></tr>
+<tr><td>allocator growth，分配池增长</td><td>缓存分配器向驱动申请新显存块；full 还可能首次创建 AdamW 状态</td><td>稳定形状下复用已保留块；观察 cudaMalloc 次数和 reserved memory，耗时本地未测</td></tr>
+</tbody></table></div>
+<p>预热后、读钟前的 synchronize 冲干净队列，否则第一次同步会给预热遗留工作结账。手算示例：遗留 20 ms 工作，首个样本就混入这 20 ms。预热多少次应由样本趋稳判断，5 次不是保证。</p>
 </section>
-<section class="document-section note-panel" aria-labelledby="modes">
-<h2 id="modes" tabindex="-1">固定预热次数，加入反向传播 <a class="header-anchor" href="#modes" aria-label="章节链接">&#8203;</a></h2>
-<p>测过前向之后，再把反向传播和优化器更新逐步加回来。三种模式都先预热 5 步，再计时 10 步。表中沿用作业记录的数值。</p><div class="note-table" role="region" aria-label="模式、small 均值（秒）、small 变异系数、medium 均值（秒）" tabindex="0"><table>
-<thead><tr><th scope="col">模式</th><th scope="col">small 均值（秒）</th><th scope="col">small 变异系数</th><th scope="col">medium 均值（秒）</th></tr></thead>
-<tbody>
-<tr><td>forward</td><td>0.109715</td><td>0.2%</td><td>0.335881</td></tr>
-<tr><td>for_bac</td><td>0.372372</td><td>11.3%</td><td>12.009977</td></tr>
-<tr><td>full</td><td>0.401314</td><td>0.5%</td><td>15.529772</td></tr>
-</tbody></table></div><p>small 的前向加反向这一组波动最大，完整训练步却只有 0.5%。各模式是分开跑的。两行均值相减，只能粗估多出来的耗时，没法据此找出哪个 kernel 最慢。medium 从前向到前向加反向，耗时从约 0.34 秒升到约 12 秒。要解释这次变化，还得对照同一次运行的硬件利用率、显存压力和时间线。</p>
+<section class="document-section note-panel" aria-labelledby="numbers">
+<h2 id="numbers" tabindex="-1">读预热表：波动有多大 <a class="header-anchor" href="#numbers" aria-label="章节链接">&#8203;</a></h2>
+<p>变异系数（coefficient of variation，CV）把波动除以均值，才能比较不同耗时尺度。下表为 write_up 的 small、10 步记录；5 次预热取自模式表。</p>
+<div class="math-block" data-tex="\bar t=\frac1n\sum_i t_i,\quad s=\sqrt{\frac{\sum_i(t_i-\bar t)^2}{n-1}},\quad \mathrm{CV}=100\%\frac{s}{\bar t}"></div>
+<div class="note-table" tabindex="0"><table><thead><tr><th>模式</th><th>预热</th><th>均值 / s</th><th>样本标准差 / s</th><th>CV</th></tr></thead><tbody>
+<tr><td>forward</td><td>0</td><td>0.145029</td><td>0.110388</td><td>76.1%</td></tr>
+<tr><td>forward</td><td>1</td><td>0.110275</td><td>0.001186</td><td>1.1%</td></tr>
+<tr><td>forward</td><td>2</td><td>0.110091</td><td>0.000548</td><td>0.5%</td></tr>
+<tr><td>forward</td><td>5</td><td>0.109715</td><td>0.000242</td><td>0.2%</td></tr>
+<tr><td>for_bac</td><td>0 / 1 / 2</td><td>0.406312 / 0.352873 / 0.352853</td><td>0.127535 / 0.000894 / 0.000856</td><td>31.4% / 0.3% / 0.2%</td></tr>
+<tr><td>full</td><td>0 / 1 / 2</td><td>0.449742 / 0.402489 / 0.401591</td><td>0.091283 / 0.001032 / 0.001382</td><td>20.3% / 0.3% / 0.3%</td></tr>
+</tbody></table></div>
+<p>由表推算，0→1 次预热均值下降 34.754 ms，标准差缩小约 93 倍（近两个数量级），方差缩小约 8663 倍：混入的是不稳的额外工作。5 次预热时约每秒 9.1 步。</p>
+<p>0.110388/0.145029≈76.1%，标准差已与均值同量级，可能混入慢首步，却不能确定离群步数量和位置。手算：九步为 a、一步为 a+Δ，有均值 a+Δ/10、s=Δ/√10；其他序列也可有同样统计量。定位必须用 times。</p>
+<p>CV 是相对量，不是均值的置信区间。for_bac/full 在 0→1 次预热也分别少约 53.4/47.3 ms，波动收窄。各组独立运行，不能由 5 次预热的 for_bac 均值较高推出“越预热越慢”。</p>
 </section>
-<section class="document-section note-panel" aria-labelledby="open">
-<h2 id="open" tabindex="-1">进程启动与预热 <a class="header-anchor" href="#open" aria-label="章节链接">&#8203;</a></h2>
-<blockquote>前后程序的warmup是否会相互影响？</blockquote><p>后续可把冷启动和进程内稳态分开测。用多个新进程轮换运行 0 次和 1 次预热的配置，保存每一步的原始时间，同时记录温度、频率及其他负载。比较各进程的首步与后续各步，可以检验这项猜想。原作业没有记录这项对照的结果。</p><p>报告另列有 Nsight 的 kernel 占比与调用次数问题，当时这部分只有题目。这里保留为待分析项。</p>
+<section class="document-section note-panel" aria-labelledby="anomaly">
+<h2 id="anomaly" tabindex="-1">medium 的前向加反向为何达到 36 倍 <a class="header-anchor" href="#anomaly" aria-label="章节链接">&#8203;</a></h2>
+<p>异常比例用来设计下一次实验。以下均值对应预热 5 步、测量 10 步。</p>
+<div class="note-table" tabindex="0"><table><thead><tr><th>模型</th><th>forward / s</th><th>for_bac / s</th><th>full / s</th></tr></thead><tbody><tr><td>small</td><td>0.109715</td><td>0.372372</td><td>0.401314</td></tr><tr><td>medium</td><td>0.335881</td><td>12.009977</td><td>15.529772</td></tr></tbody></table></div>
+<p>手算 for_bac/forward 得 small≈3.4、medium≈35.8，分子含前向与 loss。相减估计纯反向的比例为 2.4/34.8；但无图前向与训练前向不同，for_bac 还累加梯度。这一量级差不能只按“同一套 kernel 放大”解释，需查额外成本。</p>
+<div class="note-table" tabindex="0"><table><thead><tr><th>可查假设</th><th>能判定的观测量 / 对照</th></tr></thead><tbody>
+<tr><td>显存紧张，分配器反复申请或回收</td><td>重置峰值后读 max_memory_allocated、max_memory_reserved，查 nsys 的 cudaMalloc 与长等待</td></tr>
+<tr><td>驱动换页、共享 GPU 内存回落主机</td><td>查驻留显存、共享内存、PCIe 迁移与系统分页记录；普通 cudaMalloc 超额也可能直接 OOM，不会必然回落</td></tr>
+<tr><td>backward 的 cuBLAS 算法改变</td><td>查 nsys 的 GEMM 形状、kernel 名、单次时长与工作区，保持 dtype 后扫描相邻尺寸</td></tr>
+<tr><td>TF32 与 fp32 路径混用</td><td>记录 torch.backends.cuda.matmul.allow_tf32 与精度设置，固定开关重测；TF32 不改变张量 dtype</td></tr>
+<tr><td>十步里有离群步</td><td>保存 times 并逐步匹配时间线；medium for_bac 原表 CV 仅 0.1%，并不支持强离群解释</td></tr>
+</tbody></table></div>
+<p><strong>本地没有留下这些配套记录，结论待验证。</strong>应固定精度、形状、梯度清理方式，保存 times 和显存峰值，再单独剖析。small 的 for_bac/full CV 为 11.3%/0.5%，也不能全归因于反向的“固有非确定性”。</p>
 </section>
-<details class="note-details"><summary>本篇原始文件（下载）</summary>
-<ul>
-<li><a download :href="withBase('/cs336/sources/assignment2/cs336_assignment2_systems.pdf')">cs336_assignment2_systems.pdf</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment2/benchmark.py')">benchmark.py</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment2/run_benchmarks.py')">run_benchmarks.py</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment2/write_up.md')">write_up.md</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment2/assignment2_systems_manual_guide.md')">assignment2_systems_manual_guide.md</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment2/mixed_precision_accumulation.py')">mixed_precision_accumulation.py</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment2/writeup_figures/full/bac-optim-data.png')">writeup_figures/full/bac-optim-data.png</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment2/writeup_figures/full/small-forward-data.png')">writeup_figures/full/small-forward-data.png</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment2/writeup_figures/full/small-forward-pic.png')">writeup_figures/full/small-forward-pic.png</a></li>
-<li><a download :href="withBase('/cs336/sources/assignment2/LICENSE')">LICENSE</a></li>
-</ul>
-</details>
+<section class="document-section note-panel" aria-labelledby="mixed">
+<h2 id="mixed" tabindex="-1">混合精度：范围够不够，累加准不准 <a class="header-anchor" href="#mixed" aria-label="章节链接">&#8203;</a></h2>
+<p>范围与精度要分开看。下表按格式定义计算，u 为舍入到最近值的相对误差界；有效位含隐含首位 1。</p>
+<div class="note-table" tabindex="0"><table><thead><tr><th>格式</th><th>指数 / 尾数字段（有效位）</th><th>u</th><th>最大 / 最小正正常数</th></tr></thead><tbody><tr><td>fp32</td><td>8 / 23（24）</td><td>2⁻²⁴≈5.96×10⁻⁸</td><td>3.403×10³⁸ / 1.175×10⁻³⁸</td></tr><tr><td>fp16</td><td>5 / 10（11）</td><td>2⁻¹¹≈4.88×10⁻⁴</td><td>65504 / 6.104×10⁻⁵</td></tr><tr><td>bf16</td><td>8 / 7（8）</td><td>2⁻⁸≈3.91×10⁻³</td><td>3.390×10³⁸ / 1.175×10⁻³⁸</td></tr></tbody></table></div>
+<p><code>mixed_precision_accumulation.py</code> 从零开始加 1000 次 0.01。write_up 的四个打印值依次为 <strong>10.0001 / 9.9531 / 10.0021 / 10.0021</strong>，理想实数答案为 10。</p>
+<ul><li>fp32 加 fp32：加数表示与反复舍入都有微小误差，所以打印为 10.0001。</li><li>fp16 加 fp16：10 在 [8,16) 中，相邻可表示数的间距（ulp）为 2³⁻¹⁰=0.0078125。它小于 0.01，但已同量级；这一段每次加法可能只前进一个台阶，误差并非均匀随机抵消，最终为 9.9531。</li><li>fp32 加 fp16：0.01 在 fp16 中为 1311×2⁻¹⁷=0.01000213623046875，乘 1000 得 10.002136…，解释 10.0021。这里这些和可被 fp32 精确表示，主要误差就是加数的量化。</li><li>先 fp16 再转 fp32：转换保留已舍入的值，不会恢复原来的 0.01，所以仍为 10.0021。0.009765625 不是 fp16 的最近表示。</li></ul>
+<p>手算保守上界：和在 [0,16) 时，每次舍入至多 0.00390625，加上输入误差，|误差|≤1000×(0.00390625+0.00000213623)≈3.9084。该界也保证中间和小于 14，区间自洽。记录误差约 −0.0469，远小于上界；紧估计要逐次舍入，不能假设所有误差同号最大。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="autocast">
+<h2 id="autocast" tabindex="-1">autocast 改的是算子，不是整张模型 <a class="header-anchor" href="#autocast" aria-label="章节链接">&#8203;</a></h2>
+<p>沿 ToyModel 区分计算与存储类型：假设 CUDA、模型和输入初始 fp32、autocast 目标 fp16、交叉熵 loss。以下为规则推导，非实测。</p>
+<p>ToyModel 按 fc1→ReLU→LayerNorm→fc2 执行，末维先变 10，再变类别数。<a href="https://docs.pytorch.org/docs/stable/amp.html">AMP 算子规则</a>让矩阵乘降精度利用 Tensor Core，softmax/layer_norm/exp/log 走 fp32。cat/stack 按输入类型提升；不能混用 CPU 与 CUDA 的白名单，未列算子不保证升 fp32。</p>
+<div class="note-table" tabindex="0"><table><thead><tr><th>对象</th><th>类型与理由</th></tr></thead><tbody><tr><td>参数</td><td>fp32；上下文没有调用 model.half()，原参数存储不变</td></tr><tr><td>fc1 输出</td><td>fp16；linear 采用低精度计算，ReLU 沿用输出类型</td></tr><tr><td>LayerNorm 输出</td><td>fp32；CUDA autocast 对 layer_norm 选择 fp32</td></tr><tr><td>logits</td><td>fp16；fc2 的 linear 再次选低精度</td></tr><tr><td>loss</td><td>fp32；cross_entropy 走 fp32 策略，不是所有 loss 都自动如此</td></tr><tr><td>参数梯度</td><td>fp32；叶子参数的 .grad 与 fp32 参数匹配，不是因为 loss 恰好 fp32</td></tr></tbody></table></div>
+<p>backward 在上下文外沿前向选定类型反传，并非全用 fp32；optimizer.step() 的参数与状态更新也不应被自动转换包住。fp16 范围小，常需梯度缩放；bf16 范围近 fp32，但只有 8 位有效位，累加、相消更敏感。</p>
+<p>benchmark 的 <code>--autocast</code> 选 bf16。速度对照本地未测；可用 hook 检查层输出与参数梯度 dtype，再同协议测开关，16 位不保证两倍快。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="norm">
+<h2 id="norm" tabindex="-1">归一化为什么单独照顾 <a class="header-anchor" href="#norm" aria-label="章节链接">&#8203;</a></h2>
+<p>归一化输出小，不保证中间统计量安全。write_up 的 RMSNorm 注释说：“manually upcast the input to fp32 here to prevent overflow when you square the input”，并链接 <a href="https://github.com/pytorch/pytorch/issues/66707">pytorch#66707</a>。</p>
+<pre v-pre><code># write_up.md · RMSNorm.forward，先转换，再平方
+in_dtype = x.dtype
+x = x.to(torch.float32)
+rms = torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+x = x * rms
+return (self.weight * x).to(in_dtype)</code></pre>
+<p>手算 √65504≈255.94，256²=65536 已超 fp16 范围。激活若为 1～10，平方并不越界；危险在异常值或低精度求和：1024 个 10 的平方和为 102400，均值虽为 100，先累加可能溢出。实际内核是否高精度累加须另查。</p>
+<p>bf16 平方阈值约 1.84×10¹⁹，通常够用。但 LayerNorm 的 (x−μ)/√(σ²+ε) 在 x≈μ 时会放大已有舍入误差；RMSNorm 不减均值，仍有累加。两者统计量都宜用 fp32，却救不回已量化的输入。本地未测；用大幅值、近常数输入，对照 fp64 输出和梯度验证。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="memory">
+<h2 id="memory" tabindex="-1">显存账：激活从哪里来 <a class="header-anchor" href="#memory" aria-label="章节链接">&#8203;</a></h2>
+<p>激活是为反向留下的中间张量。每层 residual 为 [batch,seq,d_model]；L 来自层数，c 汇总 QKV、MLP、归一化等保存项，b 为每元素字节数。</p>
+<div class="math-block" data-tex="M_{\mathrm{linear\ activations}}\approx cBTdL b"></div>
+<p>按 benchmark 的 xl 配置 d=2560、L=32，题设 B=4、T=2048、fp16：单个 residual 为 4×2048×2560×2=41943040 字节，即 <strong>40 MiB</strong>；每层各留一份就是 1280 MiB=1.25 GiB。手算示例取 c=10，仅线性规模激活便为 12.5 GiB，这不是实测峰值。朴素注意力还另有 B×H×T² 项：H=32 时单份 fp16 分数矩阵就有 1 GiB/层，不能藏进与 T 无关的常数。</p>
+<p>峰值常在反向初期：保存的激活未释放，新梯度已产生，优化器状态仍驻留。AdamW 的 m/v 各 fp32，共 8 字节/参数；参数与梯度另算。首次 step() 创建状态也可能是峰值，须测量判定。</p>
+<p><strong>混合精度省低精度激活和计算权重，通常省不到 fp32 优化器状态。</strong>autocast 不改变原参数存储；显式半精度权重也可能另留 fp32 主权重，总账不能减半。</p>
+<details class="note-details"><summary>本地未测：怎样留下可检查的显存证据</summary><ol><li>固定 xl 与 context=128/2048，分别准备 forward/full、全精度/bf16 运行；区分首次更新与稳态。</li><li>按 <a href="https://docs.pytorch.org/docs/stable/torch_cuda_memory.html">PyTorch 显存记录文档</a>，调用 <code>torch.cuda.memory._record_memory_history()</code>，同步并重置峰值，再执行待分析步骤。</li><li>同步后记录 <code>torch.cuda.max_memory_allocated()</code>，调用 <code>torch.cuda.memory._dump_snapshot("snapshot.pickle")</code>；下划线接口需核对安装版本。</li><li>在 <a href="https://pytorch.org/memory_viz">memory_viz</a> 打开快照，以分配栈判断大张量来自哪里、反向何时释放。它只看到 PyTorch 分配器管理的内存，NCCL 等外部分配需另查。</li></ol></details>
+</section>
+<section class="document-section note-panel" aria-labelledby="profile">
+<h2 id="profile" tabindex="-1">剖析：把时间花在哪 <a class="header-anchor" href="#profile" aria-label="章节链接">&#8203;</a></h2>
+<p>剖析将总时间定位到代码。外层 <code>range_push('forward'/'backward'/'optimizer')</code> 标阶段，内层 <code>nvtx.range</code> 标 scores、softmax、final matmul：QKᵀ 从 […,T,dₖ] 生成 […,T,T]，PV 回到 […,T,dᵥ]。</p>
+<p>脚本 monkeypatch <code>cs336_basics.model.scaled_dot_product_attention</code>，把标注留在测试脚本，不改库；仍需验证掩码、缩放与 softmax 等价。mask 位于 scores 与 softmax 范围之间，也属注意力成本。</p>
+<figure class="note-figure"><img src="/cs336/sources/assignment2/writeup_figures/full/small-forward-pic.png" alt="原始 Nsight 截图中的 forward 范围与重复的内层标记"><figcaption>本地已有时间线局部截图，仅示意外层 forward 与重复内层范围的对应关系。图中区间时长不作为本文新增测量，也不与 write_up 的墙钟均值合并；截图不足以确定整步最慢内核。</figcaption></figure>
+<p>待验证时可运行 <code>nsys profile --trace=cuda,nvtx,cublas,cudnn -o trace python benchmark.py --model-size small --mode full</code>。在 NVTX 轨道定位主机调用，再沿 CUDA API 的关联找设备 kernel；范围结束不代表 GPU 已完成。读汇总要同时看调用次数与平均时长，总时长≈次数×均值；时间占比的分母是所选 kernel 总时长，不一定是墙钟。并发区间不能重复相加，SM 占用率也不是这个占比，细查通常需 Nsight Compute。本地尚无可据此归因的完整记录。</p>
+<p>算术强度（arithmetic intensity）是 FLOPs/搬运字节数。手算单头 scores：约 2BT²d 次浮点运算；若只计 Q、K 读取和分数写出，强度≈2T²d/[b(2Td+T²)]。T 增大时它趋向 2d/b；只拿 2BT²d 除以 BT²，两项的 T² 会抵消，不能声称该比值随 T 增长。softmax 对每个分数只做少量运算，却需多遍读写，强度通常低。足够大的矩阵乘较可能受计算限制，softmax 较可能受带宽限制；长序列物化 T² 张量加重访存压力，但整段注意力究竟受哪一项限制仍需测量。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="map">
+<h2 id="map" tabindex="-1">剩下的作业：先把理论账推通 <a class="header-anchor" href="#map" aria-label="章节链接">&#8203;</a></h2>
+<p>这里把手册 §3 之后的题面变成可复算的模型：以下均为<strong>理论推导，本地未实现</strong>。激活检查点先说明取舍：每 k 层存一个边界，反向重算块内激活，粗略存储为 A(L/k+k)；求导得到 k≈√L。xl 的 L=32，手算最优量级约 6 层，实际还受张量大小与块边界影响。验证须对照无检查点的梯度，并测 k=4、6、8 的峰值和重算时间。</p>
+<h3>FlashAttention：边看分块，边维护 softmax</h3>
+<p>对一块查询维护逐行最大值 m、指数和 l、未归一化输出 O。新键块给出分数 S=QKᵀ/√d；旧和原本按旧 m 缩放，换最大值后必须同步缩放 l 与 O：</p>
+<div class="math-block" data-tex="m'=\max(m,\operatorname{rowmax}(S)),\quad P=\exp(S-m'),\quad l'=e^{m-m'}l+\operatorname{rowsum}(P),\quad O'=e^{m-m'}O+PV"></div>
+<p>初始 m=−∞、l=0、O=0，结束后逐行除以 l。手算一行分两块，分数 [0, ln2]，值 [2,4]：第一块 m=0、l=1、O=2；第二块 m=ln2，旧贡献乘 1/2，得 l=1.5、O=5，输出 10/3，正好等于 (1×2+2×4)/3。</p>
+<p>大小为 Bq×Bk 的分数块临时存储 O(BqBk)，另有 O(Bqd) 累加器；固定块大小和 d 后无需保存整张 T² 矩阵，QKV、输出及逐行统计量总存储 O(Td)，对 T 为线性。反向重算分块概率，FA2 还优化并行调度；仅有上述递推不等于完成 FA2。验证须将分块输出、logsumexp 与朴素实现对拍，再比 dQ/dK/dV，覆盖因果掩码和大分数，并扫描 T 验证峰值增长。</p>
+<h3>DDP：带宽账之外，还有启动账</h3>
+<p>分布式数据并行（DDP）各卡保留全参数，反向后平均梯度。设 N 卡、每卡完整梯度 G 字节、有效链路带宽 β；环状 all-reduce 拆成 reduce-scatter 与 all-gather，各传 (N−1)G/N：</p>
+<div class="math-block" data-tex="t_{\mathrm{AR}}\approx 2\frac{N-1}{N}\frac{G}{\beta}+2(N-1)\alpha"></div>
+<p>α 是每轮启动延迟。手算示例：1 亿个 fp32 参数的梯度 G=0.4 GB，N=4、β=25 GB/s，忽略启动项得 0.024 s。若分成 K 个参数张量单独通信，带宽总量近似不变，启动项却乘 K；展平或分桶可摊薄它，分桶还能与反向重叠。验证需用各 rank 的不同数据，对照单进程全局 batch 更新，检查平均而非求和，再固定总字节数改变张量数量测耗时。</p>
+<h3>ZeRO-1 / FSDP：到底切掉哪份副本</h3>
+<p>取明确的 fp32 账本：参数 4、梯度 4、AdamW 的 m/v 共 8，即每参数 16 字节。设参数数目 P，DDP 每卡 16P；ZeRO-1 只切状态，为 8P+8P/N；完全分片数据并行（FSDP）把三类一起切，理想持久存储为 16P/N，尚未计激活和临时 gather 缓冲。</p>
+<p>手算 P=1 亿、N=4：三者每卡为 1.6、1.0、0.4 GB（十进制）。ZeRO-1 各卡更新所负责参数后还要同步新权重；FSDP 则在计算前 all-gather 权重，梯度产生后 reduce-scatter。手册规定前向后释放完整权重，因此一整步通常是<strong>前向 gather + 反向 gather + 梯度 reduce-scatter</strong>，不能简化成每步只有两次集合通信。</p>
+<p>沿用 G=0.4 GB、N=4、β=25 GB/s，并假设权重与梯度同字节数：每次 gather 或 reduce-scatter 的带宽项为 0.012 s，三次合计 0.036 s；DDP 的两阶段为 0.024 s。实际逐层启动、预取重叠与低精度通信会改账。验证要对照单卡参数更新，覆盖共享权重、参数组和多步迭代；分别量初始化、更新前后峰值，并用时间线确认完整权重及时释放、通信先于使用完成。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="summary">
+<h2 id="summary" tabindex="-1">本篇要点 <a class="header-anchor" href="#summary" aria-label="章节链接">&#8203;</a></h2>
+<p>协议先于数字：固定形状与边界，预热后同步，逐步计时并保存 times。预热表支持首次路径与稳态有别；medium 的异常比例提示补采显存和时间线，还没有给出原因。</p>
+<p>下一次只改一个因素：查慢在提交、内核还是分配迁移，误差在量化还是累加，显存由谁占住。用公式估量级，用记录区分假设；未运行的 FA2/DDP/FSDP 仍是理论账。</p>
+</section>
+<details class="note-details"><summary>本篇原始文件（下载）</summary><ul>
+<li><a download :href="withBase('/cs336/sources/assignment2/benchmark.py')">benchmark.py：计时边界、配置与 NVTX</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/run_benchmarks.py')">run_benchmarks.py：子进程、汇总与原始样本的缺口</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/mixed_precision_accumulation.py')">mixed_precision_accumulation.py：四组累加代码</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/write_up.md')">write_up.md：全部实测值、ToyModel 与 RMSNorm 摘录</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/assignment2_systems_manual_guide.md')">assignment2_systems_manual_guide.md：显存、检查点与后续作业题面</a></li>
+<li><a download :href="withBase('/cs336/sources/assignment2/writeup_figures/full/small-forward-pic.png')">small-forward-pic.png：本文展示的时间线局部</a></li>
+</ul></details>
 </article>
