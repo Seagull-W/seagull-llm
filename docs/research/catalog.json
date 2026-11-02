@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-11-02",
+    "slug": "score-centering-tim",
+    "title": "Score Centering：消掉追随采样器的漂移，仍要面对采样分布偏差",
+    "description": "精读 Score Centering Stabilizes Off-policy Reinforcement Learning：从逐前缀梯度分解解释训推不一致如何产生蒸馏漂移、分组中心化与裁剪为何留有残差，以及量化、陈旧和 top-k 近似实验能支持到哪里。",
+    "route": "/research/2026-11-02-score-centering-tim",
+    "source_urls": [
+      "https://arxiv.org/abs/2609.20807",
+      "https://arxiv.org/html/2609.20807v1",
+      "https://github.com/martin-marek/score-centering",
+      "https://github.com/huggingface/trl/releases/tag/v1.17.0",
+      "https://arxiv.org/abs/2609.15987"
+    ],
+    "window_end": "2026-11-02T00:00:00+08:00",
+    "origin": "manual"
+  },
+  {
     "date": "2026-10-31",
     "slug": "rl-framework-architecture",
     "title": "主流 RL 框架的架构分歧：控制面、训练-推理耦合与环境边界",

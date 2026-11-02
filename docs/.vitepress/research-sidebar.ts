@@ -5,6 +5,10 @@ export const researchSidebar = [
     "collapsed": false,
                         "items": [
       {
+        "text": "Score Centering：消掉追随采样器的漂移，仍要面对采样分布偏差",
+        "link": "/research/2026-11-02-score-centering-tim"
+      },
+      {
         "text": "主流 RL 框架的架构分歧：控制面、训练-推理耦合与环境边界",
         "link": "/research/2026-10-31-rl-framework-architecture"
       },

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" viewBox="0 0 920 452" role="img" aria-labelledby="title desc">
+<defs>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#7d93b0"/></marker>
+</defs>
+<style>
+text{font-family:"Noto Sans CJK SC","Microsoft YaHei","WenQuanYi Zen Hei",sans-serif;fill:#203349;font-size:14px}
+.h{font-size:22px;font-weight:700}
+.small{font-size:13px;fill:#4a5f7a}
+.box{font-size:15px;font-weight:600}
+.arrow{fill:none;stroke:#7d93b0;stroke-width:1.6;marker-end:url(#ar)}
+.chip{font-size:13.5px}
+</style>
+<rect width="920" height="452" rx="16" fill="#f6f8fc"/>
+<title id="title">训练器与采样器构成的反馈回路，以及梯度被拆成的 drift 与 signal 两项</title>
+<desc id="desc">训练器把权重同步给采样器，采样器生成 rollout，rollout 回到训练器计算梯度。恒定前缀上，期望更新可拆成 drift（朝采样器蒸馏）与 signal（奖励与 token 的协方差）；权重复原的回路让 drift 每步重新进入。</desc>
+<text x="30" y="42" class="h">一份梯度，两个方向</text>
+<text x="30" y="68" class="small">固定前缀上，期望更新被拆成两项；回路决定哪一项会在训练中累积。</text>
+
+<rect x="60" y="108" width="212" height="78" rx="8" fill="#ffffff" stroke="#ced8e5"/>
+<text x="166" y="139" text-anchor="middle" class="box">训练器 pθ</text>
+<text x="166" y="164" text-anchor="middle" class="small">按 pθ 计算 logprob 与 score</text>
+
+<rect x="648" y="108" width="212" height="78" rx="8" fill="#ffffff" stroke="#ced8e5"/>
+<text x="754" y="139" text-anchor="middle" class="box">采样器 qθ</text>
+<text x="754" y="164" text-anchor="middle" class="small">量化或陈旧的有偏副本</text>
+
+<rect x="354" y="252" width="212" height="78" rx="8" fill="#ffffff" stroke="#ced8e5"/>
+<text x="460" y="283" text-anchor="middle" class="box">rollout 批次 y</text>
+<text x="460" y="308" text-anchor="middle" class="small">由 qθ 生成，奖励 R</text>
+
+<path class="arrow" d="M272 147H640"/>
+<text x="456" y="136" text-anchor="middle" class="small">同步权重 θ</text>
+
+<path class="arrow" d="M754 186V216H566V244"/>
+<text x="666" y="208" class="small">生成 y</text>
+
+<path class="arrow" d="M354 291H166V194"/>
+<text x="270" y="281" class="small">回传梯度</text>
+
+<text x="196" y="228" class="small">梯度只穿过 pθ</text>
+<text x="606" y="252" class="small">on-policy 时 E_q[s] = 0，</text>
+<text x="606" y="274" class="small">这一项整个消失。</text>
+
+<text x="60" y="372" class="small">恒定奖励下的期望更新：</text>
+<text x="60" y="398" font-size="16" font-weight="600">E_q[R·s]  =  E_q[R] · E_q[s]     +     Cov_q(R, s)</text>
+
+<rect x="60" y="410" width="258" height="26" rx="6" fill="#fdf1e3" stroke="#e0b98a"/>
+<text x="70" y="428" class="chip" fill="#8a5a1f">drift：朝采样器的期望方向蒸馏</text>
+<rect x="334" y="410" width="252" height="26" rx="6" fill="#e6f4f1" stroke="#7fbfb6"/>
+<text x="344" y="428" class="chip" fill="#00695c">signal：奖励与 token 的配对</text>
+<text x="604" y="428" class="small">SC 在损失里减掉前一项的系数。</text>
+</svg>
