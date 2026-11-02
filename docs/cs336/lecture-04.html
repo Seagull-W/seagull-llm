@@ -26,13 +26,13 @@ import { withBase } from 'vitepress'
 <p>线性注意力（linear attention）的关键，是先改变运算，再使用矩阵乘法的结合律。第 4 页写成 ρ(QKᵀ)V，其中 ρ 表示对分数的变换；只有这里把它取为恒等映射，才能直接把括号移到 KᵀV。标准注意力中逐行执行的 softmax 依赖该行全部分数，不能穿过矩阵乘法移到括号外。因此下面的等式对未归一化的双线性聚合精确成立，却不是标准 softmax 注意力的等价加速公式。</p>
 <div class="math-block" data-tex="Q\in\mathbb{R}^{T\times d_k},\quad K\in\mathbb{R}^{T\times d_k},\quad V\in\mathbb{R}^{T\times d_v},\qquad (QK^\top)V=Q(K^\top V)"></div>
 <p>推导时从中间矩阵的形状入手最稳妥。左边先生成 T×T 的矩阵，花 T²d_k 次乘加，再乘 T×d_v 的 V，花 T²d_v 次；右边先用 d_k×T 乘 T×d_v，得到 d_k×d_v 的状态，花 Td_kd_v 次，再由 Q 读取它，又花 Td_kd_v 次。两边的输出都是 T×d_v，当 d_k＝d_v＝d 时，算术量就从 O(T²d) 变成 O(Td²)。收益取决于 T 相对 d 的大小，短序列不一定划算。</p>
-<figure class="note-figure"><img src="./figures/lecture04-p4.png" alt="第4页用矩阵结合律把先算QK转置改成先算K转置V" loading="lazy"><figcaption>第 4 页：括号改变中间结果的形状。等式成立的前提是 ρ 为恒等映射。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture04-p4.png" alt="第4页用矩阵结合律把先算QK转置改成先算K转置V" loading="lazy"><figcaption>第 4 页：括号改变中间结果的形状。等式成立的前提是 ρ 为恒等映射。</figcaption></figure>
 <p>把刚才的 T＝4096、d＝128 代回去，左边两次乘法共约 42.9 亿次乘加，右边约 1.34 亿次，相差 32 倍，这是推导。右边的状态只有 16384 个元素，按 2 字节计算为 32 KiB，比显式分数矩阵的 32 MiB 小得多。这个比较只覆盖注意力核心乘法，投影层、门控和训练中间量都没有算进去。它说明为什么重排值得研究，不能直接当成端到端速度提升。</p>
 <div class="note-table" tabindex="0" role="region" aria-label="注意力复杂度对照"><table><thead><tr><th>单头口径（推导）</th><th>传统全注意力</th><th>纯线性注意力</th></tr></thead><tbody><tr><td>全序列核心乘加</td><td>T²(d_k＋d_v)</td><td>2Td_kd_v</td></tr><tr><td>主要聚合中间量</td><td>显式实现为 T×T；融合实现可避免完整落盘</td><td>d_k×d_v 状态</td></tr><tr><td>因果解码持久历史</td><td>T(d_k＋d_v) 个缓存元素</td><td>d_kd_v 个状态元素</td></tr><tr><td>每步解码核心工作量</td><td>O(T(d_k＋d_v))</td><td>O(d_kd_v)</td></tr><tr><td>读取历史的方式</td><td>逐位置打分并归一化</td><td>查询读取累计状态</td></tr></tbody></table></div>
 <p>第 5 页进一步把因果版本写成递推。为了不把行列方向混在一起，这里统一把 q_t、k_t、v_t 看作列向量，形状分别为 d_k×1、d_k×1、d_v×1。外积 k_tv_tᵀ 是 d_k×d_v，能加到同形状的 state_t；查询读取时用 q_tᵀ，输出 y_t 是 1×d_v 的行向量。如果代码把查询存为一行，那么同一操作就写作 y_t＝q_t state_t。</p>
 <div class="math-block" data-tex="S_0=0,\qquad S_t=S_{t-1}+k_tv_t^\top\in\mathbb{R}^{d_k\times d_v},\qquad y_t=q_t^\top S_t=\sum_{j=1}^{t}(q_t^\top k_j)v_j^\top"></div>
 <p>最后一个等号是推导，它说明累计状态为什么能代替逐位置求和。生成新词元时，你只需把新的键值外积写入 S，再用查询读出结果；无论历史有多长，S 的形状都不变。这里保留的是聚合后的历史信息，过去每个位置的键和值已经混合在一起。若一层采用这种递推，便不需要该层不断增长的 KV 缓存；混合模型里保留的全注意力层仍然需要各自的缓存。</p>
-<figure class="note-figure"><img src="./figures/lecture04-p5.png" alt="第5页展示线性注意力的固定状态递推和查询读出" loading="lazy"><figcaption>第 5 页：同一个因果运算可以按序更新状态。训练时可以采用并行表达，推理时使用递推表达。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture04-p5.png" alt="第5页展示线性注意力的固定状态递推和查询读出" loading="lazy"><figcaption>第 5 页：同一个因果运算可以按序更新状态。训练时可以采用并行表达，推理时使用递推表达。</figcaption></figure>
 <details class="note-details"><summary>推导：用两个词元检查形状、更新顺序与因果性</summary>
 <p>设 d_k＝d_v＝2，k₁＝(1,0)ᵀ、v₁＝(2,3)ᵀ，第一次写入后 S₁ 的两行是 (2,3) 与 (0,0)。再取 k₂＝(0,1)ᵀ、v₂＝(5,7)ᵀ，得到 S₂ 的两行为 (2,3) 与 (5,7)。若 q₂＝(1,1)ᵀ，读出 y₂＝(7,10)，正好等于两个值向量之和，因为两个点积分数都为 1。</p>
 <p>这个例子还检查了一个实现陷阱：先更新再读出，当前位置才能看到自己的值。若先读 S₁ 再写第二个词元，就变成严格只看过去的另一种掩码。训练时也不能把全序列 KᵀV 直接拿给每一个查询，那会泄漏未来；必须使用前缀状态，或与其等价的因果掩码并行表达。</p>
@@ -56,13 +56,13 @@ import { withBase } from 'vitepress'
 <p>混合专家（Mixture of Experts，MoE）把节省的对象从历史位置换成前馈参数。第 15、25 页的常见结构，是把前馈网络（FFN）替换为 N 个专家网络，再增加一个路由器；每个专家的输入、输出宽度与原来的接口兼容。一个词元进入该层后，只执行被选中的少数网络。注意力仍负责位置之间的信息交换，专家网络则对该词元的隐藏向量做变换。</p>
 <p>第 31 页的 top-k 路由可以拆成三步。输入隐藏向量 x 先与 N 个路由向量打分，得到长度为 N 的分数；接着取其中最大的 k 个索引，其他专家权重置零；再执行被选中的 FFN，并按路由权重加权求和。若 x 的宽度为 d_model，每个专家输出也必须是 d_model，求和后才能接回残差通路。下面公式省略残差与共享专家，只表示被路由的部分。</p>
 <div class="math-block" data-tex="\mathcal{I}(x)=\operatorname{TopK}(s(x),k),\qquad y(x)=\sum_{i\in\mathcal{I}(x)}g_i(x)\operatorname{FFN}_i(x)"></div>
-<figure class="note-figure"><img src="./figures/lecture04-p31.png" alt="第31页展示路由分数、top-k掩码、专家加权求和及残差连接" loading="lazy"><figcaption>第 31 页：取 top-k 的是专家索引，求和的则是专家输出。图中的残差项不属于专家选择。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture04-p31.png" alt="第31页展示路由分数、top-k掩码、专家加权求和及残差连接" loading="lazy"><figcaption>第 31 页：取 top-k 的是专家索引，求和的则是专家输出。图中的残差项不属于专家选择。</figcaption></figure>
 <p>归一化放在哪里，会改变输出的尺度。第 31 页左侧先对所有专家做 softmax，再保留 top-k，此时剩余权重的和可能小于 1；若选中之后重新归一化，权重之和才回到 1。推导例子：四个分数经 softmax 后为 (0.4,0.3,0.2,0.1)，选前两个且不重归一化时输出为 0.4E₁＋0.3E₂，重归一化后则为 (4/7)E₁＋(3/7)E₂。两者选中相同专家，却不能在实现中随意互换。</p>
 <div class="note-table" tabindex="0" role="region" aria-label="MoE路由变体"><table><thead><tr><th>变体</th><th>怎样选</th><th>主要边界与出处</th></tr></thead><tbody><tr><td>词元选专家 top-k</td><td>每个词元保留 k 个专家</td><td>每词元工作量可控，专家负载可能不均；第 27–31 页</td></tr><tr><td>专家选词元</td><td>每个专家挑选输入词元</td><td>专家容量可控，单个词元的入选次数未必相同；第 27 页，边界为推导</td></tr><tr><td>哈希路由</td><td>按预定映射分配</td><td>作为常见基线，不靠相同的学习打分过程；第 29 页</td></tr><tr><td>全局匹配</td><td>把分配写成匹配优化问题</td><td>同时协调多个分配，增加求解工作；第 27、30 页</td></tr><tr><td>top-k 加设备约束</td><td>限制选中专家涉及的设备</td><td>兼顾专家选择与通信范围；第 55–56 页</td></tr></tbody></table></div>
 <p>总参数量统计模型保存的全部权重，激活参数量统计处理一个词元时实际用到的那部分权重。第 56 页给出的 DeepSeek v3 是 671B 总参数、37B 激活参数，B 表示十亿；两者之比约为 18.1，这是推导。这个比值并不等于把一个 671B 稠密模型无代价加速了 18.1 倍，因为路由、通信以及两种架构的算子结构都不同。它表达的是每个词元只调用很小一部分总容量。</p>
 <p>再做一个不对应任何具体模型的参数账（推导）。忽略偏置，普通两矩阵 FFN 的隐藏宽度为 m、输入宽度为 d，参数为 2dm；现在准备八个宽度 m/2 的专家，每个有 dm 个参数，每词元选两个。总专家参数变成 8dm，是原来的四倍，而激活专家参数仍为 2dm，主矩阵乘加也与原 FFN 相近。多出来的路由开销和通信不能藏进“同 FLOPs”里，这个说法只在忽略这些附加项、比较专家主计算时成立。</p>
 <p>第 32 页把一个大专家拆成多个小专家，称为细粒度专家（fine-grained expert）。在总激活宽度相近时，更多小专家允许更丰富的选择组合；共享专家（shared expert）则对所有词元始终启用，承担不必重复路由的公共变换。图中从两个大专家，变成四个小专家，再变成一个共享加三个路由专家，正好演示了怎样重新分配同一份激活预算。共享部分也消耗参数与计算，计算激活量时必须把它加回来。</p>
-<figure class="note-figure"><img src="./figures/lecture04-p32.png" alt="第32页比较两个大专家、四个细粒度专家以及共享专家加路由专家" loading="lazy"><figcaption>第 32 页：细分改变选择粒度，共享改变始终执行的部分。这两个设计可以组合使用。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture04-p32.png" alt="第32页比较两个大专家、四个细粒度专家以及共享专家加路由专家" loading="lazy"><figcaption>第 32 页：细分改变选择粒度，共享改变始终执行的部分。这两个设计可以组合使用。</figcaption></figure>
 <p>第 35 页的 DeepSeek v1 配置是 64 个路由专家、每词元选 6 个，另有 2 个共享专家，小专家宽度比例为 1/4。按等宽专家近似，激活宽度相当于 (6＋2)/4＝2 份参照 FFN，这是推导，也说明“选六个”本身并不能代表计算很贵。第 33 页的消融支持更多专家与共享专家有益，但第 34 页的 OlMoE 消融只观察到细粒度收益，没有共享专家收益。共享专家是否值得保留，应看相同预算下的实验，不能由架构名称直接决定。</p>
 </section>
 
@@ -103,9 +103,9 @@ import { withBase } from 'vitepress'
 <div class="note-table" tabindex="0" role="region" aria-label="DeepSeek三代结构对照"><table><thead><tr><th>配置</th><th>v1</th><th>v2</th><th>v3</th></tr></thead><tbody><tr><td>总／激活参数</td><td>16B／2.8B</td><td>236B／21B</td><td>671B／37B</td></tr><tr><td>路由专家数</td><td>64</td><td>160</td><td>256</td></tr><tr><td>每词元选中路由专家</td><td>6</td><td>6</td><td>8</td></tr><tr><td>共享专家数</td><td>2</td><td>2</td><td>1</td></tr><tr><td>细粒度宽度比例</td><td>1/4</td><td>1/10</td><td>1/14</td></tr><tr><td>路由与均衡重点</td><td>标准 top-k；专家＋设备辅助损失</td><td>top-M 设备限制；通信均衡</td><td>sigmoid 分数、选后归一化；专家偏置＋序列辅助项</td></tr><tr><td>页码</td><td>第 35、54 页</td><td>第 55 页</td><td>第 35、42、56 页</td></tr></tbody></table></div>
 <p>这里要明确一处材料内部差异。第 56 页标题是 v3，参数行却写着“V2”，细粒度专家数还写成 258；第 35 页的汇总表则明确列出 v3 的 256 个路由专家、8 个激活和 1 个共享。上表的专家配置采用第 35 页，671B／37B 采用第 56 页，不把两处不一致悄悄合成一个新配置。图中的数字应结合这一说明阅读。</p>
 <p>v1 的核心是让容量不必随每词元计算同步增加，共享专家给公共处理留出固定通路。到了 v2，单个词元可能需要调用散布在多台设备上的专家，专家越多，分配就越容易触及通信瓶颈。第 55 页的 top-M 设备路由先限制可以访问哪些设备，再在这些设备的专家中取 top-k；同时用通信均衡损失约束输入输出流量。这样既要避免热门设备拥堵，也要减少一个词元把消息发得过散。</p>
-<figure class="note-figure"><img src="./figures/lecture04-p55.png" alt="DeepSeek v2结构与设备限制路由、通信均衡损失" loading="lazy"><figcaption>第 55 页：v2 的变化不只在专家数量，还在每个词元访问的设备范围与通信量。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture04-p55.png" alt="DeepSeek v2结构与设备限制路由、通信均衡损失" loading="lazy"><figcaption>第 55 页：v2 的变化不只在专家数量，还在每个词元访问的设备范围与通信量。</figcaption></figure>
 <p>v3 的图中还区分了“谁入选”和“入选后占多大权重”。第 56 页公式先用 sigmoid 得到专家分数，再对选中的分数除以它们的和；虽然页上标题简写为“Sigmoid＋Softmax topK”，公式实际展示的是选后重归一化，不是再做一次指数运算。结合第 42 页，偏置参与入选判定，原始分数参与输出权重。这样可以调节负载，而不必把相同的均衡压力全部交给内容打分参数承担。</p>
-<figure class="note-figure"><img src="./figures/lecture04-p56.png" alt="DeepSeek v3的共享与路由专家、选后归一化及专家偏置公式" loading="lazy"><figcaption>第 56 页：重点读下方的分数与偏置公式。图内版本标签和专家数存在笔误式不一致，表格按第 35 页口径整理。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture04-p56.png" alt="DeepSeek v3的共享与路由专家、选后归一化及专家偏置公式" loading="lazy"><figcaption>第 56 页：重点读下方的分数与偏置公式。图内版本标签和专家数存在笔误式不一致，表格按第 35 页口径整理。</figcaption></figure>
 <p>用总量除以激活量，v1、v2、v3 的比值约为 5.7、11.2、18.1，这是推导。它展示了三代模型中总容量与单词元调用容量越来越分离，却不是三次相同条件下的速度测量。模型规模和结构一起变化，单凭这张表不能把质量收益归因于某一个路由改动。理解演进时应把“新增机制针对什么瓶颈”与“它单独贡献多少收益”分开。</p>
 </section>
 

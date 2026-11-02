@@ -31,7 +31,7 @@ import { withBase } from 'vitepress'
 <div class="math-block" data-tex="J_{\mathrm{pre}}=I+J_F(N(x))J_N(x),\qquad J_{\mathrm{post}}=J_N(x+F(x))(I+J_F(x))"></div>
 <p>这里 J 是雅可比矩阵，记录输出各分量对输入各分量的导数。Pre-Norm 中的 x 求导得到恒等矩阵 I，所以反向传播除了经过子层的那一项，还能直接把上游梯度传给输入。多层相乘时，每层都选恒等项便形成一条贯通底层的路径；Post-Norm 的每条路径都必须乘归一化的雅可比，梯度的尺度与方向会不断被改变。</p>
 <p>恒等通路提供了更好的传播条件，却不等于梯度一定不会爆炸或衰减。其余导数项仍可能放大或抵消信号，学习率、初始化和层数也仍然重要。你可以先令 F 为零来检查两式：Pre-Norm 此时就是原样传递 x，Post-Norm 却仍输出 N(x)，这正是两种结构最直接的区别。</p>
-<figure class="note-figure"><img src="./figures/lecture03-p11.png" alt="左侧比较不同归一化方案的英越翻译开发集 BLEU，右侧比较 Pre-LN 与 Post-LN 的验证损失和 BLEU 曲线。"><figcaption>左图引 Salazar and Ngyuen 2019（幻灯片原文拼写），右图引 Xiong 2020。曲线还改变了 warmup 和优化器等设置，阅读时须一并看图例（第 11 页）。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture03-p11.png" alt="左侧比较不同归一化方案的英越翻译开发集 BLEU，右侧比较 Pre-LN 与 Post-LN 的验证损失和 BLEU 曲线。"><figcaption>左图引 Salazar and Ngyuen 2019（幻灯片原文拼写），右图引 Xiong 2020。曲线还改变了 warmup 和优化器等设置，阅读时须一并看图例（第 11 页）。</figcaption></figure>
 <p>第 11 页给出的证据并不限于一句“Pre-Norm 更稳定”：右上角比较验证损失与 BLEU，右下角还展示 BERT 的验证损失。第 12 页进一步把解释分成两类，Xiong 2020 对应层间梯度衰减，Salazar and Ngyuen 对应训练中的梯度尖峰。前一张图显示 Post-LN 初始化时越靠输出梯度越大，底层相对弱；后一张图展示梯度全局范数随迭代的尖峰，不能把两种现象合称为同一条衰减曲线。</p>
 <p>读训练曲线时，还要区分收敛速度和最终效果。第 11 页右上角的验证损失在训练早期就拉开差距，说明归一化位置会改变优化过程；但图例中的优化器和预热设置并不完全相同。你若自己复现实验，应固定数据、模型规模与训练预算，再单独改变归一化位置，否则无法把曲线的全部差距归因于这一处改动。</p>
 <p>第 12 页说早期动机是移除学习率预热（warmup），本讲更关心大网络的稳定性和可用的较大学习率。这个结论并不要求你在 A1 中顺手删除预热，结构选择和训练日程应分别控制。第 13 页的折中也沿着同一思路：保留恒等主路，但给分支的输出再做归一化，限制每次加回残差的更新尺度。</p>
@@ -114,8 +114,8 @@ return x_normed.to(in_dtype) * self.weight</code></pre>
 <p>前馈层的例外能直接复算。第 39 页的 T5 11B 取前馈宽度 65536、模型宽度 1024，相除得到 64；第 41 页又指出 T5 v1.1 的 GeGLU 回到 2.5 倍。能训练成功不等于预算使用最优，而换了门控结构后也不能只比较宽度倍数，必须回到前一节的 2dh 和 3dh 参数账。</p>
 <p>第 42–43 页讨论多头注意力的 H·dₖ=d，这是常见的投影尺寸约定，不是点积定义的要求。若总头宽度不同，Q/K/V 的投影可以输出 H·dₖ 维，拼接后再由输出矩阵映射回 d 维。第 43 页的 GPT3 用 96×128=12288，正好等于模型宽度；T5 用 128×128=16384，却只有 1024 的模型宽度，说明“头数必须整除模型宽度”只在直接按 d 拆头的实现中才成立。</p>
 <p>深宽比影响的是损失与系统执行共同决定的成本。第 44 页把模型宽度除以层数列成表，第 45 页说明深层必须等前一层的结果，单个请求的依赖链会变长；较宽的矩阵则更容易提供层内并行工作。流水线能让不同微批次同时处在不同层，却不能让同一词元跳过前层依赖，所以“放更多 GPU”并不自动消除深度带来的延迟。</p>
-<figure class="note-figure"><img src="./figures/lecture03-p45.png" alt="四个 GPU 各负责一层，前向和反向箭头连接相邻层，表示跨层执行的先后依赖。"><figcaption>深度的系统限制：跨设备放置各层，仍需等待前一层结果；图引 Tay et al 2021（第 45 页）。</figcaption></figure>
-<figure class="note-figure"><img src="./figures/lecture03-p46.png" alt="左图三种参数规模的曲线在一段深宽比范围内较平坦，右图比较增加宽度或层数时的计算量和任务表现。"><figcaption>左侧 Kaplan et al 2020 的曲线显示较宽的低谷，右侧 Tay et al 2021 比较扩宽与加深；不能只读出一个通用最佳比例（第 46 页）。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture03-p45.png" alt="四个 GPU 各负责一层，前向和反向箭头连接相邻层，表示跨层执行的先后依赖。"><figcaption>深度的系统限制：跨设备放置各层，仍需等待前一层结果；图引 Tay et al 2021（第 45 页）。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture03-p46.png" alt="左图三种参数规模的曲线在一段深宽比范围内较平坦，右图比较增加宽度或层数时的计算量和任务表现。"><figcaption>左侧 Kaplan et al 2020 的曲线显示较宽的低谷，右侧 Tay et al 2021 比较扩宽与加深；不能只读出一个通用最佳比例（第 46 页）。</figcaption></figure>
 <p>第 46 页的价值在于告诉你，不必为一个狭窄的“最佳深宽比”牺牲全部工程便利。以忽略偏置的普通块为近似，注意力投影约 4d²、FFN 约 8d²，L 层的主干参数约为 12Ld²；固定预算时把 d 加倍，L 大致就要缩到四分之一。这只是用于理解形状的手算关系，不含嵌入、输出层以及特殊注意力配置，也不保证两种网络的效果相同。</p>
 <p>第 47 页把词表选择分成单语与多语场景。词表增大可以容纳更多语言和词片，却也让嵌入矩阵的 Vd 个参数随 V 线性增长，并扩大输出分类的成本。你需要把文本切分后的序列长度一起考虑：较小词表省了词表参数，却可能产生更多词元，因此不是单独缩小 V 就一定省总计算。</p>
 <p>计算词表参数时，V 在这里表示词表大小，不是前面门控分支的矩阵名。若输入嵌入与输出分类器各存一份权重，两者合计约为 2Vd；若共享权重，存储量约为 Vd。共享解决的是参数存储，输出端仍然需要计算词表分数，所以词表扩大对输出计算的影响不会随共享而消失。</p>
@@ -141,9 +141,9 @@ return x_normed.to(in_dtype) * self.weight</code></pre>
 <p>先把计数口径说清楚：设批量为一，H 个查询头，每头宽度 dₖ，且 d=H·dₖ。按乘和加各算一次 FLOP，稠密 QKᵀ 的计算量为 2T²d，之后注意力权重乘 V 也要约 2T²d。因此完整的两次注意力矩阵乘约为 4T²d；若把一次乘加记为一次，两者合计又会写成 2T²d，必须先说明口径。</p>
 <div class="math-block" data-tex="F_{QK^\top}\simeq2HT^2d_k=2T^2d,\quad F_{PV}\simeq2T^2d,\quad F_{\mathrm{decode/step}}\simeq4Td"></div>
 <p>因果掩码还会带来另一个系数差异：真正跳过上三角计算时，有效位置对为 T(T+1)/2，而不是 T²。两次乘法因此可合计约为 2T²d FLOPs；若先做完整稠密乘法再盖掩码，却没有省下这些乘法。比较复杂度时应同时说明是否利用了三角结构，本节前式采用完整稠密矩阵口径。</p>
-<figure class="note-figure"><img src="./figures/lecture03-p58.png" alt="预填充注意力的 QK 打分、softmax 和值汇聚，以及包含投影的计算量、访存量和算术强度估计。"><figcaption>原页用 b、n、h、k 表示批量、长度、头数、头维，并注明 n&lt;d；其总量估计包含投影，不能直接当作单独 QKᵀ 的 FLOPs（第 58 页）。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture03-p58.png" alt="预填充注意力的 QK 打分、softmax 和值汇聚，以及包含投影的计算量、访存量和算术强度估计。"><figcaption>原页用 b、n、h、k 表示批量、长度、头数、头维，并注明 n&lt;d；其总量估计包含投影，不能直接当作单独 QKᵀ 的 FLOPs（第 58 页）。</figcaption></figure>
 <p>预填充有很多查询，可以复用相同的键值数据；单步解码只有一个新查询，读完历史缓存后却只产出一个位置的结果。算术强度指计算量除以搬运的数据量，越低越容易受内存带宽限制。若只算普通多头注意力的单步核心，计算与缓存读取都正比于 T，fp16 下约是 4Td FLOPs 除以 4Td 字节，即常数量级，而不是无条件随 T 继续下降。</p>
-<figure class="note-figure"><img src="./figures/lecture03-p60.png" alt="增量计算的算术强度近似为序列长度除以模型宽度加批量倒数之后再取倒数，长序列会降低这一近似值。"><figcaption>在包含投影且沿用前页长度假设的估计中，算术强度为 O((n/d+1/b)⁻¹)，长度增加会加重缓存搬运的负担（第 60 页）。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture03-p60.png" alt="增量计算的算术强度近似为序列长度除以模型宽度加批量倒数之后再取倒数，长序列会降低这一近似值。"><figcaption>在包含投影且沿用前页长度假设的估计中，算术强度为 O((n/d+1/b)⁻¹)，长度增加会加重缓存搬运的负担（第 60 页）。</figcaption></figure>
 <p>第 60 页的下降关系来自包含投影的整体近似，并沿用长度小于宽度的条件。生成完整序列时，历史缓存被重复读取，长度累积导致 O(BT²d) 级别的 K/V 访存，而投影工作累计约为 O(BTd²)。在这一近似下得到 O((T/d+1/B)⁻¹)；下面的长缓存手算则直接数元素，不把这个短序列近似外推成任意长度的性能预测。</p>
 <p>多查询注意力（Multi-Query Attention，MQA）保留 H 个查询头，只共享一组 K/V；分组查询注意力（Grouped-Query Attention，GQA）把它放宽为 G 组 K/V，每组服务若干查询头。第 61–62 页给出这两种方案，减少的是 K/V 投影宽度和历史缓存，不是把查询头全删掉。只要每个查询仍看完整历史，注意力打分与值汇聚的主要算量不会简单按 G/H 同比例减少。</p>
 <div class="math-block" data-tex="N_{\mathrm{KV,MHA}}=2THd_k,\quad N_{\mathrm{KV,GQA}}=2TGd_k,\qquad M_{\mathrm{bytes}}=2TGd_k\,s"></div>

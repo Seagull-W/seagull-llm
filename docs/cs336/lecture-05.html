@@ -15,7 +15,7 @@ import { withBase } from 'vitepress'
 <h2 id="execution" tabindex="-1">1. GPU 与 CPU 的分工 <a class="header-anchor" href="#execution" aria-label="章节链接">&#8203;</a></h2>
 <p>这节先解决一个疑问：为什么单个线程不一定很快的设备，能把整个矩阵算得很快？按第 8 页的区分，CPU 优化少数线程的低延迟，GPU 优化大量线程的总吞吐。CPU 花更多资源处理复杂控制流、预测分支和加速串行依赖；GPU 把更多资源留给并行运算，让许多数据执行相似的工作。</p>
 <p>线程不是一颗独占的物理核心。流式多处理器（streaming multiprocessor，SM）是 GPU 上安排计算与片上资源的重要单位，内部包含许多流处理器（streaming processor，SP）及其他执行单元。第 9 页把整卡放大到单个 SM，就是为了让你区分“硬件有什么”和“程序把工作分成什么”。寄存器、共享内存和调度资源也跟着 SM 分布，不能把整张卡想成一个无限大的计算池。</p>
-<figure class="note-figure"><img src="./figures/lecture05-p9.png" alt="第9页：GPU由多个SM组成，单个SM内有调度器、寄存器、执行单元和共享内存" loading="lazy"><figcaption>第 9 页：硬件的两层视图。右图写的是完整 GA100 的 128 SM 示意，不等于后文第 48 页 A100 算例的 108 SM。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture05-p9.png" alt="第9页：GPU由多个SM组成，单个SM内有调度器、寄存器、执行单元和共享内存" loading="lazy"><figcaption>第 9 页：硬件的两层视图。右图写的是完整 GA100 的 128 SM 示意，不等于后文第 48 页 A100 算例的 108 SM。</figcaption></figure>
 <p>程序的层级则是线程、线程束（warp）、线程块（block）和网格（grid）。一次内核（kernel）启动提交一个网格，网格包含许多线程块；每个块安排到一个 SM 上执行，块内线程可以协作加载数据、使用共享内存并同步。一个 SM 可以容纳多个块，但容纳多少取决于每块的线程数、寄存器和共享内存需求。块不是 SM 的另一个名字，也不是越大越能填满设备。</p>
 <p>大量线程还有一个用途：掩盖等待。某个 warp 发出读取后暂时拿不到数据，SM 可以调度其他已经就绪的 warp，让执行单元继续工作。这里隐藏的是一部分等待时间，并没有消灭必须传输的字节；如果所有 warp 都在争用已经饱和的带宽，再增加线程也不会让数据凭空更快到达。并行度和复用因此解决不同问题，前者提供可调度工作，后者减轻供数压力。</p>
 <p>按第 11 页，连续编号的 32 个线程组成一个 warp。单指令多线程（SIMT）让你写每个线程的程序，硬件把同一 warp 中线程的同一条指令一起调度，各线程处理自己的数据。推导：一个 256 线程的块含 8 个 warp；若网格有 100 个这样的块，就是 25,600 个逻辑线程。这些线程会分批执行，不要求同时存在 25,600 个独占 SP。</p>
@@ -33,7 +33,7 @@ import { withBase } from 'vitepress'
 <tr><td>片上 SRAM 汇总</td><td>第 52 页图：20 MB，是整卡示意</td><td>第 52 页图：19 TB/s，是汇总带宽</td><td>不能当作单块共享内存预算</td></tr>
 </tbody></table></div>
 <p>表里的图来自不同示意，不能拼成一张特定型号的完整规格表。第 10 页的周期数比较访问延迟，第 52 页的 TB/s 比较单位时间能搬多少数据，两者不是同一个量。按第 52 页数字推导，片上与 HBM 的带宽比为 19/1.5≈12.7；第 10 页另用约 8 倍概括 SRAM 与 DRAM 的速度差异。保留各自口径，比选一个倍数套在所有硬件上更有用。</p>
-<figure class="note-figure"><img src="./figures/lecture05-p10.png" alt="第10页：内存延迟表、GPU芯片布局和片外显存位置" loading="lazy"><figcaption>第 10 页：共享内存和 L1 在 SM 内，L2 在芯片上，全局内存在芯片旁。图中延迟表用于说明层次差异，不是所有 GPU 的固定延迟。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture05-p10.png" alt="第10页：内存延迟表、GPU芯片布局和片外显存位置" loading="lazy"><figcaption>第 10 页：共享内存和 L1 在 SM 内，L2 在芯片上，全局内存在芯片旁。图中延迟表用于说明层次差异，不是所有 GPU 的固定延迟。</figcaption></figure>
 <p>现在算一次方阵乘 C=AB，三个矩阵都是 N×N，每元素占 s 字节。若输入各读一次、输出写一次，理想最低流量是 3sN² 字节，乘加工作约为 2N³ FLOPs，其中一次乘法加一次加法记两次。推导：N=4096、fp16 的 s=2 时，三个矩阵合计 96 MiB，而计算约为 1374 亿次浮点运算。数据量只按平方长，计算量按立方长，矩阵乘的机会正藏在这一个额外的 N 里。</p>
 <p>不过，“输入只读一次”是理想账本，不是朴素程序自然拥有的性质。若每个输出独立从全局内存做完整点积，同一输入会被不同输出反复请求，流量就可能接近立方级。硬件缓存能接住一部分请求，但程序明确把一块输入留在共享内存里，才更容易控制复用次数。后面的分块推导会把这两个流量口径分开。</p>
 <p>共享内存的“共享”也有范围。按第 12 页的块级编程模型，一个块可以让线程先合作读入数据，再通过同步把它交给块内其他线程；不同块不能直接把彼此的这份共享内存当作共同数组。跨块传递结果通常仍要经过全局内存，并安排适当的同步。因此把所有输入块都读进某个 SM，并不意味着整张 GPU 上的所有输出块都能免费复用它们。</p>
@@ -43,7 +43,7 @@ import { withBase } from 'vitepress'
 <h2 id="roofline" tabindex="-1">3. 算术强度与 roofline：时间花在搬运还是计算 <a class="header-anchor" href="#roofline" aria-label="章节链接">&#8203;</a></h2>
 <p>判断优化方向之前，你需要把“算得多”和“搬得多”放进同一个比值。承接<a href="./lecture-02#intensity">第 2 讲的算术强度</a>，令 F 为运算量、D 为跨 HBM 边界的字节数，算术强度（arithmetic intensity）就是 I=F/D，单位 FLOP/byte。若峰值算力为 P、带宽为 B，理想时间至少是计算时间 F/P 与搬运时间 D/B 中的较大值。这是下界，启动、同步和不规则访问都可能让实际时间更长。</p>
 <div class="math-block" data-tex="I=\frac{F}{D},\qquad t\ge\max\left(\frac{F}{P},\frac{D}{B}\right),\qquad P_{\mathrm{achievable}}\le\min(P,BI),\qquad I_*=\frac{P}{B}"></div>
-<figure class="note-figure"><img src="./figures/lecture05-p21.png" alt="第21页roofline图：低强度处吞吐沿带宽斜线增长，高强度处受算力水平线上限约束" loading="lazy"><figcaption>第 21 页：屋顶线模型（roofline）。同一数据若从共享内存或寄存器供给，可以对应更陡的供数斜线；图上的旧示意刻度不作为当前 GPU 的规格。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture05-p21.png" alt="第21页roofline图：低强度处吞吐沿带宽斜线增长，高强度处受算力水平线上限约束" loading="lazy"><figcaption>第 21 页：屋顶线模型（roofline）。同一数据若从共享内存或寄存器供给，可以对应更陡的供数斜线；图上的旧示意刻度不作为当前 GPU 的规格。</figcaption></figure>
 <p>推导例子沿用第 2 讲的假设设备：带宽 1 TB/s、相应计算路径的峰值 50 TFLOP/s，拐点便是 50 FLOP/byte。强度只有 0.25 的算子，带宽给出的吞吐上限是 0.25 TFLOP/s；强度达到 100 时，仍受 50 TFLOP/s 的算力上限约束。这里用十进制 TB 与 TFLOP，两个万亿相除后正好留下 FLOP/byte，不涉及 MiB 的换算。</p>
 <p>逐元素 ReLU 每个输入读一次、每个输出写一次，按一次比较记一项工作，fp32 是每 8 字节做一次操作，强度为 1/8。第 25 页写的“8 bytes/FLOP”是这个比值的倒数，换成 fp16 后是 4 bytes/FLOP，也就是强度翻倍到 1/4。常见 softmax 同样要扫过整行，完成最大值、指数、求和与归一化，却缺少矩阵乘那种跨许多输出的输入复用。因而它们通常容易访存受限；小张量还可能主要受启动开销影响。</p>
 <p>大矩阵乘则有机会走到计算受限的一侧。用上一节理想流量，fp16 方阵乘的强度是 2N³/(6N²)=N/3；N=4096 时约为 1365 FLOP/byte。这个数字说明复用做充分后有机会吃满算力，却不保证某个内核真的做到了。尤其第 17 页强调矩阵乘有专用 Tensor Core 加速，不能把普通标量运算峰值和低精度矩阵乘峰值混在同一条屋顶线上比较。</p>
@@ -70,7 +70,7 @@ import { withBase } from 'vitepress'
 <h2 id="fusion" tabindex="-1">4.1 融合与重算：中间结果要不要写回 <a class="header-anchor" href="#fusion" aria-label="章节链接">&#8203;</a></h2>
 <p>一连串便宜的运算，为什么合起来反而昂贵？第 30–33 页的算子融合（operator fusion）把问题指向中间结果：单个算子结束后写回全局内存，下一个算子又把同一份数据读出来。若把相邻运算合成一个内核，中间值可留在寄存器中继续用。计算本身未必减少，数据绕远路的次数却少了。</p>
 <p>融合和分块常常同时出现，但你可以用两个问题把它们分清。若一份中间结果本来要先存出去、随后再读回来，现在直接交给下一步，这是融合省掉的往返。若同一份输入原本被许多输出重复读取，现在先缓存起来供它们反复使用，这是分块获得的复用。FlashAttention 同时做了这两件事：分块保留一小片工作集，融合让分数、指数和加权求和紧接着完成。</p>
-<figure class="note-figure"><img src="./figures/lecture05-p32.png" alt="第32页：sin平方加cos平方由五个逐元素操作组成，分别执行会保存中间张量" loading="lazy"><figcaption>第 32 页，结合第 33 页的融合实现阅读：五个逐元素内核可以合成一次调用。这里研究数据路径，不用三角恒等式把整个表达式替换成常数。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture05-p32.png" alt="第32页：sin平方加cos平方由五个逐元素操作组成，分别执行会保存中间张量" loading="lazy"><figcaption>第 32 页，结合第 33 页的融合实现阅读：五个逐元素内核可以合成一次调用。这里研究数据路径，不用三角恒等式把整个表达式替换成常数。</figcaption></figure>
 <p>以 sin²x+cos²x 为例，未融合时依次做 sin、平方、cos、平方、相加，共五个逐元素内核。每个元素会写出四份中间值，随后又各读回一次；融合后这四次中间值往返都可以省掉。推导：若朴素执行的两个分支都独立读 x，前四个一元内核各是一读一写，末尾相加是两读一写，合计 11 次元素读写。融合后只需读 x、写最终结果，共 2 次，流量模型的比值是 11/2=5.5，而不是把“五个内核”直接当成“五倍加速”。</p>
 <p>上面的 11 次是忽略缓存的逻辑读写计数，实际 HBM 流量会受到缓存命中的影响。融合还节省四次内核启动，但可能增加寄存器使用量，让一个 SM 同时容纳的块更少。第 33 页说这类简单融合可由编译器完成，并不意味着任意操作链都适合无限融合。若中间结果被多个后续分支使用，或需要跨块全局同步，融合的资源与执行约束就会改变。</p>
 <p>重算（recomputation）是在前向与反向之间做同样的取舍。激活是前向过程中产生、反向求导可能要用的中间值；保留它们可以少算一次，但需要占空间并在反向重新读取。第 34–36 页用连续三个 sigmoid 展示：可以只保留必要输入，反向时重新生成便宜的中间激活。它既可能降低峰值显存，也可能在访存受限的链上降低流量，但这两个收益不是同一个计量。</p>
@@ -80,7 +80,7 @@ import { withBase } from 'vitepress'
 <section class="document-section note-panel" aria-labelledby="tiles">
 <h2 id="tiles" tabindex="-1">5. 分块的收益怎么算 <a class="header-anchor" href="#tiles" aria-label="章节链接">&#8203;</a></h2>
 <p>现在把“读一次，多用几次”变成可复算的公式。第 40–42 页的分块（tiling）把输出矩阵切成 b×b 的小块，每个输出块由一个线程块协作计算。沿着点积的公共维，每次加载 A、B 各一个 b×b 输入块到共享内存，计算这一段部分和，再换下一对输入块。输出累加器在整个公共维遍历结束后才写回，避免每个阶段都把部分和送回 HBM。</p>
-<figure class="note-figure"><img src="./figures/lecture05-p41.png" alt="第41页：将输入矩阵切成小块，逐阶段读入共享内存并累加同一输出块" loading="lazy"><figcaption>第 41 页：复用发生在一个输出块内部。输入块换到下一阶段前，必须等当前阶段所有需要它的线程完成读取。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture05-p41.png" alt="第41页：将输入矩阵切成小块，逐阶段读入共享内存并累加同一输出块" loading="lazy"><figcaption>第 41 页：复用发生在一个输出块内部。输入块换到下一阶段前，必须等当前阶段所有需要它的线程完成读取。</figcaption></figure>
 <p>先按第 42 页的简化模型，忽略缓存并假设 b 整除 N。非分块时，N² 个输出各读两个长度为 N 的向量，输入读取量为 2N³ 个元素，输出写 N² 个元素；换个角度，每个 A 或 B 元素都被读 N 次。分块后，一个 A 元素可以同时服务同一输出块的 b 个列输出，一个 B 元素可以服务 b 个行输出。这就是从全局内存读来一次后，在块内复用 b 次的含义。</p>
 <p>推导时数输出块最不容易漏项：输出块有 (N/b)² 个，每块沿公共维走 N/b 个阶段，每阶段读 2b² 个元素。相乘得到输入读取量 2N³/b，再加输出写入 N²，便是完整流量模型。与朴素读取量相比，输入部分正好减少 b 倍。单个输入在全局内存仍会被不同输出块读 N/b 次，所以“每块读一次”只指当前输出块的一个阶段，不是整次乘法全局只读一次。</p>
 <div class="math-block" data-tex="R_{\mathrm{input}}=\left(\frac{N}{b}\right)^2\frac{N}{b}\,(2b^2)=\frac{2N^3}{b},\qquad D=s\left(\frac{2N^3}{b}+N^2\right)"></div>
@@ -114,11 +114,11 @@ import { withBase } from 'vitepress'
 <section class="document-section note-panel" aria-labelledby="mystery">
 <h2 id="mystery" tabindex="-1">6. “矩阵越大越快”的两个原因 <a class="header-anchor" href="#mystery" aria-label="章节链接">&#8203;</a></h2>
 <p>第 45–48 页要解释的，是矩阵尺寸改变时吞吐曲线为什么起伏。图中纵轴是每秒完成的运算量，吞吐提高不自动等于绝对耗时减少，因为更大的矩阵还有更多计算。若改善幅度足够大，绝对时间也可能下降，但要另看计时。先分清这两种“快”，再看曲线上的尖峰与台阶。</p>
-<figure class="note-figure"><img src="./figures/lecture05-p47.png" alt="第47页：按矩阵尺寸可整除因子着色的吞吐曲线，以及对齐和未对齐布局比较" loading="lazy"><figcaption>第 47 页：可整除性与对齐改变分块效率。横轴尺寸相近的矩阵，也可能因为内存布局和内核处理方式不同而有不同吞吐。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture05-p47.png" alt="第47页：按矩阵尺寸可整除因子着色的吞吐曲线，以及对齐和未对齐布局比较" loading="lazy"><figcaption>第 47 页：可整除性与对齐改变分块效率。横轴尺寸相近的矩阵，也可能因为内存布局和内核处理方式不同而有不同吞吐。</figcaption></figure>
 <p>第一个原因是分块与对齐。某个尺寸需要许多边缘块，稍微增大到合适倍数后，块内有效比例和读取布局反而更规整。比如把 127×127 的输出补到 128×128，原先已覆盖的计算槽位可能没增加多少，却让数据路径更简单。这个例子只解释可能的机制；实际是否获益，还取决于库选择的内核、步长和补齐成本。第 47 页的不同颜色提醒你，可整除因子值得和吞吐一起检查。</p>
 <p>第二个原因是波次数量化（wave quantization）：整个网格需要分几批才能装进 SM？推导模型令 SM 数为 S，每个 SM 可同时常驻 r 个这样的块，那么一波容量 C=Sr。若共有 K 个块且每块耗时相同，波数为向上取整的 K/C，平均块槽位利用率就是 K/[C⌈K/C⌉]。最后一波即使只有一个块，也占用一段收尾时间，因此增加少量工作有时会突然多出一整波。</p>
 <div class="math-block" data-tex="C=Sr,\qquad W=\left\lceil\frac{K}{C}\right\rceil,\qquad U_{\mathrm{slots}}=\frac{K}{CW}"></div>
-<figure class="note-figure"><img src="./figures/lecture05-p48.png" alt="第48页：1792尺寸需要98个输出块，1793尺寸需要120个输出块，而例中A100有108个SM" loading="lazy"><figcaption>第 48 页：按本讲幻灯片，块大小为 256×128，A100 为 108 SM。以下利用率推导额外假定每个 SM 常驻一个块。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture05-p48.png" alt="第48页：1792尺寸需要98个输出块，1793尺寸需要120个输出块，而例中A100有108个SM" loading="lazy"><figcaption>第 48 页：按本讲幻灯片，块大小为 256×128，A100 为 108 SM。以下利用率推导额外假定每个 SM 常驻一个块。</figcaption></figure>
 <p>按第 48 页的尺寸，1792 时块数是 7×14=98，1793 时两个方向都要向上取整，变成 8×15=120。取 S=108、r=1，前者一波，槽位利用率是 98/108≈90.7%；后者两波，平均为 120/216≈55.6%，其中第二波只有 12/108≈11.1% 的槽位有块。尺寸只增大一点，调度却出现长尾，这就能解释周期性的吞吐下降。</p>
 <p>这里的 r 必须由当前内核的资源占用决定。若仍用 108 SM，但每个 SM 能常驻两个块，容量就变为 216，120 个块可在一波内安排，刚才的两波结论就不成立。真实块耗时还会受边缘工作、流水线和访存影响，所以这是一种槽位利用率模型，不是硬件计数器里的实际算力利用率。调参时同时记录块数与每块资源，才能知道是块里浪费，还是最后一波没有填满。</p>
 </section>
@@ -127,7 +127,7 @@ import { withBase } from 'vitepress'
 <h2 id="flash" tabindex="-1">7. FlashAttention 就是分块 + 增量 softmax <a class="header-anchor" href="#flash" aria-label="章节链接">&#8203;</a></h2>
 <p>注意力里的 softmax 跨整行归一化，为什么还能一块一块算？第 50–54 页把前面的内存原则接到这个问题上。令单头 Q、K、V 的形状均为 T×d，注意力先算分数 S=QKᵀ/√d，再按行归一化成 P，输出 O=PV。直接实现会把 T×T 的 S 或 P 写到 HBM，随后读取它们；序列一长，中间矩阵的读写就非常昂贵。</p>
 <p>第 51 页用“三次矩阵乘（K、Q、V）夹 softmax”概括流程，阅读时要区分投影和注意力核心。从输入 X 得到 Q、K、V 确实有三次投影乘法，但已经拿到 Q、K、V 后，核心是 QKᵀ 和 PV 两次矩阵乘，中间夹一个 softmax。本节分块省掉的是这个核心中的大中间矩阵。若把投影也纳入整个注意力层，还要另算投影及输出映射的成本。</p>
-<figure class="note-figure"><img src="./figures/lecture05-p52.png" alt="第52页：Q、K、V分块搬入SRAM，注意力块在片上计算，输出写回HBM" loading="lazy"><figcaption>第 52 页：原图把序列长度记为 N，本页统一记为 T。左侧 20 MB、19 TB/s 是整卡 SRAM 示意，算法中每个块仍受自己的片上资源预算限制。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture05-p52.png" alt="第52页：Q、K、V分块搬入SRAM，注意力块在片上计算，输出写回HBM" loading="lazy"><figcaption>第 52 页：原图把序列长度记为 N，本页统一记为 T。左侧 20 MB、19 TB/s 是整卡 SRAM 示意，算法中每个块仍受自己的片上资源预算限制。</figcaption></figure>
 <p>固定一块查询 Q，再依次读入 K、V 的块，就能算出一小片分数。难处是当前只看见部分键，尚不知道整行的最大值和指数和，不能把当前块单独 softmax 后直接与别块相加。每块各自归一化会把每块的权重都加到 1，破坏不同块之间的相对概率。第 53 页的在线 softmax 正是为了保留这种跨块的共同尺度。</p>
 <p>对一条查询行，维护三个状态：已见分数最大值 m、以 m 为基准的指数和 ℓ，以及未归一化的加权值向量 u。新块 J 的分数记为 sⱼ，对应值向量为 vⱼ；每次合并时，把旧状态重新缩放到新的最大值下，再加上新块贡献。初始化 m=−∞、ℓ=0、u=0，处理完全部块后取 O=u/ℓ。下面三个式子是根据第 53–54 页机制展开的推导，撇号表示合并后的状态。</p>
 <div class="math-block" data-tex="m'=\max\left(m,\max_{j\in J}s_j\right)"></div>
@@ -141,7 +141,7 @@ import { withBase } from 'vitepress'
 </details>
 <p>有了这三个状态，QKᵀ 的一个分块算完，就可以立即取指数、更新归一化统计，并把加权 V 的贡献累加进输出。当前 S 块和指数块在片上用完便丢弃，不需要把整张 T×T 矩阵写到 HBM。不同算法版本会选择不同循环顺序，是否反复读写部分输出也随之变化。共同收益是避免大分数矩阵和大概率矩阵的全局物化，不能理解成 Q、K、V 在整次计算里绝对只读一次。</p>
 <p>再用一个分块尺寸看清状态的形状。推导：查询块取 64 行、键块取 128 行、头宽取 64，则当前分数块只有 64×128 个元素，fp32 表示时占 32 KiB；对应的输出累加器是 64×64，fp32 占 16 KiB。每行各有一个最大值和指数和，两个统计向量合计只有 512 字节。它们都不随整段序列长度增长，但这还没计入输入块、缓冲和寄存器布局，不能把三项相加就当成实际内核的全部资源需求。</p>
-<figure class="note-figure"><img src="./figures/lecture05-p54.png" alt="第54页：分数块和指数块只在SRAM生成，通过分母修正把各块输出合并" loading="lazy"><figcaption>第 54 页：蓝色部分存于 HBM，橙色中间块在 SRAM 计算而不写入 HBM。图中输出重缩放与本页未归一化累加器的写法等价，但保存的状态形式不同。</figcaption></figure>
+<figure class="note-figure"><img src="/cs336/figures/lecture05-p54.png" alt="第54页：分数块和指数块只在SRAM生成，通过分母修正把各块输出合并" loading="lazy"><figcaption>第 54 页：蓝色部分存于 HBM，橙色中间块在 SRAM 计算而不写入 HBM。图中输出重缩放与本页未归一化累加器的写法等价，但保存的状态形式不同。</figcaption></figure>
 <p>推导一笔显存账：单头 T=4096、d=128、fp16 时，一个 T×T 矩阵占 32 MiB；若 S、P 各存一份，共 64 MiB。Q、K、V、O 各占 1 MiB，四者共 4 MiB；再按 fp32 保存每行 m 和 ℓ，总计仅 32 KiB。这里不含反向激活、分配器开销和不同实现的临时空间，只用于比较线性张量与平方中间矩阵。T 翻倍时，后者变为四倍，前者只翻倍。</p>
 <p>所以“显存从 O(T²) 降到 O(T)”需要注明：固定头宽 d，且不要求返回完整注意力概率矩阵，才有随序列长度线性增长的存储口径。一般写法是输入输出 O(Td) 加每行统计 O(T) 以及受硬件限制的片上块。若调用方就是要拿到全部 T² 个概率，那份输出本身无法变成线性大小。因果掩码还要在更新前屏蔽无效分数；完全无有效元素的块应跳过，避免出现负无穷相减。</p>
 <p>FlashAttention 仍计算稠密注意力，主要矩阵乘工作量仍是 O(T²d)，在线更新还带来额外运算。第 54 页也提示反向会逐块重算，用计算换掉中间矩阵的保存和读取。速度收益主要来自减少 HBM 访存、融合与片上复用，而非删除大部分 FLOPs。数学结果等价于原注意力，浮点求和顺序却会改变，因此数值验证应采用合理误差容限，而不是要求逐位相同。</p>
