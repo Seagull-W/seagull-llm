@@ -1,5 +1,15 @@
 [
   {
+    "date": "2026-11-04",
+    "slug": "daily-research-guide",
+    "title": "每日调研导读：从后训练全景到奖励、系统与规模边界",
+    "description": "把本站 10 月 14 日以来发布的十六篇每日调研按阅读顺序串起来：哪些先读全景、哪些算系统与信号的账、哪些落到具体机制与相邻领域，每篇给一段几句话的导读。",
+    "route": "/research/2026-11-04-daily-research-guide",
+    "source_urls": [],
+    "window_end": "2026-11-04T00:00:00+08:00",
+    "origin": "manual"
+  },
+  {
     "date": "2026-11-02",
     "slug": "score-centering-tim",
     "title": "Score Centering：消掉追随采样器的漂移，仍要面对采样分布偏差",

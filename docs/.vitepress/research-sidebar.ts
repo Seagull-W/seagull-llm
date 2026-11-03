@@ -5,6 +5,10 @@ export const researchSidebar = [
     "collapsed": false,
                         "items": [
       {
+        "text": "每日调研导读：从后训练全景到奖励、系统与规模边界",
+        "link": "/research/2026-11-04-daily-research-guide"
+      },
+      {
         "text": "Score Centering：消掉追随采样器的漂移，仍要面对采样分布偏差",
         "link": "/research/2026-11-02-score-centering-tim"
       },

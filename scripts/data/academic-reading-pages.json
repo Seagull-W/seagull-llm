@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1709,
+  "character_count": 1712,
   "pages": [
     {
       "path": "/cs336/a1-bpe.md",
@@ -114,6 +114,10 @@
     {
       "path": "/research/2026-11-02-score-centering-tim.md",
       "title": "Score Centering：消掉追随采样器的漂移，仍要面对采样分布偏差"
+    },
+    {
+      "path": "/research/2026-11-04-daily-research-guide.md",
+      "title": "每日调研导读：从后训练全景到奖励、系统与规模边界"
     },
     {
       "path": "/rl-book/cha4对话模板与监督微调.md",
