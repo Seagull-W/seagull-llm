@@ -118,8 +118,15 @@ onUnmounted(() => { close(); observer?.disconnect(); document.removeEventListene
 .Layout .vp-doc .reader-table :is(th,td):first-child { max-width:150px; }
 .Layout .vp-doc .reader-table.is-scrollable th:first-child, .Layout .vp-doc .reader-table.is-scrollable td:first-child { position:sticky; left:0; z-index:1; background:var(--vp-c-bg-alt); box-shadow:1px 0 var(--vp-c-divider); }
 .Layout.academic-reading .vp-doc .table-scroll-hint { font:12px/1.6 var(--vp-font-family-base); color:var(--vp-c-text-2); margin:20px 0 6px; }
-.plain-code { position:relative; }
-.Layout .VPDoc .vp-doc .plain-code pre { padding-top:40px; }
+.Layout .VPDoc .vp-doc .plain-code {
+  position:relative; max-width:var(--reading-measure, 100%); min-width:0; margin:24px auto;
+  border:1px solid var(--vp-c-divider); border-radius:6px; background:var(--vp-code-block-bg);
+}
+.Layout .VPDoc .vp-doc .plain-code pre {
+  margin:0; padding:44px 20px 20px; max-width:100%; overflow-x:auto;
+  text-align:left; white-space:pre; overflow-wrap:normal; tab-size:4;
+}
+.Layout .VPDoc .vp-doc .plain-code pre code { padding:0; background:transparent; }
 .plain-code-copy { position:absolute; top:6px; right:8px; padding:4px 10px; min-height:30px; font:12px var(--vp-font-family-base); border:1px solid var(--vp-c-divider); border-radius:4px; background:var(--vp-c-bg); color:var(--vp-c-text-2); }
 @media print { .table-scroll-hint,.plain-code-copy { display:none; } }
 </style>

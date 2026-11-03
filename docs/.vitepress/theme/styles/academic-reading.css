@@ -86,6 +86,12 @@
 .Layout.Layout.academic-reading .VPDoc .vp-doc :is(.lecture-equation, .reward-equation) mjx-container[display='true'] { margin: 0; }
 .Layout.Layout.academic-reading .VPDoc .vp-doc :is(pre,code,kbd) { font-family: var(--vp-font-family-mono); }
 .Layout.Layout.academic-reading .VPDoc .vp-doc :is(pre,div[class*='language-']) { font-size: 14px; line-height: 1.7; }
+/* Keep code and its disclosure/group container on the same measure as prose.
+   Long lines scroll inside pre instead of widening the article on small screens. */
+.Layout.Layout.academic-reading .VPDoc .vp-doc :is(div[class*='language-'], .vp-code-group, details:has(pre)) {
+  max-width: var(--reading-measure); min-width: 0; margin-inline: auto;
+}
+.Layout.Layout.academic-reading .VPDoc .vp-doc div[class*='language-'] pre { max-width: 100%; overflow-x: auto; }
 .Layout.Layout.academic-reading .VPDoc .vp-doc :is(table,figcaption,summary,button,input,select,textarea,.custom-block-title,.research-issue) { font-family: var(--vp-font-family-base); }
 .Layout.Layout.academic-reading .VPDoc .vp-doc table { font-size: 14px; line-height: 1.8; font-variant-numeric: tabular-nums; }
 .Layout.Layout.academic-reading .VPDoc .vp-doc :is(th,td) { line-height: 1.8; }
