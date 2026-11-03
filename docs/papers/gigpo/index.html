@@ -45,7 +45,7 @@
 <blockquote>
 <p>本质是想办法为更细的粒度找到评判好坏的标准，这里相同状态就提供了一个基准，从而判断重复状态下哪些动作更好。</p>
 </blockquote>
-<figure class="note-figure"><img src="./figures/pre-knowledge.png" alt="阅读起点配图"><figcaption>阅读起点 · 原文配图</figcaption></figure>
+<figure class="note-figure"><img src="/papers/gigpo/figures/pre-knowledge.png" alt="阅读起点配图"><figcaption>阅读起点 · 原文配图</figcaption></figure>
 </section>
 
 <section class="document-section note-panel" aria-labelledby="gigpo训练agent">
@@ -53,11 +53,11 @@
 <h3 id="回合相对优势" tabindex="-1">回合相对优势 <a class="header-anchor" href="#回合相对优势" aria-label="Permalink to &quot;回合相对优势&quot;">&ZeroWidthSpace;</a></h3>
 <p>考虑到低方差分组，可以考虑将分组优势的分母设为1（原为std）</p>
 <h3 id="步级相对优势" tabindex="-1">步级相对优势 <a class="header-anchor" href="#步级相对优势" aria-label="Permalink to &quot;步级相对优势&quot;">&ZeroWidthSpace;</a></h3>
-<figure class="note-figure"><img src="./figures/锚状态分组.png" alt="GiGPO训练agent配图"><figcaption>GiGPO训练agent · 原文配图</figcaption></figure>
-<figure class="note-figure"><img src="./figures/相对优势.png" alt="GiGPO训练agent配图"><figcaption>GiGPO训练agent · 原文配图</figcaption></figure>
+<figure class="note-figure"><img src="/papers/gigpo/figures/锚状态分组.png" alt="GiGPO训练agent配图"><figcaption>GiGPO训练agent · 原文配图</figcaption></figure>
+<figure class="note-figure"><img src="/papers/gigpo/figures/相对优势.png" alt="GiGPO训练agent配图"><figcaption>GiGPO训练agent · 原文配图</figcaption></figure>
 <p>所谓奖励稀疏，即中间的即时奖励为0，所以这里用discount return代替。</p>
 <h3 id="公式" tabindex="-1">公式 <a class="header-anchor" href="#公式" aria-label="Permalink to &quot;公式&quot;">&ZeroWidthSpace;</a></h3>
-<figure class="note-figure"><img src="./figures/公式.png" alt="GiGPO训练agent配图"><figcaption>GiGPO训练agent · 原文配图</figcaption></figure>
+<figure class="note-figure"><img src="/papers/gigpo/figures/公式.png" alt="GiGPO训练agent配图"><figcaption>GiGPO训练agent · 原文配图</figcaption></figure>
 </section>
 
 <section class="document-section note-panel" aria-labelledby="实验">
@@ -70,7 +70,7 @@
 <p><strong>训练细节</strong>：basemodel为Qwen2.5-1.5B/3B/7B-Instruct，<span class="math-inline" data-tex="\omega"></span>设为1，分组大小设为8。此外，对锚点状态引入基于相似度的模糊匹配（最长匹配子序列超过0.9视为同一状态）</p>
 <h3 id="消融" tabindex="-1">消融 <a class="header-anchor" href="#消融" aria-label="Permalink to &quot;消融&quot;">&ZeroWidthSpace;</a></h3>
 <p>对<span class="math-inline" data-tex="F_norm=1/std"></span>以及分别去除步级和回合相对优势，使用Qwen2.5-1.5B-Instruct作为策略模型。</p>
-<figure class="note-figure"><img src="./figures/ablation_01.png" alt="实验配图"><figcaption>实验 · 原文配图</figcaption></figure>
+<figure class="note-figure"><img src="/papers/gigpo/figures/ablation_01.png" alt="实验配图"><figcaption>实验 · 原文配图</figcaption></figure>
 </section>
 
 <section class="document-section note-panel" aria-labelledby="优势与局限">

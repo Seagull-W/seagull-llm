@@ -42,7 +42,7 @@
 </blockquote>
 <p>共训练10,400步，每个训练步有32个不同的问题（训练批次大小为32*16=512），值得注意的是，每400步即将参考模型替换为最新的策略模型（从而允许更大的搜索范围）。为加速训练，每次rollout 生成8,192个输出，划分为16个mini-batch（16*512），且只训练一轮。</p>
 <h4 id="rl-infra" tabindex="-1">RL Infra <a class="header-anchor" href="#rl-infra" aria-label="Permalink to &quot;RL Infra&quot;">&ZeroWidthSpace;</a></h4>
-<figure class="note-figure"><img src="./figures/RLInfra.png" alt="RLInfra架构图"><figcaption>RLInfra架构图</figcaption></figure>
+<figure class="note-figure"><img src="/papers/deepseek-r1/figures/RLInfra.png" alt="RLInfra架构图"><figcaption>RLInfra架构图</figcaption></figure>
 <p><strong>Rollout生成模块</strong>：prompt分批发放给vLLM worker，每个worker用当前actor（策略模型）权重采样分布，采用专家并行及MTP自解码等提速。</p>
 <p><strong>Inference打分模块</strong>：VRAM（显存）换入reference+reward模型，对prompt和response做前向，以计算KL loss和基准奖励。</p>
 <p><strong>规则奖励</strong>：CPU执行，与Rollout和Inference并行，每条回复生成完即可验证，输出只用在train计算;loss前汇合即可。</p>
@@ -82,7 +82,7 @@
 
 <section class="document-section note-panel" aria-labelledby="deepseek-r1">
 <h2 id="deepseek-r1" tabindex="-1">deepseek-r1 <a class="header-anchor" href="#deepseek-r1" aria-label="Permalink to &quot;deepseek-r1&quot;">&ZeroWidthSpace;</a></h2>
-<figure class="note-figure"><img src="./figures/R1的多流程训练.png" alt="R1的多流程训练图"><figcaption>R1的多流程训练图</figcaption></figure>
+<figure class="note-figure"><img src="/papers/deepseek-r1/figures/R1的多流程训练.png" alt="R1的多流程训练图"><figcaption>R1的多流程训练图</figcaption></figure>
 <h3 id="基于模型的奖励" tabindex="-1">基于模型的奖励 <a class="header-anchor" href="#基于模型的奖励" aria-label="Permalink to &quot;基于模型的奖励&quot;">&ZeroWidthSpace;</a></h3>
 <p>对于通用数据的偏好，依然要用模型来捕捉。</p>
 <p>这里考虑了有用性与无害性。</p>

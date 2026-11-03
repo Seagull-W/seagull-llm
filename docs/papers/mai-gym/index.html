@@ -194,7 +194,7 @@
 <section class="document-section note-panel" aria-labelledby="maigym">
 <h2 id="maigym" tabindex="-1">三、MAI-Gym <a class="header-anchor" href="#maigym" aria-label="章节链接">&#8203;</a></h2>
 <h3 id="architecture" tabindex="-1">3.1 系统架构 <a class="header-anchor" href="#architecture" aria-label="章节链接">&#8203;</a></h3>
-<figure class="note-figure"><img src="./figures/图2.png" alt="MAI-Gym 共享轨迹采样路径、环境管理器、部署后端与四个扩展点的系统架构。"><figcaption>MAI-Gym 共享轨迹采样路径、环境管理器、部署后端与四个扩展点的系统架构。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图2.png" alt="MAI-Gym 共享轨迹采样路径、环境管理器、部署后端与四个扩展点的系统架构。"><figcaption>MAI-Gym 共享轨迹采样路径、环境管理器、部署后端与四个扩展点的系统架构。</figcaption></figure>
 <p>首先，所有工作负载(即不同形式的任务：采集数据、训练模型、评估)<em>共享一条轨迹采样路径和一个智能体运行框架</em>，因此评测、数据采集和训练使用同一个智能体（左侧）。</p>
 <p>其次，智能体<em>仅通过环境管理器</em>访问所有环境；管理器提供统一接口，隐藏环境与部署细节（中部）。部署后端承载移动端、计算机和网页实例（右侧），仪表盘报告系统状态（底部）。</p>
 <p><strong>保持采样路径和agent harness一致</strong>，尽可能保证不同工作负载下运行机制相近，从而避免因为框架差异导致系统性偏差。</p>
@@ -210,12 +210,12 @@
 <li>每次尝试需要数十次多模态推理调用后，验证器才返回奖励。</li>
 </ol>
 <p>MAI-Gym的工作，一是在Andorid、桌面虚拟机和浏览器这三种任务上做了针对性优化，降低了重置耗时（中位数）；二是对大规模快速供应做了优化；三是高效多轮推理，分为Rollout和Training两部分，细节见下图：</p>
-<figure class="note-figure"><img src="./figures/图3.png" alt="多轮推理中窗口式历史管理与训练样本划分的示意图。"><figcaption>多轮推理中窗口式历史管理与训练样本划分的示意图。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图3.png" alt="多轮推理中窗口式历史管理与训练样本划分的示意图。"><figcaption>多轮推理中窗口式历史管理与训练样本划分的示意图。</figcaption></figure>
 <blockquote>
 <p>一些前置知识，每一轮上下文含文本和截图，旧截图解除占用是通过占位符的方式，当本轮上下文前缀改变时就需要重新计算KV缓存。</p>
 </blockquote>
 <p>对于Rollout的部分，K为一个窗口的轮数，0为相邻窗口重叠数，当K+1时开启新窗口，KV缓存重新计算，1~K-O的截图变为占位符，此时新的窗口至少能看见O+1轮完整上下文，K+2开始复用KV缓存。相比last-k降低了KV缓存更新的频率，保留了一定的重叠窗口。论文取K=10,O=2。</p>
-<figure class="note-figure"><img src="./figures/图2_补充.png" alt="窗口式轨迹划分中各窗口覆盖的轮次、重叠轮次与训练区间。"><figcaption>窗口式轨迹划分中各窗口覆盖的轮次、重叠轮次与训练区间。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图2_补充.png" alt="窗口式轨迹划分中各窗口覆盖的轮次、重叠轮次与训练区间。"><figcaption>窗口式轨迹划分中各窗口覆盖的轮次、重叠轮次与训练区间。</figcaption></figure>
 <p>对于Training部分，采用相同的窗口划分样本（如1~K，K-O+1~2K-O），这是为了让模型训练上下文和rollout阶段尽量保持一致，用loss mask保证第二个样本中与上一个样本的重叠部分不计算loss。</p>
 <h3 id="evaluation-diagnostics" tabindex="-1">3.3 评测与诊断 <a class="header-anchor" href="#evaluation-diagnostics" aria-label="章节链接">&#8203;</a></h3>
 <p>支持本地checkpoint和API测评，在移动端/计算机/网页提供了3/4/3个benchmark。</p>
@@ -223,7 +223,7 @@
 <p>支持通过外部智能体查询评估基准测试轨迹。</p>
 <h3 id="env-task-synthesis" tabindex="-1">3.4 环境与任务合成 <a class="header-anchor" href="#env-task-synthesis" aria-label="章节链接">&#8203;</a></h3>
 <p>诊断指出该练什么，合成提供练什么。合成覆盖可执行任务 <span class="math-inline" data-tex="x=(\mathcal{E},s_0,g,V)"></span> 的全部四项：模拟应用给出 <span class="math-inline" data-tex="\mathcal{E}"></span>，跨应用世界构建给出一致的 <span class="math-inline" data-tex="s_0"></span>，任务与验证器合成给出 <span class="math-inline" data-tex="g"></span> 和经过执行测试的 <span class="math-inline" data-tex="V"></span>。每个阶段都是一项<em>智能体技能</em>，即 Claude Code 这类编程智能体遵循的一组指令；技能与其产出的应用、任务一起发布。</p>
-<figure class="note-figure"><img src="./figures/图4.png" alt="七个真实移动应用与对应克隆应用的界面对照。"><figcaption>七个真实移动应用与对应克隆应用的界面对照。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图4.png" alt="七个真实移动应用与对应克隆应用的界面对照。"><figcaption>七个真实移动应用与对应克隆应用的界面对照。</figcaption></figure>
 <p><strong>环境合成：模拟应用。</strong> 模拟应用是后端可重置的独立应用，使同一条工作流可以在无副作用的前提下重复数千次。按是否有真实应用作为参照分两类：</p>
 <div class="note-table" tabindex="0"><table>
 <thead>
@@ -250,7 +250,7 @@
 </tbody>
 </table></div>
 <p>克隆的正确性靠人工比对：测试人员在克隆与真实应用上执行同一任务并对照过程中的界面（附录 A.7.1）。新颖应用是运行在 Chromium 中的确定性状态机——相同 <span class="math-inline" data-tex="s_0"></span> 与动作序列必然产生相同结果，因此重置与奖励是精确的；流水线先在无浏览器条件下测逻辑，再在 Chromium 中运行同一份代码，并用参考解、重置测试和两次运行的一致性检查来验收（附录 A.7.2）。42 个新颖应用含 840 个任务、3,196 项针对应用状态、动作历史和提交答案的可执行检查。</p>
-<figure class="note-figure"><img src="./figures/图5.png" alt="跨应用世界构建、任务生成与验证器合成的三阶段流程。"><figcaption>跨应用世界构建、任务生成与验证器合成的三阶段流程。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图5.png" alt="跨应用世界构建、任务生成与验证器合成的三阶段流程。"><figcaption>跨应用世界构建、任务生成与验证器合成的三阶段流程。</figcaption></figure>
 <p><strong>跨应用世界构建。</strong> 真实任务的前提是 <span class="math-inline" data-tex="s_0"></span> 里已经存在完成任务所需的证据和资源，所以顺序是&quot;先造世界，再写任务&quot;。人物设定（身份、角色、目标）与情境（时间线、事件、约束）合成共享同一批人物、事件和事实的文件与应用记录：项目说明、预算表、邮件往来、日历条目分别描述同一项目的不同侧面。共享上下文使任务必须以取证为前提——不是&quot;创建一个叫<em>预算审查</em>的日程&quot;，而是&quot;把预算审查挪到修订版表格截止日的次日&quot;，需要读邮件、表格和日历。缺资源时流水线回填并验证更新后的世界；初始化模板把这套世界灌进运行中的实例（移动端填应用数据，计算机端填桌面工作区），得到的即为可复现的 <span class="math-inline" data-tex="s_0"></span>。</p>
 <p><strong>任务与验证器合成。</strong> 三步，核心目标是让 <span class="math-inline" data-tex="V"></span> 检查&quot;用户要求的结果&quot;，而不是&quot;某一种解法碰巧采用的做法&quot;：</p>
 <ol>
@@ -555,12 +555,12 @@
 </table></div>
 <p><strong>任务 OOD。</strong> 同一个检查点跑完七个基准，而四个 GUI 智能体基线只报计算机结果。在两个训练过的环境上，MAI-Gym-9B 得 78.4 与 76.2，是同规模最优：领先 UI-Venus-2-9B 3.2 与 5.4 个百分点，领先 GUI-Owl-1.5-8B 40.2 与 23.3 个百分点；也超过在此二基准上报数的更大模型（含 GUI-Owl-1.5-32B，以及 OSWorld-Verified 上的 EvoCUA-1.5-32B、CUA-GYM-35B-A3B、CUA-GYM-397B-A17B），仅 397B-A17B 的 Qwen-CUA 在其上更高。对前沿模型，MobileWorld 上超过 Opus 4.8（69.2）、GPT-5.5（62.4）与 Qwen3.8-Max（77.8），OSWorld-Verified 上距 GPT-5.5 仅 2.5 个百分点。训练未用任何基准任务，所以这两个分数衡量的是在训练过的环境里解新任务的能力。</p>
 <p><strong>环境 OOD。</strong> 移动端仍有竞争力但不再领先：AndroidWorld 75.9、MobileGym 46.5，分别比 UI-Venus-2-9B 低 4.3 和 6.2 个百分点（都高于 GUI-Owl-1.5-8B）。计算机侧更难：OSWorld 2.0 为 3.7/11.3，MacAgentBench 41.3，MyPCBench 15.2，均为同规模开放 GUI 智能体中已报告的最好水平。</p>
-<figure class="note-figure"><img src="./figures/图6.png" alt="基础模型、SFT 预热与联合 RL 在七个基准上的成绩和增益。"><figcaption>基础模型、SFT 预热与联合 RL 在七个基准上的成绩和增益。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图6.png" alt="基础模型、SFT 预热与联合 RL 在七个基准上的成绩和增益。"><figcaption>基础模型、SFT 预热与联合 RL 在七个基准上的成绩和增益。</figcaption></figure>
 <p><strong>SFT 与联合 RL 的增益。</strong> 图 6 把每项分数拆成基础模型、SFT 预热增益与联合 RL 增益（SFT 检查点按本文协议评测，上标 <span class="math-inline" data-tex="p"></span> 为部分得分）。SFT 贡献了大部分提升：任务 OOD 平均 29.9→66.4，环境 OOD 平均 18.8→32.3。联合 RL 再把跨域平均从 44.1 推到 50.5——移动均值 +8.7、计算机均值 +4.2，说明一次运行联合训练两个域可以同时改善两侧；两个任务 OOD 基准分别 +14.1 与 +7.8，环境 OOD 平均 +4.2，且五个环境 OOD 基准<strong>逐个</strong>都涨，说明从两个环境的合成任务学到的能力可迁移到别的环境。</p>
 <blockquote>
 <p>口径自查：基础环境 OOD 平均 <span class="math-inline" data-tex="(57.8+9.0+0.0+20.7+6.5)/5=18.8"></span>；终态环境 OOD 平均 <span class="math-inline" data-tex="(75.9+46.5+3.7+41.3+15.2)/5=36.5"></span>，与 32.3+4.2 一致；跨域平均 <span class="math-inline" data-tex="(66.9+34.1)/2=50.5"></span> 也自洽。任务 OOD 的 66.4 指 SFT 检查点的 <span class="math-inline" data-tex="(64.3+68.4)/2"></span>，不是终态均值（77.3），读表时容易混。</p>
 </blockquote>
-<figure class="note-figure"><img src="./figures/图7.png" alt="命令行工具、批量 GUI 动作与移动端自适应放大的行为案例。"><figcaption>命令行工具、批量 GUI 动作与移动端自适应放大的行为案例。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图7.png" alt="命令行工具、批量 GUI 动作与移动端自适应放大的行为案例。"><figcaption>命令行工具、批量 GUI 动作与移动端自适应放大的行为案例。</figcaption></figure>
 <p><strong>训练学到的高效行为。</strong> 图 7 三个案例：计算机侧当 CLI 是最短路径时直接调命令行——用 <code>ffprobe</code> 查视频流、<code>ffmpeg</code> 导出字幕并无损重封装，绕开媒体编辑里更长的 GUI 路径；支持批量 GUI 动作，电子表格里&quot;锁定焦点→输入区域→确认→快捷键复制&quot;可合成更少的高层动作，减少步数、观测–决策循环与用户词元成本；移动端出现模型原生的自适应放大，用应用自带双击缩放并跨页移动放大目标，读取全页视图下看不清的小字（如 PDF 里的参数数值）。这些提升不只是&quot;动作选得更准&quot;，还包括为任务选择合适的交互方式：直接 GUI、批量 GUI、外部工具。</p>
 <h3 id="analysis" tabindex="-1">4.3 分析 <a class="header-anchor" href="#analysis" aria-label="章节链接">&#8203;</a></h3>
 <p>六个问题各对应一节：基础设施能否撑住在线 GUI RL 的规模、联合 RL 是否优于专家合并、RL 增益如何随合成任务数增长、克隆里的训练能否迁移到真实应用、能否仅凭奖励学会陌生应用、GRPO 与 SAO 在 MAI-Gym 上如何比较。</p>
@@ -696,20 +696,20 @@
 </tr>
 </tbody>
 </table></div>
-<figure class="note-figure"><img src="./figures/图8.png" alt="合成训练任务数量与两个任务 OOD 基准成功率的关系。"><figcaption>合成训练任务数量与两个任务 OOD 基准成功率的关系。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图8.png" alt="合成训练任务数量与两个任务 OOD 基准成功率的关系。"><figcaption>合成训练任务数量与两个任务 OOD 基准成功率的关系。</figcaption></figure>
 <p>两个基准的任务都没参与训练，所以这是泛化随任务多样性上升；OSWorld-Verified 在 1k 处还小幅回落（70.9），5k 才明显起来。</p>
 <h4 id="analysis-sim2real" tabindex="-1">4.3.4 克隆训练迁移到真实应用 <a class="header-anchor" href="#analysis-sim2real" aria-label="章节链接">&#8203;</a></h4>
 <p>用 52 个配对任务，比较仅克隆内 RL 前后，12306 克隆与实体手机上真实 12306 的成功率。</p>
-<figure class="note-figure"><img src="./figures/图9.png" alt="克隆内 RL 前后在 12306 克隆与真实应用上的成功率对比。"><figcaption>克隆内 RL 前后在 12306 克隆与真实应用上的成功率对比。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图9.png" alt="克隆内 RL 前后在 12306 克隆与真实应用上的成功率对比。"><figcaption>克隆内 RL 前后在 12306 克隆与真实应用上的成功率对比。</figcaption></figure>
 <p>克隆 36.5→73.1，真实应用 28.8→48.1（+19.2 个百分点）。图 11 给出同一个能力在两边的表现：RL 后策略在克隆与真机上都正确算出&quot;下周一&quot;并设置提醒。迁移并不完整——克隆与真机的差距从 7.7 扩大到 25.0 个百分点，克隆内的增益不能直接当作真实应用的增益。</p>
-<figure class="note-figure"><img src="./figures/图11.png" alt="RL 后策略在 12306 克隆与真实手机上计算日期并设置提醒的轨迹。"><figcaption>RL 后策略在 12306 克隆与真实手机上计算日期并设置提醒的轨迹。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图11.png" alt="RL 后策略在 12306 克隆与真实手机上计算日期并设置提醒的轨迹。"><figcaption>RL 后策略在 12306 克隆与真实手机上计算日期并设置提醒的轨迹。</figcaption></figure>
 <h4 id="analysis-novel-apps" tabindex="-1">4.3.5 仅凭奖励学习陌生应用 <a class="header-anchor" href="#analysis-novel-apps" aria-label="章节链接">&#8203;</a></h4>
 <p>252 个任务训练、62 个留出任务各试一次，步数预算 60。成功率 25.8→45.2；耗尽预算的尝试 27→5；平均轨迹长度 33.3→16.4 步。全程只用验证器奖励，不给这些应用的任何示范。</p>
-<figure class="note-figure"><img src="./figures/图12.png" alt="陌生文件管理应用中 RL 前后的操作轨迹与验证结果对比。"><figcaption>陌生文件管理应用中 RL 前后的操作轨迹与验证结果对比。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图12.png" alt="陌生文件管理应用中 RL 前后的操作轨迹与验证结果对比。"><figcaption>陌生文件管理应用中 RL 前后的操作轨迹与验证结果对比。</figcaption></figure>
 <p>图 12 的留出任务：RL 前反复无效长按把 60 步预算烧完、只过 2/4 项检查；RL 后 5 步完成——选中 3.71 GB 的 Music 文件夹、移入 Download、打开存储页、回答&quot;同一卷内移动不释放空间&quot;（可用仍是 2.35 GB），四项检查全过。这类&quot;移动后可用空间不变&quot;的判断正是纯行为克隆难以覆盖的部分。</p>
 <h4 id="analysis-grpo-sao" tabindex="-1">4.3.6 GRPO 与 SAO <a class="header-anchor" href="#analysis-grpo-sao" aria-label="章节链接">&#8203;</a></h4>
 <p>SAO 用异步单轨迹更新替代分组采样，以学习得到的价值模型估计优势。两条曲线早期任务成功率相近，区间末尾 SAO 略低于 GRPO；计时上 SAO 减少了采样等待，但额外的评论家计算（每次演员更新配两次评论家更新）基本抵消了这部分收益，在测试配置下没有明确的总体训练时间优势。</p>
-<figure class="note-figure"><img src="./figures/图10.png" alt="GRPO 与 SAO 的任务成功率随累计演员更新次数变化的曲线。"><figcaption>GRPO 与 SAO 的任务成功率随累计演员更新次数变化的曲线。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图10.png" alt="GRPO 与 SAO 的任务成功率随累计演员更新次数变化的曲线。"><figcaption>GRPO 与 SAO 的任务成功率随累计演员更新次数变化的曲线。</figcaption></figure>
 </section>
 
 <section class="document-section note-panel" aria-labelledby="related-work">
@@ -827,9 +827,9 @@
 <section class="document-section note-panel" aria-labelledby="figures-reading">
 <h2 id="figures-reading" tabindex="-1">附二：配图补读与贡献—证据对照 <a class="header-anchor" href="#figures-reading" aria-label="章节链接">&#8203;</a></h2>
 <p>前面正文里嵌进的图都是机制图与结果图，另有四张图只在文字里提过：图 1（全文总览）、图 13（仪表盘）、图 14 与图 15（合成任务示例）。这四张读一遍，可以顺便核对全文的数字口径。</p>
-<figure class="note-figure"><img src="./figures/图1.png" alt="MAI-Gym 的三端环境、四项平台能力、训练闭环与模型成绩总览。"><figcaption>MAI-Gym 的三端环境、四项平台能力、训练闭环与模型成绩总览。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图1.png" alt="MAI-Gym 的三端环境、四项平台能力、训练闭环与模型成绩总览。"><figcaption>MAI-Gym 的三端环境、四项平台能力、训练闭环与模型成绩总览。</figcaption></figure>
 <p><strong>图 1：一句话结构。</strong> 左栏是环境侧——移动端（MobileWorld、AndroidWorld、MobileGym 与模拟应用）与计算机／网页侧（OSWorld、OSWorld 2.0、MacAgentBench、MyPCBench），向中间送截图、收回批量动作。中栏是 MAI-Gym 的四个能力，正好对应全文四个数字：<code>01</code> 一键评测 <strong>10</strong> 个基准、<code>02</code> 并行轨迹采样 <strong>20K</strong> 环境、<code>03</code> 智能体 RL 训练 <strong>2K</strong> 开放可执行任务 × <strong>6</strong> 种算法、<code>04</code> 面向模型弱点的任务／环境合成；底部闭环是 Evaluate → Diagnose → Synthesize → Retrain。右栏把 MobileWorld 与 OSWorld-Verified 的成功率对参数量画成散点，9B 的点落在高分位——这就是摘要里&quot;低于 10B 的开放 GUI 智能体中最好&quot;的那句话的图形版。与图 2 的分工：图 1 讲平台提供哪四种能力，图 2 讲这些能力为什么能共用一条采样路径。</p>
-<figure class="note-figure"><img src="./figures/图13.png" alt="实例群、运行记录、基准对比与轨迹诊断四类仪表盘视图。"><figcaption>实例群、运行记录、基准对比与轨迹诊断四类仪表盘视图。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图13.png" alt="实例群、运行记录、基准对比与轨迹诊断四类仪表盘视图。"><figcaption>实例群、运行记录、基准对比与轨迹诊断四类仪表盘视图。</figcaption></figure>
 <p><strong>图 13：仪表盘四视图</strong>，对应 3.3 节提出的三个问题。</p>
 <ul>
 <li>(a) 实例群：容量快照（会话数、硬上限、步速）、活动曲线（会话数与 steps/s 随时间）、会话清单（leased／free／busy／invalid）——回答&quot;实例群是否健康&quot;。</li>
@@ -837,9 +837,9 @@
 <li>(c) 基准对比：按检查点并排列分数，每个分数可追到具体 run。</li>
 <li>(d) 轨迹诊断：任务指令、逐步截图（出错步标红）、该步的动作参数与模型预测（JSON）——回答&quot;哪一步出错&quot;，也是区分智能体失败、环境故障与超时的落点。</li>
 </ul>
-<figure class="note-figure"><img src="./figures/图14.png" alt="比较印刷样张与完成研讨会幻灯片的桌面合成任务及检查项。"><figcaption>比较印刷样张与完成研讨会幻灯片的桌面合成任务及检查项。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图14.png" alt="比较印刷样张与完成研讨会幻灯片的桌面合成任务及检查项。"><figcaption>比较印刷样张与完成研讨会幻灯片的桌面合成任务及检查项。</figcaption></figure>
 <p><strong>图 14：两个桌面合成任务</strong>（附录 A.6）。左 (a) 比较印刷样张：读工单、手写笔记与确认邮件，在 Calc 里汇总三份样张的印刷设置，为每份样张在演示文稿里加一页，最后把表格导出 CSV、演示文稿导出 PDF；右 (b) 完成研讨会开场幻灯片：用计划文档、预算工作簿、差旅估算补齐日期／地点／演讲者／预算项，在 Calc 里做预算柱状图插进演示文稿，并算出差旅总额另存新文件。两栏的检查项都只落在&quot;文件里能读出来的数值与页数&quot;上：CSV 与幻灯片的数值、每份样张一页、PDF 含三个标签、图表类别与数值、摘要里的差旅合计。这正是 3.4 节&quot;先定要求再写验证器&quot;的可见样本——验证器查的是结果，不是某条操作路径。</p>
-<figure class="note-figure"><img src="./figures/图15.png" alt="移动端行道树清查任务的指令依赖与调查规程文件。"><figcaption>移动端行道树清查任务的指令依赖与调查规程文件。</figcaption></figure>
+<figure class="note-figure"><img src="/papers/mai-gym/figures/图15.png" alt="移动端行道树清查任务的指令依赖与调查规程文件。"><figcaption>移动端行道树清查任务的指令依赖与调查规程文件。</figcaption></figure>
 <p><strong>图 15：移动端&quot;行道树清查&quot;</strong>。左侧指令是一串依赖：按 <code>Street_Tree_Inventory_Protocol_2023.pdf</code> 的方法分析下载目录里三份调查，摘要表每条街道一行、加一行总计，最后回邮件给出各街数据、总计与最后调查日期。右侧就是那份规程的截图：种植点只能记 tree／vacant／stump 三态（树桩在被林业部门清除前不算空位），胸径在离地 4.5 英尺（137 厘米）处量，单位英寸保留一位小数，厘米要先除以 2.54。</p>
 <p>这张图解释了合成任务与&quot;问答式&quot;任务的差别：单位换算规则、三态定义这些知识不在模型参数里，而在任务自带的文件里，策略必须先检索到规程、再按规程换算。4.3.3 里任务池从 0.5k 扩到 5k 带来 +9.2／+6.5 的提升，靠的正是这类&quot;证据在环境里&quot;的任务多样性。</p>
 <p><strong>贡献四条与证据位置。</strong> 引言的四条贡献可以在正文里逐条对上：</p>
