@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { readFileSync } from 'node:fs'
 import { readingPages, usesAcademicReading } from './reading-pages.mjs'
 
 test('all public text collections receive academic reading typography', () => {
   const pages = readingPages()
   assert.ok(pages.length >= 71)
-  assert.deepEqual([...new Set(pages.map(p => p.path.split('/')[1]))].sort(),
-    ['cs336', 'linux-notes', 'papers', 'research', 'rl-book', 'rust-notes', 'westlake-rl'])
+  const sections = JSON.parse(readFileSync('docs/.vitepress/sections.json', 'utf8'))
+  const textSections = sections.filter(s => s.kind !== 'gallery')
+  assert.deepEqual([...new Set(pages.map(p => p.path.split('/')[1]))].sort(), textSections.map(s => s.id).sort())
   for (const path of ['/westlake-rl/随机近似/课程讲义', '/rl-book/cha6强化学习',
     '/papers/projects/intellect-3/', '/rust-notes/多线程并发编程',
     '/linux-notes/linux-isolation', '/research/2026-10-26-agent-code-review-layers']) {

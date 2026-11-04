@@ -2,14 +2,16 @@
 import { computed, ref } from 'vue'
 import { withBase } from 'vitepress'
 import { bilibiliSpaceUrl, scienceVideos } from '../data/videos'
+import { useVisualStyle } from '../theme/visual-styles'
 
 const props = defineProps<{ preview?: boolean }>()
+const style = useVisualStyle()
 const failedCovers = ref<Record<string, boolean>>({})
 const videos = computed(() => props.preview ? scienceVideos.slice(0, 3) : scienceVideos)
 </script>
 
 <template>
-  <section class="video-gallery" :class="{ 'is-preview': preview }" aria-labelledby="video-gallery-title">
+  <section class="video-gallery" :data-index="style.iconSet" :class="{ 'is-preview': preview }" aria-labelledby="video-gallery-title">
     <header class="gallery-header">
       <div>
         <p class="eyebrow">通过视频，一起学习</p>
@@ -22,7 +24,7 @@ const videos = computed(() => props.preview ? scienceVideos.slice(0, 3) : scienc
 
     <div v-if="videos.length" class="video-grid" :class="{ 'two-columns': videos.length === 2 }">
       <a
-        v-for="video in videos"
+        v-for="(video,i) in videos"
         :key="video.bvid"
         :id="preview ? undefined : video.bvid"
         class="video-card"
@@ -51,7 +53,7 @@ const videos = computed(() => props.preview ? scienceVideos.slice(0, 3) : scienc
           <span v-if="video.duration" class="duration">{{ video.duration }}</span>
         </div>
         <div class="video-info">
-          <time :datetime="video.publishedAt">{{ video.publishedAt }}</time>
+          <div class="video-meta"><span class="video-reel" aria-hidden="true">{{ String(i + 1).padStart(2,'0') }}</span><time :datetime="video.publishedAt">{{ video.publishedAt }}</time></div>
           <h3>{{ video.title }}</h3>
           <p class="video-description">{{ video.description }}</p>
           <span class="watch-link">在 Bilibili 观看 <span aria-hidden="true">↗</span></span>
@@ -116,4 +118,36 @@ time { color: var(--vp-c-text-2); font-size: 12px; }
   h1, h2 { font-size: 26px; }
 }
 @media (prefers-reduced-motion: reduce) { .video-card { transition: none; } }
+.video-meta { display:flex; gap:12px; align-items:baseline; }
+.video-reel { display:none; }
+.video-gallery[data-index='paper'] .video-card { border:0; border-top:1px solid var(--vp-c-divider); border-radius:0; background:transparent; padding-top:12px; }
+.video-gallery[data-index='paper'] .video-info { padding:10px 0; }
+.video-gallery[data-index='paper'] .video-info h3 { font-family:'Seagull Academic Serif',SimSun,serif; }
+.video-gallery[data-index='paper'] .source-badge,.video-gallery[data-index='cinema'] .source-badge { display:none; }
+.video-gallery[data-index='pixel'] .video-card { padding:8px; box-shadow:none; border:0; border-bottom:2px solid var(--pixel-edge); background:var(--pixel-panel); }
+.video-gallery[data-index='pixel'] .video-info { padding:12px 8px 6px; }
+.video-gallery[data-index='pixel'] .video-reel { display:block; padding:2px 5px; font:12px/1.4 var(--vp-font-family-mono); background:var(--vp-c-brand-1); color:var(--vp-button-brand-text); }
+.video-gallery[data-index='cinema'] .video-card { border:0; border-radius:0; background:transparent; }
+.video-gallery[data-index='cinema'] .video-cover { aspect-ratio:1.85; }
+.video-gallery[data-index='cinema'] .video-info { padding:12px 0; border-bottom:1px solid var(--vp-c-divider); }
+.video-gallery[data-index='cinema'] .video-reel { display:inline; font:italic 20px Georgia,serif; color:var(--vp-c-brand-1); }
+.video-gallery[data-index='cinema'] .video-info h3 { font:500 19px/1.5 'Seagull Academic Serif',SimSun,serif; }
+.video-gallery[data-index='cinema'] .play-icon { width:28px; height:28px; left:7px; bottom:7px; background:#1a1b16aa; }
+.video-gallery[data-index='grace'] .video-grid { grid-template-columns:1fr; gap:0; }
+.video-gallery[data-index='grace'] .video-card { flex-direction:row; align-items:center; gap:clamp(14px,3vw,34px); border:0; border-bottom:1px solid var(--grace-etch); border-radius:0; background:transparent; padding:18px 0; }
+.video-gallery[data-index='grace'] .video-cover { width:clamp(130px,24%,240px); flex:none; }
+.video-gallery[data-index='grace'] .video-info { padding:0; }
+.video-gallery[data-index='grace'] .video-description { margin:5px 0 8px; }
+.video-gallery[data-index='grace'] .video-info h3 { font-family:var(--grace-serif); }
+@media(min-width:780px) {
+  .video-gallery[data-index='paper'] .video-card { display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1fr); gap:18px; align-items:start; }
+  .video-gallery[data-index='paper'] .video-info { padding:0 0 8px; }
+}
+@media(max-width:539px) {
+  .video-gallery[data-index='grace'] .video-cover { width:96px; }
+  .video-gallery[data-index='grace'] .video-info h3 { font-size:15px; }
+  .video-gallery[data-index='grace'] .source-badge,.video-gallery[data-index='grace'] .play-icon { display:none; }
+  .video-gallery[data-index='grace'] .duration { inset:auto 0 0 auto; border-radius:0; }
+  .video-gallery[data-index='grace'] .video-description { -webkit-line-clamp:2; font-size:12px; }
+}
 </style>

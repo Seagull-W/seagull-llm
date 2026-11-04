@@ -25,19 +25,33 @@ html[data-appearance-motion='cinema']::view-transition-new(seagull-film-frame) {
 
 @media (prefers-reduced-motion: no-preference) {
   html[data-appearance-motion='paper']::view-transition-new(root) {
-    animation: seagull-paper-edge 340ms cubic-bezier(.32, .05, .21, 1) both;
+    animation: seagull-paper-edge 540ms cubic-bezier(.37, .09, .22, 1) both;
   }
   html[data-appearance-motion='pixel']::view-transition-new(root) {
-    animation: seagull-pixel-edge 240ms steps(7, end) both;
+    animation: seagull-pixel-edge 420ms steps(8, end) both;
   }
   html[data-appearance-motion='cinema']::view-transition-new(seagull-film-frame) {
-    animation: seagull-frame-dissolve 380ms ease-in-out both;
+    animation: seagull-frame-dissolve 600ms ease-in-out both;
+  }
+  html[data-appearance-motion='cinema-gate']::view-transition-new(root) {
+    animation: seagull-projection-gate 540ms cubic-bezier(.4,.05,.24,1) both;
+  }
+  html[data-appearance-motion='grace']::view-transition-new(root) {
+    animation: seagull-grace-arch 620ms cubic-bezier(.32,.08,.23,1) both;
   }
 }
 
+@keyframes seagull-projection-gate {
+  from { clip-path: inset(50% 0); }
+  to { clip-path: inset(0); }
+}
+@keyframes seagull-grace-arch {
+  from { clip-path: ellipse(0% 0% at 50% 100%); }
+  to { clip-path: ellipse(100% 138% at 50% 100%); }
+}
 @keyframes seagull-paper-edge {
-  from { clip-path: polygon(100% 0, 100% 0, 100% 100%, 106% 100%); }
-  to   { clip-path: polygon(-6% 0, 100% 0, 100% 100%, 0 100%); }
+  from { clip-path: polygon(100% 0, 100% 0, 100% 100%, 116% 100%); }
+  to   { clip-path: polygon(-16% 0, 100% 0, 100% 100%, 0 100%); }
 }
 @keyframes seagull-pixel-edge {
   from {

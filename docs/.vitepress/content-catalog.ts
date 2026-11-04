@@ -1,15 +1,8 @@
 import { normalizeContentPath } from './public-content'
+import sections from './sections.json'
 
-export const sections = [
-  { id: 'cs336', title: 'CS336学习笔记', description: '从课程讲义到作业源码与 GPU 实验' },
-  { id: 'rl-book', title: 'RL 学习笔记', description: '从监督微调到奖励建模与训练实验' },
-  { id: 'westlake-rl', title: '西湖强化学习', description: '概念笔记、数学推导与课程讲义' },
-  { id: 'papers', title: '论文与项目', description: '论文精读、后训练项目与工程实践' },
-  { id: 'research', title: '每日调研', description: '论文与社区进展，按问题整理' },
-  { id: 'rust-notes', title: 'Rust 笔记', description: '并发编程的概念与代码示例' },
-  { id: 'linux-notes', title: 'Linux 笔记', description: '系统机制、隔离与实践' },
-  { id: 'videos', title: '科普视频', description: '通过可视化理解抽象概念' }
-]
+export { sections }
+export const textSections = sections.filter(section => section.kind !== 'gallery')
 export interface ContentEntry { title: string; url: string; description: string; tags: string[]; section: string; kind: string; updated: string }
 export interface SearchSection { title: string; anchor: string; text: string }
 export interface SearchDocument { url: string; sections: SearchSection[] }

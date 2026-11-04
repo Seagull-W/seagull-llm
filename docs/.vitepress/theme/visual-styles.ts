@@ -3,8 +3,11 @@ import { computed, inject, onMounted, onUnmounted, ref, type ComputedRef, type I
 export interface VisualStyle {
   id: string
   name: string
+  description: string
+  collectionTitle: string
+  closingTitle: string
   version: number
-  iconSet: 'paper' | 'pixel' | 'cinema'
+  iconSet: 'paper' | 'pixel' | 'cinema' | 'grace'
   assets: { heroLight: string; heroDark: string; mobile: string; mobileDark?: string; closing: string; closingDark?: string; logo: string }
   icons?: Record<string, string>
   sectionArt?: Record<string, string>
@@ -14,7 +17,8 @@ export interface VisualStyle {
 // A style is a coordinated asset set, not a light/dark theme. Add complete sets here.
 export const visualStyles = {
   'paper-coast': {
-    id: 'paper-coast', name: '纸海', version: 1.1, iconSet: 'paper',
+    id: 'paper-coast', name: '剪纸', version: 1.1, iconSet: 'paper',
+    description: '纸页、海风与留白', collectionTitle: '分册目录', closingTitle: '卷尾',
     assets: {
       logo: '/logo-paper-coast.svg',
       heroLight: '/images/home/hero-light.webp',
@@ -24,7 +28,8 @@ export const visualStyles = {
     },
   },
   'pixel-voyage': {
-    id: 'pixel-voyage', name: '像素航海', version: 1.3, iconSet: 'pixel',
+    id: 'pixel-voyage', name: '像素', version: 1.3, iconSet: 'pixel',
+    description: '像素、海岛与探索', collectionTitle: '栏目航线', closingTitle: '返航',
     assets: {
       logo: '/logo-pixel-voyage.svg',
       heroLight: '/images/pixel-voyage/mobile.png',
@@ -36,7 +41,8 @@ export const visualStyles = {
     sectionArt: Object.fromEntries(Object.entries({ cs336: 'learning', 'rl-book': 'learning', 'westlake-rl': 'learning', papers: 'reading', research: 'reading', tags: 'reading', 'rust-notes': 'systems', 'linux-notes': 'systems' }).map(([section, art]) => [section, `/images/pixel-voyage/${art}.png`])),
   },
   'along-the-way': {
-    id: 'along-the-way', name: '沿途', version: 1.1, iconSet: 'cinema',
+    id: 'along-the-way', name: '灿烂人生', version: 1.1, iconSet: 'cinema',
+    description: '窗光、远方与生活', collectionTitle: '镜头索引', closingTitle: '片尾',
     assets: {
       logo: '/logo-along-the-way.svg',
       heroLight: '/images/along-way/train-rest.webp',
@@ -55,6 +61,18 @@ export const visualStyles = {
       'rust-notes': { src: '/images/along-way/train-detail-small.webp' },
       'linux-notes': { src: '/images/along-way/train-rest-small.webp' },
       tags: { src: '/images/along-way/fjord-small.webp' },
+    },
+  },
+  'grace-archive': {
+    id: 'grace-archive', name: '艾尔登法环', version: 1, iconSet: 'grace',
+    description: '古卷、金枝与烛光', collectionTitle: '馆藏目录', closingTitle: '卷末印记',
+    assets: {
+      logo: '/logo-grace-archive.svg',
+      heroLight: '/images/grace-archive/limgrave.webp',
+      heroDark: '/images/grace-archive/night-sky.webp',
+      mobile: '/images/grace-archive/limgrave-small.webp',
+      mobileDark: '/images/grace-archive/night-sky-small.webp',
+      closing: '/logo-grace-archive.svg',
     },
   },
 } satisfies Record<string, VisualStyle>

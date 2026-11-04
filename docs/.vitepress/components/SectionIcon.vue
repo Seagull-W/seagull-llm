@@ -3,13 +3,15 @@ import { computed } from 'vue'
 import { withBase } from 'vitepress'
 import { sectionGlyphs, type SectionGlyph } from './section-glyphs'
 import { useVisualStyle } from '../theme/visual-styles'
+import GraceEmblem from './GraceEmblem.vue'
 const props = defineProps<{ section: string }>()
 const style = useVisualStyle()
 const glyph = computed(() => sectionGlyphs[props.section as SectionGlyph] || sectionGlyphs.papers)
 const pixelIcon = computed(() => style.value.icons?.[props.section] || style.value.icons?.papers)
 </script>
 <template>
-  <img v-if="pixelIcon" class="section-icon pixel-icon" :src="withBase(pixelIcon)" alt="" aria-hidden="true" width="32" height="32" />
+  <GraceEmblem v-if="style.iconSet === 'grace'" class="section-icon" :section="section" />
+  <img v-else-if="pixelIcon" class="section-icon pixel-icon" :src="withBase(pixelIcon)" alt="" aria-hidden="true" width="32" height="32" />
   <svg v-else class="section-icon" :data-icon-set="style.iconSet" viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false">
     <path :d="glyph.paper" class="paper" />
     <path :d="glyph.ink" class="ink" />

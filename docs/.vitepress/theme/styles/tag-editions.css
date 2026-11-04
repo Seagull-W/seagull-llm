@@ -1,0 +1,70 @@
+/* Four ways to handle the same catalogue. Native controls retain their labels,
+   URL state and tab order when the desktop margins collapse to a single column. */
+.Layout[data-visual-style='paper-coast'] .tag-index .tag-search input {
+  border:0; border-bottom:1px solid var(--vp-c-divider); border-radius:0;
+  padding-inline:0; background:transparent;
+}
+.Layout[data-visual-style='paper-coast'] .tag-filters > button {
+  border:0; border-radius:0; border-inline-start:2px solid transparent;
+}
+.Layout[data-visual-style='paper-coast'] .tag-filters > button[aria-pressed='true'] {
+  border-inline-start-color:var(--vp-c-brand-1); background:var(--vp-c-bg-soft);
+}
+
+.Layout[data-visual-style='pixel-voyage'] .catalog-filters select { border:0; border-bottom:2px solid var(--pixel-edge); }
+.Layout[data-visual-style='pixel-voyage'] .tag-index .tag-filters {
+  padding:13px; background:var(--pixel-panel); border-block:1px dashed var(--pixel-edge);
+}
+.Layout[data-visual-style='pixel-voyage'] .tag-filters > button {
+  border:0; border-radius:0; position:relative; padding-inline-start:16px;
+}
+.Layout[data-visual-style='pixel-voyage'] .tag-filters > button[aria-pressed='true'] {
+  box-shadow:none; background:var(--vp-c-bg-alt);
+}
+.Layout[data-visual-style='pixel-voyage'] .tag-filters > button[aria-pressed='true']::before {
+  content:''; position:absolute; width:5px; height:5px; left:5px; top:50%;
+  transform:translateY(-50%); background:var(--pixel-signal);
+}
+
+.Layout[data-visual-style='along-the-way'] .tag-index :is(.tag-search input,.catalog-filters select) {
+  border:0; border-radius:0; border-bottom:1px solid var(--vp-c-border-hover); background:transparent;
+}
+.Layout[data-visual-style='along-the-way'] .tag-filters > button { padding-inline:7px; border-radius:0; }
+.Layout[data-visual-style='along-the-way'] .tag-filters > button[aria-pressed='true'] {
+  border:1px solid transparent; border-bottom-color:currentColor; background:transparent;
+}
+.Layout[data-visual-style='along-the-way'] .catalog-summary { border-block:1px solid var(--vp-c-divider); padding:4px 0; }
+.Layout[data-visual-style='grace-archive'] .tag-filters > button[aria-pressed='true'] {
+  outline:1px solid var(--grace-etch); outline-offset:-2px;
+}
+
+@media(min-width:800px) {
+  .Layout:is([data-visual-style='paper-coast'],[data-visual-style='grace-archive']) .tag-index {
+    display:grid; grid-template-columns:clamp(160px,20%,220px) minmax(0,1fr);
+    grid-template-rows:auto auto auto 1fr;
+    grid-template-areas:'query summary' 'select results' 'topics results' '. results';
+    align-items:start; gap:0 clamp(22px,3vw,46px);
+  }
+  .Layout:is([data-visual-style='paper-coast'],[data-visual-style='grace-archive']) .tag-search { grid-area:query; margin:0 0 10px; }
+  .Layout:is([data-visual-style='paper-coast'],[data-visual-style='grace-archive']) .catalog-filters { grid-area:select; flex-direction:column; margin:0 0 10px; }
+  .Layout:is([data-visual-style='paper-coast'],[data-visual-style='grace-archive']) .tag-filters { grid-area:topics; gap:2px; align-content:start; }
+  .Layout:is([data-visual-style='paper-coast'],[data-visual-style='grace-archive']) .catalog-summary { grid-area:summary; margin:0; }
+  .Layout:is([data-visual-style='paper-coast'],[data-visual-style='grace-archive']) .tag-index > :is(.chapter-cards,.tag-empty) { grid-area:results; }
+  .Layout:is([data-visual-style='paper-coast'],[data-visual-style='grace-archive']) .topic-panel { width:350px; max-width:75vw; right:auto; }
+
+  .Layout[data-visual-style='grace-archive'] .tag-index .tag-filters {
+    flex-direction:column; align-items:stretch; padding:8px; background:var(--vp-c-bg-soft); border-block:1px solid var(--grace-etch);
+  }
+  .Layout[data-visual-style='grace-archive'] .tag-filters > button { text-align:start; }
+
+  .Layout[data-visual-style='along-the-way'] .tag-index {
+    display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:0 24px;
+  }
+  .Layout[data-visual-style='along-the-way'] .tag-search,
+  .Layout[data-visual-style='along-the-way'] .catalog-filters { margin:0 0 14px; }
+  .Layout[data-visual-style='along-the-way'] .tag-index > :is(.tag-filters,.catalog-summary,.chapter-cards,.tag-empty) { grid-column:1/-1; }
+}
+@media(max-width:539px) {
+  .Layout .tag-index .catalog-filters > label { min-width:0; }
+  .Layout .tag-index .catalog-summary { flex-wrap:wrap; }
+}

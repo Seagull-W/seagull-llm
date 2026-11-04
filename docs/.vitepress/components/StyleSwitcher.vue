@@ -12,11 +12,6 @@ const route = useRoute()
 const trigger = ref<HTMLButtonElement>()
 const dialog = ref<HTMLDialogElement>()
 const opened = ref(false)
-const descriptions: Record<VisualStyleId, string> = {
-  'paper-coast': '纸页、海风与留白',
-  'pixel-voyage': '像素、海岛与探索',
-  'along-the-way': '窗光、远方与生活',
-}
 let previousOverflow = ''
 let scrollLocked = false
 
@@ -34,6 +29,7 @@ async function open(event: MouseEvent) {
   else dialog.value.focus()
 }
 function restore() {
+  if (dialog.value?.open) return
   if (scrollLocked) { document.documentElement.style.overflow = previousOverflow; scrollLocked = false }
   if (!opened.value) return
   opened.value = false
@@ -51,13 +47,18 @@ function choose(id: VisualStyleId) {
   changeAppearance(visualStyles[id].iconSet, () => controls.select(id))
 }
 function move(event: KeyboardEvent) {
-  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return
   const covers = [...(dialog.value?.querySelectorAll<HTMLButtonElement>('.style-cover') || [])]
   const active = covers.indexOf(document.activeElement as HTMLButtonElement)
   if (active < 0) return
+  const vertical = event.key === 'ArrowUp' || event.key === 'ArrowDown'
+  const columns = getComputedStyle(covers[active].parentElement!).gridTemplateColumns.split(' ').length
+  if (vertical && columns === covers.length) return
   event.preventDefault()
+  const step = vertical ? columns : 1
+  const forward = event.key === 'ArrowRight' || event.key === 'ArrowDown'
   const index = event.key === 'Home' ? 0 : event.key === 'End' ? covers.length - 1
-    : (active + (event.key === 'ArrowRight' ? 1 : -1) + covers.length) % covers.length
+    : (active + (forward ? step : -step) + covers.length) % covers.length
   covers[index]?.focus()
 }
 watch(() => route.path, close)
@@ -82,7 +83,7 @@ onUnmounted(() => { dialog.value?.close(); if (scrollLocked) document.documentEl
               <span class="cover-horizon"></span>
             </span>
             <span class="cover-caption"><strong>{{ style.name }}</strong><span v-if="current.id === id" class="cover-current"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m3 8 3 3 7-7" /></svg>使用中</span></span>
-            <span class="cover-description">{{ descriptions[id] }}</span>
+            <span class="cover-description">{{ style.description }}</span>
           </button>
         </div>
       </template>
@@ -101,20 +102,20 @@ onUnmounted(() => { dialog.value?.close(); if (scrollLocked) document.documentEl
 .miniature-back { background:var(--vp-c-brand-1); opacity:.55; transform:translate(3px,-2px) rotate(12deg); }
 .miniature-front { display:grid; place-items:center; background:var(--preview-paper); transform:rotate(-8deg); }
 .miniature-front[data-style='pixel-voyage'] { background:var(--preview-pixel); }
+.miniature-front[data-style='grace-archive'] { background:#282820; border-color:#9c8154; }
 .miniature-front img { width:20px; height:20px; }
 .miniature-front[data-style='pixel-voyage'] img { image-rendering:pixelated; filter:var(--preview-pixel-filter); }
 .style-trigger:is(:hover,:focus-visible) .miniature-back { transform:translate(6px,-3px) rotate(19deg); }
 .style-trigger:is(:hover,:focus-visible) .miniature-front { transform:translate(-2px,0) rotate(-13deg); }
-.style-book { position:fixed; inset:calc(var(--vp-nav-height) + 16px) 24px auto auto; width:480px; max-width:calc(100vw - 32px); max-height:calc(100dvh - var(--vp-nav-height) - 32px); margin:0; padding:24px 26px 28px; overflow:auto; overscroll-behavior:contain; border:1px solid var(--vp-c-divider); border-radius:12px; background:var(--vp-c-bg-alt); color:var(--vp-c-text-1); box-shadow:0 16px 64px #14223030; white-space:normal; }
+.style-book { position:fixed; inset:calc(var(--vp-nav-height) + 16px) 24px auto auto; width:860px; max-width:calc(100vw - 32px); max-height:calc(100dvh - var(--vp-nav-height) - 32px); margin:0; padding:24px 26px 28px; overflow:auto; overscroll-behavior:contain; border:1px solid var(--vp-c-divider); border-radius:12px; background:var(--vp-c-bg-alt); color:var(--vp-c-text-1); box-shadow:0 16px 64px #14223030; white-space:normal; }
 .style-book::backdrop { background:#14223038; }
-.style-book { width:670px; }
 .style-book:focus { outline:none; }
 .style-book-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:24px; }
 .style-book-heading h2 { margin:0; font:600 19px/1.5 var(--vp-font-family-base); letter-spacing:.02em; }
 .style-book-heading p { margin:4px 0 0; font:12px/1.7 var(--vp-font-family-base); color:var(--vp-c-text-2); }
 .style-book-close { display:grid; place-items:center; flex:none; width:36px; height:36px; margin:-6px -8px 0 0; padding:0; border:0; border-radius:50%; color:var(--vp-c-text-2); background:transparent; }
 .style-book-close:hover { background:var(--vp-c-bg-soft); color:var(--vp-c-text-1); }
-.style-covers { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; perspective:800px; }
+.style-covers { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:24px; perspective:800px; }
 .style-cover { display:block; min-width:0; padding:6px 0 0; border:0; border-radius:4px; background:transparent; color:inherit; text-align:left; font-family:var(--vp-font-family-base); white-space:normal; cursor:pointer; }
 .cover-scene { position:relative; display:block; height:166px; margin:0 4px 18px; overflow:hidden; isolation:isolate; border-radius:3px 8px 8px 3px; background:var(--preview-paper); box-shadow:1px 2px 0 var(--vp-c-divider),3px 4px 0 var(--vp-c-bg-soft),0 6px 12px #14223016; transform:rotate(-3deg); transform-origin:8px 85%; transition:transform .2s,box-shadow .2s; }
 .cover-scene::after { content:''; position:absolute; inset:0 auto 0 7px; width:1px; background:#26364a1c; box-shadow:1px 0 #ffffff30; }
@@ -125,6 +126,12 @@ onUnmounted(() => { dialog.value?.close(); if (scrollLocked) document.documentEl
 .style-cover[data-style='along-the-way'] .cover-scene::before { content:''; position:absolute; inset:0; background:linear-gradient(#111a1580,transparent 60%); z-index:1; }
 .style-cover[data-style='along-the-way'] .cover-brand { color:#f1eee3; z-index:2; }
 .style-cover[data-style='along-the-way'] .cover-horizon { background:#f1eee3; }
+.style-cover[data-style='grace-archive'] .cover-scene { background:#282820; border-radius:2px 4px 4px 2px; transform:rotate(1.5deg); }
+.style-cover[data-style='grace-archive'] .cover-art { object-position:70% center; }
+.style-cover[data-style='grace-archive'] .cover-scene::before { content:''; position:absolute; z-index:1; inset:0; background:linear-gradient(0deg,#191a15e8,transparent 65%); }
+.style-cover[data-style='grace-archive'] .cover-scene::after { inset:6px 7px 6px 9px; width:auto; z-index:2; border:1px solid #dbc28b8c; background:none; box-shadow:inset 3px 0 #292a2399; }
+.style-cover[data-style='grace-archive'] .cover-brand { inset:auto 12px 18px; z-index:2; color:#f0dab1; font:small-caps 19px/1 Georgia,serif; letter-spacing:.09em; text-align:center; }
+.style-cover[data-style='grace-archive'] .cover-horizon { display:none; }
 .style-cover[data-style='pixel-voyage'] .cover-art { inset:42px 6px 10px auto; width:76%; height:74%; object-fit:contain; image-rendering:pixelated; filter:var(--preview-pixel-filter); }
 .cover-brand { position:absolute; top:18px; left:19px; color:var(--preview-ink); font:25px/1 Georgia,serif; }
 .style-cover[data-style='pixel-voyage'] .cover-brand { top:22px; right:12px; color:var(--preview-pixel-ink); }
@@ -137,6 +144,11 @@ onUnmounted(() => { dialog.value?.close(); if (scrollLocked) document.documentEl
 .cover-description { display:block; margin-top:4px; color:var(--vp-c-text-2); font-size:12px; line-height:1.7; }
 .style-cover:is(:hover,:focus-visible) .cover-scene { transform:translateY(-5px) rotate(0); }
 .style-book .style-cover:focus-visible { outline:2px solid var(--vp-c-brand-1); outline-offset:7px; }
+@media(min-width:640px) and (max-width:959px) {
+  .style-book { width:500px; }
+  .style-covers { grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px 26px; }
+  .cover-scene { height:126px; margin-bottom:12px; }
+}
 @media(max-width:639px) {
   .style-trigger { gap:6px; padding-inline:6px; }
   .style-trigger-label { font-size:12px; }

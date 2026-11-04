@@ -4,6 +4,10 @@ import { useData, withBase } from 'vitepress'
 import { data as pages } from '../data/tagged-pages.data'
 import { normalizeContentPath } from '../public-content'
 import { readingSeries, sectionFor } from '../content-catalog'
+import { useVisualStyle } from '../theme/visual-styles'
+import SectionPhotograph from './SectionPhotograph.vue'
+import GraceEmblem from './GraceEmblem.vue'
+const style = useVisualStyle()
 const { page } = useData()
 const path = computed(() => normalizeContentPath('/' + page.value.relativePath))
 const current = computed(() => pages.find(p => normalizeContentPath(p.url) === path.value))
@@ -28,8 +32,17 @@ const related = computed(() => {
 </script>
 <template>
   <nav v-if="current" class="related-reading" aria-label="继续阅读">
-    <div v-if="sequence.length" class="reading-sequence"><p>{{ series?.title }}</p><div><a v-for="item in sequence" :key="item.url" :href="withBase(item.url)"><small>{{ item.label }}</small><span>{{ item.title }} →</span></a></div></div>
-    <template v-if="related.length"><h2>相关阅读</h2><a v-for="item in related" :key="item.url" class="related-link" :href="withBase(item.url)"><span>{{ item.title }}</span><small>{{ item.common.slice(0, 2).join(' · ') }}</small></a></template>
+    <div v-if="sequence.length" class="reading-sequence"><p>{{ series?.title }}</p><div><a v-for="item in sequence" :key="item.url" :href="withBase(item.url)"><small><span aria-hidden="true">{{ item.label === '上一篇' ? '←' : '→' }}</span> {{ item.label }}</small><span>{{ item.title }}</span></a></div></div>
+    <template v-if="related.length">
+      <h2>相关阅读</h2>
+      <div class="reading-recommendations">
+        <SectionPhotograph v-if="style.iconSet === 'cinema' && section" class="recommendation-still" :section="section.id" :style="{ gridRow: '1 / span ' + related.length }" />
+        <a v-for="item in related" :key="item.url" class="related-link" :href="withBase(item.url)">
+          <GraceEmblem v-if="style.iconSet === 'grace'" class="recommendation-emblem" :section="item.section" />
+          <span class="recommendation-copy"><strong>{{ item.title }}</strong><small>{{ item.common.slice(0, 2).join(' · ') }}</small></span>
+        </a>
+      </div>
+    </template>
     <a v-if="section" class="back-to-section" :href="withBase('/' + section.id + '/')">← 返回 {{ section.title }}</a>
   </nav>
 </template>

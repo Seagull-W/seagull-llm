@@ -52,6 +52,10 @@
   .Layout[data-visual-style='along-the-way'] :is(.search-dialog,.reader-drawer,.style-book)[open] {
     animation: film-panel-arrives 220ms ease-out;
   }
+  .Layout[data-visual-style='grace-archive'] :is(.search-dialog,.reader-drawer,.style-book)[open] {
+    transform-origin:left center;
+    animation:archive-panel-opens 220ms cubic-bezier(.21,.67,.28,1);
+  }
   .Layout :is(.search-dialog,.reader-drawer,.style-book)[open]::backdrop {
     animation: panel-backdrop-arrives 140ms ease-out;
   }
@@ -70,6 +74,10 @@
 @keyframes film-panel-arrives {
   from { opacity:.65; }
   to { opacity:1; }
+}
+@keyframes archive-panel-opens {
+  from { transform:perspective(840px) rotateY(-8deg); }
+  to { transform:perspective(840px) rotateY(0deg); }
 }
 @keyframes panel-backdrop-arrives {
   from { opacity:.4; }

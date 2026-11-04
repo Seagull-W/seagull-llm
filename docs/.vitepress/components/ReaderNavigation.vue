@@ -7,6 +7,8 @@ import { sectionFor } from '../content-catalog'
 import { sidebar } from '../sidebar'
 import ContentsList, { type Heading } from './ContentsList.vue'
 import InterfaceIcon from './InterfaceIcon.vue'
+import ReadingPosition from './ReadingPosition.vue'
+import { usesAcademicReading } from '../theme/reading-design'
 const { frontmatter, page } = useData()
 const route = useRoute()
 const enabled = computed(() => frontmatter.value.layout !== 'page' && !String(frontmatter.value.pageClass || '').includes('chapter-index'))
@@ -25,6 +27,10 @@ const groups = computed(() => {
   return result
 })
 const active = ref(''), expanded = ref(headings.value[0]?.id || ''), mode = ref<'toc' | 'collection'>('toc')
+const stops = computed(() => groups.value.map(group => group.heading))
+const positionIndex = computed(() => Math.max(0, groups.value.findIndex(group =>
+  group.heading.id === active.value || group.children.some(h => h.id === active.value))))
+const hasPosition = computed(() => stops.value.length > 1 && usesAcademicReading('/' + page.value.relativePath, frontmatter.value))
 const drawer = ref<HTMLDialogElement>(), rail = ref<HTMLElement>()
 const tocEnabled = computed(() => frontmatter.value.aside !== false && frontmatter.value.outline !== false && headings.value.length > 0)
 const collection = computed(() => {
@@ -94,11 +100,17 @@ onUnmounted(() => { close(); cancelAnimationFrame(frame); window.removeEventList
   <div v-if="enabled" class="reader-navigation" :class="{ 'has-toc': tocEnabled }">
     <nav class="reader-tools" aria-label="阅读导航">
       <button v-if="section" aria-haspopup="dialog" @click="open($event, 'collection')"><InterfaceIcon name="collection" />栏目目录<InterfaceIcon class="reader-tool-chevron" name="chevron" /></button>
+      <span v-if="tocEnabled && hasPosition" class="reader-pocket-position" aria-hidden="true" :title="stops[positionIndex]?.text">{{ positionIndex + 1 }} / {{ stops.length }}</span>
       <button v-if="tocEnabled" class="toc-mobile" aria-haspopup="dialog" @click="open($event, 'toc')"><InterfaceIcon name="contents" />本页目录</button>
     </nav>
-    <aside v-if="tocEnabled" ref="rail" class="reader-toc" aria-label="本页目录"><h2>本页目录</h2><ContentsList :groups="groups" :active="active" :expanded="expanded" @jump="jump" @toggle="toggle" /></aside>
+    <aside v-if="tocEnabled" ref="rail" class="reader-toc" aria-label="本页目录">
+      <ReadingPosition v-if="hasPosition" :stops="stops" :index="positionIndex" :section="section?.id || ''" @jump="jump" />
+      <h2>本页目录</h2>
+      <ContentsList :groups="groups" :active="active" :expanded="expanded" @jump="jump" @toggle="toggle" />
+    </aside>
     <dialog ref="drawer" class="reader-drawer" aria-labelledby="reader-drawer-title" @close="restore" @click="($event.target === drawer) && close()">
       <header><h2 id="reader-drawer-title">{{ mode === 'toc' ? '本页目录' : section?.title }}</h2><button autofocus aria-label="关闭目录" @click="close">关闭</button></header>
+      <ReadingPosition v-if="mode === 'toc' && hasPosition" :stops="stops" :index="positionIndex" :section="section?.id || ''" @jump="jump" />
       <ContentsList v-if="mode === 'toc'" :groups="groups" :active="active" :expanded="expanded" @jump="jump" @toggle="toggle" />
       <nav v-else class="reader-collection-list" aria-label="栏目文章"><a class="collection-home" :href="withBase('/' + section?.id + '/')" @click="close">查看栏目首页 →</a><a v-for="entry in collection" :key="entry.url" :href="withBase(entry.url)" :aria-current="normalizeContentPath('/' + page.relativePath) === normalizeContentPath(entry.url) ? 'page' : undefined" @click="close"><small>{{ entry.kind }}</small>{{ entry.title }}</a></nav>
     </dialog>

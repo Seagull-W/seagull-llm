@@ -1,9 +1,8 @@
-import { isPublicContent, normalizeContentPath } from '../public-content'
-
-const readingSections = new Set(['papers', 'rl-book', 'westlake-rl', 'rust-notes', 'linux-notes', 'cs336', 'research'])
+import { isPublicContent } from '../public-content'
+import { sectionFor } from '../content-catalog'
 
 // Use source paths so SSR, client navigation and subdirectory deployments agree.
 export function usesAcademicReading(path: string, metadata: Record<string, any>): boolean {
-  const section = normalizeContentPath(path).split('/')[1]
-  return readingSections.has(section) && isPublicContent(path, metadata)
+  const section = sectionFor(path)
+  return !!section && section.kind !== 'gallery' && isPublicContent(path, metadata)
 }

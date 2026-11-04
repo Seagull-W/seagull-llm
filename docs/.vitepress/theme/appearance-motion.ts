@@ -1,5 +1,6 @@
 import { nextTick } from 'vue'
-import type { VisualStyle } from './visual-styles'
+import { resolveVisualStyle, type VisualStyle } from './visual-styles'
+import { showPageArrival } from './page-arrival'
 
 // Only deliberate choices call this helper. Restoring preferences on load or
 // synchronizing another tab must not animate the page someone is reading.
@@ -14,22 +15,25 @@ export function changeAppearance(kind: VisualStyle['iconSet'], update: () => voi
     update()
     return
   }
-  if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
     update()
     return
   }
+  const root = document.documentElement
+  if (!document.startViewTransition) {
+    update()
+    nextTick(() => showPageArrival(resolveVisualStyle(root.dataset.visualStyle)))
+    return
+  }
+  let appearance: string = kind
   if (kind === 'cinema') {
-    // A style change may enter the film layout from an illustrated home or
-    // directory. Only take a snapshot if its scene will actually be in view.
-    const bounds = document.querySelector('.film-frame picture, .home-illustrated-hero, .section-illustration')?.getBoundingClientRect()
-    if (!bounds || bounds.bottom <= 0 || bounds.top >= window.innerHeight) {
-      update()
-      return
-    }
+    // When there is a visible picture, dissolve only the two shots. For an
+    // article use an opaque projection gate so text keeps its contrast.
+    const bounds = document.querySelector('.film-frame picture, .home-illustrated-hero, .grace-hero, .section-illustration')?.getBoundingClientRect()
+    if (!bounds || bounds.bottom <= 64 || bounds.top >= window.innerHeight - 24) appearance = 'cinema-gate'
   }
 
-  const root = document.documentElement
-  root.dataset.appearanceMotion = kind
+  root.dataset.appearanceMotion = appearance
   let committed = false
   function commit() {
     if (committed) return

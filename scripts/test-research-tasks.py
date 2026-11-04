@@ -274,11 +274,26 @@ class TaskTests(unittest.TestCase):
         prior = {'date': '2026-10-15', 'slug': 'manual', 'title': '手工专题', 'description': '保留',
                  'route': '/research/2026-10-15-manual', 'source_urls': [], 'window_end': '2026-10-16T00:00:00Z'}
         w.write_json(catalog, [prior])
+        index = root / 'docs/research/index.md'
+        sidebar = root / 'docs/.vitepress/research-sidebar.ts'
+        w.write_text(index, '# 每日调研\n\n栏目导读、插图与卡片入口')
+        w.write_text(sidebar, '// Adapter for the shared catalog')
         with patch.object(w, 'ROOT', root), patch.object(w, 'CATALOG', catalog):
             w.integrate(task, self.run)
+            rows = w.read_json(catalog)
+            # Reimporting an existing entry must retain its editorial label and nested navigation.
+            entry = next(item for item in rows if item['route'] != prior['route'])
+            additions = {'label': '导读', 'sidebarTitle': '阅读导引',
+                         'children': [{'text': '第一章', 'link': entry['route'] + '/chapter-one'}]}
+            entry.update(additions)
+            w.write_json(catalog, rows)
+            w.integrate(task, self.run)
         self.assertEqual(len(w.read_json(catalog)), 2)
-        self.assertIn(prior['route'], (root / 'docs/research/index.md').read_text())
-        self.assertIn('调研', (root / 'docs/.vitepress/research-sidebar.ts').read_text())
+        self.assertIn(prior, w.read_json(catalog))
+        current = next(item for item in w.read_json(catalog) if item['route'] == entry['route'])
+        self.assertEqual({key: current[key] for key in additions}, additions)
+        self.assertEqual(index.read_text(encoding='utf-8'), '# 每日调研\n\n栏目导读、插图与卡片入口')
+        self.assertEqual(sidebar.read_text(encoding='utf-8'), '// Adapter for the shared catalog')
 
     def test_task_cli_report_is_local_and_cannot_be_mistaken_for_site_integration(self):
         base = self.run

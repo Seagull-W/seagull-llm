@@ -3,6 +3,7 @@ import { useData, withBase } from 'vitepress'
 import { useVisualStyle } from '../theme/visual-styles'
 import PixelWordmark from './PixelWordmark.vue'
 import FilmHero from './FilmHero.vue'
+import GraceHero from './GraceHero.vue'
 
 const { isDark, frontmatter } = useData()
 const style = useVisualStyle()
@@ -10,6 +11,7 @@ const style = useVisualStyle()
 
 <template>
   <FilmHero v-if="style.iconSet === 'cinema'" />
+  <GraceHero v-else-if="style.iconSet === 'grace'" />
   <div v-else class="home-illustrated-hero">
     <picture class="hero-art" aria-hidden="true">
       <source media="(max-width: 639px)" :srcset="withBase(style.assets.mobile)" />

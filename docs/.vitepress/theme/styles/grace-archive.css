@@ -1,0 +1,236 @@
+/* The saved palette is restored before Vue swaps the default theme's artwork. */
+html[data-visual-style='grace-archive'] .Layout:not([data-visual-style='grace-archive']) :is(.hero-art,.section-illustration,.home-closing-art,.section-icon,.section-artwork,.visual-logo) {
+  visibility: hidden;
+}
+
+/* Tarnished metal marks the controls; long-form pages use matte, untextured stone. */
+html[data-visual-style='grace-archive'],
+.Layout.Layout[data-visual-style='grace-archive'] {
+  --vp-c-bg: #e9e5d9;
+  --vp-c-bg-alt: #f4f0e5;
+  --vp-c-bg-soft: #ddd9cb;
+  --vp-c-text-1: #2c2b24;
+  --vp-c-text-2: #58564a;
+  --vp-c-text-3: #696354;
+  --vp-c-brand-1: #71541e;
+  --vp-c-brand-2: #513f1b;
+  --vp-c-brand-3: #8d703c;
+  --vp-c-divider: #c4bdab;
+  --vp-c-border: var(--vp-c-divider);
+  --vp-c-border-hover: #958461;
+  --vp-button-brand-text: #fff8e8;
+  --vp-button-brand-hover-text: #fff8e8;
+  --grace-serif: Georgia, 'Seagull Academic Serif', 'Songti SC', SimSun, serif;
+  --grace-etch: #92866c;
+  --grace-code: #f3f0e6;
+  --grace-panel: #30312b;
+  --grace-deep: #242620;
+  --grace-panel-ink: #eee8d7;
+  --grace-panel-muted: #c5c0ad;
+  --grace-panel-gold: #e0ca8e;
+  --grace-panel-line: #65614e;
+  --grace-sheen: linear-gradient(102deg, #bda56a1c 0%, #bda56a07 36%, transparent 72%);
+  /* A small repeating olive grain belongs to metal surfaces, never to the article. */
+  --grace-patina: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.3 .62' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 .63 0 0 0 0 .60 0 0 0 0 .44 .14 0 0 0 -.035'/%3E%3C/filter%3E%3Crect width='96' height='96' filter='url(%23grain)'/%3E%3C/svg%3E");
+  --illustration-ink: #695730;
+  --illustration-paper: #d7c394;
+  --illustration-mist: #e4dfd0;
+  --illustration-shade: #968568;
+  --illustration-accent: #ae8543;
+  --illustration-light: #f9efce;
+}
+
+html.dark[data-visual-style='grace-archive'],
+.dark .Layout.Layout[data-visual-style='grace-archive'] {
+  --vp-c-bg: #23231e;
+  --vp-c-bg-alt: #2a2a23;
+  --vp-c-bg-soft: #33342b;
+  --vp-c-text-1: #e6e2d3;
+  --vp-c-text-2: #c0bca8;
+  --vp-c-text-3: #a8a28f;
+  --vp-c-brand-1: #d7bd7f;
+  --vp-c-brand-2: #eddaa6;
+  --vp-c-brand-3: #b69c63;
+  --vp-c-divider: #4e4b3e;
+  --vp-c-border-hover: #8b7e61;
+  --vp-button-brand-text: #26231a;
+  --vp-button-brand-hover-text: #26231a;
+  --grace-etch: #887953;
+  --grace-code: #292a23;
+  --grace-panel: #282923;
+  --grace-deep: #1c1e1a;
+  --grace-panel-line: #595644;
+  --illustration-ink: #dfca93;
+  --illustration-paper: #937e59;
+  --illustration-mist: #38392e;
+  --illustration-shade: #6b654e;
+}
+
+/* These surfaces use the inventory's dark ground even when the reading page is light. */
+.Layout[data-visual-style='grace-archive'] :is(.VPNavBar, .VPNavScreen, .VPMenu, .search-dialog, .reader-drawer, .style-book, .home-sections) {
+  --vp-c-bg: var(--grace-panel);
+  --vp-c-bg-alt: var(--grace-deep);
+  --vp-c-bg-soft: #414135;
+  --vp-c-text-1: var(--grace-panel-ink);
+  --vp-c-text-2: var(--grace-panel-muted);
+  --vp-c-text-3: #aaa692;
+  --vp-c-brand-1: var(--grace-panel-gold);
+  --vp-c-brand-2: #f2dfac;
+  --vp-c-divider: var(--grace-panel-line);
+  --vp-c-default-soft: #b8a77c18;
+  color: var(--vp-c-text-1);
+}
+
+.Layout[data-visual-style='grace-archive'] .VPNavBar {
+  --vp-nav-bg-color: var(--grace-deep);
+  background: var(--grace-patina), var(--grace-sheen), var(--grace-deep);
+  border-bottom: 1px solid var(--grace-panel-line);
+  box-shadow: inset 0 -2px 0 #181913;
+}
+.Layout[data-visual-style='grace-archive'] .VPNavBar .content-body {
+  --vp-nav-bg-color: transparent;
+  background: transparent;
+}
+.Layout[data-visual-style='grace-archive'] :is(.VPNavBarMenuLink, .VPNavBarMenuGroup .button, .style-trigger-label) {
+  font-family: var(--grace-serif);
+  letter-spacing: .045em;
+}
+.Layout[data-visual-style='grace-archive'] .VPNavBarMenuLink.active {
+  background: linear-gradient(var(--grace-panel-gold), var(--grace-panel-gold)) center calc(50% + 15px) / 15px 1px no-repeat;
+}
+.Layout[data-visual-style='grace-archive'] :is(.site-search-trigger, .style-trigger, .reader-tools button) { border-radius: 0; }
+.Layout[data-visual-style='grace-archive'] .VPNavScreen { background: var(--grace-panel); }
+.Layout[data-visual-style='grace-archive'] :is(.VPMenu, .search-dialog, .reader-drawer, .style-book) {
+  background: var(--grace-patina), var(--grace-sheen), var(--grace-panel);
+  border-radius: 1px;
+  border-color: var(--grace-panel-line);
+  box-shadow: inset 0 1px 0 #dbca973b, 0 12px 36px #14140e4d;
+}
+.Layout[data-visual-style='grace-archive'] :is(.search-dialog, .reader-drawer, .style-book)::backdrop {
+  background: rgb(19 20 16 / 61%);
+}
+.Layout[data-visual-style='grace-archive'] :is(.search-dialog, .reader-drawer) header {
+  background: linear-gradient(90deg, #d6c38b0e, transparent 64%);
+  border-bottom-color: var(--grace-panel-line);
+}
+.Layout[data-visual-style='grace-archive'] .search-dialog input {
+  color: var(--grace-panel-ink);
+  background: transparent;
+  caret-color: var(--grace-panel-gold);
+}
+.Layout[data-visual-style='grace-archive'] .search-dialog input::placeholder { color: var(--grace-panel-muted); }
+.Layout[data-visual-style='grace-archive'] .search-suggestions button {
+  background: transparent;
+  border-radius: 0;
+  border-bottom: 1px solid var(--grace-panel-line);
+}
+.Layout[data-visual-style='grace-archive'] :is(.search-context, .chapter-card-meta, .update-meta, .article-topics a) {
+  color: var(--vp-c-brand-1);
+}
+.Layout[data-visual-style='grace-archive'] :is(.search-hit strong, .reader-drawer h2, .style-book-heading h2, .reader-toc h2) {
+  font-family: var(--grace-serif);
+}
+
+/* A shared gilt cursor is visible at the leading edge of the selected row. */
+.Layout[data-visual-style='grace-archive'] :is(.search-hit > a, .reader-collection-list > a, .reader-toc-list a, .VPMenuLink .link, .chapter-card) {
+  position: relative;
+  padding-inline-start: 19px;
+  border-radius: 0;
+}
+.Layout[data-visual-style='grace-archive'] :is(.search-hit > a, .reader-collection-list > a, .reader-toc-list a, .VPMenuLink .link, .chapter-card):is(:hover, :focus-visible, [aria-current], .active) {
+  color: var(--vp-c-brand-1);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--vp-c-brand-1) 14%, transparent), transparent 96%);
+  border-inline-start-color: transparent;
+}
+.Layout[data-visual-style='grace-archive'] :is(.search-hit > a, .reader-collection-list > a, .reader-toc-list a, .VPMenuLink .link, .chapter-card):is(:hover, :focus-visible, [aria-current], .active)::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 3px;
+  width: 6px;
+  height: 11px;
+  background: var(--vp-c-brand-1);
+  clip-path: polygon(0 24%, 22% 0, 100% 50%, 22% 100%, 0 76%, 52% 50%);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.Layout[data-visual-style='grace-archive'] .toc-children a { padding-inline-start: calc(19px + var(--depth,0) * 10px); }
+.Layout[data-visual-style='grace-archive'] :is(.VPNav, .reader-navigation, .home-dashboard, .vp-doc, .related-reading) :is(button, a, input, summary, select):focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 2px;
+}
+.Layout[data-visual-style='grace-archive'] :is(.VPMenuLink, .search-hit, .reader-collection-list, .reader-toc-list) a:focus-visible {
+  outline-offset: -2px;
+}
+
+/* A contiguous equipment list: each icon sits in the margin of its entry. */
+.Layout[data-visual-style='grace-archive'] .home-sections {
+  padding: clamp(18px, 3vw, 36px);
+  border-block: 1px solid var(--grace-etch);
+  background: var(--grace-patina), var(--grace-sheen), linear-gradient(128deg, var(--grace-panel), var(--grace-deep));
+}
+.Layout[data-visual-style='grace-archive'] .home-heading h2,
+.Layout[data-visual-style='grace-archive'] .home-dashboard h3,
+.Layout[data-visual-style='grace-archive'] :is(.chapter-card-title, .related-reading h2) {
+  font-family: var(--grace-serif);
+}
+.Layout[data-visual-style='grace-archive'] .home-sections .home-heading h2 { font-weight: 400; letter-spacing: .105em; color: var(--grace-panel-gold); }
+.Layout[data-visual-style='grace-archive'] .related-link:is(:hover, :focus-visible) { background: var(--grace-sheen); }
+.Layout[data-visual-style='grace-archive'] .home-search,
+.Layout[data-visual-style='grace-archive'] .reading-sequence a {
+  border: 0;
+  border-block: 1px solid var(--vp-c-divider);
+  border-radius: 0;
+  background: var(--vp-c-bg-soft);
+}
+.Layout[data-visual-style='grace-archive'] .update-filters button[aria-pressed='true'] {
+  border-bottom: 2px solid var(--vp-c-brand-1);
+}
+
+/* Gallery fronts and article furniture use the lighter side of the palette. */
+.Layout.chapter-index[data-visual-style='grace-archive'] .vp-doc .illustrated-directory-intro {
+  position: relative;
+  border-block: 1px solid var(--grace-etch);
+  border-radius: 0;
+  padding: 22px 200px 22px 20px;
+  background: linear-gradient(102deg, var(--vp-c-bg-soft), transparent 83%);
+}
+.Layout.chapter-index[data-visual-style='grace-archive'] .illustrated-directory-intro h1 {
+  font-family: var(--grace-serif);
+  letter-spacing: .025em;
+}
+.Layout.chapter-index[data-visual-style='grace-archive'] .illustrated-directory-intro .section-illustration {
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+}
+.Layout[data-visual-style='grace-archive'] .article-context {
+  padding-block: 8px 12px;
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+.Layout[data-visual-style='grace-archive'] .reader-toc h2,
+.Layout[data-visual-style='grace-archive'] .related-reading h2 {
+  color: var(--vp-c-brand-1);
+  letter-spacing: .07em;
+}
+.Layout[data-visual-style='grace-archive'] .reader-toc h2 {
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--grace-etch);
+}
+.Layout[data-visual-style='grace-archive'] .reading-progress {
+  height: 2px;
+  background: linear-gradient(90deg, #897444, #c9af71 78%, #f2dd9e);
+}
+.Layout[data-visual-style='grace-archive'] .VPDoc .vp-doc { --vp-code-block-bg: var(--grace-code); }
+.Layout[data-visual-style='grace-archive'] .tag-index :is(input, select, button, summary, .topic-panel) { border-radius: 1px; }
+.Layout[data-visual-style='grace-archive'] .tag-filters button[aria-pressed='true'] { border-bottom-color: var(--vp-c-brand-1); }
+.Layout[data-visual-style='grace-archive'] .VPFooter { border-top-color: var(--grace-etch); }
+
+@media (max-width: 639px) {
+  .Layout.chapter-index[data-visual-style='grace-archive'] .vp-doc .illustrated-directory-intro { padding: 16px; }
+  .Layout.chapter-index[data-visual-style='grace-archive'] .illustrated-directory-intro h1 { padding-right: 60px; }
+  .Layout.chapter-index[data-visual-style='grace-archive'] .illustrated-directory-intro .section-illustration {
+    top: 12px; right: 8px; transform: none;
+  }
+  .Layout[data-visual-style='grace-archive'] .home-sections { padding: 18px 14px; }
+}

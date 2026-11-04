@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '../theme/styles/tag-editions.css'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { data as pages } from '../data/tagged-pages.data'
 import { contextFor, fold, metadataScore, newestFirst, normalizeTag, queryTerms, sections } from '../content-catalog'

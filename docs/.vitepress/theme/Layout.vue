@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import DefaultTheme from 'vitepress/theme'
-import { computed, onMounted, provide, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, provide, watch } from 'vue'
 import { useData, withBase } from 'vitepress'
 import ReaderNavigation from '../components/ReaderNavigation.vue'
 import HomeHero from '../components/HomeHero.vue'
@@ -12,39 +12,42 @@ import RelatedReading from '../components/RelatedReading.vue'
 import ReadingMedia from '../components/ReadingMedia.vue'
 import PixelThemeFilter from '../components/PixelThemeFilter.vue'
 import { usesAcademicReading } from './reading-design'
+import { sectionFor } from '../content-catalog'
 import { createVisualStyleControls, visualStyles, visualStyleKey, visualStyleControlsKey } from './visual-styles'
 import './styles/route-arrival.css'
+import { showPageArrival } from './page-arrival'
 const styleControls = createVisualStyleControls()
 const visualStyle = computed(() => visualStyles[styleControls.selected.value])
 provide(visualStyleKey, visualStyle)
 provide(visualStyleControlsKey, styleControls)
 const { Layout } = DefaultTheme
 const { frontmatter, page } = useData()
+let stopHomeOpening: (() => void) | undefined
 onMounted(() => {
+  // A direct visit to the home page gives this tab one opening shot. Wait for
+  // the saved artwork to replace the server default without delaying the page.
+  if (frontmatter.value.layout === 'home' && !location.hash && !window.scrollY) {
+    let seen = false
+    try {
+      seen = sessionStorage.getItem('seagull-home-opening') === 'seen'
+      sessionStorage.setItem('seagull-home-opening', 'seen')
+    } catch { /* Still usable when tab storage is unavailable. */ }
+    if (!seen) nextTick(() => {
+      if (frontmatter.value.layout === 'home' && !window.scrollY) stopHomeOpening = showPageArrival(styleControls.selected.value)
+    })
+  }
   watch(() => page.value.relativePath, (_page, _previous, onCleanup) => {
-    if (location.hash || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return
-    const opening = document.querySelector<HTMLElement>('.VPHome .hero-art, .VPHome .film-frame, .VPDoc .section-illustration')
-      ?? document.querySelector<HTMLElement>('.VPDoc main h1')
-    if (!opening) return
-
-    opening.dataset.routeArrival = styleControls.selected.value
-    const clear = () => {
-      delete opening.dataset.routeArrival
-      opening.removeEventListener('animationend', finish)
-      opening.removeEventListener('animationcancel', finish)
-    }
-    const finish = (event: AnimationEvent) => {
-      if (event.target === opening && event.animationName.startsWith('seagull-arrive-')) clear()
-    }
-    opening.addEventListener('animationend', finish)
-    opening.addEventListener('animationcancel', finish)
-    onCleanup(clear)
+    stopHomeOpening?.()
+    stopHomeOpening = undefined
+    const stop = showPageArrival(styleControls.selected.value)
+    if (stop) onCleanup(stop)
   }, { flush: 'post' })
 })
+onUnmounted(() => stopHomeOpening?.())
 const academicReading = computed(() => usesAcademicReading('/' + page.value.relativePath, frontmatter.value))
 const sectionClass = computed(() => {
-  const section = page.value.relativePath?.split('/')[0]
-  return ['research', 'papers', 'rl-book', 'westlake-rl', 'rust-notes', 'linux-notes', 'cs336', 'videos'].includes(section) ? 'section-' + section : ''
+  const section = sectionFor('/' + page.value.relativePath)
+  return section ? 'section-' + section.id : ''
 })
 </script>
 <template>
