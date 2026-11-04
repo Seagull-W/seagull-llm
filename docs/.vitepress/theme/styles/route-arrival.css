@@ -1,0 +1,29 @@
+/* One arrival cue on the destination's artwork or title. The reading surface stays still. */
+@media screen and (prefers-reduced-motion: no-preference) {
+  [data-route-arrival='paper-coast'] {
+    animation: seagull-arrive-paper 260ms cubic-bezier(.19,.75,.3,1);
+  }
+
+  [data-route-arrival='pixel-voyage'] {
+    animation: seagull-arrive-pixel 150ms steps(2,end);
+  }
+
+  [data-route-arrival='along-the-way'] {
+    animation: seagull-arrive-film 360ms ease-out;
+  }
+}
+
+@keyframes seagull-arrive-paper {
+  from { opacity: .8; translate: 0 -5px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+@keyframes seagull-arrive-pixel {
+  from { translate: -4px 0; }
+  to { translate: 0 0; }
+}
+
+@keyframes seagull-arrive-film {
+  from { opacity: .7; }
+  to { opacity: 1; }
+}

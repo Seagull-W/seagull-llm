@@ -4,12 +4,17 @@ import Layout from './Layout.vue'
 import './styles/native-html.css'
 import './styles/notebook-design.css'
 import './styles/custom.css'
+import './styles/paper-coast.css'
 import './styles/reader-navigation.css'
 import './styles/academic-reading.css'
 import './styles/note-flow.css'
+import './styles/pixel-voyage.css'
+import './styles/toolbar.css'
+import './styles/along-the-way.css'
 import ChapterCards from '../components/ChapterCards.vue'
 import TagsIndex from '../components/TagsIndex.vue'
 import NoteFlowIcon from '../components/NoteFlowIcon.vue'
+import SectionIllustration from '../components/SectionIllustration.vue'
 
 // 首页 / 全局必需组件：同步导入
 import SeagullLens from '../components/SeagullLens.vue'
@@ -31,6 +36,7 @@ export default {
   Layout,
   enhanceApp({ app }) {
     app.component('ChapterCards', ChapterCards)
+    app.component('SectionIllustration', SectionIllustration)
     app.component('TagsIndex', TagsIndex)
     app.component('NoteFlowIcon', NoteFlowIcon)
     app.component('TokenDemo', TokenDemo)

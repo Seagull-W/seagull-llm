@@ -1,0 +1,26 @@
+/* Paper Coast v1: decoration stays outside scientific figures and reading text. */
+[data-visual-style='paper-coast'] {
+  --illustration-paper:#d3e3e6;
+  --illustration-mist:#e9eff0;
+  --illustration-ink:#397580;
+  --illustration-light:#f9fcfc;
+  --illustration-shade:#8db4bc;
+  --illustration-accent:#c18b62;
+}
+.dark [data-visual-style='paper-coast'] {
+  --illustration-paper:#31535e;
+  --illustration-mist:#203b44;
+  --illustration-ink:#9acbd0;
+  --illustration-light:#d5e4df;
+  --illustration-shade:#527d88;
+  --illustration-accent:#ddb588;
+}
+.Layout.chapter-index .vp-doc .illustrated-directory-intro {
+  position:relative;
+  padding-right:200px;
+  min-height:150px;
+}
+@media(max-width:639px) {
+  .Layout.chapter-index .vp-doc .illustrated-directory-intro { padding-right:0; min-height:0; }
+  .Layout.chapter-index .vp-doc .illustrated-directory-intro h1 { padding-right:60px; }
+}

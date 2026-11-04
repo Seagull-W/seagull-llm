@@ -9,9 +9,9 @@
 .reader-navigation { display:contents; }
 .Layout .VPDoc:has(.reader-navigation) > .container { grid-column:1; grid-row:2; }
 .reader-tools { grid-column:1/-1; grid-row:1; display:flex; justify-content:space-between; gap:16px; margin:-16px 0 22px; align-items:center; }
-.reader-tools button { min-height:40px; font-size:12px; color:var(--vp-c-text-2); }
+.reader-tools button { display:inline-flex; align-items:center; gap:8px; min-height:40px; font-size:12px; color:var(--vp-c-text-2); }
 .reader-tools button:hover { color:var(--vp-c-brand-1); }
-.reader-tools button span { margin-left:8px; }
+.reader-tool-chevron { width:12px; height:12px; }
 .reader-toc { display:none; grid-column:2; grid-row:2; position:sticky; top:calc(var(--vp-nav-height) + 28px); min-width:0; }
 .reader-toc h2,.reader-drawer h2 { margin:0 0 12px; font:600 13px/1.8 var(--vp-font-family-base); }
 .reader-toc-list { max-height:calc(100dvh - var(--vp-nav-height) - 110px); overflow:auto; overscroll-behavior:contain; scrollbar-width:thin; }

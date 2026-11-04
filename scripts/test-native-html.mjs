@@ -81,7 +81,7 @@ test('visible notebooks have editorial structure, usable anchors and clean summa
     const { data, content } = readContent(file)
     if (content.includes('format-system')) continue // bespoke Linux reference
     assert.match(content, /data-design="linux-notebook"/, file)
-    assert.match(content, /class="document-intro note-hero"/, file)
+    assert.match(content, /class="document-intro note-hero(?:\s+[^"]*)?"/, file)
     assert.match(content, /class="document-section note-panel"/, file)
     assert.doesNotMatch(data.description, /ZeroWidthSpace/, file)
     const ids = [...content.matchAll(/<h[1-6]\b[^>]*id="([^"]+)"/g)].map(match => match[1])

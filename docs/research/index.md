@@ -7,9 +7,14 @@ aside: false
 tags: ["每日调研"]
 ---
 
+<div class="illustrated-directory-intro">
+<SectionIllustration section="research" />
+
 # 每日调研
 
 按主题整理论文与社区进展。文章保留检索窗口、来源链接与阅读范围，区分研究者的主张和编辑分析。
+
+</div>
 
 ## 调研记录
 

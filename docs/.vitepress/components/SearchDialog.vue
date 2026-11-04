@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } fr
 import { useRoute, withBase } from 'vitepress'
 import { data as pages } from '../data/tagged-pages.data'
 import { contextFor, excerpt, searchContent, type SearchDocument } from '../content-catalog'
+import InterfaceIcon from './InterfaceIcon.vue'
 
 const dialog = ref<HTMLDialogElement>()
 const input = ref<HTMLInputElement>()
@@ -55,7 +56,7 @@ onUnmounted(() => { close(); window.removeEventListener('keydown', shortcut); wi
 
 <template>
   <button class="site-search-trigger" aria-haspopup="dialog" aria-label="搜索全部内容" @click="open">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
+    <InterfaceIcon name="search" />
     <span>搜索</span><kbd>Ctrl K</kbd>
   </button>
   <dialog ref="dialog" class="search-dialog" aria-label="搜索全部内容" @close="restore" @click="($event.target === dialog) && close()" @keydown="move">
@@ -83,11 +84,13 @@ onUnmounted(() => { close(); window.removeEventListener('keydown', shortcut); wi
 kbd { margin-left:12px; font:11px var(--vp-font-family-base); opacity:.75; }
 .search-dialog { position:fixed; inset:10vh 20px auto; margin:auto; width:700px; max-width:calc(100vw - 40px); max-height:80dvh; padding:0; border:1px solid var(--vp-c-divider); border-radius:12px; color:var(--vp-c-text-1); background:var(--vp-c-bg); box-shadow:0 20px 70px #0003; }
 .search-dialog[open] { display:flex; flex-direction:column; }
+/* The dialog sits inside the navbar, whose nowrap must not reach results. */
+.search-dialog { white-space:normal; }
 .search-dialog::backdrop { background:#0c202c88; }
 header { display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--vp-c-divider); }
 input { flex:1; min-width:0; font-size:17px; min-height:40px; }
 header button { min-width:40px; min-height:40px; font-size:13px; color:var(--vp-c-text-2); }
-.search-body { overflow:auto; overscroll-behavior:contain; padding:0 20px 20px; }
+.search-body { overflow:auto; overflow-wrap:anywhere; overscroll-behavior:contain; padding:0 20px 20px; }
 .search-status { font-size:12px; color:var(--vp-c-text-2); margin:16px 0 6px; }
 .search-hit { border-bottom:1px solid var(--vp-c-divider); padding:8px 0 14px; }
 .search-hit > a { display:block; padding:8px; border-radius:6px; }

@@ -1,0 +1,53 @@
+/* Wipes keep both snapshots opaque and in register. The film dissolve captures
+   only the photograph, leaving letters and their background at full contrast. */
+html[data-appearance-motion]::view-transition {
+  pointer-events: none;
+}
+html[data-appearance-motion]::view-transition-group(root),
+html[data-appearance-motion]::view-transition-old(root),
+html[data-appearance-motion]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html[data-appearance-motion='cinema'] {
+  view-transition-name: none;
+}
+html[data-appearance-motion='cinema'] :is(.film-frame picture, .film-section-art .section-photograph) {
+  view-transition-name: seagull-film-frame;
+}
+html[data-appearance-motion='cinema']::view-transition-group(seagull-film-frame),
+html[data-appearance-motion='cinema']::view-transition-old(seagull-film-frame),
+html[data-appearance-motion='cinema']::view-transition-new(seagull-film-frame) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-appearance-motion='paper']::view-transition-new(root) {
+    animation: seagull-paper-edge 340ms cubic-bezier(.32, .05, .21, 1) both;
+  }
+  html[data-appearance-motion='pixel']::view-transition-new(root) {
+    animation: seagull-pixel-edge 240ms steps(7, end) both;
+  }
+  html[data-appearance-motion='cinema']::view-transition-new(seagull-film-frame) {
+    animation: seagull-frame-dissolve 380ms ease-in-out both;
+  }
+}
+
+@keyframes seagull-paper-edge {
+  from { clip-path: polygon(100% 0, 100% 0, 100% 100%, 106% 100%); }
+  to   { clip-path: polygon(-6% 0, 100% 0, 100% 100%, 0 100%); }
+}
+@keyframes seagull-pixel-edge {
+  from {
+    clip-path: polygon(0 0, -24px 0, -24px 25%, -12px 25%, -12px 50%, 0 50%, 0 75%, -12px 75%, -12px 100%, 0 100%);
+  }
+  to {
+    clip-path: polygon(0 0, 100% 0, 100% 25%, calc(100% + 12px) 25%, calc(100% + 12px) 50%, calc(100% + 24px) 50%, calc(100% + 24px) 75%, calc(100% + 12px) 75%, calc(100% + 12px) 100%, 0 100%);
+  }
+}
+@keyframes seagull-frame-dissolve {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

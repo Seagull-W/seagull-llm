@@ -1,0 +1,77 @@
+/* Shared toolbar layout. Each visual style supplies its own palette and icons. */
+.Layout.Layout :is(.site-search-trigger,.seagull-nav-actions > :where(button),.reader-tools :where(button)) {
+  border:0; border-radius:6px; background:transparent; box-shadow:none;
+  color:var(--vp-c-text-2); transition:color .15s,background-color .15s;
+}
+.Layout.Layout :is(.site-search-trigger,.seagull-nav-actions > button,.reader-tools button):hover {
+  color:var(--vp-c-text-1); background:var(--vp-c-bg-soft);
+}
+.Layout.Layout .site-search-trigger { flex-shrink:0; gap:8px; padding-inline:10px; }
+.Layout.Layout .site-search-trigger kbd { border:0; padding:0; color:var(--vp-c-text-3); font-size:10px; }
+.Layout.Layout .seagull-nav-actions { position:relative; gap:6px; padding-left:16px; margin-left:4px; }
+.Layout.Layout .seagull-nav-actions::before { content:''; position:absolute; left:0; top:12px; bottom:12px; width:1px; background:var(--vp-c-divider); }
+.Layout.Layout .seagull-nav-actions .action-label { display:none; }
+.Layout.Layout .theme-toggle { width:40px; padding:0; border-radius:50%; }
+.Layout.Layout .reader-tools { min-height:48px; }
+.Layout.Layout .reader-tools button { gap:8px; padding:0 8px; font-size:13px; }
+.Layout.Layout .reader-tools button > .interface-icon { color:var(--vp-c-brand-1); }
+.Layout.Layout .reader-tools .reader-tool-chevron { color:var(--vp-c-text-3); }
+.Layout.Layout :is(.VPMenu,.search-dialog) {
+  border-radius:8px; border:1px solid var(--vp-c-divider); box-shadow:0 12px 36px #14223026;
+}
+.Layout.Layout .VPNavScreen { border:0; box-shadow:none; }
+.Layout.Layout .reader-drawer { border:0; border-left:1px solid var(--vp-c-divider); box-shadow:-12px 0 36px #14223026; }
+.Layout.Layout :is(.search-dialog header,.reader-drawer header) { border-bottom:1px solid var(--vp-c-divider); }
+
+@media(max-width:639px) {
+  .Layout.Layout .site-search-trigger { width:40px; padding:0; justify-content:center; }
+  .Layout.Layout .site-search-trigger > span { display:none; }
+  .Layout.Layout .seagull-nav-actions { gap:2px; margin-left:0; padding-left:8px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .Layout.Layout :is(.site-search-trigger,.seagull-nav-actions > button,.reader-tools button) { transition:none; }
+}
+
+/* Native dialogs take focus immediately. Only their entrance has a duration,
+   so Escape, a search result, or a contents link always dismisses immediately. */
+@media (prefers-reduced-motion: no-preference) {
+  .Layout[data-visual-style='paper-coast'] :is(.search-dialog,.reader-drawer,.style-book)[open] {
+    animation: paper-panel-arrives 190ms cubic-bezier(.2,.7,.25,1);
+  }
+  .Layout[data-visual-style='paper-coast'] { --panel-drop: -8px; }
+  .Layout[data-visual-style='paper-coast'] .reader-drawer { --panel-origin: translateX(14px); }
+
+  .Layout[data-visual-style='pixel-voyage'] :is(.search-dialog,.reader-drawer,.style-book)[open] {
+    animation: pixel-panel-arrives 120ms steps(3, end);
+  }
+  .Layout[data-visual-style='pixel-voyage'] { --panel-drop: -6px; }
+  .Layout[data-visual-style='pixel-voyage'] .reader-drawer { --panel-origin: translateX(6px); }
+
+  .Layout :is(.search-dialog,.style-book) { --panel-origin: translateY(var(--panel-drop)); }
+
+  .Layout[data-visual-style='along-the-way'] :is(.search-dialog,.reader-drawer,.style-book)[open] {
+    animation: film-panel-arrives 220ms ease-out;
+  }
+  .Layout :is(.search-dialog,.reader-drawer,.style-book)[open]::backdrop {
+    animation: panel-backdrop-arrives 140ms ease-out;
+  }
+}
+@media (max-width:639px) {
+  .Layout .style-book { --panel-origin: translateY(calc(-1 * var(--panel-drop))); }
+}
+@keyframes paper-panel-arrives {
+  from { opacity:.84; transform:var(--panel-origin); }
+  to { opacity:1; transform:none; }
+}
+@keyframes pixel-panel-arrives {
+  from { transform:var(--panel-origin); }
+  to { transform:none; }
+}
+@keyframes film-panel-arrives {
+  from { opacity:.65; }
+  to { opacity:1; }
+}
+@keyframes panel-backdrop-arrives {
+  from { opacity:.4; }
+  to { opacity:1; }
+}

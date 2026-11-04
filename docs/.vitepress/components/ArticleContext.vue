@@ -2,13 +2,14 @@
 import { computed } from 'vue'
 import { useData, withBase } from 'vitepress'
 import { sectionFor, topicTags } from '../content-catalog'
+import SectionIcon from './SectionIcon.vue'
 const { page, frontmatter } = useData()
 const section = computed(() => sectionFor('/' + page.value.relativePath))
 const tags = computed(() => topicTags(frontmatter.value.tags || []))
 </script>
 <template>
   <div class="article-context">
-    <nav aria-label="当前位置"><a :href="withBase('/')">首页</a><span aria-hidden="true">/</span><a v-if="section" :href="withBase('/' + section.id + '/')">{{ section.title }}</a><time v-if="frontmatter.date" :datetime="String(frontmatter.date)">{{ String(frontmatter.date).slice(0, 10) }}</time></nav>
+    <nav aria-label="当前位置"><a :href="withBase('/')">首页</a><span aria-hidden="true">/</span><a v-if="section" class="section-link" :href="withBase('/' + section.id + '/')"><SectionIcon :section="section.id" />{{ section.title }}</a><time v-if="frontmatter.date" :datetime="String(frontmatter.date)">{{ String(frontmatter.date).slice(0, 10) }}</time></nav>
     <nav v-if="tags.length" class="article-topics" aria-label="文章主题"><a v-for="tag in tags" :key="tag" :href="withBase('/tags') + '#' + encodeURIComponent(tag)">{{ tag }}</a></nav>
   </div>
 </template>
@@ -19,4 +20,6 @@ a:hover { color:var(--vp-c-brand-1); text-decoration:underline; }
 time { margin-left:auto; font-variant-numeric:tabular-nums; }
 .article-topics { gap:6px 14px; margin-top:10px; }
 .article-topics a { color:var(--vp-c-brand-1); }
+.section-link { display:inline-flex; gap:6px; align-items:center; }
+.section-link .section-icon { width:22px; height:22px; }
 </style>

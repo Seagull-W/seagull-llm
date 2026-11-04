@@ -1,0 +1,56 @@
+/* Along the Way: original film frames carry atmosphere; text keeps a quiet surface. */
+:root[data-visual-style='along-the-way'],
+.Layout.Layout[data-visual-style='along-the-way'] {
+  --vp-c-bg:#eeede6; --vp-c-bg-alt:#f6f5ef; --vp-c-bg-soft:#e3e5da;
+  --vp-c-text-1:#30372f; --vp-c-text-2:#626b5e; --vp-c-text-3:#777d6f;
+  --vp-c-brand-1:#4b665a; --vp-c-brand-2:#354e43; --vp-c-brand-3:#647d6d;
+  --vp-c-divider:#ccd0c2; --vp-c-border:#ccd0c2; --vp-c-border-hover:#87977d;
+  --vp-button-brand-text:#f6f5ef; --vp-button-brand-hover-text:#f6f5ef;
+  --illustration-paper:#d3d9ca; --illustration-mist:#e3e5da; --illustration-ink:#586d5f;
+  --journey-warm:#92704c;
+}
+:root.dark[data-visual-style='along-the-way'],
+.dark .Layout.Layout[data-visual-style='along-the-way'] {
+  --vp-c-bg:#20231e; --vp-c-bg-alt:#272c24; --vp-c-bg-soft:#30382d;
+  --vp-c-text-1:#e5e4d8; --vp-c-text-2:#b7bcac; --vp-c-text-3:#a1a894;
+  --vp-c-brand-1:#b2c2b0; --vp-c-brand-2:#ced8c8; --vp-c-brand-3:#97ac94;
+  --vp-c-divider:#444b3e; --vp-c-border:#444b3e; --vp-c-border-hover:#819078;
+  --vp-button-brand-text:#20231e; --vp-button-brand-hover-text:#20231e;
+  --illustration-paper:#414d3c; --illustration-mist:#30382d; --illustration-ink:#b2c2b0;
+  --journey-warm:#c2a278;
+}
+.Layout[data-visual-style='along-the-way'] .VPHero { padding-top:36px; padding-bottom:32px; }
+.Layout[data-visual-style='along-the-way'] .home-heading h2 { font-family:'Seagull Academic Serif','Noto Serif SC',SimSun,serif; font-weight:600; }
+.Layout[data-visual-style='along-the-way'] .home-search { border-radius:3px; background:transparent; }
+.Layout[data-visual-style='along-the-way'] .section-grid > a { gap:22px; padding-block:22px; }
+.Layout[data-visual-style='along-the-way'] .section-grid h3 { color:var(--vp-c-text-1); }
+.Layout[data-visual-style='along-the-way'] .section-grid a:hover h3 { color:var(--vp-c-brand-1); }
+.Layout[data-visual-style='along-the-way'] .section-grid h3 span { color:var(--journey-warm); }
+.Layout[data-visual-style='along-the-way'] .section-grid p { font-size:13px; }
+.Layout[data-visual-style='along-the-way'] .home-closing-art { height:220px; margin-top:36px; mask-image:none; opacity:1; mix-blend-mode:normal; }
+.Layout[data-visual-style='along-the-way'] .home-closing-art img { filter:none; object-position:center 65%; }
+.Layout[data-visual-style='along-the-way'].chapter-index .vp-doc .illustrated-directory-intro { padding-right:260px; min-height:150px; }
+.Layout[data-visual-style='along-the-way'] .film-section-art { width:220px; height:124px; }
+.Layout[data-visual-style='along-the-way'] .film-section-art .section-photograph { width:100%; height:100%; }
+.Layout[data-visual-style='along-the-way'] .VPDoc .vp-doc { --vp-code-block-bg:#f5f4ed; }
+.dark .Layout[data-visual-style='along-the-way'] .VPDoc .vp-doc { --vp-code-block-bg:#252b22; }
+html[data-visual-style='along-the-way'] .Layout:not([data-visual-style='along-the-way']) :is(.hero-art,.section-illustration,.home-closing-art,.section-icon,.section-artwork,.visual-logo) { visibility:hidden; }
+@media(max-width:767px) {
+  .Layout[data-visual-style='along-the-way'] .section-grid .section-photograph { width:100%; aspect-ratio:16 / 9; margin-bottom:14px; }
+}
+@media(max-width:639px) {
+  .Layout[data-visual-style='along-the-way'] .VPHero { padding-top:28px; padding-bottom:26px; }
+  .Layout[data-visual-style='along-the-way'].chapter-index .vp-doc .illustrated-directory-intro { padding-right:0; min-height:0; }
+  .Layout[data-visual-style='along-the-way'].chapter-index .vp-doc .illustrated-directory-intro h1 { padding-right:96px; }
+  .Layout[data-visual-style='along-the-way'] .film-section-art { width:80px; height:52px; }
+  .Layout[data-visual-style='along-the-way'] .home-closing-art { height:140px; margin-top:24px; }
+}
+@media(max-width:539px) {
+  .Layout[data-visual-style='along-the-way'] .section-grid > a { gap:16px; padding-block:18px; }
+  .Layout[data-visual-style='along-the-way'] .section-grid .section-photograph { width:96px; margin:0; aspect-ratio:4 / 3; }
+  .Layout[data-visual-style='along-the-way'] .section-grid p { font-size:12px; }
+}
+@media(max-width:359px) {
+  .Layout[data-visual-style='along-the-way'] .home-discover { flex-wrap:wrap; justify-content:flex-end; gap:10px; }
+  .Layout[data-visual-style='along-the-way'] .home-search { flex-basis:100%; min-height:48px; }
+}

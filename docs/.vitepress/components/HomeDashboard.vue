@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, shallowRef } from 'vue'
+import { computed, onMounted, ref, shallowRef, watch } from 'vue'
 import { withBase } from 'vitepress'
 import { data as pages } from '../data/tagged-pages.data'
 import { sections, contextFor } from '../content-catalog'
+import SectionArtwork from './SectionArtwork.vue'
+import InterfaceIcon from './InterfaceIcon.vue'
+import { useVisualStyle } from '../theme/visual-styles'
 const active = ref('')
+const style = useVisualStyle()
+const results = ref<HTMLElement>()
 const featured = shallowRef(pages.slice(0, 4))
 onMounted(() => {
   const pool = [...pages]
@@ -14,19 +19,32 @@ onMounted(() => {
   featured.value = pool.slice(0, 4)
 })
 const updates = computed(() => active.value ? pages.filter(p => active.value === 'notes' ? !['research','videos'].includes(p.section) : p.section === active.value).slice(0, 4) : featured.value)
+// Only an explicit filter change should animate, never the first set of recommendations.
+watch(active, () => {
+  const grid = results.value
+  if (!grid?.animate || !window.matchMedia('(prefers-reduced-motion: no-preference)').matches) return
+  grid.getAnimations().forEach(animation => animation.cancel())
+  if (style.value.iconSet === 'pixel') {
+    grid.animate([{ transform: 'translateX(-4px)' }, { transform: 'none' }], { duration: 120, easing: 'steps(2, end)' })
+  } else if (style.value.iconSet === 'cinema') {
+    grid.animate([{ opacity: 0.72 }, { opacity: 1 }], { duration: 240, easing: 'ease-out' })
+  } else {
+    grid.animate([{ transform: 'translateY(-4px)', opacity: 0.84 }, { transform: 'none', opacity: 1 }], { duration: 200, easing: 'ease-out' })
+  }
+}, { flush: 'post' })
 function search() { window.dispatchEvent(new Event('seagull-search')) }
 </script>
 <template>
   <div class="home-dashboard">
-    <div class="home-discover"><button class="home-search" aria-haspopup="dialog" @click="search"><span aria-hidden="true">⌕</span> 搜索笔记、论文、主题…<span class="search-key">Ctrl K</span></button><a :href="withBase('/tags')">全部内容 <span aria-hidden="true">→</span></a></div>
+    <div class="home-discover"><button class="home-search" aria-haspopup="dialog" @click="search"><InterfaceIcon name="search" /> 搜索笔记、论文、主题…<span class="search-key">Ctrl K</span></button><a :href="withBase('/tags')">全部内容 <span aria-hidden="true">→</span></a></div>
     <section class="home-sections" aria-labelledby="home-sections-title">
       <header class="home-heading"><h2 id="home-sections-title">从这里开始</h2></header>
-      <nav class="section-grid" aria-label="内容栏目"><a v-for="s in sections.filter(s => s.id !== 'videos')" :key="s.id" :href="withBase('/' + s.id + '/')"><h3>{{ s.title }} <span aria-hidden="true">→</span></h3><p>{{ s.description }}</p></a></nav>
+      <nav class="section-grid" aria-label="内容栏目"><a v-for="s in sections.filter(s => s.id !== 'videos')" :key="s.id" :href="withBase('/' + s.id + '/')"><SectionArtwork :section="s.id" /><div class="section-copy"><h3>{{ s.title }} <span aria-hidden="true">→</span></h3><p>{{ s.description }}</p></div></a></nav>
     </section>
     <section class="home-updates" aria-labelledby="home-updates-title">
       <header class="home-heading"><h2 id="home-updates-title">{{ active ? '最近更新' : '内容推荐' }}</h2><a :href="withBase('/tags')">{{ active ? '全部更新 →' : '全部内容 →' }}</a></header>
       <div class="update-filters" aria-label="内容类型"><button v-for="filter in [{id:'',title:'全部'},{id:'notes',title:'笔记与论文'},{id:'research',title:'调研'},{id:'videos',title:'视频'}]" :key="filter.id" :aria-pressed="active === filter.id" @click="active = filter.id">{{ filter.title }}</button></div>
-      <div class="update-grid"><a v-for="page in updates" :key="page.url" :href="withBase(page.url)"><div class="update-meta"><span>{{ contextFor(page) }}</span><time v-if="page.section === 'research'" :datetime="page.updated">{{ page.updated }}</time></div><h3>{{ page.title }}</h3><p>{{ page.description }}</p></a></div>
+      <div ref="results" class="update-grid"><a v-for="page in updates" :key="page.url" :href="withBase(page.url)"><div class="update-meta"><span>{{ contextFor(page) }}</span><time v-if="page.section === 'research'" :datetime="page.updated">{{ page.updated }}</time></div><h3>{{ page.title }}</h3><p>{{ page.description }}</p></a></div>
     </section>
   </div>
 </template>
@@ -42,8 +60,10 @@ function search() { window.dispatchEvent(new Event('seagull-search')) }
 .home-discover > a,.home-heading > a { font-size:13px; color:var(--vp-c-brand-1); flex:none; white-space:nowrap; }
 .home-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
 .home-heading h2 { font-size:22px; font-weight:600; line-height:1.5; }
-.section-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0 28px; border-top:1px solid var(--vp-c-divider); }
-.section-grid > a { display:block; padding:18px 0; border-bottom:1px solid var(--vp-c-divider); }
+.section-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 36px; border-top:1px solid var(--vp-c-divider); }
+.section-grid > a { display:flex; gap:16px; align-items:center; padding:22px 0; border-bottom:1px solid var(--vp-c-divider); }
+.section-grid > a:focus-visible { outline:2px solid var(--vp-c-brand-1); outline-offset:5px; border-radius:4px; }
+.section-copy { flex:1; min-width:0; }
 .section-grid h3 { display:flex; justify-content:space-between; gap:12px; font-size:16px; font-weight:600; }
 .section-grid h3 span { color:var(--vp-c-brand-1); font-weight:400; }
 .section-grid p { font-size:12px; color:var(--vp-c-text-2); margin-top:6px; line-height:1.7; }
@@ -58,4 +78,14 @@ function search() { window.dispatchEvent(new Event('seagull-search')) }
 .update-grid p { font-size:13px; line-height:1.8; color:var(--vp-c-text-2); display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
 .home-dashboard a:hover h3 { color:var(--vp-c-brand-1); }
 @media(max-width:767px) { .section-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 20px; } .home-discover { gap:14px; margin-bottom:24px; } .home-discover > a { line-height:1.7; } .search-key { display:none; } .home-search { font-size:13px; padding:10px 12px; } .home-heading h2 { font-size:20px; } .section-grid p { font-size:11px; } .section-grid h3 { font-size:15px; } .update-grid { grid-template-columns:1fr; } .home-updates { margin-top:32px; } }
+@media(max-width:767px) {
+  .section-grid > a { display:block; padding:20px 0; }
+  .section-grid .section-artwork { margin:0 0 10px; }
+}
+@media(max-width:539px) {
+  .section-grid { grid-template-columns:1fr; }
+  .section-grid > a { display:flex; gap:18px; padding:16px 0; }
+  .section-grid .section-artwork { width:90px; height:66px; margin:0; }
+  .section-grid p { font-size:12px; }
+}
 </style>

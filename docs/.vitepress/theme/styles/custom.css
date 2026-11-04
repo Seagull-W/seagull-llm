@@ -47,9 +47,9 @@ button,summary,select { cursor:pointer; }
 
 /* Compact, illustrated home opening. */
 @font-face { font-family:'Seagull TeX'; src:url('../../../../node_modules/katex/dist/fonts/KaTeX_Main-Regular.woff2') format('woff2'); font-weight:400; font-display:swap; }
-.VPHome.VPHome .VPHero { margin-top:0; padding:44px 32px 30px; }
+.VPHome.VPHome .VPHero { margin-top:0; padding:28px 32px 30px; }
 .VPHome.VPHome .VPHero .container { max-width:1120px; flex-direction:row; align-items:center; gap:40px; }
-.VPHome.VPHome .VPHero .main { flex:1; min-width:0; max-width:none; order:0; text-align:left; }
+.VPHome.VPHome .VPHero .main { flex:1; min-width:0; width:100%; max-width:none; order:0; text-align:left; }
 .VPHome.VPHome .VPHero .image { flex:0 0 34%; margin:0; }
 .VPHome.VPHome .VPHero .image-container { width:100%; height:auto; transform:none; }
 .VPHome .VPHero .image-bg { display:none; }

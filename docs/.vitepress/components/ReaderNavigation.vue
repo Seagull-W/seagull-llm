@@ -6,6 +6,7 @@ import { normalizeContentPath } from '../public-content'
 import { sectionFor } from '../content-catalog'
 import { sidebar } from '../sidebar'
 import ContentsList, { type Heading } from './ContentsList.vue'
+import InterfaceIcon from './InterfaceIcon.vue'
 const { frontmatter, page } = useData()
 const route = useRoute()
 const enabled = computed(() => frontmatter.value.layout !== 'page' && !String(frontmatter.value.pageClass || '').includes('chapter-index'))
@@ -92,8 +93,8 @@ onUnmounted(() => { close(); cancelAnimationFrame(frame); window.removeEventList
 <template>
   <div v-if="enabled" class="reader-navigation" :class="{ 'has-toc': tocEnabled }">
     <nav class="reader-tools" aria-label="阅读导航">
-      <button v-if="section" aria-haspopup="dialog" @click="open($event, 'collection')">栏目目录 <span aria-hidden="true">⌄</span></button>
-      <button v-if="tocEnabled" class="toc-mobile" aria-haspopup="dialog" @click="open($event, 'toc')">本页目录 <span aria-hidden="true">☰</span></button>
+      <button v-if="section" aria-haspopup="dialog" @click="open($event, 'collection')"><InterfaceIcon name="collection" />栏目目录<InterfaceIcon class="reader-tool-chevron" name="chevron" /></button>
+      <button v-if="tocEnabled" class="toc-mobile" aria-haspopup="dialog" @click="open($event, 'toc')"><InterfaceIcon name="contents" />本页目录</button>
     </nav>
     <aside v-if="tocEnabled" ref="rail" class="reader-toc" aria-label="本页目录"><h2>本页目录</h2><ContentsList :groups="groups" :active="active" :expanded="expanded" @jump="jump" @toggle="toggle" /></aside>
     <dialog ref="drawer" class="reader-drawer" aria-labelledby="reader-drawer-title" @close="restore" @click="($event.target === drawer) && close()">

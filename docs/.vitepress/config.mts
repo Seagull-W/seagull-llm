@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import { sidebar } from './sidebar'
+import { visualStyleBoot } from './theme/visual-styles'
 import texDelimiters from './markdown/tex-delimiters.mjs'
 import nativeHtml from './markdown/native-html.mjs'
 
@@ -204,6 +205,7 @@ const config = withMermaid({
 
   // ===== 主题外观 =====
   appearance: true, // 亮色/暗色双模式，跟随系统 + 手动切换
+  head: [['script', {}, visualStyleBoot]],
 
   // ===== Markdown 配置 =====
   markdown: {
@@ -223,7 +225,7 @@ const config = withMermaid({
   // ===== 主题配置 =====
   themeConfig: {
     // --- 站点 Logo（海鸥） ---
-    logo: { src: '/logo.svg', alt: 'seagull 首页' },
+    // Logo comes from Layout's nav-bar-title-before slot and follows the chosen style.
 
     // --- 导航栏标题（false = 只显示 logo，不显示文字） ---
     siteTitle: false,

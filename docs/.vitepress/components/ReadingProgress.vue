@@ -27,5 +27,5 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="reading-progress" :style="{ transform: `scaleX(${progress})` }"></div>
+  <div class="reading-progress" aria-hidden="true" :style="{ transform: `scaleX(${progress})`, '--reading-progress': progress }"></div>
 </template>
