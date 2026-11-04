@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1712,
+  "character_count": 1718,
   "pages": [
     {
       "path": "/cs336/a1-bpe.md",
@@ -118,6 +118,10 @@
     {
       "path": "/research/2026-11-04-daily-research-guide.md",
       "title": "每日调研导读：从后训练全景到奖励、系统与规模边界"
+    },
+    {
+      "path": "/research/2026-11-04-rufus-air-post-training.md",
+      "title": "Rufus-Air：八段配方的关键是训练信号，顺序仍属经验选择"
     },
     {
       "path": "/rl-book/cha4对话模板与监督微调.md",

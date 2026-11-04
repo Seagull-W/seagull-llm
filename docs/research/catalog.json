@@ -11,6 +11,22 @@
     "label": "导读"
   },
   {
+    "date": "2026-11-04",
+    "slug": "rufus-air-post-training",
+    "title": "Rufus-Air：八段配方的关键是训练信号，顺序仍属经验选择",
+    "description": "精读 Rufus-Air v2：从 SFT 的监督量、RL 的难度过滤与奖励设计，到 agent 轨迹保真和评测环境，区分逐段增益、受控消融与尚未验证的工程判断。",
+    "route": "/research/2026-11-04-rufus-air-post-training",
+    "source_urls": [
+      "https://arxiv.org/abs/2609.29421v2",
+      "https://arxiv.org/html/2609.29421v2",
+      "https://arxiv.org/pdf/2609.29421v2",
+      "https://arxiv.org/abs/2508.06471",
+      "https://github.com/THUDM/slime/blob/main/slime/utils/routing_replay.py"
+    ],
+    "window_end": "2026-11-04T23:59:00+08:00",
+    "origin": "manual"
+  },
+  {
     "date": "2026-11-02",
     "slug": "score-centering-tim",
     "title": "Score Centering：消掉追随采样器的漂移，仍要面对采样分布偏差",
