@@ -4,11 +4,11 @@
 
 ## 2026-10-17 阅读设计修订
 
-> **2026-10-27 全站学术排版修订（优先于下方旧视觉约定）**：已确认的西湖讲义学术阅读样式推广到六个文字栏目中的全部公开文章。`theme/reading-design.ts` 按真实源路径与现有公开范围规则启用 `academic-reading`，共享样式位于 `theme/styles/academic-reading.css`。正文使用本地 Noto Serif SC、720px 文字版心和连续分节；开篇与分节面板采用克制的标题、留白及分隔线。原有导读、机制图、比较、图片、代码、折叠详解和交互组件仍按文章内容维护。代码保持等宽字体，导航、图中标注、表格、图注和交互控件保持无衬线字体。首页、栏目目录、标签索引与视频保留各自布局；草稿、内部内容和已撤下的科普书不因此公开。每日调研保留 Markdown，仅由共享样式改善阅读。
+公开学术文章共用西湖讲义的阅读版式，包括六个 HTML 文字栏目和使用 Markdown 的每日调研。`theme/reading-design.ts` 根据源路径与公开范围启用 `academic-reading`，样式位于 `theme/styles/academic-reading.css`。正文使用本地 Noto Serif SC 和 720px 版心，开篇与分节以留白和分隔线划分。代码使用等宽字体，导航、图中标注、表格、图注和交互控件使用无衬线字体。首页、栏目目录、标签索引与视频各有自己的布局。
 
 共享字体位于 `docs/.vitepress/theme/fonts/`，400／600 两个 WOFF2 子集由 `python scripts/update-reading-font.py` 根据当前公开文章生成；原字体缓存在忽略的 `.research/font-cache`，文章清单保存在 `scripts/data/academic-reading-pages.json`。新增字符后更新子集，未覆盖字符使用系统宋体回退。原奖励建模比较开关已结束试用，使用确定后的学术排版。
 
-笔记页面充分沿用 Linux 隔离机制笔记的视觉语言，而不只是把 Markdown 标签换成 HTML：深蓝渐变的 `note-hero` 开篇、主题 chips、可跳转的 `note-jump` 阅读导航、白色 `note-panel` 分节、蓝／绿／橙的机制图和对照块、独立的公式与图片区域。正文左对齐，段落保持连续阅读；仅在概念、步骤或结果需要比较时使用网格，不把每段文字都拆成卡片。
+笔记沿用 Linux 隔离机制笔记的内容结构。开篇交代问题与阅读线索，长文提供页内导航，机制、比较、公式和图片紧邻相关解释。现有栏目的普通文章只维护一份正文；纸海、像素航海、沿途的颜色与页面过渡由站点主题提供。栏目装饰与昼夜效果见 [VISUAL_STYLES.md](./VISUAL_STYLES.md)。
 
 HTML 源文件使用 `data-design="linux-notebook"` 标记，页内按实际内容维护以下元素：
 
@@ -33,7 +33,7 @@ LLM 科普书目前整体撤下：源文件保留，但不参与站点构建、�
 
 ## 文件与路由
 
-每个页面由两个相邻文件组成：`name.html` 保存唯一正文，`name.md` 保存 title、description、tags、发布状态及 `contentFormat: html`，正文只有 `<!--@include: ./name.html-->`。目录式页面使用 `index.html` 和 `index.md`。不维护两份正文，不自动从旧 Markdown 覆盖现有 HTML。路由保持 `/section/name` 或 `/section/`。
+使用 HTML 的读者页面由两个相邻文件组成。`name.html` 保存唯一正文，`name.md` 保存 title、description、tags、发布状态及 `contentFormat: html`，元数据下方只有 `<!--@include: ./name.html-->`。目录式页面使用 `index.html` 和 `index.md`。扁平文章路由如 `/cs336/lecture-01`，目录式文章如 `/papers/deepseek-r1/`。每日调研在 `docs/research/` 下直接维护 Markdown。
 
 HTML 是页面模板片段，编译后直接出现在主文档中，不是嵌入另一个网页。不要添加 `html/head/body` 或第二个 `main`，也不要使用 iframe、`v-html` 或运行时拉取文章。HTML 中保留 Vue 组件和可选的顶层 `script setup`、`style scoped`，因此需要通过 `npm run dev` 或构建预览，而不是双击源文件。
 
@@ -45,14 +45,15 @@ HTML 是页面模板片段，编译后直接出现在主文档中，不是嵌入
 | 论文与项目随谈 | `article.format-paper` | 标题与来源、问题、方法、证据与结果、工程分析、适用边界及引用；图表紧邻分析 |
 | RL 学习笔记 | `article.format-lab` | 学习目标、算法与公式、配置和命令、实验结果与分析；表格用等宽数字、结果区允许更宽布局 |
 | 西湖 RL 笔记 | `article.format-course` | 概念、假设、公式推导、算法与课程资料；保持连续阅读。由 LaTeX 源稿导入的五篇讲义额外使用 `academic-lecture` 学术排版，原 PDF 在文末按需展开对照 |
+| CS336 学习笔记 | 讲义用 `article.format-course`，作业和实验用 `article.format-lab` | 讲义保留课程概念与推导，作业和实验结合实现、运行条件与结果 |
 | Rust 学习笔记 | `article.format-code` | 问题、概念和 API、代码示例、行为解释、易错点与速查；代码语言与复制操作保持可用 |
 | Linux 学习笔记 | `article.format-system` | 机制总览、基础概念、机制图、命令与限制、组合边界、速查表；沿用隔离机制笔记的图解和分节面板 |
 | 栏目首页与标签页 | `div.format-directory` | 标题与简介、`ChapterCards` 或 `TagsIndex`；保留 `pageClass: chapter-index` |
 | 视频 | `div.format-gallery` | `VideoGallery` 管理封面、简介及观看入口 |
-| 网站首页 | `div.format-home` | hero 与 features 元数据仍在 `index.md`；首页主题组件保持现有入口 |
-| 每日调研 | Markdown | 保留现有日报流水线、日期、目录和发布方式 |
+| 网站首页 | `div.format-home` | 首屏文案在 `docs/index.md` 的 `hero` 中维护；栏目入口来自 `content-catalog.ts` 的 `sections` |
+| 每日调研 | Markdown | 调研正文及栏目卡片均使用 Markdown，卡片位于 `docs/research/index.md` |
 
-共同视觉采用白色 `#fcfdff` 阅读底色、`#243247` 正文、`#59677a` 辅助文字、`#e1e7ee` 分隔线及对应栏目强调色；暗色跟随站点变量。正文使用现有中文系统字体，代码使用等宽字体。主文左对齐，优先控制行长，实验和机制图适度加宽；不要给整篇文章建立固定高度或独立滚动条。
+正文沿用共享字体、行长与配色。确需给自定义组件配色时，用站点变量表达背景、正文和分隔线，例如 `--vp-c-bg`、`--vp-c-text-1`、`--vp-c-divider`。实验图与宽表可局部加宽，页面保留一处主滚动区域。
 
 ### 西湖讲义学术排版（2026-10-27 试用）
 
@@ -65,17 +66,17 @@ HTML 是页面模板片段，编译后直接出现在主文档中，不是嵌入
 ## 正文示例
 
 ```html
-<article class="native-document format-paper" data-format="paper" aria-label="文章标题">
-  <header class="document-intro">
+<article class="native-document format-paper" data-format="paper" data-design="linux-notebook" aria-label="文章标题">
+  <header class="document-intro note-hero">
     <h1 id="paper-title" tabindex="-1">文章标题 <a class="header-anchor" href="#paper-title" aria-label="文章链接">&#8203;</a></h1>
-    <p>介绍本文问题与来源。</p>
+    <p class="note-deck">介绍本文问题与来源。</p>
   </header>
-  <section class="document-section">
+  <section class="document-section note-panel" aria-labelledby="method">
     <h2 id="method" tabindex="-1">方法 <a class="header-anchor" href="#method" aria-label="章节链接">&#8203;</a></h2>
     <p>正文说明。</p>
-    <figure>
-      <img src="./figures/method.svg" alt="说明图中结构与关系">
-      <figcaption>图的来源、范围和必要说明。</figcaption>
+    <figure class="note-figure">
+      <img src="/cs336/figures/lecture03-p45.png" alt="四个 GPU 各负责一层，前向和反向箭头连接相邻层。">
+      <figcaption>各层分布在不同 GPU 上，后续层仍须等待前一层的结果。图源：CS336 第三讲，第 45 页，引自 Tay 等（2021）。</figcaption>
     </figure>
   </section>
 </article>
@@ -96,13 +97,15 @@ HTML 是页面模板片段，编译后直接出现在主文档中，不是嵌入
 
 代码使用 `<pre v-pre><code>...</code></pre>`，转义示例代码中的 `<`、`>`、`&`，`v-pre` 防止示例中的 Vue 插值被执行。迁移内容已保留原有 Shiki 高亮与复制按钮；新增长代码示例可沿用对应结构，或使用简洁的 pre/code。
 
-Vue 重组件继续全局异步注册，正文中使用 `<ClientOnly><ComponentName /></ClientOnly>`。本地脚本通过单独的顶层 `<script setup lang="ts">` 导入，路径相对于同目录源文件。图片保持相对路径，Vite 会处理资源；`/` 开头的站内链接与 public 资源由接入层补齐部署 base。动态组件链接使用 VitePress `withBase`。
+Vue 重组件继续全局异步注册，正文中使用 `<ClientOnly><ComponentName /></ClientOnly>`。本地脚本通过单独的顶层 `<script setup lang="ts">` 导入，路径相对于同目录源文件。
+
+将读者需要看到的本地配图放入 `docs/public/` 下的栏目资源目录。上例文件为 `docs/public/cs336/figures/lecture03-p45.png`，HTML 的 `src` 从公共目录的根写起。HTML 接入层会为双引号中的静态根路径 `src` 和 `href` 补齐部署前缀；Vue 组件动态拼出的站内路径用 VitePress 的 `withBase`。随 HTML include 使用的 `./figures/` 相对路径曾在生产构建中漏拷贝，发布前应在构建预览中打开文章，确认实际图片加载且图注对应。三种风格共用同一张内容图。
 
 Mermaid 保留原有按需加载组件；HTML 中用 `<ClientOnly><Mermaid id="unique-diagram" graph="URL 编码后的 Mermaid 源码" /></ClientOnly>`，图 ID 在页面中唯一。局部样式使用独立的 `<style scoped>` 块，不覆盖全局 body、导航或侧边栏；共用板块样式在 `docs/.vitepress/theme/styles/native-html.css`。
 
 ## 发布与验证
 
-按 `新增内容.md` 完整接入侧边栏、栏目 `index.html` 卡片及标签。草稿、隐藏内容、内部记录的公开范围规则保持不变，不能为了 HTML 迁移放开标签索引过滤。
+按 [新增内容.md](./新增内容.md) 接入侧边栏、栏目卡片和标签，也按其中的清单登记新栏目。普通栏目的文章卡片写在栏目 `index.html`；每日调研写在 `docs/research/index.md`。草稿、隐藏内容和内部记录按原有公开范围规则处理。
 
 ```bash
 npm run tags

@@ -18,15 +18,16 @@
 
 执行前阅读 [新增内容.md](./新增内容.md)，按其中的发布流程完成整套接入；只新增 Markdown 文件不算完成。
 
-- 每日调研继续使用 Markdown；其他读者页面使用相邻 `.html` 作为正文主文件，`.md` 仅保留元数据和 HTML include。格式遵循 [HTML_FORMATS.md](./HTML_FORMATS.md)，禁止用 iframe 或运行时 HTML 注入包装文章。栏目卡片在 `index.html` 维护。
+- 每日调研的正文和栏目卡片分别在文章 `.md` 和 `docs/research/index.md` 维护。其他读者页面用相邻 `.html` 保存正文、`.md` 保存元数据和 HTML include，栏目卡片在对应的 `index.html` 维护。HTML 格式、图注与资源路径见 [HTML_FORMATS.md](./HTML_FORMATS.md)。禁止用 iframe 或运行时 HTML 注入包装文章。
 - 笔记设计参考 Linux 隔离机制笔记，维护真实的导读、机制图、分节面板、对照、图注和折叠详解，不能只把 Markdown 转成 HTML。LLM 科普书当前整体撤下，源文件保留；未经用户明确要求，不恢复其构建、导航、首页、标签、搜索或翻页入口。
 
-- 公开文章必须同步登记 `docs/.vitepress/sidebar.ts` 和对应栏目首页的 `ChapterCards` 卡片，保持标题、摘要和路由一致。用户明确要求展示的文章应补齐入口，不能仅因原先未登记侧边栏就将其当作隐藏内容。
+- 公开文章必须同步登记栏目侧边栏和栏目首页的 `ChapterCards` 卡片，保持标题、摘要和路由一致。普通栏目在 `docs/.vitepress/sidebar.ts` 登记；每日调研的侧边栏条目在它导入的 `docs/.vitepress/research-sidebar.ts`，目录记录与登记步骤见[调研指南](./research/README.md)。用户明确要求展示的文章应补齐入口，不能仅因原先未登记侧边栏就将其当作隐藏内容。
 - 每篇文章设置准确的 `title`、`description` 和主题 `tags`。运行 `npm run tags` 自动补充缺失标签后，检查并修正标签；脚本不会覆盖已有标签。
 - 标签索引由 `docs/.vitepress/data/tagged-pages.data.mts` 自动生成，公开范围由 `docs/.vitepress/public-content.ts` 根据侧边栏和发布状态判断。不要为了让单篇文章显示而取消公开范围过滤。
 - 草稿、隐藏内容和网站维护文档不得进入公开章节卡片或标签索引；为这些页面设置 `search: false`，需要禁止搜索引擎索引时同时设置 robots `noindex`。不要把 `sidebar: false` 当作隐藏内容标记。
-- 新增栏目还需登记顶栏导航、侧边栏路径前缀，并补充 `scripts/generate-content-tags.mjs` 的栏目标签映射；详见流程规范。
-- 验证目录卡片、侧边栏、文章标签跳转、标签筛选和站内搜索，确认公开内容可找到、内部内容不可找到。运行 `node scripts/test-public-content.mjs` 和 `npm run build`；涉及公式时再运行 `node scripts/test-markdown-math.mjs`。
+- 新增栏目还需登记顶栏导航、侧边栏路径前缀、`docs/.vitepress/content-catalog.ts` 的 `sections` 和 `scripts/generate-content-tags.mjs` 的栏目标签映射。采用学术阅读版式的栏目同步登记到 `docs/.vitepress/theme/reading-design.ts`。
+- 现有栏目里的普通文章自动沿用站点视觉风格和昼夜切换。修改栏目插画、图标、配色或过渡效果时，参照 [VISUAL_STYLES.md](./VISUAL_STYLES.md) 并运行 `npm run test:styles`。
+- 发布前运行 `npm run test:content`（含公开范围和公式检查）及 `npm run build`。实际验证目录卡片、侧边栏、文章标签跳转、标签筛选和站内搜索，确认公开内容可找到、内部内容不可找到。
 
 正文写作遵循对应栏目的规范；LLM 科普书新版内容优先依据 [LLM_BOOK_PLAN.md](./LLM_BOOK_PLAN.md)。
 
