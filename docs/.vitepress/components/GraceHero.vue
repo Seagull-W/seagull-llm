@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useData, withBase } from 'vitepress'
-import { useVisualStyle } from '../theme/visual-styles'
+import { heroImageFor, heroMobileMedia, useVisualStyle } from '../theme/visual-styles'
 
 const { frontmatter, isDark } = useData()
 const style = useVisualStyle()
@@ -9,8 +9,8 @@ const style = useVisualStyle()
 <template>
   <section class="grace-hero" aria-labelledby="grace-home-title">
     <picture class="grace-hero-art" aria-hidden="true">
-      <source media="(max-width:639px)" :srcset="withBase(isDark ? style.assets.mobileDark || style.assets.mobile : style.assets.mobile)" />
-      <img :src="withBase(isDark ? style.assets.heroDark : style.assets.heroLight)" alt="" width="1680" height="945" fetchpriority="high" />
+      <source :media="heroMobileMedia" :srcset="withBase(heroImageFor(style, isDark, true))" />
+      <img :src="withBase(heroImageFor(style, isDark, false))" alt="" width="1680" height="945" fetchpriority="high" />
     </picture>
     <div class="grace-hero-title">
       <h1 id="grace-home-title">{{ frontmatter.hero.name }}</h1>
@@ -27,6 +27,8 @@ const style = useVisualStyle()
 <style scoped>
 .grace-hero {
   position:relative;
+  width:100%;
+  min-width:0;
   isolation:isolate;
   display:flex;
   align-items:center;
@@ -37,7 +39,11 @@ const style = useVisualStyle()
   color:#fff2cc;
 }
 .grace-hero-art, .grace-hero::after { position:absolute; inset:0; pointer-events:none; }
-.grace-hero-art { z-index:-2; }
+.grace-hero-art {
+  z-index:-2;
+  background:url('../theme/hero-previews/grace-day.webp?inline') center 40% / cover no-repeat;
+}
+.dark .grace-hero-art { background-image:url('../theme/hero-previews/grace-night.webp?inline'); }
 .grace-hero-art img {
   display:block; width:100%; height:100%;
   object-fit:cover; object-position:center 40%;
@@ -77,7 +83,7 @@ const style = useVisualStyle()
 @media(max-width:639px) {
   .grace-hero { display:block; min-height:0; aspect-ratio:auto; background:#20221c; }
   .grace-hero::after { content:none; }
-  .grace-hero-art { position:relative; z-index:0; display:block; aspect-ratio:16 / 9; }
+  .grace-hero-art { position:relative; z-index:0; display:block; aspect-ratio:16 / 9; background-position:center; }
   .grace-hero-art img { object-position:center; }
   .grace-hero-title { width:100%; padding:18px clamp(16px,5vw,30px) 19px; }
   .grace-hero-title h1 { font-size:clamp(40px,8vw,51px); }

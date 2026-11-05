@@ -4,12 +4,17 @@ import InterfaceIcon from './InterfaceIcon.vue'
 import StyleSwitcher from './StyleSwitcher.vue'
 import WindowLight from './WindowLight.vue'
 import { useVisualStyle } from '../theme/visual-styles'
-import { changeAppearance } from '../theme/appearance-motion'
+import { changeAppearance, warmHomePicture } from '../theme/appearance-motion'
 import '../theme/styles/appearance-motion.css'
 const { isDark } = useData()
 const style = useVisualStyle()
 
+function prepareDaylight() {
+  warmHomePicture(style.value, !isDark.value)
+}
+
 function toggleDaylight() {
+  prepareDaylight()
   changeAppearance(style.value.iconSet, () => { isDark.value = !isDark.value })
 }
 </script>
@@ -17,7 +22,8 @@ function toggleDaylight() {
 <template>
   <div class="seagull-nav-actions"><slot />
     <StyleSwitcher />
-    <button class="theme-toggle" type="button" :aria-pressed="isDark" :title="isDark ? '切换到浅色模式' : '切换到深色模式'" aria-label="深色主题" @click="toggleDaylight">
+    <button class="theme-toggle" type="button" :aria-pressed="isDark" :title="isDark ? '切换到浅色模式' : '切换到深色模式'" aria-label="深色主题"
+      @pointerenter="prepareDaylight" @pointerdown="prepareDaylight" @focus="prepareDaylight" @click="toggleDaylight">
       <WindowLight v-if="style.iconSet === 'cinema'" :night="isDark" /><InterfaceIcon v-else :name="isDark ? 'moon' : 'sun'" /><span class="action-label">主题</span>
     </button>
   </div>

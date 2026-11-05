@@ -35,6 +35,8 @@
 
 修改风格后运行 `npm run test:styles`、`npm run test:content` 和 `npm run build`。从首页下半部点进栏目，再进入一篇有多个小节的文章，试一次节间跳转、文末推荐和浏览器后退。新增数据和调研的检查命令见[调研发布说明](./research/README.md)。
 
+风格手册的 `coverLight` 和 `coverDark` 使用按卡片尺寸导出的小图；像素原图足够小时可直接复用。首页主图由 `heroImageFor` 根据风格、昼夜和屏宽选择。新增主图时，把桌面与手机路径登记在同一份视觉清单里，首屏预加载和切换预取都会沿用它。若卷尾另有手机构图，可登记 `closingMobile` 和 `closingMobileDark`。这些资源由主题维护，发表文章时无需配图或修改清单。
+
 ## 剪纸 · Paper Coast v1.1
 
 状态：可在风格手册选择。它是一套纸感剪贴插画风格，兼具简笔线条，不是写实风景或纯线稿。风格标识为 `paper-coast`，版本为 `1.1`。
@@ -57,7 +59,7 @@
 | 首页栏目入口 | 七幅折纸小作品 | 配合分册标题、摘要及可翻看的篇目 |
 | 栏目首页 | 复用对应的折纸作品 | CS336、RL、西湖、论文、调研、Rust、Linux；标签总览仍用简洁的标签图标 |
 | 文章页面 | 章首印记、书签与节间定位 | 仅修饰阅读导航和章节边界 |
-| 页尾 | 淡纸浪 | 懒加载、边缘渐隐；深色仅处理这张装饰图 |
+| 页尾 | 翻开的书、折纸海鸥与灯塔 | 白天用暖纸和青绿纸浪，夜间用月光和灯火。手机取窄画幅，保留灯塔、书与海鸥。 |
 | 站点标识 | 青灰纸翼 SVG | 原有 logo.svg 保留，新版本使用独立文件 |
 
 视频的播放符号包含在图标集中，当前不额外改造视频封面。正文机制图仍由 `NoteFlowIcon` 管理：它们具有具体含义，不随装饰主题重新生成。
@@ -71,7 +73,7 @@
 | 海鸥与知识轨迹-1.png | hero-light.webp | 浅色首页 |
 | 深蓝纸艺海鸥背景-3.png | hero-dark.webp | 深色首页 |
 | 剪纸风海鸥向右上滑翔-4.png | gull-mobile.webp | 手机首页 |
-| 极简海鸥与淡淡纸浪-5.png | closing.webp | 页尾 |
+| 内置生图绘制的剪纸海岸日夜双联画 | closing/paper-tide-{day,night}*.webp | 页尾；提示词以手工书页、层叠纸浪、折纸海鸥、灯塔与侧光投影为核心 |
 | 蓝灰海鸥与漂浮纸片-2.png | — | 同类备用构图 |
 | 阅读与探索的轻盈构成-6.png | — | 暂不堆叠横幅，避免拉长首页 |
 | 透明底的剪纸海鸥-7.png、向右上滑翔的剪纸海鸥-8.png | — | 边缘存在灰色晕影，暂不采用 |
@@ -179,7 +181,9 @@ v1.2 将导航、风格选择、明暗开关和阅读目录收敛为两层轻量
 | `#79A99B` | `#698F82` | 鼠尾草绿 → 稍沉的绿色 |
 | `#F2C690` | `#B57C3B` | 暖杏色 → 暖赭色 |
 
-色板映射定义在 `theme/pixel-daylight.ts`，SVG 滤镜由 `PixelThemeFilter.vue` 提供。首页、栏目横幅、小图标、Logo 和页尾统一使用映射。不要对文章图片、视频封面、公式或整页应用反色滤镜。新增像素素材必须符合这四种原色，否则应提供独立的白天版本。
+色板映射定义在 `theme/pixel-daylight.ts`，SVG 滤镜由 `PixelThemeFilter.vue` 提供。首页主图、栏目横幅、小图标和 Logo 使用映射。
+
+卷尾山道有独立昼夜底图。猎人照《崛起》太刀展示中的紫金祸铠绘制，雷狼龙参照官方立绘的前肢、金角、白鬃和尾甲。两套透明像素图各含三种姿势，昼夜共用。画面右下角的太刀图标可以点击，也可聚焦后按 Enter 或空格施展见切。减少动态模式下，按钮在备战和出刀定格之间切换。[《崛起》官方武器展示](https://www.monsterhunter.com/rise/us/weapon/) · [雷狼龙官方图鉴](https://monsterhunternow.com/en/monsters/zinogre)
 
 ### 验证
 
@@ -211,11 +215,11 @@ v1.2 将导航、风格选择、明暗开关和阅读目录收敛为两层轻量
 | 网页素材 | 来源 | 使用位置 |
 | --- | --- | --- |
 | train-rest.webp | 用户截图「2025-06-06 220817」 | 白天首页、Linux 栏目 |
-| night-window.webp | 用户截图「2025-06-12 135623」 | 夜间首页、调研栏目 |
+| night-window.webp | 用户截图「2025-06-12 135623」 | 夜间首页、调研栏目及夜间片尾，片尾向上取景以保留烟花与窗前背影 |
 | fjord.webp | 用户截图「2025-06-06 223952」 | 西湖栏目、标签页 |
 | country-road.webp | 用户截图「2025-06-12 172715」 | RL 栏目、白天页尾 |
 | study.webp | 内置 image_gen 原创生成 | CS336 栏目 |
-| room-day.webp / room-night.webp | 内置 image_gen 生成及昼夜编辑 | 论文栏目、夜间页尾 |
+| room-day.webp / room-night.webp | 内置 image_gen 生成及昼夜编辑 | 论文栏目 |
 | train-detail.webp | 内置 image_gen 原创生成 | Rust 栏目 |
 
 网页资产位于 `docs/public/images/along-way/`。原始截图和选用的生成图保存在 `design/along-way/sources/`；生成提示词及工具记录在 `design/along-way/generation-prompts.json`。另生成的公路、峡湾版本未采用，用户原片截图优先。
@@ -232,6 +236,9 @@ v1.2 将导航、风格选择、明暗开关和阅读目录收敛为两层轻量
 
 `grace-archive` 的设计参考《艾尔登法环》的装备选择和赐福菜单。导航、搜索和目录使用墨绿炭灰的面板、暗金分隔线和窄幅选中光带；白天的正文使用灰石色底，夜间使用炭褐色底。视觉参考见[官方入门指南](https://en.bandainamcoent.eu/elden-ring/news/elden-ring-starter-guide-tips-know-playing-the-game)中的游戏菜单。
 
-- **首页馆藏目录**由 `GraceCatalog.vue` 读取现有栏目清单和公开文章数据。选中一个栏目后显示对应藏品的线刻徽记、真实篇数、近期篇目与栏目入口。键盘可用方向键换栏，手机用双列选择区。新文章沿用既有发布流程。
-- **栏目图案**集中于 `grace-etchings.ts` 和 `GraceEmblem.vue`。星盘、天平、圆规、书册、墨水瓶、铁砧和钥匙分别用于七个文字栏目。文章面包屑沿用对应的小号徽记；页尾收在同一枚原创火焰印记上。
+- **首页馆藏目录**由 `GraceCatalog.vue` 读取栏目清单和公开文章数据。左侧用线刻徽记选择栏目，右侧显示篇数、近期篇目与栏目入口。点击右上方的人物或名字可翻看下一组，键盘可用 Tab 聚焦并用 Enter 或空格翻看。宽屏每组两位，959px 及以下逐位展示。
+- **人物贴图**用于馆藏目录和栏目导读右侧的留白。八张透明 WebP 位于 `docs/public/images/grace-archive/characters/`，组合和栏目对应关系在 `grace-characters.ts`。菈妮与布莱泽、梅琳娜与战士壶亚历山大、蕾妲与安帕赫、梅瑟莫与蕾菈娜各成一组。日夜共用素材，浏览时按需加载。新增文章沿用既有发布流程。
+- **人物画法**使用内置生图工具创作同人插画。图集提示词要点为“两行四列、八位角色独立留隙、半身铜版藏书插画、保留角色轮廓和少量固有色、实心人物、透明背景、无文字与边框”。裁切时保留宽帽、耳尖、壶身和双剑等辨识特征。
+- **栏目徽记**集中于 `grace-etchings.ts` 和 `GraceEmblem.vue`。星盘、天平、圆规、书册、墨水瓶、铁砧和钥匙分别用于七个文字栏目，文章面包屑沿用对应的小号徽记。
+- **卷尾赐福**由 `GraceClosingScene.vue` 展示。内置生图创作的昼夜长幅取同一机位，梅琳娜与亚历山大分坐赐福两侧，金焰、光屑与石面反光在画幅进入视口时轻动。手机使用保留双人的 16:9 裁切，减少动态模式展示静画。
 - **首页远景**由 `GraceHero.vue` 读取视觉清单。两张图片均选自[《ELDEN RING》官方 Steam 商店截图集](https://store.steampowered.com/app/1245620/ELDEN_RING/)。[日间黄金树](https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/ss_943bf6fe62352757d9070c1d33e50b92fe8539f1.1920x1080.jpg)与[夜间星空](https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/ss_510a02cf3045e841e180f2b77fb87545e0c8b59d.1920x1080.jpg)在 `docs/public/images/grace-archive/` 下各有 1680px 和 768px 的 WebP。桌面标题留在左侧，窄屏标题移到图下。游戏截图属于原作，站点菜单、标识和栏目插图为本主题另行绘制。

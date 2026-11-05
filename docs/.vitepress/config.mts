@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import { sidebar } from './sidebar'
-import { visualStyleBoot } from './theme/visual-styles'
+import { homeHeroPreload, visualStyleBoot } from './theme/visual-styles'
 import texDelimiters from './markdown/tex-delimiters.mjs'
 import nativeHtml from './markdown/native-html.mjs'
 
@@ -206,6 +206,13 @@ const config = withMermaid({
   // ===== 主题外观 =====
   appearance: true, // 亮色/暗色双模式，跟随系统 + 手动切换
   head: [['script', {}, visualStyleBoot]],
+  transformHtml(html, _file, { pageData, siteData }) {
+    if (pageData.frontmatter.layout === 'home') {
+      // transformHead tags follow the render-blocking stylesheet. Put this
+      // request after the viewport meta so mobile and desktop both start early.
+      return html.replace('<title>', () => `<script id="preload-home-art">${homeHeroPreload(siteData.base)}</script>\n    <title>`)
+    }
+  },
 
   // ===== Markdown 配置 =====
   markdown: {

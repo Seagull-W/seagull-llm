@@ -4,8 +4,9 @@ import { existsSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
-import { visualStyles, resolveVisualStyle, visualStyleBoot } from '../docs/.vitepress/theme/visual-styles.ts'
+import { closingImageFor, heroImageFor, heroMobileMedia, homeHeroPreload, visualStyles, resolveVisualStyle, visualStyleBoot } from '../docs/.vitepress/theme/visual-styles.ts'
 import { pixelDaylightMatrix } from '../docs/.vitepress/theme/pixel-daylight.ts'
+import { graceParties, graceCharacterFor, portraitPath } from '../docs/.vitepress/components/grace-characters.ts'
 
 test('every style has deployable assets, including all category illustrations and icons', () => {
   for (const style of Object.values(visualStyles)) {
@@ -19,6 +20,19 @@ test('every style has deployable assets, including all category illustrations an
   }
 })
 
+test('every grace portrait belongs to a pair and has a deployable transparent image', async () => {
+  for (const party of graceParties) {
+    assert.equal(party.length, 2)
+    for (const character of party) {
+      assert.equal(graceCharacterFor(character.section), character)
+      const path = new URL('../docs/public' + portraitPath(character), import.meta.url)
+      const metadata = await sharp(fileURLToPath(path)).metadata()
+      assert.equal(metadata.hasAlpha, true, character.name)
+    }
+  }
+  assert.equal(graceCharacterFor('future-section'), graceParties[0][0])
+})
+
 test('first paint restores only valid styles and tolerates unavailable storage', () => {
   for (const value of [...Object.keys(visualStyles), 'old-theme', '__proto__', 'toString', null]) {
     const document = { documentElement: { dataset: {} } }
@@ -28,6 +42,36 @@ test('first paint restores only valid styles and tolerates unavailable storage',
   const document = { documentElement: { dataset: {} } }
   runInNewContext(visualStyleBoot, { document, localStorage: { getItem() { throw new Error('blocked') } } })
   assert.equal(document.documentElement.dataset.visualStyle, 'paper-coast')
+})
+
+test('the home head preloads exactly the picture selected for the saved style, screen and appearance', () => {
+  for (const base of ['/', '/seagull-llm/']) {
+    for (const style of Object.values(visualStyles)) {
+      for (const mobile of [false, true]) for (const dark of [false, true]) {
+        const links = []
+        const document = { createElement: name => ({ name }), head: { appendChild: link => links.push(link) } }
+        const localStorage = { getItem: key => key === 'seagull-visual-style' ? style.id : dark ? 'dark' : 'light' }
+        runInNewContext(homeHeroPreload(base), { document, localStorage, matchMedia: query => ({ matches: query === heroMobileMedia && mobile }) })
+        assert.equal(links.length, 1)
+        assert.equal(links[0].rel, 'preload')
+        assert.equal(links[0].as, 'image')
+        const asset = mobile ? (dark && style.assets.mobileDark || style.assets.mobile) : (dark ? style.assets.heroDark : style.assets.heroLight)
+        assert.equal(heroImageFor(style, dark, mobile), asset)
+        assert.equal(links[0].href, base + asset.slice(1))
+      }
+    }
+  }
+})
+
+test('first visit preloads the system appearance even if storage is unavailable', () => {
+  for (const getItem of [() => null, () => { throw new Error('blocked') }, key => key === 'seagull-visual-style' ? '__proto__' : 'auto']) {
+    const links = []
+    const document = { createElement: () => ({}), head: { appendChild: link => links.push(link) } }
+    runInNewContext(homeHeroPreload('/'), {
+      document, localStorage: { getItem }, matchMedia: query => ({ matches: query === '(prefers-color-scheme: dark)' }),
+    })
+    assert.deepEqual(links.map(link => link.href), [visualStyles['paper-coast'].assets.heroDark])
+  }
 })
 
 test('pixel icons retain their native 32px grid and binary transparency', async () => {
@@ -56,9 +100,22 @@ test('daylight rendering maps every source pigment precisely and preserves alpha
   }
 })
 
-test('all pixel decoration uses the four pigments supported by the daylight mapping', async () => {
+test('each closing scene has a distinct day and night artwork on both screen sizes', () => {
+  for (const style of Object.values(visualStyles)) {
+    for (const mobile of [false, true]) {
+      const day = closingImageFor(style, false, mobile)
+      const night = closingImageFor(style, true, mobile)
+      assert.notEqual(day, night, style.name)
+      assert.ok(existsSync(new URL('../docs/public' + day, import.meta.url)), day)
+      assert.ok(existsSync(new URL('../docs/public' + night, import.meta.url)), night)
+    }
+  }
+})
+
+test('pixel artwork rendered with the daylight filter uses its four supported pigments', async () => {
   const style = visualStyles['pixel-voyage']
-  const assets = new Set([...Object.values(style.assets), ...Object.values(style.icons), ...Object.values(style.sectionArt)])
+  const { heroLight, heroDark, mobile, logo, coverLight, coverDark } = style.assets
+  const assets = new Set([heroLight, heroDark, mobile, logo, coverLight, coverDark, ...Object.values(style.icons), ...Object.values(style.sectionArt)])
   const palette = new Set(['26364a', '79a99b', 'f2c690', 'f6f1e7'])
   for (const asset of assets) {
     if (!asset.endsWith('.png')) continue

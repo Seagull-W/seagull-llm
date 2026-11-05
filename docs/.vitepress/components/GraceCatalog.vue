@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { withBase } from 'vitepress'
 import { textSections as collections, type ContentEntry } from '../content-catalog'
 import GraceEmblem from './GraceEmblem.vue'
+import GraceVisitors from './GraceVisitors.vue'
 
 const props = defineProps<{ pages: ContentEntry[] }>()
 const selection = ref(collections[0].id)
@@ -29,7 +30,7 @@ const articles = computed(() => props.pages.filter(page => page.section === curr
           <h3 id="grace-detail-title">{{ current.title }}</h3>
           <p class="grace-description">{{ current.description }}</p>
         </div>
-        <GraceEmblem :section="current.id" class="grace-artifact" />
+        <GraceVisitors :key="current.id" :section="current.id" />
       </div>
       <ul class="grace-articles" aria-label="近期篇目">
         <li v-for="entry in articles.slice(0, 3)" :key="entry.url">
@@ -61,7 +62,6 @@ const articles = computed(() => props.pages.filter(page => page.section === curr
 .grace-detail .grace-count { margin:0 0 4px; color:var(--grace-panel-muted); font:12px/1.5 var(--vp-font-family-base); letter-spacing:.05em; }
 .grace-detail h3 { margin:0; padding:0; color:var(--grace-panel-ink); font:400 clamp(21px,2.1vw,29px)/1.45 var(--grace-serif); }
 .grace-detail .grace-description { margin:5px 0 0; color:var(--grace-panel-muted); font:14px/1.7 var(--grace-serif); }
-.grace-artifact { width:clamp(72px,10vw,126px); height:auto; --grace-emblem-ink:var(--grace-panel-gold); }
 .grace-detail .grace-articles { margin:16px 0 12px; padding:0; list-style:none; border-top:1px solid var(--grace-panel-line); }
 .grace-articles li { margin:0; border-bottom:1px solid color-mix(in srgb,var(--grace-panel-line) 65%,transparent); }
 .grace-detail .grace-articles a { display:block; padding:9px 6px; font:14px/1.7 var(--grace-serif); color:var(--grace-panel-ink); text-decoration:none; }
@@ -76,7 +76,6 @@ const articles = computed(() => props.pages.filter(page => page.section === curr
   .grace-choice-icon { width:27px; height:25px; }
   .grace-detail { border:0; border-top:1px solid var(--grace-panel-line); padding:14px 0 0; }
   .grace-detail-head { gap:8px; min-height:72px; }
-  .grace-artifact { width:60px; }
   .grace-articles a { min-height:44px; }
 }
 @media(max-width:359px) {

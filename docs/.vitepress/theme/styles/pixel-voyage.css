@@ -32,8 +32,6 @@
 .Layout[data-visual-style='pixel-voyage'] .hero-art img { object-fit:contain; image-rendering:pixelated; }
 .Layout[data-visual-style='pixel-voyage'] :is(.seagull-hero-title,.seagull-hero-wordmark) { color:var(--pixel-panel-text); }
 .Layout[data-visual-style='pixel-voyage'] .seagull-hero-tagline { color:var(--pixel-panel-muted); }
-.Layout[data-visual-style='pixel-voyage'] .home-closing-art { opacity:1; mix-blend-mode:normal; mask-image:none; background:var(--pixel-panel); }
-.Layout[data-visual-style='pixel-voyage'] .home-closing-art img { filter:var(--pixel-art-filter); image-rendering:pixelated; }
 
 .Layout.Layout[data-visual-style='pixel-voyage'] .vp-doc .illustrated-directory-intro {
   isolation:isolate; overflow:hidden; background:var(--pixel-panel); border:0; border-radius:0;
@@ -57,7 +55,6 @@
   .Layout.Layout[data-visual-style='pixel-voyage'] .vp-doc .illustrated-directory-intro { padding:20px; min-height:0; }
   .Layout[data-visual-style='pixel-voyage'] .pixel-section-art { inset:20px 16px auto auto; width:40px; height:40px; }
   .Layout[data-visual-style='pixel-voyage'] .pixel-banner img { object-fit:contain; }
-  .Layout[data-visual-style='pixel-voyage'] .home-closing-art { height:96px; }
 }
 
 /* The boot script restores the palette before hydration. Avoid showing the other
@@ -172,7 +169,6 @@ html[data-visual-style='pixel-voyage'] .Layout[data-visual-style='paper-coast'] 
   width:calc(var(--reading-progress,0) * 100%); height:4px; transform:none !important;
   background:repeating-linear-gradient(90deg,var(--pixel-signal) 0 8px,transparent 8px 12px);
 }
-.Layout[data-visual-style='pixel-voyage'] .home-closing-art { border-top:4px solid var(--pixel-edge); border-bottom:4px solid var(--pixel-edge); }
 .Layout[data-visual-style='pixel-voyage'] .VPFooter { border-top:2px solid var(--pixel-edge); box-shadow:0 -4px 0 var(--pixel-shadow); }
 
 @media(min-width:1400px) {

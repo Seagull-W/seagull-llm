@@ -2,7 +2,7 @@
 import SectionIcon from './SectionIcon.vue'
 import SectionArtwork from './SectionArtwork.vue'
 import SectionPhotograph from './SectionPhotograph.vue'
-import GraceEmblem from './GraceEmblem.vue'
+import { graceCharacterFor, portraitPath } from './grace-characters'
 import { sectionArtwork } from './section-artwork'
 import { computed } from 'vue'
 import { withBase } from 'vitepress'
@@ -17,7 +17,7 @@ const hasStudy = computed(() => Object.hasOwn(sectionArtwork, props.section))
 <template>
   <div class="section-illustration" :class="{ 'pixel-section-art': banner, 'film-section-art': style.iconSet === 'cinema' }" aria-hidden="true">
     <SectionPhotograph v-if="style.iconSet === 'cinema'" :section="section" />
-    <GraceEmblem v-else-if="style.iconSet === 'grace'" class="grace-section-emblem" :section="section" />
+    <img v-else-if="style.iconSet === 'grace'" class="grace-directory-portrait" :src="withBase(portraitPath(graceCharacterFor(section)))" alt="" width="154" height="116" loading="lazy" decoding="async" fetchpriority="low" />
     <picture v-else-if="banner" class="pixel-banner"><source media="(max-width:639px)" :srcset="withBase(style.icons?.[section] || style.assets.mobile)" /><img :src="withBase(banner)" alt="" width="2304" height="768" /></picture>
     <SectionArtwork v-else-if="hasStudy" :section="section" />
     <svg v-else class="paper-landscape" viewBox="0 0 200 130" fill="none">
@@ -33,10 +33,11 @@ const hasStudy = computed(() => Object.hasOwn(sectionArtwork, props.section))
 .section-illustration { position:absolute; right:0; top:0; width:180px; height:130px; pointer-events:none; }
 .paper-landscape { width:100%; height:100%; }
 .section-illustration .section-artwork { width:180px; height:130px; }
-.grace-section-emblem { display:block; width:100%; height:100%; color:var(--vp-c-brand-1); }
+.section-illustration .grace-directory-portrait { display:block; width:100%; height:100%; object-fit:contain; padding:5px 8px; }
 .section-icon { position:absolute; width:76px; height:76px; top:23px; left:54px; transform:rotate(-7deg); }
 @media(max-width:639px) {
   .section-illustration { width:54px; height:54px; top:0; }
+  .section-illustration .grace-directory-portrait { padding:0 2px; }
   .paper-landscape { display:none; }
   .section-illustration .section-artwork { width:54px; height:40px; }
   .section-icon { width:44px; height:44px; top:0; left:5px; transform:none; }
