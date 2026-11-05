@@ -42,5 +42,4 @@ __pycache__/
 /hermes/
 
 # Local workspace overview and connectivity diagnostic
-/README.md
 /scripts/check-github-access.py
