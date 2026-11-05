@@ -183,7 +183,11 @@ v1.2 将导航、风格选择、明暗开关和阅读目录收敛为两层轻量
 
 色板映射定义在 `theme/pixel-daylight.ts`，SVG 滤镜由 `PixelThemeFilter.vue` 提供。首页主图、栏目横幅、小图标和 Logo 使用映射。
 
-卷尾山道有独立昼夜底图。猎人照《崛起》太刀展示中的紫金祸铠绘制，雷狼龙参照官方立绘的前肢、金角、白鬃和尾甲。两套透明像素图各含三种姿势，昼夜共用。画面右下角的太刀图标可以点击，也可聚焦后按 Enter 或空格施展见切。减少动态模式下，按钮在备战和出刀定格之间切换。[《崛起》官方武器展示](https://www.monsterhunter.com/rise/us/weapon/) · [雷狼龙官方图鉴](https://monsterhunternow.com/en/monsters/zinogre)
+卷尾山道有独立昼夜底图。猎人照《崛起》太刀展示中的紫金祸铠绘制，雷狼龙参照官方立绘的前肢、金角、白鬃和尾甲。昼夜共用两张透明动作图，猎人有 11 种姿势，雷狼龙有 7 种。[《崛起》官方武器展示](https://www.monsterhunter.com/rise/us/weapon/) · [雷狼龙官方图鉴](https://monsterhunternow.com/en/monsters/zinogre)
+
+五枚图标依次触发见切、纳刀大居合、登龙、神威居合和圆月。大居合以拔刀迎击扫尾，登龙在突刺命中后腾空下劈，神威蓄满后连续三斩。圆月在山道上维持 12 秒，圈内见切和大居合命中时会追加丝线斩击。雷狼龙也会在待机时召集雷光虫，进入超带电状态。这些时长按网页短场景编排。[《冰原》官方太刀演示](https://www.youtube.com/watch?v=NbZiSlgAHRk) · [《曙光》官方太刀演示](https://www.youtube.com/watch?v=frHRZfTcHGs)
+
+按钮支持点击、Enter 和空格。出招中可以预选下一招，最后一次选择生效。手机上的按钮排在山道下方，可直接滑过画面。场景离屏或标签页切到后台时，动作和圆月的计时一起暂停。开启减少动态后，每招展示一个定格，再点同一招回到备战。动作顺序、姿势与落点在 [choreography.ts](./docs/.vitepress/components/pixel-hunt/choreography.ts) 维护，正文和栏目无需配置。
 
 ### 验证
 

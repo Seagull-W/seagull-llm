@@ -37,7 +37,7 @@ onUnmounted(() => {
 <template>
   <footer ref="footer" class="home-colophon" :class="{ 'is-scene-active': sceneActive }" :data-index="style.iconSet" aria-label="首页结尾">
     <GraceClosingScene v-if="style.iconSet === 'grace'" />
-    <PixelClosingScene v-else-if="style.iconSet === 'pixel'" />
+    <PixelClosingScene v-else-if="style.iconSet === 'pixel'" :active="sceneActive" />
     <FilmClosingScene v-else-if="style.iconSet === 'cinema'" />
     <picture v-else class="paper-closing-scene">
       <source :media="heroMobileMedia" :srcset="withBase(closingImageFor(style, isDark, true))" width="720" height="295" />
