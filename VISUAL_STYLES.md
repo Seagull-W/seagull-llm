@@ -244,5 +244,5 @@ v1.2 将导航、风格选择、明暗开关和阅读目录收敛为两层轻量
 - **人物贴图**用于馆藏目录和栏目导读右侧的留白。八张透明 WebP 位于 `docs/public/images/grace-archive/characters/`，组合和栏目对应关系在 `grace-characters.ts`。菈妮与布莱泽、梅琳娜与战士壶亚历山大、蕾妲与安帕赫、梅瑟莫与蕾菈娜各成一组。日夜共用素材，浏览时按需加载。新增文章沿用既有发布流程。
 - **人物画法**使用内置生图工具创作同人插画。图集提示词要点为“两行四列、八位角色独立留隙、半身铜版藏书插画、保留角色轮廓和少量固有色、实心人物、透明背景、无文字与边框”。裁切时保留宽帽、耳尖、壶身和双剑等辨识特征。
 - **栏目徽记**集中于 `grace-etchings.ts` 和 `GraceEmblem.vue`。星盘、天平、圆规、书册、墨水瓶、铁砧和钥匙分别用于七个文字栏目，文章面包屑沿用对应的小号徽记。
-- **卷尾赐福**由 `GraceClosingScene.vue` 展示。内置生图创作的昼夜长幅取同一机位，梅琳娜与亚历山大分坐赐福两侧，金焰、光屑与石面反光在画幅进入视口时轻动。手机使用保留双人的 16:9 裁切，减少动态模式展示静画。
+- **首页卷尾**由 `GraceClosingScene.vue` 展示。白天，梅琳娜与亚历山大分坐赐福两侧，金焰轻动，在石面上投下倒影。夜间，小镰刀与食粪者站在废弃监牢的断拱下，头顶的侵蚀太阳勾出暗红色的光边，灰烬缓缓落过石路。桌面使用 3:1 长幅，手机使用保留两个人物与场景中心的 16:9 裁切。离屏时动效暂停，减少动态模式展示静画。
 - **首页远景**由 `GraceHero.vue` 读取视觉清单。两张图片均选自[《ELDEN RING》官方 Steam 商店截图集](https://store.steampowered.com/app/1245620/ELDEN_RING/)。[日间黄金树](https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/ss_943bf6fe62352757d9070c1d33e50b92fe8539f1.1920x1080.jpg)与[夜间星空](https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/ss_510a02cf3045e841e180f2b77fb87545e0c8b59d.1920x1080.jpg)在 `docs/public/images/grace-archive/` 下各有 1680px 和 768px 的 WebP。桌面标题留在左侧，窄屏标题移到图下。游戏截图属于原作，站点菜单、标识和栏目插图为本主题另行绘制。

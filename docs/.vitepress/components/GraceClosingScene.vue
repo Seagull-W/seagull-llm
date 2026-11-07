@@ -7,14 +7,15 @@ const style = useVisualStyle()
 </script>
 
 <template>
-  <div class="grace-rest">
+  <div class="grace-rest" :class="{ 'grace-eclipse': isDark }">
     <picture>
       <source :media="heroMobileMedia" :srcset="withBase(closingImageFor(style, isDark, true))" width="720" height="405" />
       <img :src="withBase(closingImageFor(style, isDark))" width="1608" height="536" loading="lazy" decoding="async"
-        :alt="isDark ? '月光下，梅琳娜与战士壶亚历山大坐在遗迹石台上，赐福的金光映上她的脸、壶身和脚边的积水。' : '黄金树照亮远方城堡，梅琳娜与战士壶亚历山大相对而坐，在石台中央的赐福旁歇脚。'" />
+        :alt="isDark ? '断拱之间悬着一轮暗红色日蚀。左侧骑士双手横握一柄小镰刀，右侧的食粪者身穿忌讳铠甲，剑尖垂向石路。' : '黄金树照亮远方城堡，梅琳娜与战士壶亚历山大相对而坐，在石台中央的赐福旁歇脚。'" />
     </picture>
-    <span class="grace-reflection" />
-    <svg class="grace-fire" viewBox="0 0 120 116" fill="none" aria-hidden="true" focusable="false">
+    <div v-if="isDark" class="grace-ash" aria-hidden="true"><i v-for="offset in [9, 22, 39, 52, 68, 81, 93]" :key="offset" :style="{ left: offset + '%', animationDelay: -(offset % 13) + 's' }" /></div>
+    <span v-else class="grace-reflection" />
+    <svg v-if="!isDark" class="grace-fire" viewBox="0 0 120 116" fill="none" aria-hidden="true" focusable="false">
       <g class="grace-tongue">
         <path fill="#ffd778" d="M60 98c1-12-3-20-2-31 0-12 7-21 5-39 8 18-1 29 0 40 0 13 3 20-3 30Z" />
         <path fill="#fff4c4" d="M60 96c2-15-1-19 0-29 1-5 3-12 3-19 4 11-1 19-1 25 0 9 2 16-2 23Z" />
@@ -47,12 +48,19 @@ const style = useVisualStyle()
   background: #545344;
   pointer-events: none;
 }
-.dark .grace-rest { background: #17202a; }
+.grace-eclipse { background: #211d20; }
 .grace-rest picture, .grace-rest img { display: block; width: 100%; height: 100%; }
 .grace-rest img { object-fit: cover; }
 .grace-fire, .grace-reflection { display: none; }
 
 @media (prefers-reduced-motion: no-preference) {
+  .grace-ash { position:absolute; inset:4% 0 8%; pointer-events:none; }
+  .grace-ash i {
+    position:absolute; top:12%; width:2px; height:1px; background:#c5b8b6; opacity:0;
+    animation:grace-ashfall 13s linear infinite paused;
+  }
+  .grace-ash i:nth-child(even) { top:26%; animation-duration:17s; }
+  .is-scene-active .grace-ash i { animation-play-state:running; }
   .grace-fire {
     position: absolute;
     display: block;
@@ -89,6 +97,12 @@ const style = useVisualStyle()
   .is-scene-active .grace-rest :is(.grace-tongue, .grace-filament, .grace-motes, .grace-reflection) {
     animation-play-state: running;
   }
+}
+@keyframes grace-ashfall {
+  0% { transform:translate(0,0); opacity:0; }
+  22% { opacity:.5; }
+  60% { transform:translate(-14px,48px); opacity:.35; }
+  100% { transform:translate(-9px,92px); opacity:0; }
 }
 @keyframes grace-burn {
   0% { opacity: .24; transform: skewX(-4deg) scale(.8, .77); }
