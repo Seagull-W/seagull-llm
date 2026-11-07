@@ -2,6 +2,7 @@
 import { useData, withBase } from 'vitepress'
 import { heroImageFor, heroMobileMedia, useVisualStyle } from '../theme/visual-styles'
 
+defineProps<{ loadImage: boolean }>()
 const { frontmatter, isDark } = useData()
 const style = useVisualStyle()
 </script>
@@ -9,8 +10,10 @@ const style = useVisualStyle()
 <template>
   <section class="grace-hero" aria-labelledby="grace-home-title">
     <picture class="grace-hero-art" aria-hidden="true">
-      <source :media="heroMobileMedia" :srcset="withBase(heroImageFor(style, isDark, true))" />
-      <img :src="withBase(heroImageFor(style, isDark, false))" alt="" width="1680" height="945" fetchpriority="high" />
+      <template v-if="loadImage">
+        <source :media="heroMobileMedia" :srcset="withBase(heroImageFor(style, isDark, true))" />
+        <img :src="withBase(heroImageFor(style, isDark, false))" alt="" width="1680" height="945" fetchpriority="high" />
+      </template>
     </picture>
     <div class="grace-hero-title">
       <h1 id="grace-home-title">{{ frontmatter.hero.name }}</h1>

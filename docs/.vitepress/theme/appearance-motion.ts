@@ -1,14 +1,11 @@
 import { nextTick } from 'vue'
 import { withBase } from 'vitepress'
-import { heroImageFor, heroMobileMedia, resolveVisualStyle, type VisualStyle } from './visual-styles'
+import { closingImageFor, heroImageFor, heroMobileMedia, resolveVisualStyle, type VisualStyle } from './visual-styles'
 import { showPageArrival } from './page-arrival'
 
 const homePicture = '.VPHome :is(.hero-art, .film-frame picture, .grace-hero-art) img'
-const visiblePicture = homePicture + ', .VPDoc .section-illustration img'
-// Large desktop night scenes can take ~250 ms on a cold connection. Beyond
-// this budget their inline preview can carry the transition without a freeze.
-const decodeBudget = 300
-let warmed: HTMLImageElement | undefined
+const warmed = new Map<string, HTMLImageElement>()
+let hoverTimer: number | undefined
 
 function inView<T extends HTMLElement>(selector: string) {
   const element = document.querySelector<T>(selector)
@@ -17,37 +14,49 @@ function inView<T extends HTMLElement>(selector: string) {
   return box && box.width > 0 && box.height > 0 && box.bottom > navBottom && box.top < innerHeight ? element : null
 }
 
-// Hold just the latest intended hero in the decode cache, never the entire set
-// of full-size landscape images when someone is browsing the book of covers.
-export function warmHomePicture(style: VisualStyle, dark: boolean) {
-  const current = inView<HTMLImageElement>(homePicture)
-  if (!current) return
-  const path = heroImageFor(style, dark, matchMedia(heroMobileMedia).matches)
-  const url = new URL(withBase(path), document.baseURI).href
-  if (current.currentSrc === url || warmed?.src === url) return
-  const image = new Image()
-  warmed = image
-  image.fetchPriority = 'low'
-  image.src = url
-  image.decode?.().catch(() => { if (warmed === image) warmed = undefined })
+export function cancelPicturePreview() {
+  window.clearTimeout(hoverTimer)
 }
 
-async function decodeVisiblePicture(cancelled?: Promise<void>) {
-  const image = inView<HTMLImageElement>(visiblePicture)
-  if (!image?.decode) return
-  let timer: number | undefined
-  const limit = new Promise<void>(resolve => { timer = window.setTimeout(resolve, decodeBudget) })
-  try {
-    const waits = [image.decode(), limit]
-    if (cancelled) waits.push(cancelled)
-    await Promise.race(waits)
-  } catch { /* An image error or a superseding source never prevents a choice. */ }
-  finally { window.clearTimeout(timer) }
+export function previewAppearancePicture(style: VisualStyle, dark: boolean) {
+  cancelPicturePreview()
+  const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
+  if (connection?.saveData || ['2g', 'slow-2g'].includes(connection?.effectiveType ?? '')) return
+  hoverTimer = window.setTimeout(() => warmAppearancePicture(style, dark, 'low'), 140)
+}
+
+// Reuse a pending request on selection. Two strong references cover a round trip
+// between themes without retaining every landscape in decoded form.
+export function warmAppearancePicture(style: VisualStyle, dark: boolean, priority: 'low' | 'high' = 'high') {
+  cancelPicturePreview()
+  const mobile = matchMedia(heroMobileMedia).matches
+  const hero = inView<HTMLImageElement>(homePicture)
+  const footer = !hero && inView('.home-colophon')
+  if (!hero && !footer) return
+  const path = hero ? heroImageFor(style, dark, mobile) : closingImageFor(style, dark, mobile)
+  const url = new URL(withBase(path), document.baseURI).href
+  if (hero?.currentSrc === url || (footer && footer.querySelector('img')?.currentSrc === url)) return
+  const cached = warmed.get(url)
+  if (cached) {
+    warmed.delete(url)
+    warmed.set(url, cached)
+    if (priority === 'high') cached.fetchPriority = priority
+    return
+  }
+  const image = new Image()
+  if (warmed.size >= 2) warmed.delete(warmed.keys().next().value!)
+  warmed.set(url, image)
+  const release = () => { if (warmed.get(url) === image) warmed.delete(url) }
+  image.onerror = release
+  image.fetchPriority = priority
+  image.decoding = 'async'
+  image.src = url
+  image.decode?.().catch(release)
 }
 
 // Only deliberate choices call this helper. Restoring preferences on load or
 // synchronizing another tab must not animate the page someone is reading.
-let active: { transition: ViewTransition; commit: () => void; stopWaiting: () => void } | undefined
+let active: { transition: ViewTransition; commit: () => void } | undefined
 let revision = 0
 
 export function changeAppearance(kind: VisualStyle['iconSet'], update: () => void) {
@@ -55,7 +64,6 @@ export function changeAppearance(kind: VisualStyle['iconSet'], update: () => voi
   if (active) {
     // A second click can arrive before the first snapshot's update callback.
     // Commit both choices in order and let the latest one appear immediately.
-    active.stopWaiting()
     active.transition.skipTransition()
     active.commit()
     update()
@@ -69,8 +77,7 @@ export function changeAppearance(kind: VisualStyle['iconSet'], update: () => voi
   if (!document.startViewTransition) {
     const route = location.pathname
     update()
-    nextTick(async () => {
-      await decodeVisiblePicture()
+    nextTick(() => {
       if (request === revision && route === location.pathname) showPageArrival(resolveVisualStyle(root.dataset.visualStyle))
     })
     return
@@ -90,14 +97,13 @@ export function changeAppearance(kind: VisualStyle['iconSet'], update: () => voi
     update()
   }
 
-  let stopWaiting!: () => void
-  const cancelled = new Promise<void>(resolve => { stopWaiting = resolve })
-  const transition = document.startViewTransition(async () => {
+  const transition = document.startViewTransition(() => {
     commit()
-    await nextTick()
-    await decodeVisiblePicture(cancelled)
+    // The browser freezes painting until this callback resolves. Network and
+    // image decoding continue independently of the Vue DOM update.
+    return nextTick()
   })
-  active = { transition, commit, stopWaiting }
+  active = { transition, commit }
   // Skipping the animation rejects ready but still runs the update callback.
   transition.ready.catch(() => {})
   function clear() {

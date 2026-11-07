@@ -2,7 +2,7 @@
 import { inject, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useData, useRoute, withBase } from 'vitepress'
 import { visualStyles, visualStyleControlsKey, useVisualStyle, type VisualStyleId } from '../theme/visual-styles'
-import { changeAppearance, warmHomePicture } from '../theme/appearance-motion'
+import { cancelPicturePreview, changeAppearance, previewAppearancePicture, warmAppearancePicture } from '../theme/appearance-motion'
 import PixelWordmark from './PixelWordmark.vue'
 
 const controls = inject(visualStyleControlsKey)
@@ -30,6 +30,7 @@ async function open(event: MouseEvent) {
 }
 function restore() {
   if (dialog.value?.open) return
+  cancelPicturePreview()
   if (scrollLocked) { document.documentElement.style.overflow = previousOverflow; scrollLocked = false }
   if (!opened.value) return
   opened.value = false
@@ -44,7 +45,7 @@ function dismissOutside(event: MouseEvent) {
 function choose(id: VisualStyleId) {
   close()
   if (!controls || id === controls.selected.value) return
-  warmHomePicture(visualStyles[id], isDark.value)
+  warmAppearancePicture(visualStyles[id], isDark.value)
   changeAppearance(visualStyles[id].iconSet, () => controls.select(id))
 }
 function move(event: KeyboardEvent) {
@@ -63,7 +64,7 @@ function move(event: KeyboardEvent) {
   covers[index]?.focus()
 }
 watch(() => route.path, close)
-onUnmounted(() => { dialog.value?.close(); if (scrollLocked) document.documentElement.style.overflow = previousOverflow })
+onUnmounted(() => { cancelPicturePreview(); dialog.value?.close(); if (scrollLocked) document.documentElement.style.overflow = previousOverflow })
 </script>
 
 <template>
@@ -78,7 +79,8 @@ onUnmounted(() => { dialog.value?.close(); if (scrollLocked) document.documentEl
         <header class="style-book-heading"><div><h2 id="style-book-title">换一片风景</h2><p id="style-book-hint">点选封面，换一种阅读氛围</p></div><button class="style-book-close" type="button" aria-label="关闭风格选择" @click="close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button></header>
         <div class="style-covers" role="group" aria-label="可选风格">
           <button v-for="(style, id) in visualStyles" :key="id" class="style-cover" :data-style="id" type="button" :aria-label="`切换为${style.name}`" :aria-pressed="current.id === id"
-            @pointerenter="warmHomePicture(style, isDark)" @pointerdown="warmHomePicture(style, isDark)" @focus="warmHomePicture(style, isDark)" @click="choose(id)">
+            @pointerenter="previewAppearancePicture(style, isDark)" @pointerleave="cancelPicturePreview"
+            @focus="previewAppearancePicture(style, isDark)" @blur="cancelPicturePreview" @click="choose(id)">
             <span class="cover-scene" aria-hidden="true">
               <img class="cover-art" :src="withBase(isDark ? style.assets.coverDark : style.assets.coverLight)" alt="" width="260" height="180" decoding="async" />
               <span class="cover-brand"><PixelWordmark v-if="id === 'pixel-voyage'" /><span v-else>Seagull</span></span>

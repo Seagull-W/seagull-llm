@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useData, withBase } from 'vitepress'
 import { heroImageFor, heroMobileMedia, useVisualStyle } from '../theme/visual-styles'
+defineProps<{ loadImage: boolean }>()
 const { isDark, frontmatter } = useData()
 const style = useVisualStyle()
 </script>
@@ -13,8 +14,10 @@ const style = useVisualStyle()
     </div>
     <figure class="film-frame">
       <picture>
-        <source :media="heroMobileMedia" :srcset="withBase(heroImageFor(style, isDark, true))" />
-        <img :src="withBase(heroImageFor(style, isDark, false))" :alt="isDark ? '窗前的背影，窗外绽放着烟花。' : '午后的列车里，一个人靠着窗边的木座椅休憩。'" width="2560" height="1446" fetchpriority="high" />
+        <template v-if="loadImage">
+          <source :media="heroMobileMedia" :srcset="withBase(heroImageFor(style, isDark, true))" />
+          <img :src="withBase(heroImageFor(style, isDark, false))" :alt="isDark ? '窗前的背影，窗外绽放着烟花。' : '午后的列车里，一个人靠着窗边的木座椅休憩。'" width="2560" height="1446" fetchpriority="high" />
+        </template>
       </picture>
       <figcaption><span>{{ isDark ? '窗前夜色' : '列车午后' }}</span><span>《灿烂人生》<i lang="it">La meglio gioventù</i></span></figcaption>
     </figure>

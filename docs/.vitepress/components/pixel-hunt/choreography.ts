@@ -1,3 +1,5 @@
+import { themeImagePath } from '../../theme/visual-styles.ts'
+
 // Positions are in the 512 × 160 mountain scene. Both actors pivot at their feet.
 export const stage = { width: 512, height: 160, ground: 132 }
 const home = 166
@@ -14,6 +16,11 @@ export const sheets = {
     poses: ['guard', 'crouch', 'leap', 'howl', 'charged', 'turn', 'sweep'],
   },
 } as const
+
+export function huntSheetPath(sheet: { file: string }) {
+  const url = themeImagePath('/images/pixel-voyage/closing/' + sheet.file)
+  return import.meta.env?.DEV ? url + '?v=2' : url
+}
 
 export type Fighter = keyof typeof sheets
 type Pose<F extends Fighter> = typeof sheets[F]['poses'][number]

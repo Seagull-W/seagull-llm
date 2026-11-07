@@ -3,9 +3,9 @@ import { defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue'
 import { useData, withBase } from 'vitepress'
 import { closingImageFor, heroMobileMedia, useVisualStyle } from '../theme/visual-styles'
 import FilmClosingScene from './FilmClosingScene.vue'
+import GraceClosingScene from './GraceClosingScene.vue'
 
 const PixelClosingScene = defineAsyncComponent(() => import('./PixelClosingScene.vue'))
-const GraceClosingScene = defineAsyncComponent(() => import('./GraceClosingScene.vue'))
 const style = useVisualStyle()
 const { isDark } = useData()
 const footer = ref<HTMLElement>()
@@ -37,7 +37,10 @@ onUnmounted(() => {
 <template>
   <footer ref="footer" class="home-colophon" :class="{ 'is-scene-active': sceneActive }" :data-index="style.iconSet" aria-label="首页结尾">
     <GraceClosingScene v-if="style.iconSet === 'grace'" />
-    <PixelClosingScene v-else-if="style.iconSet === 'pixel'" :active="sceneActive" />
+    <div v-else-if="style.iconSet === 'pixel'" class="pixel-closing-frame">
+      <img class="hunt-land" :src="withBase(closingImageFor(style, isDark))" width="512" height="160" loading="lazy" decoding="async" alt="" />
+      <PixelClosingScene :active="sceneActive" />
+    </div>
     <FilmClosingScene v-else-if="style.iconSet === 'cinema'" />
     <picture v-else class="paper-closing-scene">
       <source :media="heroMobileMedia" :srcset="withBase(closingImageFor(style, isDark, true))" width="720" height="295" />
@@ -52,6 +55,19 @@ onUnmounted(() => {
 
 <style scoped>
 .home-colophon { max-width:1120px; margin:20px auto 0; }
+.pixel-closing-frame { --hunt-ratio:3.2; position:relative; margin-top:32px; }
+.hunt-land {
+  display:block; width:100%; height:auto; aspect-ratio:var(--hunt-ratio); object-fit:cover;
+  background:#789793; image-rendering:pixelated; pointer-events:none;
+}
+.dark .hunt-land { background:#273950; }
+@media(max-width:760px) {
+  /* The mobile controls sit below the landscape, including while they load. */
+  .pixel-closing-frame { margin-top:22px; padding-bottom:44px; }
+}
+@media(max-width:639px) {
+  .pixel-closing-frame { --hunt-ratio:2.05; }
+}
 .paper-closing-scene, .paper-closing-scene img { display:block; width:100%; height:auto; }
 html[data-visual-style]:not([data-visual-style='paper-coast']) .paper-closing-scene { display:none; }
 .closing-line { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:11px 0; border-top:1px solid var(--vp-c-divider); color:var(--vp-c-text-2); font-size:12px; }

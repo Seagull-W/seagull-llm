@@ -1,3 +1,5 @@
+import { themeImagePath } from '../theme/visual-styles.ts'
+
 // Adjacent entries share a plate in the wide catalogue. The section's own
 // portrait leads when that section is selected, including on narrow screens.
 export const graceParties = [
@@ -12,5 +14,5 @@ export function graceCharacterFor(section: string) {
   return graceCharacters.find(character => character.section === section) ?? graceCharacters[0]
 }
 export function portraitPath(character: typeof graceCharacters[number]) {
-  return `/images/grace-archive/characters/${character.id}.webp`
+  return themeImagePath(`/images/grace-archive/characters/${character.id}.webp`)
 }

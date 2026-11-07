@@ -14,6 +14,20 @@ export interface VisualStyle {
   sectionPhotos?: Record<string, { src: string; night?: string }>
 }
 
+declare const __SEAGULL_THEME_IMAGES__: Record<string, string>
+
+export function themeImagePath(path: string): string {
+  return typeof __SEAGULL_THEME_IMAGES__ === 'undefined' ? path : __SEAGULL_THEME_IMAGES__[path] ?? path
+}
+
+export function styleImageGroups(style: VisualStyle): Record<string, string | undefined>[] {
+  const groups: Record<string, string | undefined>[] = [style.assets]
+  if (style.icons) groups.push(style.icons)
+  if (style.sectionArt) groups.push(style.sectionArt)
+  if (style.sectionPhotos) groups.push(...Object.values(style.sectionPhotos))
+  return groups
+}
+
 // A style is a coordinated asset set, not a light/dark theme. Add complete sets here.
 export const visualStyles = {
   'paper-coast': {
@@ -94,6 +108,18 @@ export const visualStyles = {
   },
 } satisfies Record<string, VisualStyle>
 
+// The build injects the same image map into the browser and SSR bundles.
+// The dev server and standalone Node consumers read the originals in public/.
+if (typeof __SEAGULL_THEME_IMAGES__ !== 'undefined') {
+  for (const style of Object.values(visualStyles)) {
+    for (const images of styleImageGroups(style)) {
+      for (const [key, path] of Object.entries(images)) {
+        if (path) images[key] = themeImagePath(path)
+      }
+    }
+  }
+}
+
 export type VisualStyleId = keyof typeof visualStyles
 export const defaultVisualStyle: VisualStyleId = 'paper-coast'
 export const visualStyleStorageKey = 'seagull-visual-style'
@@ -111,11 +137,11 @@ export function closingImageFor(style: VisualStyle, dark: boolean, mobile = fals
 
 // Runs before stylesheets and VitePress's own appearance script, so use the
 // persisted preference (or the system scheme) rather than the initial DOM.
-export function homeHeroPreload(base: string) {
+export function homeHeroPreload(base: string, resolveImage: (path: string) => string = themeImagePath) {
   const paths = Object.fromEntries(Object.values(visualStyles).map(style => [
     style.id,
     [false, true].map(mobile => [false, true].map(dark =>
-      base.replace(/\/$/, '') + heroImageFor(style, dark, mobile))),
+      base.replace(/\/$/, '') + resolveImage(heroImageFor(style, dark, mobile)))),
   ]))
   return `(()=>{
     const paths=${JSON.stringify(paths)};

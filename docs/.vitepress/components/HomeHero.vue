@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useData, withBase } from 'vitepress'
 import { defaultVisualStyle, heroImageFor, heroMobileMedia, useVisualStyle, visualStyles } from '../theme/visual-styles'
 import PixelWordmark from './PixelWordmark.vue'
@@ -8,8 +8,35 @@ import GraceHero from './GraceHero.vue'
 
 const { isDark, frontmatter } = useData()
 const style = useVisualStyle()
+const frame = ref<HTMLElement>()
 const mounted = ref(false)
-onMounted(() => { mounted.value = true })
+const edition = computed(() => style.value.id + (isDark.value ? '-night' : '-day'))
+const shownEdition = ref('')
+const loadImage = computed(() => shownEdition.value === edition.value)
+const preloadMargin = 192
+let observer: IntersectionObserver | undefined
+
+// Keep the current image when scrolling away. A new edition gets its full
+// image only when the reader is near the hero again.
+function requestIfNear() {
+  if (!frame.value) return
+  const box = frame.value.getBoundingClientRect()
+  if (!('IntersectionObserver' in window) || (box.bottom >= -preloadMargin && box.top <= innerHeight + preloadMargin)) {
+    shownEdition.value = edition.value
+  }
+}
+watch(edition, requestIfNear)
+onMounted(() => {
+  mounted.value = true
+  requestIfNear()
+  if (frame.value && 'IntersectionObserver' in window) {
+    observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) shownEdition.value = edition.value
+    }, { rootMargin: `${preloadMargin}px 0px` })
+    observer.observe(frame.value)
+  }
+})
+onUnmounted(() => observer?.disconnect())
 
 // Static HTML has no access to preferences. CSS can show the paper artwork
 // before hydration (also with JS off) without fetching it for returning readers.
@@ -22,17 +49,19 @@ const paperSources = {
 </script>
 
 <template>
-  <FilmHero v-if="style.iconSet === 'cinema'" />
-  <GraceHero v-else-if="style.iconSet === 'grace'" />
-  <div v-else class="home-illustrated-hero">
-    <picture v-if="mounted" class="hero-art" aria-hidden="true">
-      <source :media="heroMobileMedia" :srcset="withBase(heroImageFor(style, isDark, true))" />
-      <img :src="withBase(heroImageFor(style, isDark, false))" alt="" width="1672" height="941" fetchpriority="high" />
-    </picture>
-    <span v-else class="hero-art paper-first-paint" :style="paperSources" aria-hidden="true"></span>
-    <div class="hero-copy">
-      <h1 class="seagull-hero-heading"><span class="seagull-hero-wordmark" aria-label="SEAGULL"><PixelWordmark v-if="style.iconSet === 'pixel'" /><span v-else aria-hidden="true">S<span class="wordmark-e">E</span><span class="wordmark-a">A</span>GULL</span></span><span class="seagull-hero-title">{{ frontmatter.hero.text }}</span></h1>
-      <p class="seagull-hero-tagline">{{ frontmatter.hero.tagline }}</p>
+  <div ref="frame">
+    <FilmHero v-if="style.iconSet === 'cinema'" :load-image="loadImage" />
+    <GraceHero v-else-if="style.iconSet === 'grace'" :load-image="loadImage" />
+    <div v-else class="home-illustrated-hero">
+      <picture v-if="loadImage" class="hero-art" aria-hidden="true">
+        <source :media="heroMobileMedia" :srcset="withBase(heroImageFor(style, isDark, true))" />
+        <img :src="withBase(heroImageFor(style, isDark, false))" alt="" width="1672" height="941" fetchpriority="high" />
+      </picture>
+      <span v-else-if="!mounted" class="hero-art paper-first-paint" :style="paperSources" aria-hidden="true"></span>
+      <div class="hero-copy">
+        <h1 class="seagull-hero-heading"><span class="seagull-hero-wordmark" aria-label="SEAGULL"><PixelWordmark v-if="style.iconSet === 'pixel'" /><span v-else aria-hidden="true">S<span class="wordmark-e">E</span><span class="wordmark-a">A</span>GULL</span></span><span class="seagull-hero-title">{{ frontmatter.hero.text }}</span></h1>
+        <p class="seagull-hero-tagline">{{ frontmatter.hero.tagline }}</p>
+      </div>
     </div>
   </div>
 </template>

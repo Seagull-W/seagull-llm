@@ -1,13 +1,10 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
-import { useData, withBase } from 'vitepress'
-import { closingImageFor, useVisualStyle } from '../theme/visual-styles'
-import { chargeComplete, moonCast, moveIds, moves, sheets, stage, type Fighter, type MoveId } from './pixel-hunt/choreography'
+import { withBase } from 'vitepress'
+import { chargeComplete, huntSheetPath, moonCast, moveIds, moves, sheets, stage, type Fighter, type MoveId } from './pixel-hunt/choreography'
 import { paintHunt } from './pixel-hunt/render'
 
 const props = defineProps<{ active: boolean }>()
-const { isDark } = useData()
-const style = useVisualStyle()
 const canvas = ref<HTMLCanvasElement>()
 const atlasElements = ref<HTMLImageElement[]>([])
 const painted = ref(false)
@@ -151,10 +148,9 @@ onBeforeUnmount(() => {
 <template>
   <section class="hunt-outro" aria-label="像素山道遭遇战" :data-move="current ?? 'rest'">
     <div class="hunt-stage" role="img" aria-label="身穿紫金祸铠的太刀猎人在山道上迎战雷狼龙。">
-      <img class="hunt-land" :src="withBase(closingImageFor(style, isDark))" width="512" height="160" loading="lazy" decoding="async" alt="" />
       <div class="hunt-world" aria-hidden="true" :class="{ 'has-canvas': painted }">
         <div v-for="(sheet, who) in sheets" :key="who" class="hunt-fallback" :style="fallbackStyle(who)">
-          <img ref="atlasElements" :data-sheet="who" :src="withBase('/images/pixel-voyage/closing/' + sheet.file + '?v=2')"
+          <img ref="atlasElements" :data-sheet="who" :src="withBase(huntSheetPath(sheet))"
             :width="sheet.width * sheet.columns" :height="sheet.height * sheet.rows" :style="{ width: sheet.columns * 100 + '%' }"
             loading="lazy" decoding="async" alt="" @load="prepare" />
         </div>
@@ -199,13 +195,10 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.hunt-outro { position:relative; margin:32px auto 0; }
-.hunt-stage { position:relative; isolation:isolate; aspect-ratio:3.2; overflow:hidden; background:#789793; }
-.dark .hunt-stage { background:#273950; }
-.hunt-land, .hunt-world { position:absolute; top:0; height:100%; pointer-events:none; }
-.hunt-land { inset:0; width:100%; object-fit:cover; }
-.hunt-world { left:50%; aspect-ratio:3.2; transform:translateX(-50%); }
-.hunt-world canvas, .hunt-fallback img, .hunt-land { display:block; image-rendering:pixelated; }
+.hunt-outro { position:absolute; inset:0; }
+.hunt-stage { position:relative; isolation:isolate; aspect-ratio:var(--hunt-ratio); overflow:hidden; }
+.hunt-world { position:absolute; top:0; left:50%; height:100%; aspect-ratio:3.2; transform:translateX(-50%); pointer-events:none; }
+.hunt-world canvas, .hunt-fallback img { display:block; image-rendering:pixelated; }
 .hunt-world canvas { position:absolute; inset:0; width:100%; height:100%; }
 .hunt-fallback { position:absolute; overflow:hidden; }
 .hunt-fallback img { max-width:none; height:auto; }
@@ -228,11 +221,7 @@ onBeforeUnmount(() => {
 .hunt-action:disabled { opacity:.6; }
 .hunt-sr { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 @media (max-width:760px) {
-  .hunt-outro { margin-top:22px; }
   .hunt-actions { position:relative; inset:auto; width:100%; justify-content:center; padding:0; background:#263634; }
   .dark .hunt-actions { background:#1e2d38; }
-}
-@media (max-width:639px) {
-  .hunt-stage { aspect-ratio:2.05; }
 }
 </style>

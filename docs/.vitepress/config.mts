@@ -1,9 +1,14 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import { sidebar } from './sidebar'
+import { join } from 'node:path'
+import { writeImageCacheHeaders } from './image-cache-headers.mts'
 import { homeHeroPreload, visualStyleBoot } from './theme/visual-styles'
+import { createThemeImageBuild } from './versioned-theme-images.mts'
 import texDelimiters from './markdown/tex-delimiters.mjs'
 import nativeHtml from './markdown/native-html.mjs'
+
+const themeImages = createThemeImageBuild(new URL('../public/', import.meta.url))
 
 // ===== Vite 插件：模型下载代理（仅 dev/preview 模式生效）=====
 // 浏览器 → /api/hf/* → Vite dev server → ModelScope（modelscope.cn，服务端跟随重定向到 OSS）→ 浏览器
@@ -210,8 +215,13 @@ const config = withMermaid({
     if (pageData.frontmatter.layout === 'home') {
       // transformHead tags follow the render-blocking stylesheet. Put this
       // request after the viewport meta so mobile and desktop both start early.
-      return html.replace('<title>', () => `<script id="preload-home-art">${homeHeroPreload(siteData.base)}</script>\n    <title>`)
+      return html.replace('<title>', () => `<script id="preload-home-art">${homeHeroPreload(siteData.base, themeImages.pathFor)}</script>\n    <title>`)
     }
+  },
+
+  async buildEnd(siteConfig) {
+    await themeImages.write(siteConfig.outDir)
+    await writeImageCacheHeaders(join(siteConfig.srcDir, 'public'), siteConfig.outDir, siteConfig.site.base)
   },
 
   // ===== Markdown 配置 =====
@@ -295,7 +305,7 @@ const config = withMermaid({
   // dev/preview 模式：通过 Vite 中间件代理 ModelScope（仅本地生效）
   // 生产模式：通过 Cloudflare Worker 代理（见 worker/hf-proxy.js），不依赖此中间件
   vite: {
-    plugins: [hfProxyPlugin()]
+    plugins: [hfProxyPlugin(), themeImages.plugin]
   }
 })
 
