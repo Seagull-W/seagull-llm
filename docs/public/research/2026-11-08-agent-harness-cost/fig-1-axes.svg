@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="680" viewBox="0 0 1080 680" role="img" aria-labelledby="title desc">
+  <title id="title">agent 的三条优化轴与条件化记账</title>
+  <desc id="desc">参数、脚手架和环境都是优化轴。图中银行与 AutomationBench 的实验固定参数；harness 改变 Qwen 的正确案例率和 reviewer 的违规率，环境改变 Haiku 4.5 与 Opus 5 的成本和通过率。数字来自不同实验，不可相加。</desc>
+  <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#526578"/></marker></defs>
+  <rect width="1080" height="680" rx="20" fill="#f7f8fa"/>
+  <g font-family="Noto Sans CJK SC, Microsoft YaHei, sans-serif" fill="#172b3d">
+    <text x="44" y="55" font-size="30" font-weight="700">每个结果都要带上 model、harness 与 environment</text>
+    <text x="44" y="94" font-size="21" fill="#526578">三条可改动的轴；以下数字来自各自固定条件的对照实验</text>
+    <rect x="40" y="132" width="310" height="346" rx="12" fill="#fff" stroke="#a6b1bd" stroke-width="2"/>
+    <rect x="385" y="132" width="310" height="346" rx="12" fill="#fff" stroke="#367174" stroke-width="2"/>
+    <rect x="730" y="132" width="310" height="346" rx="12" fill="#fff" stroke="#8c663f" stroke-width="2"/>
+    <text x="64" y="178" font-size="27" font-weight="700">参数 · Model</text>
+    <text x="64" y="223" font-size="22">权重与基础能力</text>
+    <path d="M64 248 H326" stroke="#d8dfe6"/>
+    <text x="64" y="288" font-size="22">右侧主要对照中固定</text>
+    <text x="64" y="329" font-size="21">更换参数后，仍须检验</text>
+    <text x="64" y="361" font-size="21">它与执行系统的组合</text>
+    <text x="64" y="435" font-size="19" fill="#526578">共同的能力瓶颈仍可能存在</text>
+    <text x="409" y="178" font-size="27" font-weight="700">脚手架 · Harness</text>
+    <text x="409" y="223" font-size="22">规则供给、循环、执行检查</text>
+    <path d="M409 248 H671" stroke="#d8dfe6"/>
+    <text x="409" y="285" font-size="21">银行模拟 · Qwen 固定</text>
+    <text x="409" y="320" font-size="23" font-weight="700">正确率 82.1%–93.6%</text>
+    <text x="409" y="357" font-size="20">四模型池化 · 加 reviewer</text>
+    <text x="409" y="390" font-size="23" font-weight="700">违规 9.6% → 6.4%</text>
+    <text x="409" y="435" font-size="20" fill="#526578">输入 token 约 ×1.8</text>
+    <text x="754" y="178" font-size="27" font-weight="700">环境 · Environment</text>
+    <text x="754" y="223" font-size="22">共享信息的组织与访问</text>
+    <path d="M754 248 H1016" stroke="#d8dfe6"/>
+    <text x="754" y="283" font-size="20">AutomationBench · EnvOpt</text>
+    <text x="754" y="318" font-size="21" font-weight="700">Haiku 4.5：成本 −72.7%</text>
+    <text x="754" y="350" font-size="20">通过率 +14.34 个百分点</text>
+    <text x="754" y="389" font-size="21" font-weight="700">Opus 5：成本 −68.1%</text>
+    <text x="754" y="421" font-size="20">通过率 +1.34 个百分点</text>
+    <text x="754" y="455" font-size="17" fill="#526578">运行成本；离线优化费用另计</text>
+    <path d="M195 478 V515 H540 M885 478 V515 H540 M540 478 V543" stroke="#526578" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <rect x="100" y="552" width="880" height="85" rx="12" fill="#e8edf3"/>
+    <text x="540" y="585" text-anchor="middle" font-size="23" font-weight="700">并列记录：正确完成 · 实际违规 / 遗漏 · 费用与时延</text>
+    <text x="540" y="618" text-anchor="middle" font-size="20">附带任务集、交互预算、版本与计价；不同对照的增益不可相加</text>
+    <text x="540" y="665" text-anchor="middle" font-size="16" fill="#526578">本文自绘 · 2611.06116v1 表 1 / §4.2；2611.07372v1 表 1 / 表 4</text>
+  </g>
+</svg>

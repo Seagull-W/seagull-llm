@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1718,
+  "character_count": 1722,
   "pages": [
     {
       "path": "/cs336/a1-bpe.md",
@@ -122,6 +122,10 @@
     {
       "path": "/research/2026-11-04-rufus-air-post-training.md",
       "title": "Rufus-Air：八段配方的关键是训练信号，顺序仍属经验选择"
+    },
+    {
+      "path": "/research/2026-11-08-agent-harness-cost.md",
+      "title": "agent 的账不该记在模型头上：固定模型后，harness 与环境各能改动什么"
     },
     {
       "path": "/rl-book/cha4对话模板与监督微调.md",

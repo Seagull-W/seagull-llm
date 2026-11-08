@@ -1,5 +1,25 @@
 [
   {
+    "date": "2026-11-08",
+    "slug": "agent-harness-cost",
+    "title": "agent 的账不该记在模型头上：固定模型后，harness 与环境各能改动什么",
+    "description": "固定模型后只换脚手架，银行模拟里同一模型的正确率在 82.1% 与 93.6% 之间摆动；重组共享环境把 Haiku 4.5 的测试成本压低 72.7%。以三项干预实验区分正确率、违规与费用，并说明这组证据在什么条件下失效。",
+    "route": "/research/2026-11-08-agent-harness-cost",
+    "source_urls": [
+      "https://arxiv.org/abs/2611.06116v1",
+      "https://arxiv.org/html/2611.06116v1",
+      "https://arxiv.org/abs/2611.07372v1",
+      "https://arxiv.org/pdf/2611.07372v1",
+      "https://arxiv.org/abs/2611.07238v1",
+      "https://arxiv.org/html/2611.07238v1",
+      "https://arxiv.org/abs/2611.03434v1",
+      "https://arxiv.org/abs/2611.06254v1",
+      "https://arxiv.org/abs/2611.06483v1"
+    ],
+    "window_end": "2026-11-08T23:59:00+08:00",
+    "origin": "manual"
+  },
+  {
     "date": "2026-11-04",
     "slug": "daily-research-guide",
     "title": "每日调研导读：从后训练全景到奖励、系统与规模边界",
