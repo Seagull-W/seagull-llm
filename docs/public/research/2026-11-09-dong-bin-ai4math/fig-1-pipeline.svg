@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1190" viewBox="0 0 1000 1190" role="img" aria-labelledby="title desc">
+  <title id="title">董彬团队形式化数学工作：对象、接口与评测</title>
+  <desc id="desc">四段依次为语料与检索、自动形式化、证明搜索、评测。LeanSearch 为 Aria 提供 Mathlib 概念检索；AriaScorer 查询实际术语定义。Reap 由独立前提选择器 PS-2 提供当前状态所需声明。Matlas 返回的非形式陈述和 Aria 输出的形式目标以虚线标出可连接接口。Chain of States 是已有非形式证明到状态链和 tactic 的另一条路径。各论文的评测指标分别对应不同输出。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#4559a8"/></marker>
+    <style>
+      text { font-family: "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif; fill: #263247; }
+      .heading { font-size: 28px; font-weight: 700; }
+      .stage { font-size: 24px; font-weight: 700; fill: #4559a8; }
+      .name { font-size: 25px; font-weight: 700; }
+      .body { font-size: 22px; }
+      .small { font-size: 20px; fill: #526077; }
+      .box { fill: #fff; stroke: #c9d1e2; stroke-width: 1.5; rx: 12; }
+      .focus { fill: #f2f4fc; stroke: #8999cd; stroke-width: 1.5; rx: 12; }
+      .line { fill: none; stroke: #4559a8; stroke-width: 2.2; marker-end: url(#arrow); }
+      .possible { stroke-dasharray: 7 6; }
+      .rule { stroke: #dce1eb; stroke-width: 1; }
+    </style>
+  </defs>
+  <rect width="1000" height="1190" rx="16" fill="#fafbfe"/>
+  <text x="36" y="48" class="heading">把依赖变成可以检查的接口</text>
+  <path d="M38 80 H88" class="line"/><text x="103" y="87" class="small">论文中已使用</text>
+  <path d="M340 80 H390" class="line possible"/><text x="405" y="87" class="small">可连接接口，尚非联合实验证据</text>
+
+  <text x="36" y="151" class="stage">语料与检索</text>
+  <text x="36" y="185" class="small">输出哪些知识？</text>
+  <rect x="210" y="120" width="300" height="170" class="box"/>
+  <text x="232" y="158" class="name">Matlas</text>
+  <text x="232" y="196" class="body">论文／教材 → 文档依赖图</text>
+  <text x="232" y="229" class="body">逐层展开 → 非形式陈述</text>
+  <text x="232" y="265" class="small">仍需匹配或构造形式版本</text>
+  <rect x="550" y="120" width="414" height="170" class="focus"/>
+  <text x="572" y="158" class="name">LeanSearch v1 / v2</text>
+  <text x="572" y="196" class="body">v1：自然语言查询 → 库声明</text>
+  <text x="572" y="229" class="body">v2 标准：依赖展开＋检索重排</text>
+  <text x="572" y="265" class="body">v2 推理：证明草图 → 前提集合</text>
+
+  <path d="M757 290 V368" class="line"/>
+  <text x="776" y="335" class="small">概念检索</text>
+  <path d="M360 290 V328 H588 V368" class="line possible"/>
+  <rect x="374" y="292" width="156" height="26" fill="#fafbfe"/>
+  <text x="379" y="314" class="small">非形式数学知识</text>
+
+  <text x="36" y="401" class="stage">自动形式化</text>
+  <text x="36" y="435" class="small">到底在证明什么？</text>
+  <rect x="210" y="370" width="300" height="205" class="box"/>
+  <text x="232" y="409" class="name">Chain of States</text>
+  <text x="232" y="449" class="body">输入已有非形式证明</text>
+  <text x="232" y="484" class="body">先生成中间状态链</text>
+  <text x="232" y="519" class="body">生成相邻状态间 tactic</text>
+  <text x="232" y="554" class="small">跨越形式化与局部证明</text>
+  <rect x="550" y="370" width="414" height="205" class="focus"/>
+  <text x="572" y="409" class="name">Aria / AriaScorer</text>
+  <text x="572" y="449" class="body">概念依赖图 → 定义与目标陈述</text>
+  <text x="572" y="484" class="body">编译反馈修正生成代码</text>
+  <text x="572" y="519" class="body">Scorer 查询 Mathlib 术语信息</text>
+  <text x="572" y="554" class="small">另外判断陈述是否忠实于原意</text>
+
+  <path d="M757 575 V656" class="line possible"/>
+  <text x="776" y="620" class="small">定义与形式目标</text>
+
+  <text x="36" y="691" class="stage">证明搜索</text>
+  <text x="36" y="725" class="small">怎样完成目标？</text>
+  <rect x="210" y="660" width="300" height="180" class="box"/>
+  <text x="232" y="701" class="name">独立前提选择器 PS-2</text>
+  <text x="232" y="743" class="body">当前状态 → 可用库声明</text>
+  <text x="232" y="780" class="body">单独训练；RL 时保持固定</text>
+  <text x="232" y="818" class="small">沿用 LeanSearch-PS 配方</text>
+  <rect x="550" y="660" width="414" height="180" class="focus"/>
+  <text x="572" y="701" class="name">Reap / Reaper-1</text>
+  <text x="572" y="743" class="body">策略—价值指导 AND–OR 搜索</text>
+  <text x="572" y="780" class="body">Lean 内执行 tactic，返回状态</text>
+  <text x="572" y="818" class="body">成功轨迹 → 重放验证 → 训练</text>
+  <path d="M510 750 H547" class="line"/>
+
+  <path d="M757 840 V920" class="line"/>
+  <text x="776" y="886" class="small">验证过的证明</text>
+  <text x="36" y="952" class="stage">评测</text>
+  <text x="36" y="986" class="small">各自检查输出</text>
+  <rect x="210" y="924" width="754" height="195" class="box"/>
+  <text x="232" y="965" class="body">检索：MathlibQR 排序；MathlibMPR 前提组与路线覆盖</text>
+  <line x1="232" y1="984" x2="942" y2="984" class="rule"/>
+  <text x="232" y="1020" class="body">陈述：ProofNet / FATE-X；编译＋语义判定／专家核验</text>
+  <line x1="232" y1="1039" x2="942" y2="1039" class="rule"/>
+  <text x="232" y="1076" class="body">证明：miniF2F / FATE；固定问题版本、pass@k 与搜索预算</text>
+  <text x="36" y="1152" class="small">本文自绘 · 箭头表示对象传递；各项指标对应不同任务。</text>
+  <text x="36" y="1182" class="small">AI4Math review 提供方向定位，不作为流水线组件。</text>
+</svg>

@@ -1,5 +1,24 @@
 [
   {
+    "date": "2026-11-09",
+    "slug": "dong-bin-ai4math",
+    "title": "解读董彬团队的形式化数学工作线：检索、形式化与证明搜索怎样接起来",
+    "description": "以 LeanSearch v1/v2、Aria 和 Reap 为主干，解释数学知识如何成为可调用的库声明、忠实的形式陈述和可重放的证明步骤，并区分前提召回、语义正确率与不同预算下的证明成功率。",
+    "route": "/research/2026-11-09-dong-bin-ai4math",
+    "source_urls": [
+      "https://arxiv.org/abs/2403.13310v2",
+      "https://arxiv.org/abs/2605.13137v2",
+      "https://arxiv.org/abs/2510.04520v1",
+      "https://arxiv.org/abs/2611.02678v1",
+      "https://arxiv.org/abs/2604.17484v1",
+      "https://arxiv.org/abs/2511.02872v4",
+      "https://arxiv.org/abs/2512.10317v2",
+      "https://arxiv.org/abs/2601.13209v5"
+    ],
+    "window_end": "2026-11-09T23:59:00+08:00",
+    "origin": "manual"
+  },
+  {
     "date": "2026-11-08",
     "slug": "agent-harness-cost",
     "title": "agent 的账不该记在模型头上：固定模型后，harness 与环境各能改动什么",

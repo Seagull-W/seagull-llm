@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1722,
+  "character_count": 1727,
   "pages": [
     {
       "path": "/cs336/a1-bpe.md",
@@ -126,6 +126,10 @@
     {
       "path": "/research/2026-11-08-agent-harness-cost.md",
       "title": "agent 的账不该记在模型头上：固定模型后，harness 与环境各能改动什么"
+    },
+    {
+      "path": "/research/2026-11-09-dong-bin-ai4math.md",
+      "title": "解读董彬团队的形式化数学工作线：检索、形式化与证明搜索怎样接起来"
     },
     {
       "path": "/rl-book/cha4对话模板与监督微调.md",
