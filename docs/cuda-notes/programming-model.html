@@ -1,0 +1,106 @@
+<article class="native-document format-code" data-format="code" data-design="linux-notebook" aria-label="1.2 · CUDA 编程模型">
+<header class="document-intro note-hero">
+<p class="note-kicker">CUDA C++ 学习笔记</p>
+<h1 id="article-title" tabindex="-1">1.2 · CUDA 编程模型 <a class="header-anchor" href="#article-title" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">异构系统、GPU 硬件模型、线程块与网格、Warp、SIMT 以及 GPU 内存。</p>
+</header>
+<div class="document-lead">
+<p>独立于编程语言的CUDA编程模型介绍。</p>
+</div>
+<section class="document-section note-panel" aria-labelledby="_1-2-1-异构系统">
+<h2 id="_1-2-1-异构系统" tabindex="-1">1.2.1 异构系统 <a class="header-anchor" href="#_1-2-1-异构系统" aria-label="Permalink to &quot;1.2.1 异构系统&quot;">&ZeroWidthSpace;</a></h2>
+<p>CUDA编程模型假设一个异构计算系统，其同时包含CPU和GPU。
+CPU及其直连内存为主机和主机内存；GPU及其直连内存为设备和设备内存。</p>
+<p>注：SoC指同时封装CPU,GPU等的单颗芯片，即片上系统。</p>
+<p>CUDA应用程序总是在CPU上开始执行，可以在GPU上执行其部分代码。
+称在CPU上运行的代码为主机代码，主机代码可以：
+-使用CUDA API在主机内存和设备内存之间复制数据
+-启动在GPU上执行的代码
+-等待数据复制或GPU代码完成</p>
+<p>CPU和GPU可以同时执行代码，可通过最大化利用CPU和GPU来获得最佳性能。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_1-2-2-gpu硬件模型">
+<h2 id="_1-2-2-gpu硬件模型" tabindex="-1">1.2.2 GPU硬件模型 <a class="header-anchor" href="#_1-2-2-gpu硬件模型" aria-label="Permalink to &quot;1.2.2 GPU硬件模型&quot;">&ZeroWidthSpace;</a></h2>
+<p>出于CUDA编程的目的，将底层硬件抽象为概念模型。</p>
+<p>GPU视为一组SM（流式多处理器）的集合，这些SM被组织为被称为GPC（图形处理集群）的组。
+每个SM含：
+-一个本地寄存器文件
+-一个统一数据缓存
+-许多执行计算的功能单元</p>
+<p>其中，统一数据缓存为共享内存和L1缓存提供物理资源，具体的分配可以在运行时配置。</p>
+<p>注：线程块（BLOCK）需完整分配到一个SM上（不是一对一），共享缓存是同一个BLOCK所有线程共用的缓存空间，块内线程可通过共享内存高效通信。</p>
+<figure class="note-figure">
+  <img src="/cuda-notes/figures/1_2/GPU_GPC_SM.png" alt="GPU GPC与SM结构示意图">
+  <figcaption>图 1 一个 GPU 包含许多流式多处理器（SM），每个 SM 又包含许多功能单元。图形处理集群（GPC）是 SM 的集合。GPU 是一组连接到 GPU 内存的 GPC。CPU 通常有多个核心和一个连接到系统内存的内存控制器。CPU 和 GPU 通过诸如 PCIe 或 NVLINK 的互连技术连接</figcaption>
+</figure>
+<h3 id="_1-2-2-1-线程块与线程网格-block-and-grid" tabindex="-1">1.2.2.1 线程块与线程网格（BLOCK  AND  GRID） <a class="header-anchor" href="#_1-2-2-1-线程块与线程网格-block-and-grid" aria-label="Permalink to &quot;1.2.2.1 线程块与线程网格（BLOCK  AND  GRID）&quot;">&ZeroWidthSpace;</a></h3>
+<p>当应用程序启动一个内核（KERNEL，设备端运行函数）时，会启动大量的线程，线程组织为线程块，进一步组织为线程网络，网格中所有线程块大小维度相同。</p>
+<figure class="note-figure">
+  <img src="/cuda-notes/figures/1_2/GRID_BLOCK.png" alt="线程网络">
+  <figcaption>图 2 线程块网格。每个箭头代表一个线程（箭头数量不代表实际线程数）</figcaption>
+</figure>
+<p>维度：
+线程块和网格的维度可以用于简化单线程到工作单元或者数据项的映射过程。</p>
+<p>执行配置：
+当内核启动时，会使用一个特定的执行配置来启动，该配置指定了网格和线程块的维度及集群大小、流和 SM 配置设置等可选参数。</p>
+<p>内置变量：
+通过使用内置变量，执行内核的每个线程都可以确定其在其所属块内的位置，以及其所属块在网格内的位置。线程还可以使用这些内置变量来确定线程块的维度和启动内核的网格的维度。这使得每个线程在所有运行该内核的线程中拥有唯一的身份标识。这个身份标识经常被用来确定线程负责哪些数据或操作。</p>
+<p>BLOCK is only on one SM
+一个线程块的所有线程都在单个 SM 上执行。这使得线程块内的线程能够高效地相互通信和同步。线程块内的所有线程都可以访问片上的共享内存，这可以用于在线程块的线程之间交换信息。</p>
+<p>一个网格可能包含数百万个线程块，而执行该网格的 GPU 可能只有几十或几百个 SM。一个线程块的所有线程都由单个 SM 执行，并且在大多数情况下，会在该 SM 上运行至完成。线程块之间的调度没有保证，因此一个线程块不能依赖其他线程块的结果，因为在该线程块完成之前，其他线程块可能无法被调度。图 3 展示了一个网格中的线程块如何被分配给 SM 的示例。</p>
+<figure class="note-figure">
+  <img src="/cuda-notes/figures/1_2/BLOCKtoSM.png" alt="BLOCK的分配">
+  <figcaption>图 3 每个 SM 有一个或多个活动线程块。在此示例中，每个 SM 同时调度了三个线程块。网格中的线程块分配给 SM 的顺序没有保证。||  CUDA 编程模型支持任意规模的线程网格在任意规模的 GPU 上运行，无论 GPU 仅包含一个 SM 还是包含数千个 SM。为实现这一目标，除少数例外情况外，CUDA 编程模型要求不同线程块中的线程之间不存在数据依赖关系。也就是说，线程不应依赖同一网格中不同线程块内线程的计算结果，也不应与这些线程进行同步。同一线程块内的所有线程在同一时间运行于同一个 SM 上。网格中的不同线程块则在可用的 SM 之间进行调度，并且可以按任意顺序执行。简而言之，CUDA 编程模型要求线程块能够以任意顺序、并行或串行地执行。</figcaption>
+</figure>
+<h4 id="_1-2-2-1-1-线程块簇-clusters" tabindex="-1">1.2.2.1.1 线程块簇（Clusters） <a class="header-anchor" href="#_1-2-2-1-1-线程块簇-clusters" aria-label="Permalink to &quot;1.2.2.1.1 线程块簇（Clusters）&quot;">&ZeroWidthSpace;</a></h4>
+<p>可选的线程分组层级，将相邻的BLOCK按照给定的维度分组为Clusters。</p>
+<ol>
+<li>一个簇内的所有线程块都在同一个 GPC 中执行</li>
+<li>由于这些线程块被同时调度且位于同一个 GPC 内，因此不同线程块但属于同一簇的线程，可以使用协作组提供的软件接口进行相互通信和同步。簇内的线程可以访问簇中所有线程块的共享内存，这被称为分布式共享内存。</li>
+</ol>
+<figure class="note-figure">
+  <img src="/cuda-notes/figures/1_2/ClustersToGPC.png" alt="Clusters的分配">
+  <figcaption>图 4 当指定簇时，簇内的线程块按照其簇的形状排列在网格中。一个簇的线程块会在单个 GPC 的 SM 上同时被调度。</figcaption>
+</figure>
+<h3 id="_1-2-2-2-线程束warp和单指令多线程范式simt" tabindex="-1">1.2.2.2 线程束Warp和单指令多线程范式SIMT <a class="header-anchor" href="#_1-2-2-2-线程束warp和单指令多线程范式simt" aria-label="Permalink to &quot;1.2.2.2 线程束Warp和单指令多线程范式SIMT&quot;">&ZeroWidthSpace;</a></h3>
+<p>SIMT即为single instructions multiple threads，单指令多线程范式。</p>
+<p>在线程块内部，线程被组织成 32 个线程一组，称为线程束。一个线程束以单指令多线程范式执行内核代码。</p>
+<p>在 SIMT 范式中，线程束内的所有线程执行相同的内核代码，但每个线程可能遵循代码中的不同分支（如部分线程进入if分支，另外的进入else分支）。</p>
+<figure class="note-figure">
+  <img src="/cuda-notes/figures/1_2/warp_divergence.png" alt="Warp 发散时的控制流执行">
+  <figcaption>图 5 在此示例中，只有线程索引为偶数的线程执行 if 语句的主体，其他线程在执行主体时被屏蔽。</figcaption>
+</figure>
+<p>有分歧时称为Warp 发散，显然，当线程束内的线程遵循相同的控制流路径时，GPU 的利用率达到最大化。</p>
+<p>虽然在编写 CUDA 代码时不必考虑线程束，但理解线程束执行模型有助于理解诸如全局内存合并和共享内存体访问模式等概念。一些高级编程技术利用线程块内线程束的专门化来限制线程发散并最大化利用率（此处涉及到一些其他抽象）。此优化及其他优化利用了线程在执行时被分组为线程束这一知识。 线程束执行的一个含义是，线程块最好指定总线程数为 32 的倍数。
+使用任意数量的线程都是合法的，但当总数不是 32 的倍数时，线程块的最后一个线程束在执行过程中将有一些通道未被使用。这很可能导致该线程束的功能单元利用率和内存访问效率不佳。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_1-2-3-gpu内存">
+<h2 id="_1-2-3-gpu内存" tabindex="-1">1.2.3 GPU内存 <a class="header-anchor" href="#_1-2-3-gpu内存" aria-label="Permalink to &quot;1.2.3 GPU内存&quot;">&ZeroWidthSpace;</a></h2>
+<h3 id="_1-2-3-1-异构系统中的dram内存" tabindex="-1">1.2.3.1 异构系统中的DRAM内存 <a class="header-anchor" href="#_1-2-3-1-异构系统中的dram内存" aria-label="Permalink to &quot;1.2.3.1 异构系统中的DRAM内存&quot;">&ZeroWidthSpace;</a></h3>
+<p>GPU 和 CPU 都直接连接着 DRAM 芯片。在拥有多个 GPU 的系统中，每个 GPU 都有自己的内存。</p>
+<p>连接到 GPU 的 DRAM 被称为全局内存，因为 GPU 中的所有 SM 都可以访问它。
+连接到 CPU 的 DRAM 被称为系统内存或主机内存。</p>
+<p>与 CPU 类似，GPU 使用虚拟内存寻址。在所有当前支持的系统中，CPU 和 GPU 使用一个统一的虚拟内存空间。这意味着系统中每个 GPU 的虚拟内存地址范围是唯一的，并且与 CPU 以及系统中其他所有 GPU的地址范围不同。对于给定的虚拟内存地址，可以确定该地址是在 GPU 内存中还是在系统内存中，并且在多 GPU 系统中，可以确定哪个 GPU 内存包含该地址。</p>
+<p>CUDA 提供了用于分配 GPU 内存、CPU 内存的 API，以及用于在 CPU 和 GPU 之间、GPU 内部或多 GPU 系统中的 GPU 之间复制数据的 API。在需要时，可以显式控制数据的局部性。</p>
+<h3 id="_1-2-3-2-gpu中的片上内存" tabindex="-1">1.2.3.2 GPU中的片上内存 <a class="header-anchor" href="#_1-2-3-2-gpu中的片上内存" aria-label="Permalink to &quot;1.2.3.2 GPU中的片上内存&quot;">&ZeroWidthSpace;</a></h3>
+<p>每个 SM 都有自己的寄存器文件和共享内存。这些内存是 SM 的一部分，可以由在 SM 内执行的线程极快地访问，但运行在其他 SM 中的线程无法访问它们。</p>
+<p>寄存器文件存储线程局部变量，这些变量通常由编译器分配。</p>
+<p>共享内存可由一个线程块或集群内的所有线程访问。共享内存可用于在线程块或集群的线程之间交换数据。</p>
+<p>寄存器文件、共享内存空间和L1缓存由线程块内的所有线程共享。</p>
+<p>要将线程块调度到SM上，每个线程所需的寄存器总数乘以线程块中的线程数必须小于或等于SM中可用的寄存器数。如果线程块所需的寄存器数量超过寄存器文件的大小，则内核无法启动，必须减少线程块中的线程数才能使线程块可启动。</p>
+<p>共享内存分配在线程块级别进行。也就是说，与按线程分配的寄存器不同，共享内存的分配对整个线程块是共用的。</p>
+<h4 id="_1-2-3-2-1-缓存" tabindex="-1">1.2.3.2.1 缓存 <a class="header-anchor" href="#_1-2-3-2-1-缓存" aria-label="Permalink to &quot;1.2.3.2.1 缓存&quot;">&ZeroWidthSpace;</a></h4>
+<p>除了可编程内存外，GPU还具有L1和L2缓存。</p>
+<p>除了可编程内存外，GPU还具有L1和L2缓存。</p>
+<p>更大的L2缓存由GPU内的所有SM共享。</p>
+<p>每个SM还有一个独立的常量缓存，用于缓存全局内存中声明为在内核生命周期内恒定的值。编译器也可能将内核参数放入常量内存。这可以通过允许内核参数在SM中独立于L1数据缓存进行缓存来提高内核性能。</p>
+<h3 id="_1-2-3-3-统一内存" tabindex="-1">1.2.3.3 统一内存 <a class="header-anchor" href="#_1-2-3-3-统一内存" aria-label="Permalink to &quot;1.2.3.3 统一内存&quot;">&ZeroWidthSpace;</a></h3>
+<p>当应用程序在GPU或CPU上显式分配内存时，该内存只能由在该设备上运行的代码访问。也就是说，CPU内存只能从CPU代码访问，GPU内存只能从在GPU上运行的内核访问[2]。用于在CPU和GPU之间复制内存的CUDA API用于在正确的时间将数据显式复制到正确的内存。</p>
+<p>一项名为统一内存的CUDA功能允许应用程序进行内存分配，这些内存可以从CPU或GPU访问。CUDA运行时或底层硬件在需要时启用访问或将数据重定位到正确的位置。即使使用统一内存，通过最小化内存迁移并尽可能从直接连接到内存所在位置的处理器访问数据，才能获得最佳性能。</p>
+<p>统一内存的核心价值是简化编程模型，通过单一虚拟地址空间消除显式数据拷贝，但性能关键仍在于数据 locality 管理。</p>
+<p>预取（cudaMemPrefetchAsync）是避免运行时延迟的必要手段；
+减少跨设备访问频率比依赖自动迁移更重要；</p>
+</section>
+</article>

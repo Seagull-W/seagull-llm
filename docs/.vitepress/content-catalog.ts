@@ -20,6 +20,10 @@ export const readingSeries = [
   ] },
   { title: 'CS336 · 作业与实现', paths: [
     '/cs336/a1-bpe', '/cs336/a1-transformer', '/cs336/a2-benchmark'
+  ] },
+  { title: 'CUDA C++ · 编程指南', paths: [
+    '/cuda-notes/programming-model', '/cuda-notes/cuda-platform', '/cuda-notes/cuda-cpp',
+    '/cuda-notes/simt-kernels', '/cuda-notes/async-execution'
   ] }
 ]
 const aliases: Record<string, string> = { agent: '智能体', agents: '智能体', Agent: '智能体', LLM: '大语言模型', '大模型': '大语言模型', SFT: '监督微调' }

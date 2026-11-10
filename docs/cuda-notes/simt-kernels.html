@@ -1,0 +1,377 @@
+<article class="native-document format-code" data-format="code" data-design="linux-notebook" aria-label="2.2 · CUDA SIMT 内核编写">
+<header class="document-intro note-hero">
+<p class="note-kicker">CUDA C++ 学习笔记</p>
+<h1 id="article-title" tabindex="-1">2.2 · CUDA SIMT 内核编写 <a class="header-anchor" href="#article-title" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">SIMT、线程层次、GPU 内存空间、合并访存与共享内存矩阵转置。</p>
+</header>
+<section class="document-section note-panel" aria-labelledby="_2-2-1-simt基础">
+<h2 id="_2-2-1-simt基础" tabindex="-1">2.2.1 SIMT基础 <a class="header-anchor" href="#_2-2-1-simt基础" aria-label="Permalink to &quot;2.2.1 SIMT基础&quot;">&ZeroWidthSpace;</a></h2>
+<p>从开发者的角度，CUDA线程是并行性的基本单元。</p>
+<p>线程束和SIMT描述了GPU执行的基本SIMT模型。SIMT模型允许每个线程维护自己的状态和控制流。</p>
+<p>让内核代码最小化同一线程束内线程采取不同代码路径的情况，可以显著提升性能。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_2-2-2-线程层次结构">
+<h2 id="_2-2-2-线程层次结构" tabindex="-1">2.2.2 线程层次结构 <a class="header-anchor" href="#_2-2-2-线程层次结构" aria-label="Permalink to &quot;2.2.2 线程层次结构&quot;">&ZeroWidthSpace;</a></h2>
+<p>使用多维线程块和网格仅是为了方便，并不影响性能。</p>
+<p>在线程块中，类似于矩阵的内存分配，索引<code>x</code>最快，然后是<code>y</code>，最后是<code>z</code>。
+也就是说，连续的<code>threadIdx.x</code>值表示连续的线程，即步长为1；<code>threadIdx.y</code>的步长为<code>blockDim.x</code>；<code>threadIdx.z</code>的步长为<code>blockDim.x*blockDim.y</code>。</p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_2-2-3-gpu设备内存空间">
+<h2 id="_2-2-3-gpu设备内存空间" tabindex="-1">2.2.3 GPU设备内存空间 <a class="header-anchor" href="#_2-2-3-gpu设备内存空间" aria-label="Permalink to &quot;2.2.3 GPU设备内存空间&quot;">&ZeroWidthSpace;</a></h2>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>内存类型</th>
+<th>作用域</th>
+<th>生命周期</th>
+<th>位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>全局内存</td>
+<td>网格</td>
+<td>应用程序</td>
+<td>设备</td>
+</tr>
+<tr>
+<td>常量内存</td>
+<td>网格</td>
+<td>应用程序</td>
+<td>设备</td>
+</tr>
+<tr>
+<td>共享内存</td>
+<td>线程块</td>
+<td>内核</td>
+<td>SM</td>
+</tr>
+<tr>
+<td>局部内存</td>
+<td>线程</td>
+<td>内核</td>
+<td>设备</td>
+</tr>
+<tr>
+<td>寄存器</td>
+<td>线程</td>
+<td>内核</td>
+<td>SM</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="_2-2-3-1-全局内存" tabindex="-1">2.2.3.1 全局内存 <a class="header-anchor" href="#_2-2-3-1-全局内存" aria-label="Permalink to &quot;2.2.3.1 全局内存&quot;">&ZeroWidthSpace;</a></h3>
+<p>全局内存（也称为设备内存）是用于存储数据的<strong>主要内存空间</strong>，内核中的<strong>所有线程都可以访问它</strong>。它类似于 CPU 系统中的 RAM。</p>
+<p>全局内存是<strong>持久性</strong>的。也就是说，在全局内存中进行的分配以及存储其中的数据会一直存在，直到分配被释放或应用程序终止。<code>cudaDeviceReset</code> 也会释放所有分配。</p>
+<p>全局内存通过 CUDA API 调用（如 <code>cudaMalloc</code> 和 <code>cudaMallocManaged</code>）进行分配。可以使用 CUDA 运行时 API 调用（如 <code>cudaMemcpy</code>）将数据从 CPU 内存复制到全局内存。使用 CUDA API 进行的全局内存分配通过 <code>cudaFree</code> 释放。</p>
+<p>在内核启动之前，全局内存通过 CUDA API 调用进行分配和初始化。
+在内核执行期间，CUDA 线程可以读取全局内存中的数据，并且 CUDA 线程执行操作的结果可以写回全局内存。
+一旦内核完成执行，它写入全局内存的结果可以被复制回主机或由 GPU 上的其他内核使用。</p>
+<p>由于从主机启动的 CUDA 内核的返回类型是 <code>void</code>，内核计算的数值结果返回给主机的唯一方法是将这些结果写入全局内存。</p>
+<p>一个说明全局内存使用的简单例子是下面的 <code>vecAdd</code> 内核，其中三个数组 <code>A</code>、<code>B</code> 和 <code>C</code> 位于全局内存中，并被这个向量加法内核访问。</p>
+<div class="language-cpp vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">cpp</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">__global__ </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">void</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> vecAdd</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> A, </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> B, </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> C, </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> N) {</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> i </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> blockIdx.x </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> blockDim.x </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">+</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> threadIdx.x;</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (i </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> N) {</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        C[i] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> A[i] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">+</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> B[i];</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br></div></div><h3 id="_2-2-3-2-共享内存" tabindex="-1">2.2.3.2 共享内存 <a class="header-anchor" href="#_2-2-3-2-共享内存" aria-label="Permalink to &quot;2.2.3.2 共享内存&quot;">&ZeroWidthSpace;</a></h3>
+<p>共享内存位于SM上，线程块的所有线程都可以访问它。它与L1缓存共用物理资源（统一数据缓存）。</p>
+<p>由于共享内存位于每个 SM 上，其带宽更高，访问延迟也比访问全局内存低。</p>
+<p>由于共享内存可被线程块内的所有线程访问，必须注意避免同一线程块内线程间的数据竞争。
+同一线程块内线程间的同步可以通过 <code>__syncthreads()</code> 函数实现。此函数会阻塞线程块内的所有线程，直到所有线程都执行到对 <code>__syncthreads()</code> 的调用。</p>
+<div class="language-cpp vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">cpp</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">// assuming blockDim.x is 128</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">__global__ </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">void</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> example_syncthreads</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> input_data, </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> output_data) {</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    __shared__ </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> shared_data[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">128</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">    // Every thread writes to a distinct element of 'shared_data':</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    shared_data[threadIdx.x] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> input_data[threadIdx.x];</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">    // All threads synchronize, guaranteeing all writes to 'shared_data' are ordered </span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">    // before any thread is unblocked from '__syncthreads()':</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">    __syncthreads</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">    // A single thread safely reads 'shared_data':</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (threadIdx.x </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">==</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">        int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> sum </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">        for</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> i </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">; i </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> blockDim.x; </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">++</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">i) {</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">            sum </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">+=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> shared_data[i];</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        }</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        output_data[blockIdx.x] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> sum;</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br></div></div><p>由于共享内存和 L1 缓存共享相同的物理空间，使用共享内存会减少内核可用的 L1 缓存大小。此外，如果内核不使用共享内存，整个物理空间都将被 L1 缓存使用。</p>
+<p>CUDA 运行时 API 提供了函数来查询每个 SM 和每个线程块的共享内存大小，使用 <code>cudaGetDeviceProperties</code> 函数并检查 <code>cudaDeviceProp.sharedMemPerMultiprocessor</code> 和 <code>cudaDeviceProp.sharedMemPerBlock</code> 设备属性。</p>
+<p>CUDA 运行时 API 提供了一个函数 <code>cudaFuncSetCacheConfig</code>，用于告知运行时是为共享内存分配更多空间，还是为 L1 缓存分配更多空间。此函数向运行时指定一个偏好，但不保证一定被采纳。</p>
+<h4 id="_2-2-3-2-1-共享内存静态分配" tabindex="-1">2.2.3.2.1 共享内存静态分配 <a class="header-anchor" href="#_2-2-3-2-1-共享内存静态分配" aria-label="Permalink to &quot;2.2.3.2.1 共享内存静态分配&quot;">&ZeroWidthSpace;</a></h4>
+<p>要静态分配共享内存，程序员必须在内核中使用 <code>__shared__</code> 限定符声明一个变量。
+该变量将在共享内存中分配，并在内核执行期间持续存在。
+以这种方式声明的共享内存大小<strong>必须在编译时指定</strong>。</p>
+<div class="language-cpp vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">cpp</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">__shared__ </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> sharedArray[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">1024</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">];</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br></div></div><p>在此声明之后，线程块中的所有线程都将可以访问此共享内存数组。</p>
+<h4 id="_2-2-3-2-2-共享内存动态分配" tabindex="-1">2.2.3.2.2 共享内存动态分配 <a class="header-anchor" href="#_2-2-3-2-2-共享内存动态分配" aria-label="Permalink to &quot;2.2.3.2.2 共享内存动态分配&quot;">&ZeroWidthSpace;</a></h4>
+<p>可以在内核启动的三重尖括号表示法中，将每个线程块所需的共享内存<strong>字节数</strong>指定为第三个（可选的）参数，格式如下：<code>functionName&lt;&lt;&lt;grid, block, sharedMemoryBytes&gt;&gt;&gt;()</code>。
+然后，在内核内部，程序员可以使用 <code>extern __shared__</code> 说明符来声明一个将在内核启动时动态分配的变量。</p>
+<p>需要注意的一点是，如果想要多个动态分配的共享内存数组，必须使用<em>指针运算手动划分</em>单个 <code>extern __shared__</code> 区域。</p>
+<p>打算实现：</p>
+<div class="language-cpp vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">cpp</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">short</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> array0[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">128</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> array1[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">64</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">   array2[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">256</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">];</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div><p>在动态分配的共享内存中声明上述实现的方法是：</p>
+<div class="language-cpp vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">cpp</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">extern</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> __shared__ </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> array[];</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">short*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> array0 </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">short*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)array;</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> array1 </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">array0[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">128</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">   array2 </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">   (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">array1[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">64</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">];</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br></div></div><ul>
+<li><code>extern __shared__ float array[]</code>声明了一个动态数组，大小在内核启动的时候指定了。</li>
+<li><code>short* array0 = (short*)array</code>表示从内存地址0开始，接下来是<code>short</code>类型的数组，至于数组的大小由接下来的声明确定（如没有那就是到数组的结束）。</li>
+<li><code>float* array1 = (float*)&amp;array0[128]</code>表示从内存地址128*2=256（short类型占用两个字节）开始，接下来是<code>float</code>类型的数组。</li>
+<li><code>int*   array2 =   (int*)&amp;array1[64]</code>表示从内存地址64*4+256=512（float类型占用四个字节）开始，接下来是<code>int</code>类型的数组。<code>int</code>类型占四个字节，如果总内存分配了1024，那么<code>array2</code>就是128个<code>int</code>类型的数组。</li>
+</ul>
+<p><strong>指针需要与其指向的类型对齐</strong>。以下代码无法工作：</p>
+<div class="language-cpp vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">cpp</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">extern</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> __shared__ </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> array[];</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">short*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> array0 </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">short*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)array;</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> array1 </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">array0[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">127</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">];</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div><p>数组储存的起始地址需是类型占字节数的整数倍，否则会导致内存访问错误。这个是为了适配硬件的内存对齐要求。</p>
+<h3 id="_2-2-3-3-寄存器" tabindex="-1">2.2.3.3 寄存器 <a class="header-anchor" href="#_2-2-3-3-寄存器" aria-label="Permalink to &quot;2.2.3.3 寄存器&quot;">&ZeroWidthSpace;</a></h3>
+<p>寄存器位于 SM 上，具有线程局部作用域。<strong>寄存器的使用由编译器管理</strong>，在内核执行期间，寄存器用于线程局部存储。每个 SM 的寄存器数量和每个线程块的寄存器数量可以通过 GPU 的 <code>cudaDeviceProp.regsPerMultiprocessor</code> 和 <code>cudaDeviceProp.regsPerBlock</code> 设备属性查询。</p>
+<blockquote>
+<p>所谓线程局部作用域，是指这块空间只能由某个特定线程访问，修改等，其余线程无法访问，也无法修改。</p>
+</blockquote>
+<p>NVCC 允许开发者通过 <code>-maxrregcount</code> 选项指定内核使用的最大寄存器数量。使用此选项减少内核可用的寄存器数量，可能会导致 SM 上同时<strong>调度更多的线程块</strong>，但也可能导致更多的寄存器溢出。具体来说，SM 上的寄存器数量是有限的，不能超过这个数量,如果一个BLOCK占用过多的寄存器，那么SM调度的BLOCK就少了；此外，如果划分的寄存器太少，编译器（NVCC）可能会将部分局部内存拿来充当寄存器，就是所谓的寄存器溢出。</p>
+<h3 id="_2-2-3-4-局部内存" tabindex="-1">2.2.3.4 局部内存 <a class="header-anchor" href="#_2-2-3-4-局部内存" aria-label="Permalink to &quot;2.2.3.4 局部内存&quot;">&ZeroWidthSpace;</a></h3>
+<p>局部内存不是一个物理空间，而是类似于寄存器的<strong>线程局部存储</strong>，由 NVCC 管理，但局部内存的物理位置在全局内存空间中。&quot;局部&quot;这个标签指的是其逻辑作用域，而非物理位置。</p>
+<p>编译器可能将其放入局部内存的自动变量包括：</p>
+<ul>
+<li>无法确定其索引是否为常量的数组，</li>
+<li>占用过多寄存器空间的大型结构体或数组，</li>
+<li>当内核使用的寄存器超过可用数量（即寄存器溢出）时的任何变量。</li>
+</ul>
+<p>由于局部内存空间位于设备内存中，局部内存访问具有与全局内存访问相同的延迟和带宽，并且需要满足与合并的全局内存访问中描述的相同的内存合并要求。然而，局部内存的组织方式使得<strong>连续的 32 位字由连续的线程 ID 访问</strong>。因此，只要一个线程束中的所有线程访问相同的相对地址（例如数组变量中的相同索引或结构体变量中的相同成员），访问就是完全合并的。</p>
+<p>具体来说，局部内存将各个线程的局部变量相同索引的值存在连续的内存地址中，例如，局部内存中会将所有线程的<code>localArray[0]</code>值存储在连续的内存地址中，当线程束的每个线程都访问局部变量<code>localArray[0i]</code>时，就可以触发<strong>内存合并</strong>。</p>
+<blockquote>
+<p>不同线程同时访问相同相对位置变量是一种常规情况，如各种循环体。</p>
+</blockquote>
+<h3 id="_2-2-3-5-常量内存" tabindex="-1">2.2.3.5 常量内存 <a class="header-anchor" href="#_2-2-3-5-常量内存" aria-label="Permalink to &quot;2.2.3.5 常量内存&quot;">&ZeroWidthSpace;</a></h3>
+<p>常量内存具有网格作用域，并且在应用程序的整个生命周期内都可访问。常量内存驻留在设备上，并且对内核是 <em>只读</em> 的。因此，它必须在主机端使用 <code>__constant__</code> 限定符在任何函数外部进行声明和初始化。</p>
+<p><code>__constant__</code> 内存空间限定符声明的变量具有以下特性：</p>
+<ul>
+<li>驻留在常量内存空间中，</li>
+<li>其生命周期与创建它的 CUDA 上下文相同，</li>
+<li>每个设备都有一个独立的对象，</li>
+<li>可以被网格内的所有线程访问，并且主机可以通过运行时库（<code>cudaGetSymbolAddress()</code> / <code>cudaGetSymbolSize()</code> / <code>cudaMemcpyToSymbol()</code> / <code>cudaMemcpyFromSymbol()</code>）进行访问。</li>
+</ul>
+<p>常量内存的总量可以通过设备属性 <code>cudaDeviceProp.totalConstMem</code> 来查询。</p>
+<p>常量内存适用于少量数据，这些数据将被每个线程以只读方式使用。相对于其他内存，常量内存容量较小，通常每个设备为 64KB。</p>
+<div class="language-cpp vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">cpp</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">// 在你的 .cu 文件中</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">__constant__ </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> coeffs[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">4</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">__global__ </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">void</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> compute</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> *</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">out) {</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> idx </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> threadIdx.x;</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    out[idx] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> coeffs[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> idx </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">+</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> coeffs[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">// 在你的主机代码中</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> h_coeffs[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">4</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> {</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">1.0</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">f</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">2.0</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">f</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">3.0</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">f</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">4.0</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">f</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">};</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">cudaMemcpyToSymbol</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(coeffs, h_coeffs, </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">sizeof</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(h_coeffs));</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">compute</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x3C;&#x3C;&#x3C;</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">10</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">>>></span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(device_out);</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br></div></div><h3 id="_2-2-3-6-缓存" tabindex="-1">2.2.3.6 缓存 <a class="header-anchor" href="#_2-2-3-6-缓存" aria-label="Permalink to &quot;2.2.3.6 缓存&quot;">&ZeroWidthSpace;</a></h3>
+<p>GPU 设备具有多级缓存结构，包括 L2 和 L1 缓存。</p>
+<p>L2 缓存位于设备上，并在<em>所有 SM 之间共享</em>。L2 缓存的大小可以通过 <code>cudaGetDeviceProperties</code> 函数中的 <code>l2CacheSize</code> 设备属性元素来查询。</p>
+<p>如上文 共享内存 所述，L1 缓存在物理上位于每个 SM 上，并且与共享内存使用的是相同的物理空间。如果一个内核没有使用共享内存，那么整个物理空间将被 L1 缓存使用。</p>
+<p>L2 和 L1 缓存可以通过函数进行控制，允许开发者指定各种缓存行为。这些函数的详细信息请参阅 配置 L1/共享内存平衡、L2 缓存控制 和 低级加载和存储函数。</p>
+<p>如果不使用这些提示，编译器和运行时将尽力高效地利用缓存。</p>
+<h3 id="_2-2-3-8-分布式共享内存" tabindex="-1">2.2.3.8 分布式共享内存 <a class="header-anchor" href="#_2-2-3-8-分布式共享内存" aria-label="Permalink to &quot;2.2.3.8 分布式共享内存&quot;">&ZeroWidthSpace;</a></h3>
+<p>计算能力 9.0 中引入的<strong>线程块集群</strong>（由协作组提供支持），使得线程块集群中的线程能够访问该集群中所有参与线程块的共享内存。这种分区的共享内存称为<strong>分布式共享内存</strong>，其对应的地址空间称为<strong>分布式共享内存地址空间</strong>。</p>
+<p>属于线程块集群的线程可以在分布式地址空间中进行读取、写入或执行原子操作，无论该地址属于本地线程块还是远程线程块。</p>
+<p>无论内核是否使用分布式共享内存，共享内存大小的规定（静态或动态）仍然是针对每个线程块的。</p>
+<p>访问分布式共享内存中的数据要求所有线程块都存在。用户在访问分布式共享内存之前，必须先调用 <code>cluster.sync()</code> 来确保所有线程块都已开始执行。</p>
+<p>用户还需要确保所有分布式共享内存操作在线程块退出之前完成，例如，如果一个远程线程块试图读取某个给定线程块的共享内存，程序需要确保远程线程块完成对该共享内存的读取后才能退出。</p>
+<p>让我们看一个简单的直方图计算示例，以及如何使用线程块集群在 GPU 上对其进行优化。计算直方图的标准方法是在每个线程块的共享内存中执行计算，然后执行全局内存原子操作。这种方法的一个限制是共享内存容量。一旦直方图条柱无法再放入共享内存，用户就需要直接在全局内存中计算直方图，从而执行原子操作。借助分布式共享内存，CUDA 提供了一个中间步骤，根据直方图条柱的大小，直方图可以直接在共享内存、分布式共享内存或全局内存中计算。</p>
+<blockquote>
+<p>原子操作是并行计算中保证数据一致性的“强制排队机制”。它的核心定义是：一组“读-改-写”（Read-Modify-Write）操作，在执行过程中不可被中断，要么全部完成，要么完全不执行。</p>
+</blockquote>
+<p>下面的 CUDA 内核示例展示了如何根据直方图条柱的数量，在共享内存或分布式共享内存中计算直方图。</p>
+<details class="note-details"><summary>展开原代码（60 行）</summary>
+<div class="language-cpp vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">cpp</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">#include</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> &#x3C;cooperative_groups.h></span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">// Distributed Shared memory histogram kernel</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">__global__ </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">void</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> clusterHist_kernel</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> *</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">bins, </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">const</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> nbins, </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">const</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> bins_per_block, </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">const</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> int</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> *</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">__restrict__ input,</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">                                   size_t</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> array_size)</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">  extern</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> __shared__ </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> smem[];</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">  namespace</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> cg</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> cooperative_groups</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">  int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> tid </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> cg</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">::</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">this_grid</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">().</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">thread_rank</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  // Cluster initialization, size and calculating local bin offsets.</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">  cg</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">::cluster_group cluster </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> cg</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">::</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">this_cluster</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">  unsigned</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> clusterBlockRank </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> cluster.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">block_rank</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">  int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> cluster_size </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> cluster.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">dim_blocks</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">().x;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">  for</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> i </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> threadIdx.x; i </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> bins_per_block; i </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">+=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> blockDim.x)</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  {</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    smem[i] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">;</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"> //Initialize shared memory histogram to zeros</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  // cluster synchronization ensures that shared memory is initialized to zero in</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  // all thread blocks in the cluster. It also ensures that all thread blocks</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  // have started executing and they exist concurrently.</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  cluster.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">sync</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">  for</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> i </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> tid; i </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> array_size; i </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">+=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> blockDim.x </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> gridDim.x)</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  {</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> ldata </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> input[i];</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">    //Find the right histogram bin.</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> binid </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> ldata;</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (ldata </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">      binid </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    else</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (ldata </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">>=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> nbins)</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">      binid </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> nbins </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">-</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">    //Find destination block rank and offset for computing</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">    //distributed shared memory histogram</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> dst_block_rank </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)(binid </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">/</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> bins_per_block);</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> dst_offset </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> binid </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">%</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> bins_per_block;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">    //Pointer to target block shared memory</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    int</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> *</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">dst_smem </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> cluster.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">map_shared_rank</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(smem, dst_block_rank);</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">    //Perform atomic update of the histogram bin</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">    atomicAdd</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(dst_smem </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">+</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> dst_offset, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  // cluster synchronization is required to ensure all distributed shared</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  // memory operations are completed and no thread block exits while</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  // other thread blocks are still accessing distributed shared memory</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  cluster.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">sync</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">();</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  // Perform global memory histogram, using the local distributed memory histogram</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">  int</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> *</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">lbins </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> bins </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">+</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> cluster.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">block_rank</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">() </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> bins_per_block;</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">  for</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> i </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> threadIdx.x; i </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> bins_per_block; i </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">+=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> blockDim.x)</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  {</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">    atomicAdd</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">lbins[i], smem[i]);</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  }</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br><span class="line-number">35</span><br><span class="line-number">36</span><br><span class="line-number">37</span><br><span class="line-number">38</span><br><span class="line-number">39</span><br><span class="line-number">40</span><br><span class="line-number">41</span><br><span class="line-number">42</span><br><span class="line-number">43</span><br><span class="line-number">44</span><br><span class="line-number">45</span><br><span class="line-number">46</span><br><span class="line-number">47</span><br><span class="line-number">48</span><br><span class="line-number">49</span><br><span class="line-number">50</span><br><span class="line-number">51</span><br><span class="line-number">52</span><br><span class="line-number">53</span><br><span class="line-number">54</span><br><span class="line-number">55</span><br><span class="line-number">56</span><br><span class="line-number">57</span><br><span class="line-number">58</span><br><span class="line-number">59</span><br><span class="line-number">60</span><br></div></div>
+</details><p><em>建议结合下一段代码阅读</em></p>
+<blockquote>
+<ol>
+<li><code>__restrict__</code>是用来指定只有当前变量名和其派生可以访问对应的内存，即否决了变量别名的存在，<strong>可以很大程度上提高编译效率</strong></li>
+<li><code>size_t</code>是无符号整型</li>
+<li>cg::this_grid()，是一个工厂函数，返回当前代表网格的一个组对象（cg的一个cpp类实例），支持网格同步<code>sync</code>（区别于之前只能支持块内同步<code>syncthreads</code>）。
+<code>cg::this_grid().sync()</code>的硬件要求: 必须用<code>cudaLaunchCooperativeKernel</code>启动内核；计算能力不低于6.0；启动的Block数量不能超过应该SM的并发承载极限（这是因为同时要所有启动的Block表决，然而SM一次性可能装不下启动的Block，SM采取wave scheduling的方式调度，同步Block线程是没有问题的，实际中<code>cudaLaunchCooperativeKernel</code>会计算该问题，若SM装不下直接报错，避免死锁）</li>
+<li><code>thread_rank()</code>返回一个该线程在网格中唯一的整数索引</li>
+<li>cluster对象的成员函数：sync(), block_rank()(唯一索引), dim_blocks()(cluster的维度), num_blocks(), map_shared_rank(ptr, rank)(返回索引rank的Block中指针ptr所指向的共享内存地址)</li>
+<li>cpp语法：在 C/C++ 中，int *p; 执行 p + offset，编译器计算出的地址是：p 的数值 + (offset * sizeof(int))。</li>
+</ol>
+</blockquote>
+<p>上述内核可以在运行时启动，其集群大小取决于所需的分布式共享内存量。如果直方图足够小，可以仅容纳在一个线程块的共享内存中，用户可以用集群大小 1 来启动内核。以下代码片段展示了如何根据共享内存需求动态启动集群内核。</p>
+<div class="language-cpp vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">cpp</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">// 通过可扩展启动方式启动</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  //before all</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  //cudaLaunchConfig_t是主配置，通过numAttrs和attrs解耦扩展配置（cudaLaunchAttribute）</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  cudaLaunchConfig_t</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> config </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> {</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">};</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  config.gridDim </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> array_size </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">/</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> threads_per_block;</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  config.blockDim </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> threads_per_block;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  // cluster_size 取决于直方图大小。</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  // ( cluster_size == 1 ) 表示没有分布式共享内存，只有线程块本地的共享内存</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">  int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> cluster_size </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 2</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">;</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"> // 此处以大小 2 为例</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">  int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> nbins_per_block </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> nbins </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">/</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> cluster_size;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  // 动态共享内存大小是每个线程块的。</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  // 分布式共享内存大小 = cluster_size * nbins_per_block * sizeof(int)</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  config.dynamicSmemBytes </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> nbins_per_block </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">*</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> sizeof</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">  CUDA_CHECK</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(::</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">cudaFuncSetAttribute</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">((</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">void</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> *</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)clusterHist_kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, config.dynamicSmemBytes));</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  //将共享内存的最大值改为设置的动态共享内存的大小，避免默认共享内存不足</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  cudaLaunchAttribute attribute[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">];</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  //cudaLaunchAttribute 是一个结构体，用于描述一个特定的启动参数，这里将长度设为1</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  attribute[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">].id </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> cudaLaunchAttributeClusterDimension;</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  //cudaLaunchAttributeClusterDimension是一个枚举值，专门用来标识“线程块集群维度”这个属性</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  attribute[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">].val.clusterDim.x </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> cluster_size;</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  //val 是一个联合体（union），其具体内容由 id 决定，这里解读为clusterDim</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  attribute[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">].val.clusterDim.y </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  attribute[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">].val.clusterDim.z </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  config.numAttrs </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  //告知运行时该config结构体包含了多少个有效属性</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  config.attrs </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> attribute;</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  //将定义好的属性数组的地址赋值给 config 结构体中的 attrs 指针（指向cudaLaunchAttribute）</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">  cudaLaunchKernelEx</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x26;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">config, clusterHist_kernel, bins, nbins, nbins_per_block, input, array_size);</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br></div></div><blockquote>
+<p>上述直方图统计代码的思路是，将array的值分到clusters做并行统计（通过线程在grid中的唯一id来将值分给线程），每个cluster把nbins（如灰度图，值从0~255，nbins=256）按照bins_per_block分给每个block，smem[i]就是储存值为i的个数的变量，他的地址由bins_per_block*block_id(注：in cluster id)+offset=data_value来确定。在确定当前线程的值后，通过整除和取余计算出目标bin的地址，cluster通过map_shared_rank和atomicAdd将对应地址的量加一。</p>
+</blockquote>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_2-2-4-内存性能">
+<h2 id="_2-2-4-内存性能" tabindex="-1">2.2.4 内存性能 <a class="header-anchor" href="#_2-2-4-内存性能" aria-label="Permalink to &quot;2.2.4 内存性能&quot;">&ZeroWidthSpace;</a></h2>
+<p>本节讨论在 CUDA 内核中实现高内存吞吐量的一些通用原则和示例。</p>
+<h3 id="_2-2-4-1-合并的全局内存访问" tabindex="-1">2.2.4.1 合并的全局内存访问 <a class="header-anchor" href="#_2-2-4-1-合并的全局内存访问" aria-label="Permalink to &quot;2.2.4.1 合并的全局内存访问&quot;">&ZeroWidthSpace;</a></h3>
+<p>全局内存通过<strong>32字节的内存事务</strong>进行访问，当CUDA线程从全局内存访问数据时，线程束会根据访问数据的大小以及内存地址在线程中的分布情况，将线程的访问请求合并为若干内存事务。</p>
+<p>比如线程束内的线程访问连续的4个字节，一共128个字节，可以合并为4次内存事务，充分利用带宽。</p>
+<figure class="note-figure">
+  <img src="/cuda-notes/figures/2-2/global_mem_Merge_Access.png" alt="合并的全局内存访问">
+  <figcaption>图 1 合并的全局内存访问</figcaption>
+</figure>
+<p>实现合并内存访问最直接的方法是让连续的线程访问内存中连续的元素。但是实现合并内存访问并不要求连续的线程必须访问内存中连续的元素，这只是实现合并的典型方式。只要线程束中的所有线程以某种线性或置换的方式访问来自相同 32 字节内存段的元素，就会发生合并内存访问。</p>
+<h4 id="_2-2-4-1-1-全局内存访问-矩阵转置示例" tabindex="-1">2.2.4.1.1 全局内存访问-矩阵转置示例 <a class="header-anchor" href="#_2-2-4-1-1-全局内存访问-矩阵转置示例" aria-label="Permalink to &quot;2.2.4.1.1 全局内存访问-矩阵转置示例&quot;">&ZeroWidthSpace;</a></h4>
+<figure class="note-figure">
+  <img src="/cuda-notes/figures/2-2/transpose.png" alt="矩阵转置示例">
+  <figcaption>图 2 使用全局内存的矩阵转置#每个矩阵顶部和左侧的标签是二维线程块索引，也可以看作是图块索引，其中每个小方块表示一个将由二维线程块操作的矩阵图块。在此示例中，图块大小为 32 x 32 个元素，因此每个小方块代表矩阵的一个 32 x 32 图块。绿色阴影方块显示了一个示例图块在转置操作前后的位置。</figcaption>
+</figure>
+<div class="language-cpp vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">cpp</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">/* 宏：以行主序使用二维索引访问一维内存数组 */</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">/* ld 是主维度，即矩阵的列数     */</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">#define</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> INDX</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">( </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">row</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">col</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">ld</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> ) ( ( (row) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (ld) ) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">+</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (col) )</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">/* 朴素矩阵转置的 CUDA 内核 */</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">__global__ </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">void</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> naive_cuda_transpose</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> m, </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> *</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">a, </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> *</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">c )</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> myCol </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> blockDim.x </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> blockIdx.x </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">+</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> threadIdx.x;</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> myRow </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> blockDim.y </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> blockIdx.y </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">+</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> threadIdx.y;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">( myRow </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> m </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x26;&#x26;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> myCol </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> m )</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    {</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        c[</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">INDX</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">( myCol, myRow, m )] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> a[</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">INDX</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">( myRow, myCol, m )];</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    }</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"> /* end if */</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">}</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"> /* end naive_cuda_transpose */</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br></div></div><p>显然，随<code>threadIdx.x</code>的连续变化，<code>myCol</code>是连续变动的，此时<code>INDX( myRow, myCol, m )</code> 连续即读取是连续的，而<code>INDX( myCol, myRow, m )</code> 不连续即写入是不连续的，线程移动一位，写入的内存地址变化m位，当m&gt;=32时，访问完全割裂，无法合并到一次内存事务中。（此处m是矩阵的主维度）</p>
+<p>可以通过共享内存缓解。</p>
+<h3 id="_2-2-4-2-共享内存访问" tabindex="-1">2.2.4.2 共享内存访问 <a class="header-anchor" href="#_2-2-4-2-共享内存访问" aria-label="Permalink to &quot;2.2.4.2 共享内存访问&quot;">&ZeroWidthSpace;</a></h3>
+<blockquote>
+<p>预先知识</p>
+<ul>
+<li>共享内存有32个储存体，组织方式为连续的32位字映射到连续的储存体（具体地说，地址为为m的字节，其对应的储存体'ID'为m/4%32）</li>
+<li>每个储存体在一个时钟周期的带宽为32位</li>
+<li>线程束访问共享内存有以下情况：1. 每个线程和储存体双射，那么这一次访问带宽拉满；   2. 多个线程访问同一个储存体上的不同位置，会串行访问；3. 多个线程访问同一个储存体上相同位置，如果是读取，那么会广播给请求线程，如果是写入访问，那么会触发未定义行为，随机选取一个线程执行写入</li>
+<li>透过m/4%32循环的储存方式，储存体显然可以储存比128字节更多的数据，但是每一个时钟周期的带宽最大为128字节。实际中经常通过填充来改变访问步长，从而获得更大带宽。</li>
+</ul>
+</blockquote>
+<h4 id="_2-2-4-2-1-使用共享内存的矩阵转置示例" tabindex="-1">2.2.4.2.1 使用共享内存的矩阵转置示例 <a class="header-anchor" href="#_2-2-4-2-1-使用共享内存的矩阵转置示例" aria-label="Permalink to &quot;2.2.4.2.1 使用共享内存的矩阵转置示例&quot;">&ZeroWidthSpace;</a></h4>
+<p>本示例将共享内存视为用户管理的缓存，用于暂存来自全局内存的加载和储存操作，从而实现读取和写入的合并全局内存访问。</p>
+<div class="language-cpp vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">cpp</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">#define</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> THREADS_PER_BLOCK_X</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">32</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">#define</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> THREADS_PER_BLOCK_Y</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">32</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">#define</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> INDX</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">row</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">col</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">ld</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)((row)</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(ld)</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">+</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(col))</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">__global__ </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">void</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> smen_cuda_transpose</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> m, </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> *</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">a, </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> *</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">c)</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  __shared__ </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">float</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> smemArray[THREADS_PER_BLOCK_X][THREADS_PER_BLOCK_Y]</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  //确定当前负责的tile</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">  const</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> tileCol</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">blockDim.x</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">blockIdx.x;</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">  const</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> tileRow</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">blockDim.y</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">blockIdx.y;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  //从全局内存读取到共享内</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  smenArray[threadIdx.x][threadIdx.y]</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">a[</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">INDX</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">()]</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br></div></div>
+</section>
+</article>

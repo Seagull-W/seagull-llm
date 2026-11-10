@@ -1,0 +1,1678 @@
+<article class="native-document format-code" data-format="code" data-design="linux-notebook" aria-label="vLLM 源码架构分析">
+<header class="document-intro note-hero">
+<p class="note-kicker">vLLM 学习笔记</p>
+<h1 id="vllm-源码架构分析" tabindex="-1">vLLM 源码架构分析 <a class="header-anchor" href="#vllm-源码架构分析" aria-label="Permalink to &quot;vLLM 源码架构分析&quot;">&ZeroWidthSpace;</a></h1>
+<p class="note-deck">保留原稿的项目总览、引擎分层、执行器、底层算子、分布式通信与编译优化架构。</p>
+</header>
+<div class="document-lead">
+<blockquote>
+<p>vLLM (v0.x) — 高效大模型推理引擎
+源码路径: <code>Project/vLLM/vllm/</code>
+更新时间: 2026-07-06</p>
+</blockquote>
+<hr>
+</div>
+<section class="document-section note-panel" aria-labelledby="目录">
+<h2 id="目录" tabindex="-1">目录 <a class="header-anchor" href="#目录" aria-label="Permalink to &quot;目录&quot;">&ZeroWidthSpace;</a></h2>
+<ol>
+<li><a href="#_1-项目总览">项目总览</a></li>
+<li><a href="#_2-顶层核心数据结构和配置">顶层核心数据结构和配置</a></li>
+<li><a href="#_3-引擎层-engine">引擎层 (engine/)</a></li>
+<li><a href="#_4-v1-新一代引擎-v1">V1 新一代引擎 (v1/)</a></li>
+<li><a href="#_5-配置系统-config">配置系统 (config/)</a></li>
+<li><a href="#_6-服务入口-entrypoints">服务入口 (entrypoints/)</a></li>
+<li><a href="#_7-模型执行核心-model-executor">模型执行核心 (model_executor/)</a></li>
+<li><a href="#_8-c-cuda-底层算子-csrc">C++/CUDA 底层算子 (csrc/)</a></li>
+<li><a href="#_9-分布式通信-distributed">分布式通信 (distributed/)</a></li>
+<li><a href="#_10-多模态处理-multimodal">多模态处理 (multimodal/)</a></li>
+<li><a href="#_11-lora-适配器-lora">LoRA 适配器 (lora/)</a></li>
+<li><a href="#_12-推理和工具解析器">推理和工具解析器</a></li>
+<li><a href="#_13-分词器-tokenizers">分词器 (tokenizers/)</a></li>
+<li><a href="#_14-编译优化-compilation">编译优化 (compilation/)</a></li>
+<li><a href="#_15-硬件平台抽象-platforms">硬件平台抽象 (platforms/)</a></li>
+<li><a href="#_16-测试体系-tests">测试体系 (tests/)</a></li>
+<li><a href="#_17-工具模块汇总-utils-等">工具模块汇总 (utils/ 等)</a></li>
+<li><a href="#_18-架构总图">架构总图</a></li>
+</ol>
+<hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_1-项目总览">
+<h2 id="_1-项目总览" tabindex="-1">1. 项目总览 <a class="header-anchor" href="#_1-项目总览" aria-label="Permalink to &quot;1. 项目总览&quot;">&ZeroWidthSpace;</a></h2>
+<h3 id="_1-1-项目定位" tabindex="-1">1.1 项目定位 <a class="header-anchor" href="#_1-1-项目定位" aria-label="Permalink to &quot;1.1 项目定位&quot;">&ZeroWidthSpace;</a></h3>
+<p>vLLM 是一个快速、易用、低成本的大模型推理和服务库，最初由 UC Berkeley <strong>Sky Computing Lab</strong> 开发，现已成为最活跃的开源 AI 推理项目之一（2000+ 贡献者）。</p>
+<h3 id="_1-2-顶层目录结构" tabindex="-1">1.2 顶层目录结构 <a class="header-anchor" href="#_1-2-顶层目录结构" aria-label="Permalink to &quot;1.2 顶层目录结构&quot;">&ZeroWidthSpace;</a></h3>
+<details class="note-details"><summary>展开原代码（65 行）</summary>
+<div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>vllm/                         # 项目根目录</span></span>
+<span class="line"><span>├── vllm/                     # Python 主包（核心源码）</span></span>
+<span class="line"><span>│   ├── __init__.py           # 公共导出（惰性导入）</span></span>
+<span class="line"><span>│   ├── version.py            # 版本信息</span></span>
+<span class="line"><span>│   ├── connections.py        # 连接管理</span></span>
+<span class="line"><span>│   ├── envs.py               # 环境变量</span></span>
+<span class="line"><span>│   ├── env_override.py       # 环境变量覆盖</span></span>
+<span class="line"><span>│   ├── exceptions.py         # 异常定义</span></span>
+<span class="line"><span>│   ├── forward_context.py    # 前向上下文</span></span>
+<span class="line"><span>│   ├── logger.py             # 日志</span></span>
+<span class="line"><span>│   ├── sampling_params.py    # 采样参数</span></span>
+<span class="line"><span>│   ├── pooling_params.py     # 池化参数</span></span>
+<span class="line"><span>│   ├── logits_process.py     # Logits 处理</span></span>
+<span class="line"><span>│   ├── logprobs.py           # Logprob 数据结构</span></span>
+<span class="line"><span>│   ├── sequence.py           # 序列/中间张量</span></span>
+<span class="line"><span>│   ├── outputs.py            # 输出结构</span></span>
+<span class="line"><span>│   ├── inputs.py             # 输入格式</span></span>
+<span class="line"><span>│   ├── scalar_type.py        # 标量类型</span></span>
+<span class="line"><span>│   ├── model_inspection.py   # 模型检查</span></span>
+<span class="line"><span>│   ├── tasks.py              # 任务类型定义</span></span>
+<span class="line"><span>│   ├── engine/               # 引擎层（薄包装）</span></span>
+<span class="line"><span>│   ├── v1/                   # V1 新一代引擎</span></span>
+<span class="line"><span>│   ├── config/               # 统一配置系统</span></span>
+<span class="line"><span>│   ├── entrypoints/          # 服务入口（最大目录）</span></span>
+<span class="line"><span>│   ├── model_executor/       # 模型执行核心</span></span>
+<span class="line"><span>│   ├── distributed/          # 分布式通信</span></span>
+<span class="line"><span>│   ├── multimodal/           # 多模态处理</span></span>
+<span class="line"><span>│   ├── lora/                 # LoRA 适配器</span></span>
+<span class="line"><span>│   ├── compilation/          # 编译优化</span></span>
+<span class="line"><span>│   ├── platforms/            # 硬件平台抽象</span></span>
+<span class="line"><span>│   ├── parser/               # 结构化输出解析器</span></span>
+<span class="line"><span>│   ├── tool_parsers/         # 工具调用解析器</span></span>
+<span class="line"><span>│   ├── reasoning/            # 推理解析器</span></span>
+<span class="line"><span>│   ├── tokenizers/           # 分词器</span></span>
+<span class="line"><span>│   ├── kernels/              # 自定义内核</span></span>
+<span class="line"><span>│   ├── models/               # 平台定制模型</span></span>
+<span class="line"><span>│   ├── renderers/            # 渲染/反渲染</span></span>
+<span class="line"><span>│   ├── profiler/             # 性能分析</span></span>
+<span class="line"><span>│   ├── ray/                  # Ray 集成</span></span>
+<span class="line"><span>│   ├── tracing/              # 链路追踪</span></span>
+<span class="line"><span>│   ├── transformers_utils/   # Transformers 工具</span></span>
+<span class="line"><span>│   ├── triton_utils/         # Triton 工具</span></span>
+<span class="line"><span>│   ├── cute_utils/           # CuTe 工具</span></span>
+<span class="line"><span>│   ├── ir/                   # 中间表示</span></span>
+<span class="line"><span>│   ├── logging_utils/        # 日志工具</span></span>
+<span class="line"><span>│   ├── usage/                # 使用统计</span></span>
+<span class="line"><span>│   ├── plugins/              # 插件系统</span></span>
+<span class="line"><span>│   ├── assets/               # 多模态资产</span></span>
+<span class="line"><span>│   └── utils/                # 通用工具库</span></span>
+<span class="line"><span>├── csrc/                     # C++/CUDA 源码</span></span>
+<span class="line"><span>├── tests/                    # 测试套件</span></span>
+<span class="line"><span>├── benchmarks/               # 基准测试</span></span>
+<span class="line"><span>├── docs/                     # 文档</span></span>
+<span class="line"><span>├── examples/                 # 示例</span></span>
+<span class="line"><span>├── requirements/             # 依赖管理</span></span>
+<span class="line"><span>├── scripts/                  # 构建/部署脚本</span></span>
+<span class="line"><span>├── cmake/                    # CMake 构建</span></span>
+<span class="line"><span>├── rust/                     # Rust 扩展</span></span>
+<span class="line"><span>├── docker/                   # Docker 配置</span></span>
+<span class="line"><span>├── tools/                    # 开发工具</span></span>
+<span class="line"><span>├── .buildkite/               # CI 配置</span></span>
+<span class="line"><span>├── pyproject.toml            # 项目元数据</span></span>
+<span class="line"><span>├── CMakeLists.txt            # CMake 构建配置</span></span>
+<span class="line"><span>├── setup.py                  # 安装脚本</span></span>
+<span class="line"><span>└── README.md                 # 项目说明</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br><span class="line-number">35</span><br><span class="line-number">36</span><br><span class="line-number">37</span><br><span class="line-number">38</span><br><span class="line-number">39</span><br><span class="line-number">40</span><br><span class="line-number">41</span><br><span class="line-number">42</span><br><span class="line-number">43</span><br><span class="line-number">44</span><br><span class="line-number">45</span><br><span class="line-number">46</span><br><span class="line-number">47</span><br><span class="line-number">48</span><br><span class="line-number">49</span><br><span class="line-number">50</span><br><span class="line-number">51</span><br><span class="line-number">52</span><br><span class="line-number">53</span><br><span class="line-number">54</span><br><span class="line-number">55</span><br><span class="line-number">56</span><br><span class="line-number">57</span><br><span class="line-number">58</span><br><span class="line-number">59</span><br><span class="line-number">60</span><br><span class="line-number">61</span><br><span class="line-number">62</span><br><span class="line-number">63</span><br><span class="line-number">64</span><br><span class="line-number">65</span><br></div></div>
+</details><h3 id="_1-3-核心设计理念" tabindex="-1">1.3 核心设计理念 <a class="header-anchor" href="#_1-3-核心设计理念" aria-label="Permalink to &quot;1.3 核心设计理念&quot;">&ZeroWidthSpace;</a></h3>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>理念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>模块化</strong></td>
+<td>每个子系统都设计为可独立替换的模块</td>
+</tr>
+<tr>
+<td><strong>可插拔</strong></td>
+<td>注意力后端、线性层内核、MoE 实现都有多种替代方案</td>
+</tr>
+<tr>
+<td><strong>自动适配</strong></td>
+<td>平台检测完全自动化，模型架构通过注册表动态加载</td>
+</tr>
+<tr>
+<td><strong>双 ABI</strong></td>
+<td>旧版 ABI（CPU 兼容）和 Stable ABI（CUDA，vLLM 正向此迁移）</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_2-顶层核心数据结构和配置">
+<h2 id="_2-顶层核心数据结构和配置" tabindex="-1">2. 顶层核心数据结构和配置 <a class="header-anchor" href="#_2-顶层核心数据结构和配置" aria-label="Permalink to &quot;2. 顶层核心数据结构和配置&quot;">&ZeroWidthSpace;</a></h2>
+<h3 id="_2-1-根目录关键文件" tabindex="-1">2.1 根目录关键文件 <a class="header-anchor" href="#_2-1-根目录关键文件" aria-label="Permalink to &quot;2.1 根目录关键文件&quot;">&ZeroWidthSpace;</a></h3>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>核心类/内容</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td><code>LLM</code>, <code>LLMEngine</code>, <code>SamplingParams</code> 等</td>
+<td>公共 API 导出，采用惰性导入策略</td>
+</tr>
+<tr>
+<td><code>sampling_params.py</code></td>
+<td><code>SamplingParams</code>, <code>StructuredOutputsParams</code></td>
+<td>采样参数（temperature, top_p, top_k），结构化输出配置</td>
+</tr>
+<tr>
+<td><code>pooling_params.py</code></td>
+<td><code>PoolingParams</code></td>
+<td>池化任务参数</td>
+</tr>
+<tr>
+<td><code>logits_process.py</code></td>
+<td><code>LogitsProcessor</code>, <code>NoBadWordsLogitsProcessor</code></td>
+<td>Logits 处理器（禁止词表、偏置等）</td>
+</tr>
+<tr>
+<td><code>logprobs.py</code></td>
+<td><code>Logprob</code>, <code>FlatLogprobs</code>, <code>PromptLogprobs</code></td>
+<td>Logprob 数据结构，支持 OpenAI 兼容格式</td>
+</tr>
+<tr>
+<td><code>sequence.py</code></td>
+<td><code>IntermediateTensors</code></td>
+<td>流水线中间状态（hidden states, residuals）</td>
+</tr>
+<tr>
+<td><code>outputs.py</code></td>
+<td><code>CompletionOutput</code>, <code>PoolingOutput</code>, <code>RequestOutput</code></td>
+<td>请求输出结构（文本、token IDs、logprobs）</td>
+</tr>
+<tr>
+<td><code>inputs.py</code></td>
+<td><code>PromptType</code>, <code>TextPrompt</code>, <code>TokensPrompt</code></td>
+<td>输入格式定义</td>
+</tr>
+<tr>
+<td><code>scalar_type.py</code></td>
+<td><code>ScalarType</code></td>
+<td>自定义标量类型（sub-byte 数据类型）</td>
+</tr>
+<tr>
+<td><code>tasks.py</code></td>
+<td><code>SupportedTask</code>, <code>PoolingTask</code></td>
+<td>支持的任务类型（generate, embed, classify, score）</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="_2-2-惰性导入机制" tabindex="-1">2.2 惰性导入机制 <a class="header-anchor" href="#_2-2-惰性导入机制" aria-label="Permalink to &quot;2.2 惰性导入机制&quot;">&ZeroWidthSpace;</a></h3>
+<p><code>__init__.py</code> 使用 <code>MODULE_ATTRS</code> 字典映射，在 <code>__getattr__</code> 中动态导入，避免一次性加载所有依赖。</p>
+<hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_3-引擎层-engine">
+<h2 id="_3-引擎层-engine" tabindex="-1">3. 引擎层 (engine/) <a class="header-anchor" href="#_3-引擎层-engine" aria-label="Permalink to &quot;3. 引擎层 (engine/)&quot;">&ZeroWidthSpace;</a></h2>
+<p><strong>路径</strong>: <code>vllm/vllm/engine/</code></p>
+<p>当前版本中，<code>engine/</code> 是一个<strong>薄包装层</strong>，实际实现已迁移到 <code>v1/engine/</code>。</p>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>arg_utils.py</code></td>
+<td><code>EngineArgs</code>, <code>AsyncEngineArgs</code> — 解析命令行参数为 <code>VllmConfig</code></td>
+</tr>
+<tr>
+<td><code>protocol.py</code></td>
+<td><code>EngineClient</code> 抽象基类 — 定义 generate/encode/abort/健康检查接口</td>
+</tr>
+<tr>
+<td><code>async_llm_engine.py</code></td>
+<td>一行重定向: <code>AsyncLLMEngine = AsyncLLM</code> (来自 v1)</td>
+</tr>
+<tr>
+<td><code>llm_engine.py</code></td>
+<td>一行重定向: <code>LLMEngine = V1LLMEngine</code> (来自 v1)</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_4-v1-新一代引擎-v1">
+<h2 id="_4-v1-新一代引擎-v1" tabindex="-1">4. V1 新一代引擎 (v1/) <a class="header-anchor" href="#_4-v1-新一代引擎-v1" aria-label="Permalink to &quot;4. V1 新一代引擎 (v1/)&quot;">&ZeroWidthSpace;</a></h2>
+<p><strong>路径</strong>: <code>vllm/vllm/v1/</code></p>
+<p>vLLM 采用全新的 V1 架构，基于 <strong>ZeroMQ</strong> 进程间通信。</p>
+<h3 id="_4-1-目录结构" tabindex="-1">4.1 目录结构 <a class="header-anchor" href="#_4-1-目录结构" aria-label="Permalink to &quot;4.1 目录结构&quot;">&ZeroWidthSpace;</a></h3>
+<details class="note-details"><summary>展开原代码（82 行）</summary>
+<div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>v1/</span></span>
+<span class="line"><span>├── __init__.py</span></span>
+<span class="line"><span>├── engine/               # V1 引擎核心</span></span>
+<span class="line"><span>│   ├── async_llm.py      # 异步引擎</span></span>
+<span class="line"><span>│   ├── llm_engine.py     # 同步引擎</span></span>
+<span class="line"><span>│   ├── core.py           # 核心循环（ZeroMQ 通信）</span></span>
+<span class="line"><span>│   ├── core_client.py    # 核心客户端</span></span>
+<span class="line"><span>│   ├── coordinator.py    # 协调器</span></span>
+<span class="line"><span>│   ├── detokenizer.py    # 去分词器</span></span>
+<span class="line"><span>│   ├── input_processor.py # 输入处理器</span></span>
+<span class="line"><span>│   └── output_processor.py # 输出处理器</span></span>
+<span class="line"><span>├── executor/             # 分布式执行器</span></span>
+<span class="line"><span>│   ├── abstract.py       # Executor 抽象基类</span></span>
+<span class="line"><span>│   ├── uniproc_executor.py # 单进程</span></span>
+<span class="line"><span>│   ├── multiproc_executor.py # 多进程</span></span>
+<span class="line"><span>│   ├── ray_executor.py   # Ray 分布式</span></span>
+<span class="line"><span>│   ├── ray_executor_v2.py # Ray V2</span></span>
+<span class="line"><span>│   └── ray_utils.py     # Ray 工具</span></span>
+<span class="line"><span>├── core/                 # 调度核心</span></span>
+<span class="line"><span>│   ├── sched/            # 调度器</span></span>
+<span class="line"><span>│   │   ├── scheduler.py  # 调度器</span></span>
+<span class="line"><span>│   │   ├── async_scheduler.py # 异步调度器</span></span>
+<span class="line"><span>│   │   └── request_queue.py # 请求队列</span></span>
+<span class="line"><span>│   ├── block_pool.py     # 块池</span></span>
+<span class="line"><span>│   ├── kv_cache_manager.py # KV 缓存管理</span></span>
+<span class="line"><span>│   ├── kv_cache_coordinator.py # KV 缓存协调</span></span>
+<span class="line"><span>│   └── kv_cache_utils.py # KV 缓存工具</span></span>
+<span class="line"><span>├── attention/            # 注意力后端（可插拔）</span></span>
+<span class="line"><span>│   ├── backend.py        # AttentionBackend 抽象基类</span></span>
+<span class="line"><span>│   ├── selector.py       # 后端选择器</span></span>
+<span class="line"><span>│   ├── backends/         # 具体后端实现</span></span>
+<span class="line"><span>│   │   ├── flash_attn.py</span></span>
+<span class="line"><span>│   │   ├── flash_infer.py</span></span>
+<span class="line"><span>│   │   ├── triton_attention.py</span></span>
+<span class="line"><span>│   │   ├── mamba.py</span></span>
+<span class="line"><span>│   │   ├── cpu_attn.py</span></span>
+<span class="line"><span>│   │   ├── rocm_attn.py</span></span>
+<span class="line"><span>│   │   └── mla/          # MLA 注意力专用</span></span>
+<span class="line"><span>│   └── ops/              # 注意力算子</span></span>
+<span class="line"><span>├── worker/               # 工作器</span></span>
+<span class="line"><span>│   ├── gpu_model_runner.py # GPU 模型运行器</span></span>
+<span class="line"><span>│   ├── gpu_worker.py</span></span>
+<span class="line"><span>│   ├── cpu_model_runner.py</span></span>
+<span class="line"><span>│   ├── cpu_worker.py</span></span>
+<span class="line"><span>│   ├── xpu_model_runner.py</span></span>
+<span class="line"><span>│   ├── xpu_worker.py</span></span>
+<span class="line"><span>│   └── gpu/              # GPU 专用子模块</span></span>
+<span class="line"><span>│       ├── model_state.py</span></span>
+<span class="line"><span>│       ├── sampler.py</span></span>
+<span class="line"><span>│       └── spec_decode/</span></span>
+<span class="line"><span>├── sample/               # 采样模块</span></span>
+<span class="line"><span>│   ├── sampler.py</span></span>
+<span class="line"><span>│   ├── rejection_sampler.py</span></span>
+<span class="line"><span>│   └── logits_processor/</span></span>
+<span class="line"><span>├── metrics/              # 指标统计</span></span>
+<span class="line"><span>│   ├── stats.py</span></span>
+<span class="line"><span>│   ├── prometheus.py</span></span>
+<span class="line"><span>│   ├── loggers.py</span></span>
+<span class="line"><span>│   └── perf.py</span></span>
+<span class="line"><span>├── kv_offload/           # KV 缓存卸载</span></span>
+<span class="line"><span>│   ├── cpu_offload.py    # CPU 卸载（LRU/ARC）</span></span>
+<span class="line"><span>│   ├── tiering/          # 分层卸载（文件系统/对象存储/P2P）</span></span>
+<span class="line"><span>│   └── simple_kv_offload/</span></span>
+<span class="line"><span>├── spec_decode/          # 推测解码</span></span>
+<span class="line"><span>│   ├── eagle/            # EAGLE 推测</span></span>
+<span class="line"><span>│   ├── medusa/           # Medusa 推测</span></span>
+<span class="line"><span>│   ├── dflash/           # DFlash</span></span>
+<span class="line"><span>│   ├── draft_model/</span></span>
+<span class="line"><span>│   ├── ngram/</span></span>
+<span class="line"><span>│   └── suffix/</span></span>
+<span class="line"><span>├── structured_output/    # 结构化输出</span></span>
+<span class="line"><span>│   ├── outlines/</span></span>
+<span class="line"><span>│   ├── lmfe/</span></span>
+<span class="line"><span>│   ├── guidance/</span></span>
+<span class="line"><span>│   └── xgrammar/</span></span>
+<span class="line"><span>├── pool/                 # 池化</span></span>
+<span class="line"><span>│   └── late_interaction/</span></span>
+<span class="line"><span>├── cudagraph_dispatcher.py</span></span>
+<span class="line"><span>├── request.py</span></span>
+<span class="line"><span>├── outputs.py</span></span>
+<span class="line"><span>├── serial_utils.py</span></span>
+<span class="line"><span>└── utils.py</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br><span class="line-number">35</span><br><span class="line-number">36</span><br><span class="line-number">37</span><br><span class="line-number">38</span><br><span class="line-number">39</span><br><span class="line-number">40</span><br><span class="line-number">41</span><br><span class="line-number">42</span><br><span class="line-number">43</span><br><span class="line-number">44</span><br><span class="line-number">45</span><br><span class="line-number">46</span><br><span class="line-number">47</span><br><span class="line-number">48</span><br><span class="line-number">49</span><br><span class="line-number">50</span><br><span class="line-number">51</span><br><span class="line-number">52</span><br><span class="line-number">53</span><br><span class="line-number">54</span><br><span class="line-number">55</span><br><span class="line-number">56</span><br><span class="line-number">57</span><br><span class="line-number">58</span><br><span class="line-number">59</span><br><span class="line-number">60</span><br><span class="line-number">61</span><br><span class="line-number">62</span><br><span class="line-number">63</span><br><span class="line-number">64</span><br><span class="line-number">65</span><br><span class="line-number">66</span><br><span class="line-number">67</span><br><span class="line-number">68</span><br><span class="line-number">69</span><br><span class="line-number">70</span><br><span class="line-number">71</span><br><span class="line-number">72</span><br><span class="line-number">73</span><br><span class="line-number">74</span><br><span class="line-number">75</span><br><span class="line-number">76</span><br><span class="line-number">77</span><br><span class="line-number">78</span><br><span class="line-number">79</span><br><span class="line-number">80</span><br><span class="line-number">81</span><br><span class="line-number">82</span><br></div></div>
+</details><h3 id="_4-2-v1-架构改进" tabindex="-1">4.2 V1 架构改进 <a class="header-anchor" href="#_4-2-v1-架构改进" aria-label="Permalink to &quot;4.2 V1 架构改进&quot;">&ZeroWidthSpace;</a></h3>
+<ul>
+<li><strong>ZeroMQ IPC</strong>: 引擎核心基于 ZeroMQ 进行进程间通信</li>
+<li><strong>全新调度器</strong>: <code>core/sched/</code> 支持异步调度</li>
+<li><strong>可插拔注意力</strong>: 统一的 <code>AttentionBackend</code> 接口</li>
+<li><strong>KV 缓存卸载</strong>: 支持 CPU/分层存储/P2P 卸载</li>
+<li><strong>弹性专家并行</strong>: 动态扩展/收缩专家</li>
+<li><strong>完善的推测解码</strong>: EAGLE、Medusa、dFlash、N-gram 等</li>
+</ul>
+<hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_5-配置系统-config">
+<h2 id="_5-配置系统-config" tabindex="-1">5. 配置系统 (config/) <a class="header-anchor" href="#_5-配置系统-config" aria-label="Permalink to &quot;5. 配置系统 (config/)&quot;">&ZeroWidthSpace;</a></h2>
+<p><strong>路径</strong>: <code>vllm/vllm/config/</code></p>
+<p>所有子配置聚合到统一的 <strong><code>VllmConfig</code></strong> 中。</p>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>配置类</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>vllm.py</code></td>
+<td><code>VllmConfig</code></td>
+<td><strong>顶级配置容器</strong>，聚合所有子配置</td>
+</tr>
+<tr>
+<td><code>model.py</code></td>
+<td><code>ModelConfig</code></td>
+<td>模型架构、dtype、tokenizer</td>
+</tr>
+<tr>
+<td><code>cache.py</code></td>
+<td><code>CacheConfig</code></td>
+<td>KV 缓存（块大小、预算、前缀缓存算法）</td>
+</tr>
+<tr>
+<td><code>attention.py</code></td>
+<td><code>AttentionConfig</code></td>
+<td>注意力机制（sliding window 等）</td>
+</tr>
+<tr>
+<td><code>scheduler.py</code></td>
+<td><code>SchedulerConfig</code></td>
+<td>调度策略、最大并行数、交换策略</td>
+</tr>
+<tr>
+<td><code>parallel.py</code></td>
+<td><code>ParallelConfig</code></td>
+<td>分布式并行（TP/PP/DP 规模、后端）</td>
+</tr>
+<tr>
+<td><code>load.py</code></td>
+<td><code>LoadConfig</code></td>
+<td>权重加载策略</td>
+</tr>
+<tr>
+<td><code>quantization.py</code></td>
+<td><code>QuantizationConfigArgs</code></td>
+<td>量化参数</td>
+</tr>
+<tr>
+<td><code>lora.py</code></td>
+<td><code>LoRAConfig</code></td>
+<td>LoRA 适配器</td>
+</tr>
+<tr>
+<td><code>speculative.py</code></td>
+<td><code>SpeculativeConfig</code></td>
+<td>推测解码</td>
+</tr>
+<tr>
+<td><code>multimodal.py</code></td>
+<td><code>MultiModalConfig</code></td>
+<td>多模态输入</td>
+</tr>
+<tr>
+<td><code>offload.py</code></td>
+<td><code>OffloadConfig</code></td>
+<td>CPU/UVA 卸载</td>
+</tr>
+<tr>
+<td><code>kv_transfer.py</code></td>
+<td><code>KVTransferConfig</code></td>
+<td>跨节点 KV 传输（PD 分离）</td>
+</tr>
+<tr>
+<td><code>compilation.py</code></td>
+<td><code>CompilationConfig</code></td>
+<td>torch.compile / CUDA Graph</td>
+</tr>
+<tr>
+<td><code>diffusion.py</code></td>
+<td><code>DiffusionConfig</code></td>
+<td>扩散模型</td>
+</tr>
+<tr>
+<td><code>profiler.py</code></td>
+<td><code>ProfilerConfig</code></td>
+<td>性能分析</td>
+</tr>
+<tr>
+<td><code>mamba.py</code></td>
+<td><code>MambaConfig</code></td>
+<td>Mamba SSM</td>
+</tr>
+<tr>
+<td><code>pooler.py</code></td>
+<td><code>PoolerConfig</code></td>
+<td>池化层</td>
+</tr>
+<tr>
+<td><code>kernel.py</code></td>
+<td><code>KernelConfig</code></td>
+<td>内核选择（线性层后端、MoE 后端）</td>
+</tr>
+<tr>
+<td><code>reasoning.py</code></td>
+<td><code>ReasoningConfig</code></td>
+<td>推理/思维链</td>
+</tr>
+<tr>
+<td><code>speech_to_text.py</code></td>
+<td><code>SpeechToTextConfig</code></td>
+<td>语音识别</td>
+</tr>
+<tr>
+<td><code>structured_outputs.py</code></td>
+<td><code>StructuredOutputsConfig</code></td>
+<td>结构化输出</td>
+</tr>
+<tr>
+<td><code>observability.py</code></td>
+<td><code>ObservabilityConfig</code></td>
+<td>可观测性</td>
+</tr>
+<tr>
+<td><code>weight_transfer.py</code></td>
+<td><code>WeightTransferConfig</code></td>
+<td>权重传输</td>
+</tr>
+<tr>
+<td><code>model_arch.py</code></td>
+<td>—</td>
+<td>模型架构常量定义</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_6-服务入口-entrypoints">
+<h2 id="_6-服务入口-entrypoints" tabindex="-1">6. 服务入口 (entrypoints/) <a class="header-anchor" href="#_6-服务入口-entrypoints" aria-label="Permalink to &quot;6. 服务入口 (entrypoints/)&quot;">&ZeroWidthSpace;</a></h2>
+<p><strong>路径</strong>: <code>vllm/vllm/entrypoints/</code></p>
+<p>这是 vLLM 最大的目录，包含多种接入方式。</p>
+<h3 id="_6-1-目录结构" tabindex="-1">6.1 目录结构 <a class="header-anchor" href="#_6-1-目录结构" aria-label="Permalink to &quot;6.1 目录结构&quot;">&ZeroWidthSpace;</a></h3>
+<div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>entrypoints/</span></span>
+<span class="line"><span>├── llm.py              # Python 直接调用入口 LLM 类</span></span>
+<span class="line"><span>├── chat_utils.py       # 聊天模板工具</span></span>
+<span class="line"><span>├── launcher.py         # HTTP 服务器启动器（uvicorn）</span></span>
+<span class="line"><span>├── offline_utils.py    # 离线推理工具</span></span>
+<span class="line"><span>├── grpc_server.py      # gRPC 服务器</span></span>
+<span class="line"><span>├── openai/             # OpenAI 兼容 API</span></span>
+<span class="line"><span>│   ├── api_server.py   # FastAPI 主入口</span></span>
+<span class="line"><span>│   ├── cli_args.py     # CLI 参数</span></span>
+<span class="line"><span>│   ├── run_batch.py    # 批处理</span></span>
+<span class="line"><span>│   ├── chat_completion/ # Chat Completions (protocol, serving, api_router)</span></span>
+<span class="line"><span>│   ├── completion/     # Completions</span></span>
+<span class="line"><span>│   ├── engine/         # 引擎协议</span></span>
+<span class="line"><span>│   ├── models/         # 模型列表</span></span>
+<span class="line"><span>│   └── responses/      # Responses API</span></span>
+<span class="line"><span>├── anthropic/          # Anthropic Messages API</span></span>
+<span class="line"><span>│   ├── protocol.py     # 协议模型</span></span>
+<span class="line"><span>│   ├── serving.py      # 服务处理</span></span>
+<span class="line"><span>│   └── api_router.py   # 路由</span></span>
+<span class="line"><span>├── cli/                # 命令行工具</span></span>
+<span class="line"><span>│   ├── main.py         # 主入口（serve, bench, launch 等）</span></span>
+<span class="line"><span>│   ├── serve.py        # vllm serve</span></span>
+<span class="line"><span>│   ├── launch.py       # vllm launch</span></span>
+<span class="line"><span>│   ├── run_batch.py    # vllm run_batch</span></span>
+<span class="line"><span>│   ├── openai.py       # vllm openai</span></span>
+<span class="line"><span>│   ├── collect_env.py  # 环境收集</span></span>
+<span class="line"><span>│   └── benchmark/      # 基准测试子命令</span></span>
+<span class="line"><span>├── mcp/                # MCP 工具服务器</span></span>
+<span class="line"><span>│   ├── tool.py         # Tool 抽象基类</span></span>
+<span class="line"><span>│   └── tool_server.py  # MCP 工具服务器</span></span>
+<span class="line"><span>├── generate/           # 文本生成入口</span></span>
+<span class="line"><span>├── pooling/            # 池化入口（embed, classify, score）</span></span>
+<span class="line"><span>├── serve/              # 服务器基础设施</span></span>
+<span class="line"><span>│   ├── engine/         # 引擎服务</span></span>
+<span class="line"><span>│   ├── lora/           # LoRA 管理</span></span>
+<span class="line"><span>│   └── tokenize/       # 分词服务</span></span>
+<span class="line"><span>├── scale_out/          # 偏出推理</span></span>
+<span class="line"><span>├── speech_to_text/     # 语音服务</span></span>
+<span class="line"><span>└── anthropic/          # Anthropic API</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br><span class="line-number">35</span><br><span class="line-number">36</span><br><span class="line-number">37</span><br><span class="line-number">38</span><br><span class="line-number">39</span><br></div></div><h3 id="_6-2-子模块要点" tabindex="-1">6.2 子模块要点 <a class="header-anchor" href="#_6-2-子模块要点" aria-label="Permalink to &quot;6.2 子模块要点&quot;">&ZeroWidthSpace;</a></h3>
+<p><strong>MCP 工具服务器</strong> (<code>mcp/</code>):</p>
+<ul>
+<li><code>Tool</code> 抽象基类 + <code>HarmonyBrowserTool</code>, <code>HarmonyPythonTool</code></li>
+<li><code>ToolServer</code> — 通过 SSE 连接 MCP 服务器，适配为 Harmony 工具</li>
+</ul>
+<p><strong>Anthropic API</strong> (<code>anthropic/</code>):</p>
+<ul>
+<li>支持 text, image, tool_use, thinking 等多种 content block</li>
+<li>将 Anthropic Messages API 请求转换为 OpenAI 兼容格式</li>
+</ul>
+<p><strong>OpenAI API</strong> (<code>openai/</code>):</p>
+<ul>
+<li>完整的 Chat Completions / Completions / Responses API</li>
+<li>支持流式、工具调用、结构化输出</li>
+<li>模型列表管理、批处理、DP supervisor</li>
+</ul>
+<hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_7-模型执行核心-model-executor">
+<h2 id="_7-模型执行核心-model-executor" tabindex="-1">7. 模型执行核心 (model_executor/) <a class="header-anchor" href="#_7-模型执行核心-model-executor" aria-label="Permalink to &quot;7. 模型执行核心 (model_executor/)&quot;">&ZeroWidthSpace;</a></h2>
+<p><strong>路径</strong>: <code>vllm/vllm/model_executor/</code></p>
+<h3 id="_7-1-模块结构" tabindex="-1">7.1 模块结构 <a class="header-anchor" href="#_7-1-模块结构" aria-label="Permalink to &quot;7.1 模块结构&quot;">&ZeroWidthSpace;</a></h3>
+<div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>model_executor/</span></span>
+<span class="line"><span>├── layers/             # 神经网络层</span></span>
+<span class="line"><span>│   ├── attention/      # 注意力层实现</span></span>
+<span class="line"><span>│   ├── fused_moe/      # MoE 融合层</span></span>
+<span class="line"><span>│   ├── fla/            # 快速线性注意力</span></span>
+<span class="line"><span>│   ├── activation.py   # 激活函数</span></span>
+<span class="line"><span>│   ├── conv.py         # 卷积层</span></span>
+<span class="line"><span>│   ├── layernorm.py    # 归一化层</span></span>
+<span class="line"><span>│   ├── linear.py       # 线性层</span></span>
+<span class="line"><span>│   ├── mla.py          # MLA 辅助层</span></span>
+<span class="line"><span>│   └── resampler.py    # 重采样层</span></span>
+<span class="line"><span>├── models/             # 120+ 种模型架构</span></span>
+<span class="line"><span>│   ├── registry.py     # 模型注册中心（200+ 架构）</span></span>
+<span class="line"><span>│   ├── llama.py        # LLaMA 系列</span></span>
+<span class="line"><span>│   ├── qwen2.py        # Qwen2</span></span>
+<span class="line"><span>│   ├── qwen3.py        # Qwen3</span></span>
+<span class="line"><span>│   ├── deepseek_v32.py</span></span>
+<span class="line"><span>│   ├── gemma3.py</span></span>
+<span class="line"><span>│   ├── gemma4.py</span></span>
+<span class="line"><span>│   ├── mixtral.py</span></span>
+<span class="line"><span>│   ├── chatglm.py</span></span>
+<span class="line"><span>│   ├── internvl.py</span></span>
+<span class="line"><span>│   └── ... (100+ 更多)</span></span>
+<span class="line"><span>├── kernels/            # 高性能内核</span></span>
+<span class="line"><span>│   ├── attention/      # 注意力内核</span></span>
+<span class="line"><span>│   ├── linear/         # 线性层内核（13+ 后端）</span></span>
+<span class="line"><span>│   │   ├── mixed_precision/ # Marlin, EXL2, Cutlass, Machete...</span></span>
+<span class="line"><span>│   │   ├── mxfp4/      # MXFP4</span></span>
+<span class="line"><span>│   │   ├── mxfp8/      # MXFP8</span></span>
+<span class="line"><span>│   │   ├── nvfp4/      # NVFP4</span></span>
+<span class="line"><span>│   │   └── scaled_mm/  # 缩放矩阵乘法</span></span>
+<span class="line"><span>│   ├── mhc/            # 多头卷积内核</span></span>
+<span class="line"><span>│   └── fused_moe/      # MoE 内核</span></span>
+<span class="line"><span>├── offloader/          # 权重卸载</span></span>
+<span class="line"><span>├── warmup/             # 预热</span></span>
+<span class="line"><span>├── custom_op.py        # 自定义操作</span></span>
+<span class="line"><span>├── parameter.py        # 参数类型</span></span>
+<span class="line"><span>└── utils.py            # 工具函数</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br><span class="line-number">35</span><br><span class="line-number">36</span><br><span class="line-number">37</span><br><span class="line-number">38</span><br></div></div><h3 id="_7-2-注意力层概览" tabindex="-1">7.2 注意力层概览 <a class="header-anchor" href="#_7-2-注意力层概览" aria-label="Permalink to &quot;7.2 注意力层概览&quot;">&ZeroWidthSpace;</a></h3>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>文件/类</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Attention</code></td>
+<td>标准多头注意力</td>
+</tr>
+<tr>
+<td><code>CrossAttention</code></td>
+<td>交叉注意力（编码器-解码器）</td>
+</tr>
+<tr>
+<td><code>MLAAttention</code></td>
+<td>多头潜在注意力（DeepSeek MLA）</td>
+</tr>
+<tr>
+<td><code>ChunkedLocalAttention</code></td>
+<td>分块局部注意力</td>
+</tr>
+<tr>
+<td><code>EncoderOnlyAttention</code></td>
+<td>仅编码器注意力</td>
+</tr>
+<tr>
+<td><code>MMEncoderAttention</code></td>
+<td>多模态编码器注意力</td>
+</tr>
+<tr>
+<td><code>RSWAAttention</code></td>
+<td>循环滑动窗口注意力</td>
+</tr>
+<tr>
+<td><code>StaticSinkAttention</code></td>
+<td>静态汇点注意力</td>
+</tr>
+<tr>
+<td><code>PrefillPrefixLMAttention</code></td>
+<td>前缀 LM 预填充注意力</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="_7-3-模型数量统计" tabindex="-1">7.3 模型数量统计 <a class="header-anchor" href="#_7-3-模型数量统计" aria-label="Permalink to &quot;7.3 模型数量统计&quot;">&ZeroWidthSpace;</a></h3>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>模型家族</th>
+<th>文件数</th>
+<th>代表模型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLaMA</td>
+<td>llama.py, llama4.py, mllama4.py</td>
+<td>LLaMA 3/4</td>
+</tr>
+<tr>
+<td>Qwen</td>
+<td>qwen2.py, qwen2_vl.py, qwen2_moe.py, qwen3.py, qwen3_vl.py</td>
+<td>Qwen2/3</td>
+</tr>
+<tr>
+<td>DeepSeek</td>
+<td>deepseek_v32.py, deepseek_v4.py</td>
+<td>DeepSeek V3/V4</td>
+</tr>
+<tr>
+<td>Gemma</td>
+<td>gemma.py, gemma2.py, gemma3.py, gemma3n.py, gemma4.py</td>
+<td>Gemma 系列</td>
+</tr>
+<tr>
+<td>Mistral</td>
+<td>mistral.py, mistral3.py, mixtral.py</td>
+<td>Mistral/Mixtral</td>
+</tr>
+<tr>
+<td>Phi</td>
+<td>phi.py, phi3.py, phi3v.py, phi4mm.py</td>
+<td>Phi 系列</td>
+</tr>
+<tr>
+<td>ChatGLM</td>
+<td>chatglm.py, glm.py, glm4.py, glm4v.py</td>
+<td>ChatGLM/GLM</td>
+</tr>
+<tr>
+<td><strong>总计</strong></td>
+<td><strong>120+ 文件</strong></td>
+<td><strong>200+ 已注册架构</strong></td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_8-c-cuda-底层算子-csrc">
+<h2 id="_8-c-cuda-底层算子-csrc" tabindex="-1">8. C++/CUDA 底层算子 (csrc/) <a class="header-anchor" href="#_8-c-cuda-底层算子-csrc" aria-label="Permalink to &quot;8. C++/CUDA 底层算子 (csrc/)&quot;">&ZeroWidthSpace;</a></h2>
+<p><strong>路径</strong>: <code>vllm/csrc/</code></p>
+<p>这是 vLLM 性能的关键所在，实现了所有高性能 GPU/CPU 内核。</p>
+<h3 id="_8-1-整体架构" tabindex="-1">8.1 整体架构 <a class="header-anchor" href="#_8-1-整体架构" aria-label="Permalink to &quot;8.1 整体架构&quot;">&ZeroWidthSpace;</a></h3>
+<div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>csrc/</span></span>
+<span class="line"><span>├── attention/              # Attention 内核模板</span></span>
+<span class="line"><span>│   ├── attention_generic.cuh</span></span>
+<span class="line"><span>│   ├── dtype_bfloat16.cuh  # bf16 特化</span></span>
+<span class="line"><span>│   ├── dtype_float16.cuh   # fp16 特化</span></span>
+<span class="line"><span>│   ├── dtype_float32.cuh   # fp32 特化</span></span>
+<span class="line"><span>│   └── dtype_fp8.cuh       # fp8 特化</span></span>
+<span class="line"><span>├── libtorch_stable/        # Stable ABI 新版实现</span></span>
+<span class="line"><span>│   ├── attention/          # 高级 Attention</span></span>
+<span class="line"><span>│   │   ├── mla/            # Blackwell MLA 解码</span></span>
+<span class="line"><span>│   │   └── merge_attn_states.cu</span></span>
+<span class="line"><span>│   ├── quantization/       # 量化内核套件</span></span>
+<span class="line"><span>│   │   ├── marlin/         # Marlin GEMM (GPTQ/AWQ)</span></span>
+<span class="line"><span>│   │   ├── gptq/           # GPTQ (2/3/4/8-bit)</span></span>
+<span class="line"><span>│   │   ├── awq/            # AWQ GEMM</span></span>
+<span class="line"><span>│   │   ├── cutlass_w4a8/   # W4A8 CUTLASS</span></span>
+<span class="line"><span>│   │   ├── w8a8/cutlass/   # W8A8（SM75-SM120 全覆盖）</span></span>
+<span class="line"><span>│   │   ├── fp4/            # NVFP4/MXFP4</span></span>
+<span class="line"><span>│   │   ├── machete/        # Hopper 混合精度 GEMM</span></span>
+<span class="line"><span>│   │   └── fused_kernels/  # 融合量化</span></span>
+<span class="line"><span>│   ├── moe/                # MoE 内核</span></span>
+<span class="line"><span>│   │   ├── marlin_moe_wna16/</span></span>
+<span class="line"><span>│   │   ├── grouped_topk_kernels.cu</span></span>
+<span class="line"><span>│   │   ├── topk_softmax_kernels.cu</span></span>
+<span class="line"><span>│   │   └── dsv3_router_gemm.cu</span></span>
+<span class="line"><span>│   ├── cache_kernels.cu    # KV 缓存操作</span></span>
+<span class="line"><span>│   ├── custom_all_reduce.cu # 自定义 AllReduce</span></span>
+<span class="line"><span>│   ├── layernorm_kernels.cu</span></span>
+<span class="line"><span>│   ├── pos_encoding_kernels.cu</span></span>
+<span class="line"><span>│   ├── sampler.cu</span></span>
+<span class="line"><span>│   └── activation_kernels.cu</span></span>
+<span class="line"><span>├── cpu/                    # CPU 内核</span></span>
+<span class="line"><span>│   ├── cpu_attn.cpp        # CPU Attention</span></span>
+<span class="line"><span>│   ├── cpu_fused_moe.cpp   # CPU MoE</span></span>
+<span class="line"><span>│   ├── micro_gemm/         # AMX/NEON/RVV 微 GEMM</span></span>
+<span class="line"><span>│   └── sgl-kernels/        # SGL 内核</span></span>
+<span class="line"><span>├── quantization/           # 量化工具</span></span>
+<span class="line"><span>│   └── w8a8/fp8/           # FP8 工具（AMD/NVIDIA）</span></span>
+<span class="line"><span>├── rocm/                   # AMD GPU 内核</span></span>
+<span class="line"><span>│   ├── attention.cu</span></span>
+<span class="line"><span>│   ├── q_gemm_rdna3.cu</span></span>
+<span class="line"><span>│   └── moe_q_gemm_rdna3.cu</span></span>
+<span class="line"><span>├── cutlass_extensions/     # CUTLASS 扩展</span></span>
+<span class="line"><span>├── quickreduce/            # 快速 AllReduce</span></span>
+<span class="line"><span>├── ops.h                   # 旧版 ABI op 声明</span></span>
+<span class="line"><span>├── torch_bindings.cpp      # PyTorch 绑定入口</span></span>
+<span class="line"><span>└── dispatch_utils.h        # 调度工具</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br><span class="line-number">35</span><br><span class="line-number">36</span><br><span class="line-number">37</span><br><span class="line-number">38</span><br><span class="line-number">39</span><br><span class="line-number">40</span><br><span class="line-number">41</span><br><span class="line-number">42</span><br><span class="line-number">43</span><br><span class="line-number">44</span><br><span class="line-number">45</span><br><span class="line-number">46</span><br><span class="line-number">47</span><br></div></div><h3 id="_8-2-支持的-gpu-架构" tabindex="-1">8.2 支持的 GPU 架构 <a class="header-anchor" href="#_8-2-支持的-gpu-架构" aria-label="Permalink to &quot;8.2 支持的 GPU 架构&quot;">&ZeroWidthSpace;</a></h3>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>架构</th>
+<th>SM 版本</th>
+<th>量化支持</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Turing</td>
+<td>SM75</td>
+<td>INT8</td>
+</tr>
+<tr>
+<td>Ampere</td>
+<td>SM80/SM89</td>
+<td>FP8, INT8, W4A8</td>
+</tr>
+<tr>
+<td>Hopper</td>
+<td>SM90</td>
+<td>FP8, INT8, NVFP4, W4A8</td>
+</tr>
+<tr>
+<td>Blackwell</td>
+<td>SM100/SM120</td>
+<td>NVFP4, MXFP4, MLA</td>
+</tr>
+<tr>
+<td>RDNA3</td>
+<td>AMD</td>
+<td>W4A16, FP8</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="_8-3-主要算子分类" tabindex="-1">8.3 主要算子分类 <a class="header-anchor" href="#_8-3-主要算子分类" aria-label="Permalink to &quot;8.3 主要算子分类&quot;">&ZeroWidthSpace;</a></h3>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>算子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>量化 GEMM</strong></td>
+<td>marlin_gemm, gptq_gemm, awq_gemm, cutlass_scaled_mm, machete_mm, cutlass_w4a8_mm</td>
+</tr>
+<tr>
+<td><strong>FP4</strong></td>
+<td>cutlass_scaled_fp4_mm, cutlass_mxfp4_group_mm, nvfp4_scaled_mm</td>
+</tr>
+<tr>
+<td><strong>归一化</strong></td>
+<td>rms_norm, fused_add_rms_norm, rms_norm_dynamic_per_token_quant</td>
+</tr>
+<tr>
+<td><strong>激活</strong></td>
+<td>silu_and_mul, gelu_and_mul, fatrelu_and_mul, swigluoai_and_mul</td>
+</tr>
+<tr>
+<td><strong>位置编码</strong></td>
+<td>rotary_embedding, fused_qk_norm_rope</td>
+</tr>
+<tr>
+<td><strong>缓存</strong></td>
+<td>swap_blocks, reshape_and_cache, concat_and_cache_mla</td>
+</tr>
+<tr>
+<td><strong>采样</strong></td>
+<td>top_k_softmax, persistent_topk, cooperative_topk</td>
+</tr>
+<tr>
+<td><strong>通信</strong></td>
+<td>custom_all_reduce, init_custom_ar</td>
+</tr>
+<tr>
+<td><strong>MoE</strong></td>
+<td>cutlass_moe_mm, topk_softmax, grouped_topk</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_9-分布式通信-distributed">
+<h2 id="_9-分布式通信-distributed" tabindex="-1">9. 分布式通信 (distributed/) <a class="header-anchor" href="#_9-分布式通信-distributed" aria-label="Permalink to &quot;9. 分布式通信 (distributed/)&quot;">&ZeroWidthSpace;</a></h2>
+<p><strong>路径</strong>: <code>vllm/vllm/distributed/</code></p>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>文件/子目录</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>parallel_state.py</code></td>
+<td>分布式状态管理（world_size, rank, TP/PP/DP 进程组）</td>
+</tr>
+<tr>
+<td><code>communication_op.py</code></td>
+<td>通信算子（allreduce, broadcast 等）</td>
+</tr>
+<tr>
+<td><code>utils.py</code></td>
+<td>分布式工具函数</td>
+</tr>
+<tr>
+<td><code>kv_events.py</code></td>
+<td>KV 缓存事件发布（跨节点 KV 传输）</td>
+</tr>
+<tr>
+<td><code>nixl_utils.py</code></td>
+<td>NVIDIA NIXL 通信工具</td>
+</tr>
+<tr>
+<td><code>device_communicators/</code></td>
+<td>设备间通信实现（14 个文件）</td>
+</tr>
+<tr>
+<td>├── <code>pynccl.py</code></td>
+<td>NCCL 包装器</td>
+</tr>
+<tr>
+<td>├── <code>custom_all_reduce.py</code></td>
+<td>自定义 AllReduce</td>
+</tr>
+<tr>
+<td>├── <code>shm_broadcast.py</code></td>
+<td>共享内存广播</td>
+</tr>
+<tr>
+<td>├── <code>cuda_communicator.py</code></td>
+<td>CUDA 通信器</td>
+</tr>
+<tr>
+<td>├── <code>cpu_communicator.py</code></td>
+<td>CPU 通信器</td>
+</tr>
+<tr>
+<td>├── <code>xpu_communicator.py</code></td>
+<td>XPU 通信器</td>
+</tr>
+<tr>
+<td>├── <code>ray_communicator.py</code></td>
+<td>Ray 通信器</td>
+</tr>
+<tr>
+<td>└── <code>flashinfer_all_reduce.py</code></td>
+<td>FlashInfer AllReduce</td>
+</tr>
+<tr>
+<td><code>ec_transfer/</code></td>
+<td>纠删码传输（弹性推理）</td>
+</tr>
+<tr>
+<td><code>elastic_ep/</code></td>
+<td>弹性专家并行</td>
+</tr>
+<tr>
+<td><code>eplb/</code></td>
+<td>专家并行负载均衡</td>
+</tr>
+<tr>
+<td><code>kv_transfer/</code></td>
+<td>KV 缓存跨节点传输（PD 分离）</td>
+</tr>
+<tr>
+<td>│ └── backends/</td>
+<td>mooncake, nixl, hf3fs, offloading, lmcache, flexkv, moriio</td>
+</tr>
+<tr>
+<td><code>weight_transfer/</code></td>
+<td>权重传输（RL 训练权重同步）</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="并行策略" tabindex="-1">并行策略 <a class="header-anchor" href="#并行策略" aria-label="Permalink to &quot;并行策略&quot;">&ZeroWidthSpace;</a></h3>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>策略</th>
+<th>缩写</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tensor Parallelism</td>
+<td>TP</td>
+<td>张量并行</td>
+</tr>
+<tr>
+<td>Pipeline Parallelism</td>
+<td>PP</td>
+<td>流水线并行</td>
+</tr>
+<tr>
+<td>Data Parallelism</td>
+<td>DP</td>
+<td>数据并行</td>
+</tr>
+<tr>
+<td>Expert Parallelism</td>
+<td>EP</td>
+<td>专家并行</td>
+</tr>
+<tr>
+<td>Context Parallelism</td>
+<td>CP</td>
+<td>上下文并行</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_10-多模态处理-multimodal">
+<h2 id="_10-多模态处理-multimodal" tabindex="-1">10. 多模态处理 (multimodal/) <a class="header-anchor" href="#_10-多模态处理-multimodal" aria-label="Permalink to &quot;10. 多模态处理 (multimodal/)&quot;">&ZeroWidthSpace;</a></h2>
+<p><strong>路径</strong>: <code>vllm/vllm/multimodal/</code></p>
+<div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>multimodal/</span></span>
+<span class="line"><span>├── inputs.py           # 输入类型（ImageItem, VideoItem, AudioItem 等）</span></span>
+<span class="line"><span>├── parse.py            # 多模态数据解析器</span></span>
+<span class="line"><span>├── registry.py         # 多模态处理器注册中心</span></span>
+<span class="line"><span>├── audio.py            # 音频处理（重采样、声道缩减）</span></span>
+<span class="line"><span>├── image.py            # 图像处理（缩放、EXIF、RGBA 转换）</span></span>
+<span class="line"><span>├── video.py            # 视频处理（帧提取）</span></span>
+<span class="line"><span>├── cache.py            # 处理器缓存</span></span>
+<span class="line"><span>├── encoder_budget.py   # 编码预算估算</span></span>
+<span class="line"><span>├── evs.py              # 高效视频摘要（token 剪枝）</span></span>
+<span class="line"><span>├── gpu_ipc_memory.py   # GPU IPC 内存池</span></span>
+<span class="line"><span>├── hasher.py           # 多模态数据哈希</span></span>
+<span class="line"><span>├── utils.py            # 工具函数</span></span>
+<span class="line"><span>├── media/              # 媒体 IO 层</span></span>
+<span class="line"><span>│   ├── base.py         # MediaIO 抽象基类</span></span>
+<span class="line"><span>│   ├── connector.py    # 媒体连接器（HTTP/HTTPS/Data URI）</span></span>
+<span class="line"><span>│   ├── image.py        # 图像加载/编码</span></span>
+<span class="line"><span>│   ├── audio.py        # 音频加载/编码</span></span>
+<span class="line"><span>│   └── video.py        # 视频加载</span></span>
+<span class="line"><span>└── processing/         # 多模态处理管线</span></span>
+<span class="line"><span>    ├── context.py      # 处理上下文</span></span>
+<span class="line"><span>    ├── dummy_inputs.py # 虚拟输入构建</span></span>
+<span class="line"><span>    ├── inputs.py       # 处理器输入封装</span></span>
+<span class="line"><span>    └── processor.py    # 核心多模态处理器</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br></div></div><hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_11-lora-适配器-lora">
+<h2 id="_11-lora-适配器-lora" tabindex="-1">11. LoRA 适配器 (lora/) <a class="header-anchor" href="#_11-lora-适配器-lora" aria-label="Permalink to &quot;11. LoRA 适配器 (lora/)&quot;">&ZeroWidthSpace;</a></h2>
+<p><strong>路径</strong>: <code>vllm/vllm/lora/</code></p>
+<div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>lora/</span></span>
+<span class="line"><span>├── request.py          # LoRARequest（name, id, path）</span></span>
+<span class="line"><span>├── lora_model.py       # LoRAModel 加载器</span></span>
+<span class="line"><span>├── lora_weights.py     # LoRALayerWeights（lora_a, lora_b, scaling）</span></span>
+<span class="line"><span>├── model_manager.py    # LoRAModelManager + LRU 缓存</span></span>
+<span class="line"><span>├── worker_manager.py   # Worker 端 LoRA 管理</span></span>
+<span class="line"><span>├── resolver.py         # LoRA 解析器（本地文件系统 / S3）</span></span>
+<span class="line"><span>├── peft_helper.py      # PEFT 配置解析</span></span>
+<span class="line"><span>├── utils.py            # 模块替换、目标匹配</span></span>
+<span class="line"><span>├── layers/             # LoRA 层实现</span></span>
+<span class="line"><span>│   ├── base.py         # BaseLayerWithLoRA 基类</span></span>
+<span class="line"><span>│   ├── base_linear.py  # Column/Row Parallel LoRA</span></span>
+<span class="line"><span>│   ├── fused_moe.py    # MoE LoRA</span></span>
+<span class="line"><span>│   ├── logits_processor.py</span></span>
+<span class="line"><span>│   └── utils.py</span></span>
+<span class="line"><span>├── ops/                # LoRA 算子</span></span>
+<span class="line"><span>│   ├── torch_ops/      # PyTorch 实现（shrink, expand）</span></span>
+<span class="line"><span>│   ├── triton_ops/     # Triton 实现（含 FP8 变体）</span></span>
+<span class="line"><span>│   └── xpu_ops/        # XPU 实现</span></span>
+<span class="line"><span>└── punica_wrapper/     # Punica 包装器（GPU/CPU/XPU）</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br></div></div><hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_12-推理和工具解析器">
+<h2 id="_12-推理和工具解析器" tabindex="-1">12. 推理和工具解析器 <a class="header-anchor" href="#_12-推理和工具解析器" aria-label="Permalink to &quot;12. 推理和工具解析器&quot;">&ZeroWidthSpace;</a></h2>
+<p>vLLM 对主流模型提供了完善的推理内容提取和工具调用解析，分为三个层次：</p>
+<h3 id="_12-1-推理解析器-reasoning" tabindex="-1">12.1 推理解析器 (reasoning/) <a class="header-anchor" href="#_12-1-推理解析器-reasoning" aria-label="Permalink to &quot;12.1 推理解析器 (reasoning/)&quot;">&ZeroWidthSpace;</a></h3>
+<p><strong>路径</strong>: <code>vllm/vllm/reasoning/</code></p>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>模型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>abs_reasoning_parsers.py</code></td>
+<td><code>ReasoningParser</code> 抽象基类</td>
+</tr>
+<tr>
+<td><code>basic_parsers.py</code></td>
+<td>基础实现</td>
+</tr>
+<tr>
+<td><code>deepseek_r1_reasoning_parser.py</code></td>
+<td>DeepSeek-R1</td>
+</tr>
+<tr>
+<td><code>deepseek_v3_reasoning_parser.py</code></td>
+<td>DeepSeek-V3</td>
+</tr>
+<tr>
+<td><code>deepseek_v4_engine_reasoning_parser.py</code></td>
+<td>DeepSeek-V4</td>
+</tr>
+<tr>
+<td><code>qwen3_engine_reasoning_parser.py</code></td>
+<td>Qwen3</td>
+</tr>
+<tr>
+<td><code>gemma4_engine_reasoning_parser.py</code></td>
+<td>Gemma 4</td>
+</tr>
+<tr>
+<td><code>minimax_m3_reasoning_parser.py</code></td>
+<td>MiniMax M3</td>
+</tr>
+<tr>
+<td><code>mistral_reasoning_parser.py</code></td>
+<td>Mistral</td>
+</tr>
+<tr>
+<td><code>olmo3_reasoning_parser.py</code></td>
+<td>OLMo 3</td>
+</tr>
+<tr>
+<td><code>kimi_k2_reasoning_parser.py</code></td>
+<td>Kimi K2</td>
+</tr>
+<tr>
+<td><code>step3_reasoning_parser.py</code>, <code>step3p5_reasoning_parser.py</code></td>
+<td>Step 3/3.5</td>
+</tr>
+<tr>
+<td><code>cohere_command_reasoning_parser.py</code></td>
+<td>Cohere Command</td>
+</tr>
+<tr>
+<td><code>granite_reasoning_parser.py</code></td>
+<td>Granite</td>
+</tr>
+<tr>
+<td><code>internlm2_reasoning_parser.py</code></td>
+<td>InternLM 2</td>
+</tr>
+<tr>
+<td><code>nemotron_v3_engine_reasoning_parser.py</code></td>
+<td>Nemotron V3</td>
+</tr>
+<tr>
+<td><code>poolside_v1_reasoning_parser.py</code></td>
+<td>Poolside V1</td>
+</tr>
+<tr>
+<td>... (共 20+ 个解析器)</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="_12-2-工具调用解析器-tool-parsers" tabindex="-1">12.2 工具调用解析器 (tool_parsers/) <a class="header-anchor" href="#_12-2-工具调用解析器-tool-parsers" aria-label="Permalink to &quot;12.2 工具调用解析器 (tool_parsers/)&quot;">&ZeroWidthSpace;</a></h3>
+<p><strong>路径</strong>: <code>vllm/vllm/tool_parsers/</code></p>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>模型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>abstract_tool_parser.py</code></td>
+<td><code>ToolParser</code> 抽象基类</td>
+</tr>
+<tr>
+<td><code>llama_tool_parser.py</code></td>
+<td>LLaMA</td>
+</tr>
+<tr>
+<td><code>hermes_tool_parser.py</code></td>
+<td>Hermes</td>
+</tr>
+<tr>
+<td><code>mistral_tool_parser.py</code></td>
+<td>Mistral</td>
+</tr>
+<tr>
+<td><code>deepseekv3_tool_parser.py</code></td>
+<td>DeepSeek-V3</td>
+</tr>
+<tr>
+<td><code>deepseekv32_engine_tool_parser.py</code></td>
+<td>DeepSeek-V3.2</td>
+</tr>
+<tr>
+<td><code>deepseekv4_engine_tool_parser.py</code></td>
+<td>DeepSeek-V4</td>
+</tr>
+<tr>
+<td><code>qwen3_engine_tool_parser.py</code></td>
+<td>Qwen3</td>
+</tr>
+<tr>
+<td><code>gemma4_engine_tool_parser.py</code></td>
+<td>Gemma 4</td>
+</tr>
+<tr>
+<td><code>glm47_moe_tool_parser.py</code></td>
+<td>GLM-4-7B MoE</td>
+</tr>
+<tr>
+<td><code>granite_tool_parser.py</code>, <code>granite4_tool_parser.py</code></td>
+<td>Granite</td>
+</tr>
+<tr>
+<td><code>kimi_k2_tool_parser.py</code></td>
+<td>Kimi K2</td>
+</tr>
+<tr>
+<td><code>minimax_m2_tool_parser.py</code>, <code>minimax_m3_tool_parser.py</code></td>
+<td>MiniMax</td>
+</tr>
+<tr>
+<td><code>olmo3_tool_parser.py</code></td>
+<td>OLMo 3</td>
+</tr>
+<tr>
+<td><code>step3_tool_parser.py</code>, <code>step3p5_tool_parser.py</code></td>
+<td>Step</td>
+</tr>
+<tr>
+<td><code>xlam_tool_parser.py</code></td>
+<td>XLAM</td>
+</tr>
+<tr>
+<td><code>rust_tool_parser.py</code></td>
+<td>Rust 风格</td>
+</tr>
+<tr>
+<td><code>pythonic_tool_parser.py</code></td>
+<td>Pythonic 风格</td>
+</tr>
+<tr>
+<td>... (共 30+ 个解析器)</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="_12-3-结构化输出解析器-parser" tabindex="-1">12.3 结构化输出解析器 (parser/) <a class="header-anchor" href="#_12-3-结构化输出解析器-parser" aria-label="Permalink to &quot;12.3 结构化输出解析器 (parser/)&quot;">&ZeroWidthSpace;</a></h3>
+<p><strong>路径</strong>: <code>vllm/vllm/parser/</code></p>
+<div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>parser/</span></span>
+<span class="line"><span>├── abstract_parser.py  # Parser 抽象基类</span></span>
+<span class="line"><span>├── parser_manager.py   # 统一解析器管理器</span></span>
+<span class="line"><span>├── harmony.py          # OpenAI Harmony 协议</span></span>
+<span class="line"><span>├── utils.py            # 工具函数</span></span>
+<span class="line"><span>├── metrics.py          # 性能指标</span></span>
+<span class="line"><span>├── deepseek_v32.py     # DeepSeek-V3.2</span></span>
+<span class="line"><span>├── deepseek_v4.py      # DeepSeek-V4</span></span>
+<span class="line"><span>├── gemma4.py           # Gemma 4</span></span>
+<span class="line"><span>├── qwen3.py            # Qwen3</span></span>
+<span class="line"><span>├── mistral.py          # Mistral</span></span>
+<span class="line"><span>├── kimi_k2.py          # Kimi K2</span></span>
+<span class="line"><span>├── engine/             # 流式解析引擎</span></span>
+<span class="line"><span>│   ├── events.py       # 语义事件定义</span></span>
+<span class="line"><span>│   ├── incremental_lexer.py # 增量词法分析</span></span>
+<span class="line"><span>│   ├── parser_engine.py # 核心解析引擎</span></span>
+<span class="line"><span>│   ├── token_id_scanner.py # Token ID 扫描</span></span>
+<span class="line"><span>│   └── adapters.py     # 模型适配器</span></span>
+<span class="line"><span>└── ...</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br></div></div><hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_13-分词器-tokenizers">
+<h2 id="_13-分词器-tokenizers" tabindex="-1">13. 分词器 (tokenizers/) <a class="header-anchor" href="#_13-分词器-tokenizers" aria-label="Permalink to &quot;13. 分词器 (tokenizers/)&quot;">&ZeroWidthSpace;</a></h2>
+<p><strong>路径</strong>: <code>vllm/vllm/tokenizers/</code></p>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>protocol.py</code></td>
+<td><code>TokenizerLike</code> 协议接口</td>
+</tr>
+<tr>
+<td><code>registry.py</code></td>
+<td>分词器注册中心</td>
+</tr>
+<tr>
+<td><code>hf.py</code></td>
+<td>HuggingFace 分词器（线程安全池化）</td>
+</tr>
+<tr>
+<td><code>mistral.py</code></td>
+<td>Mistral 分词器</td>
+</tr>
+<tr>
+<td><code>deepseek_v32.py</code></td>
+<td>DeepSeek-V3.2 分词器</td>
+</tr>
+<tr>
+<td><code>deepseek_v32_encoding.py</code></td>
+<td>DeepSeek-V3.2 编码实现</td>
+</tr>
+<tr>
+<td><code>deepseek_v4.py</code></td>
+<td>DeepSeek-V4 分词器</td>
+</tr>
+<tr>
+<td><code>deepseek_v4_encoding.py</code></td>
+<td>DeepSeek-V4 编码（支持 tool calling / thinking mode）</td>
+</tr>
+<tr>
+<td><code>fastokens.py</code></td>
+<td>fastokens 后端补丁（替换 Rust 分词器）</td>
+</tr>
+<tr>
+<td><code>detokenizer_utils.py</code></td>
+<td>解码工具函数</td>
+</tr>
+<tr>
+<td><code>kimi_audio.py</code></td>
+<td>Kimi 音频分词器</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_14-编译优化-compilation">
+<h2 id="_14-编译优化-compilation" tabindex="-1">14. 编译优化 (compilation/) <a class="header-anchor" href="#_14-编译优化-compilation" aria-label="Permalink to &quot;14. 编译优化 (compilation/)&quot;">&ZeroWidthSpace;</a></h2>
+<p><strong>路径</strong>: <code>vllm/vllm/compilation/</code></p>
+<h3 id="_14-1-编译系统结构" tabindex="-1">14.1 编译系统结构 <a class="header-anchor" href="#_14-1-编译系统结构" aria-label="Permalink to &quot;14.1 编译系统结构&quot;">&ZeroWidthSpace;</a></h3>
+<div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>compilation/</span></span>
+<span class="line"><span>├── backends.py             # torch.compile 后端封装</span></span>
+<span class="line"><span>├── compiler_interface.py   # 编译器接口抽象</span></span>
+<span class="line"><span>├── caching.py              # 编译缓存</span></span>
+<span class="line"><span>├── codegen.py              # 执行代码生成</span></span>
+<span class="line"><span>├── cuda_graph.py           # CUDA Graph 捕获/重放</span></span>
+<span class="line"><span>├── breakable_cudagraph.py  # 可中断 CUDA Graph</span></span>
+<span class="line"><span>├── base_static_graph.py    # 静态图基类</span></span>
+<span class="line"><span>├── wrapper.py              # 编译包装器</span></span>
+<span class="line"><span>├── decorators.py           # 编译装饰器</span></span>
+<span class="line"><span>├── partition_rules.py      # 分区规则</span></span>
+<span class="line"><span>├── piecewise_backend.py    # 分段编译后端</span></span>
+<span class="line"><span>└── passes/                 # 编译 passes</span></span>
+<span class="line"><span>    ├── fusion/             # 算子融合 passes</span></span>
+<span class="line"><span>    │   ├── act_quant_fusion.py       # Activation + Quantization</span></span>
+<span class="line"><span>    │   ├── allreduce_rms_fusion.py   # AllReduce + RMS Norm</span></span>
+<span class="line"><span>    │   ├── attn_quant_fusion.py      # Attention + Quantization</span></span>
+<span class="line"><span>    │   ├── collective_fusion.py      # 集合通信融合</span></span>
+<span class="line"><span>    │   ├── mla_attn_quant_fusion.py  # MLA + Quantization</span></span>
+<span class="line"><span>    │   ├── mla_rope_kvcache_cat_fusion.py</span></span>
+<span class="line"><span>    │   ├── qk_norm_rope_fusion.py</span></span>
+<span class="line"><span>    │   ├── rms_quant_fusion.py</span></span>
+<span class="line"><span>    │   ├── rocm_aiter_fusion.py</span></span>
+<span class="line"><span>    │   ├── rope_kvcache_fusion.py</span></span>
+<span class="line"><span>    │   └── sequence_parallelism.py</span></span>
+<span class="line"><span>    ├── ir/                 # IR 级别 passes</span></span>
+<span class="line"><span>    │   ├── clone_elimination.py</span></span>
+<span class="line"><span>    │   ├── inplace_functionalization.py</span></span>
+<span class="line"><span>    │   └── lowering_pass.py</span></span>
+<span class="line"><span>    └── utility/            # 工具 passes</span></span>
+<span class="line"><span>        ├── noop_elimination.py</span></span>
+<span class="line"><span>        ├── split_coalescing.py</span></span>
+<span class="line"><span>        └── post_cleanup.py</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br></div></div><h3 id="_14-2-核心功能" tabindex="-1">14.2 核心功能 <a class="header-anchor" href="#_14-2-核心功能" aria-label="Permalink to &quot;14.2 核心功能&quot;">&ZeroWidthSpace;</a></h3>
+<ul>
+<li><strong>torch.compile</strong>: 支持 eager + inductor 混合编译</li>
+<li><strong>CUDA Graph</strong>: 支持完整图和可中断图</li>
+<li><strong>算子融合</strong>: 10+ 种融合模式（Act+Quant, AllReduce+RMSNorm, QK Norm+RoPE 等）</li>
+<li><strong>IR 优化</strong>: 消除冗余 clone、inplace 函数化、IR 降低</li>
+</ul>
+<hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_15-硬件平台抽象-platforms">
+<h2 id="_15-硬件平台抽象-platforms" tabindex="-1">15. 硬件平台抽象 (platforms/) <a class="header-anchor" href="#_15-硬件平台抽象-platforms" aria-label="Permalink to &quot;15. 硬件平台抽象 (platforms/)&quot;">&ZeroWidthSpace;</a></h2>
+<p><strong>路径</strong>: <code>vllm/vllm/platforms/</code></p>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>平台</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>interface.py</code></td>
+<td>—</td>
+<td><code>Platform</code> 抽象基类，定义设备管理、注意力、内存接口</td>
+</tr>
+<tr>
+<td><code>cuda.py</code></td>
+<td>NVIDIA GPU</td>
+<td><code>CudaPlatform</code></td>
+</tr>
+<tr>
+<td><code>rocm.py</code></td>
+<td>AMD GPU</td>
+<td><code>RocmPlatform</code></td>
+</tr>
+<tr>
+<td><code>tpu.py</code></td>
+<td>Google TPU</td>
+<td><code>TpuPlatform</code></td>
+</tr>
+<tr>
+<td><code>xpu.py</code></td>
+<td>Intel XPU</td>
+<td><code>XPUPlatform</code></td>
+</tr>
+<tr>
+<td><code>cpu.py</code></td>
+<td>通用 CPU</td>
+<td><code>CpuPlatform</code></td>
+</tr>
+<tr>
+<td><code>zen_cpu.py</code></td>
+<td>AMD Zen CPU</td>
+<td><code>ZenCpuPlatform</code>（AVX-512 + zenT orch）</td>
+</tr>
+<tr>
+<td><code>__init__.py</code></td>
+<td>—</td>
+<td><strong>自动检测</strong>: 运行时检测 CUDA/ROCm/TPU/XPU/CPU</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="自动检测流程" tabindex="-1">自动检测流程 <a class="header-anchor" href="#自动检测流程" aria-label="Permalink to &quot;自动检测流程&quot;">&ZeroWidthSpace;</a></h3>
+<div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>检查插件 → 尝试 TPU → CUDA → ROCm → XPU → CPU</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br></div></div><hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_16-测试体系-tests">
+<h2 id="_16-测试体系-tests" tabindex="-1">16. 测试体系 (tests/) <a class="header-anchor" href="#_16-测试体系-tests" aria-label="Permalink to &quot;16. 测试体系 (tests/)&quot;">&ZeroWidthSpace;</a></h2>
+<p><strong>路径</strong>: <code>vllm/tests/</code></p>
+<div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>tests/</span></span>
+<span class="line"><span>├── basic_correctness/  # 基础正确性（CPU offload, 内存）</span></span>
+<span class="line"><span>├── benchmarks/         # 基准测试（延迟、吞吐量、参数扫描）</span></span>
+<span class="line"><span>├── compile/            # torch.compile 测试</span></span>
+<span class="line"><span>│   ├── correctness_e2e/</span></span>
+<span class="line"><span>│   ├── fullgraph/</span></span>
+<span class="line"><span>│   ├── fusions_e2e/</span></span>
+<span class="line"><span>│   └── passes/</span></span>
+<span class="line"><span>├── config/             # 配置测试</span></span>
+<span class="line"><span>├── cuda/               # CUDA 特定测试</span></span>
+<span class="line"><span>├── detokenizer/        # 分词器测试</span></span>
+<span class="line"><span>├── distributed/        # 分布式测试（20+ 文件）</span></span>
+<span class="line"><span>├── engine/             # 引擎测试</span></span>
+<span class="line"><span>├── entrypoints/        # API 入口测试</span></span>
+<span class="line"><span>├── evals/              # 模型评估（GPQA, GSM8K, MRCR）</span></span>
+<span class="line"><span>├── kernels/            # 内核测试（最丰富）</span></span>
+<span class="line"><span>│   ├── attention/      # FlashAttention, FlashInfer, MLA 等</span></span>
+<span class="line"><span>│   ├── core/           # RoPE, LayerNorm, 激活等</span></span>
+<span class="line"><span>│   ├── moe/            # MoE 内核（15+ 文件）</span></span>
+<span class="line"><span>│   └── quantization/   # 量化内核测试</span></span>
+<span class="line"><span>├── lora/               # LoRA 测试</span></span>
+<span class="line"><span>├── models/             # 模型测试</span></span>
+<span class="line"><span>├── multimodal/         # 多模态测试</span></span>
+<span class="line"><span>├── parser/             # 解析器测试</span></span>
+<span class="line"><span>├── quantization/       # 量化集成测试</span></span>
+<span class="line"><span>├── reasoning/          # 推理解析器测试</span></span>
+<span class="line"><span>└── samplers/           # 采样器测试</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br></div></div><hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_17-工具模块汇总-utils-等">
+<h2 id="_17-工具模块汇总-utils-等" tabindex="-1">17. 工具模块汇总 (utils/ 等) <a class="header-anchor" href="#_17-工具模块汇总-utils-等" aria-label="Permalink to &quot;17. 工具模块汇总 (utils/ 等)&quot;">&ZeroWidthSpace;</a></h2>
+<h3 id="_17-1-utils-通用工具库" tabindex="-1">17.1 utils/ 通用工具库 <a class="header-anchor" href="#_17-1-utils-通用工具库" aria-label="Permalink to &quot;17.1 utils/ 通用工具库&quot;">&ZeroWidthSpace;</a></h3>
+<p><strong>路径</strong>: <code>vllm/vllm/utils/</code></p>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>async_utils.py</code></td>
+<td>异步工具（resolve, merge_async_iterators）</td>
+</tr>
+<tr>
+<td><code>cache.py</code></td>
+<td>通用缓存（LRU）</td>
+</tr>
+<tr>
+<td><code>collection_utils.py</code></td>
+<td>集合工具（is_list_of, groupby）</td>
+</tr>
+<tr>
+<td><code>func_utils.py</code></td>
+<td>函数工具</td>
+</tr>
+<tr>
+<td><code>gc_utils.py</code></td>
+<td>垃圾回收</td>
+</tr>
+<tr>
+<td><code>hashing.py</code></td>
+<td>哈希工具</td>
+</tr>
+<tr>
+<td><code>import_utils.py</code></td>
+<td>导入工具（LazyLoader, resolve_obj_by_qualname）</td>
+</tr>
+<tr>
+<td><code>jsontree.py</code></td>
+<td>JSON 树操作</td>
+</tr>
+<tr>
+<td><code>math_utils.py</code></td>
+<td>数学工具</td>
+</tr>
+<tr>
+<td><code>mem_utils.py</code></td>
+<td>内存工具</td>
+</tr>
+<tr>
+<td><code>nccl.py</code></td>
+<td>NCCL 工具</td>
+</tr>
+<tr>
+<td><code>network_utils.py</code></td>
+<td>网络工具（端口检测、IP 验证）</td>
+</tr>
+<tr>
+<td><code>numa_utils.py</code></td>
+<td>NUMA 工具</td>
+</tr>
+<tr>
+<td><code>registry.py</code></td>
+<td>扩展管理器（插件注册框架）</td>
+</tr>
+<tr>
+<td><code>torch_utils.py</code></td>
+<td>PyTorch 工具</td>
+</tr>
+<tr>
+<td><code>hpc.py</code></td>
+<td>HPC 工具（CPU pinning）</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="_17-2-其他工具模块" tabindex="-1">17.2 其他工具模块 <a class="header-anchor" href="#_17-2-其他工具模块" aria-label="Permalink to &quot;17.2 其他工具模块&quot;">&ZeroWidthSpace;</a></h3>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>triton_utils/</code></td>
+<td>Triton 内存分配、强制首次配置</td>
+</tr>
+<tr>
+<td><code>transformers_utils/</code></td>
+<td>HuggingFace Transformers 工具（配置、处理器、S3）</td>
+</tr>
+<tr>
+<td><code>logging_utils/</code></td>
+<td>访问日志过滤、输入转储、计时</td>
+</tr>
+<tr>
+<td><code>tracing/</code></td>
+<td>OpenTelemetry 链路追踪</td>
+</tr>
+<tr>
+<td><code>profiler/</code></td>
+<td>逐层性能分析</td>
+</tr>
+<tr>
+<td><code>ir/</code></td>
+<td>中间表示（算子定义、容差）</td>
+</tr>
+<tr>
+<td><code>cute_utils/</code></td>
+<td>CuTe（CUDA 模板库）工具</td>
+</tr>
+<tr>
+<td><code>plugins/</code></td>
+<td>插件系统（IO 处理器、LoRA 解析器）</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="_18-架构总图">
+<h2 id="_18-架构总图" tabindex="-1">18. 架构总图 <a class="header-anchor" href="#_18-架构总图" aria-label="Permalink to &quot;18. 架构总图&quot;">&ZeroWidthSpace;</a></h2>
+<h3 id="_18-1-数据流" tabindex="-1">18.1 数据流 <a class="header-anchor" href="#_18-1-数据流" aria-label="Permalink to &quot;18.1 数据流&quot;">&ZeroWidthSpace;</a></h3>
+<div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>用户</span></span>
+<span class="line"><span>  │</span></span>
+<span class="line"><span>  ├── Python API: entrypoints/llm.py (LLM 类)</span></span>
+<span class="line"><span>  │</span></span>
+<span class="line"><span>  ├── HTTP API: entrypoints/openai/ (FastAPI)</span></span>
+<span class="line"><span>  │   ├── OpenAI Chat/Completions API</span></span>
+<span class="line"><span>  │   ├── Anthropic Messages API</span></span>
+<span class="line"><span>  │   └── gRPC Server</span></span>
+<span class="line"><span>  │</span></span>
+<span class="line"><span>  └── CLI: entrypoints/cli/ (vllm serve)</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>  engine/protocol.py (EngineClient 接口)</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>  v1/engine/ (V1 引擎核心)</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        ├── v1/engine/core.py (ZeroMQ IPC 核心循环)</span></span>
+<span class="line"><span>        │       │</span></span>
+<span class="line"><span>        │       ├── v1/core/sched/ (调度器)</span></span>
+<span class="line"><span>        │       ├── v1/worker/ (模型运行器)</span></span>
+<span class="line"><span>        │       │       │</span></span>
+<span class="line"><span>        │       │       ├── model_executor/models/ (120+ 模型)</span></span>
+<span class="line"><span>        │       │       ├── model_executor/layers/ (注意力/MoE/归一化)</span></span>
+<span class="line"><span>        │       │       └── model_executor/kernels/ (高性能内核)</span></span>
+<span class="line"><span>        │       │       │       └── csrc/ (C++/CUDA 底层算子)</span></span>
+<span class="line"><span>        │       │       │</span></span>
+<span class="line"><span>        │       │       └── v1/spec_decode/ (推测解码)</span></span>
+<span class="line"><span>        │       │</span></span>
+<span class="line"><span>        │       ├── v1/sample/ (采样器)</span></span>
+<span class="line"><span>        │       ├── v1/attention/ (可插拔注意力后端)</span></span>
+<span class="line"><span>        │       └── v1/kv_offload/ (KV 缓存卸载)</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        └── v1/executor/ (分布式执行器)</span></span>
+<span class="line"><span>                │</span></span>
+<span class="line"><span>                └── distributed/ (分布式通信)</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br><span class="line-number">35</span><br><span class="line-number">36</span><br></div></div><h3 id="_18-2-模块依赖关系" tabindex="-1">18.2 模块依赖关系 <a class="header-anchor" href="#_18-2-模块依赖关系" aria-label="Permalink to &quot;18.2 模块依赖关系&quot;">&ZeroWidthSpace;</a></h3>
+<div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>┌─────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    config/ (VllmConfig)                      │</span></span>
+<span class="line"><span>│                  全系统统一配置容器                           │</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>                              │</span></span>
+<span class="line"><span>                              ▼</span></span>
+<span class="line"><span>┌─────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                 platforms/ (硬件平台抽象)                    │</span></span>
+<span class="line"><span>│        CUDA / ROCm / TPU / XPU / CPU 自动检测              │</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>                              │</span></span>
+<span class="line"><span>                              ▼</span></span>
+<span class="line"><span>┌────────────┐   ┌────────────┐   ┌─────────────────────────┐</span></span>
+<span class="line"><span>│ entrypoints│──▶│ v1/engine  │──▶│  v1/worker + model_exec │</span></span>
+<span class="line"><span>│ (API入口)  │   │ (引擎核心)  │   │  (模型加载/执行)        │</span></span>
+<span class="line"><span>└────────────┘   └─────┬──────┘   └──────────┬──────────────┘</span></span>
+<span class="line"><span>                       │                     │</span></span>
+<span class="line"><span>                       ▼                     ▼</span></span>
+<span class="line"><span>              ┌────────────────┐   ┌──────────────────────────┐</span></span>
+<span class="line"><span>              │ v1/executor    │   │  csrc/ (C++/CUDA 算子)   │</span></span>
+<span class="line"><span>              │ (分布式执行器)  │   │  ┌────────────────────┐  │</span></span>
+<span class="line"><span>              └───────┬────────┘   │  │ attention/         │  │</span></span>
+<span class="line"><span>                      │            │  │ quantization/      │  │</span></span>
+<span class="line"><span>                      ▼            │  │ moe/               │  │</span></span>
+<span class="line"><span>              ┌────────────────┐   │  │ cpu/               │  │</span></span>
+<span class="line"><span>              │ distributed/   │   │  │ rocm/              │  │</span></span>
+<span class="line"><span>              │ (通信)         │   │  │ cutlass_extensions/│  │</span></span>
+<span class="line"><span>              └────────────────┘   │  └────────────────────┘  │</span></span>
+<span class="line"><span>                                   └──────────────────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>┌─────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    辅助模块 (可插拔)                         │</span></span>
+<span class="line"><span>│  multimodal/ │  lora/ │  parser/ │  tool_parsers/          │</span></span>
+<span class="line"><span>│  reasoning/  │  compilation/  │  tokenizers/              │</span></span>
+<span class="line"><span>│  inputs/ │  outputs/ │  sampling_params/                   │</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br><span class="line-number">35</span><br><span class="line-number">36</span><br></div></div><h3 id="_18-3-核心设计要点总结" tabindex="-1">18.3 核心设计要点总结 <a class="header-anchor" href="#_18-3-核心设计要点总结" aria-label="Permalink to &quot;18.3 核心设计要点总结&quot;">&ZeroWidthSpace;</a></h3>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>方面</th>
+<th>设计决策</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>引擎架构</strong></td>
+<td>V1 基于 ZeroMQ IPC，支持同步/异步引擎</td>
+</tr>
+<tr>
+<td><strong>调度</strong></td>
+<td>全新调度器支持连续批处理、chunked prefill、prefix caching</td>
+</tr>
+<tr>
+<td><strong>注意力</strong></td>
+<td>PagedAttention + 可插拔后端（FlashAttention/FlashInfer/Triton/MLA）</td>
+</tr>
+<tr>
+<td><strong>量化</strong></td>
+<td>10+ 种量化方案，覆盖 INT4/INT8/FP8/FP4</td>
+</tr>
+<tr>
+<td><strong>分布式</strong></td>
+<td>TP/PP/DP/EP/CP 全面支持，自定义 AllReduce</td>
+</tr>
+<tr>
+<td><strong>模型支持</strong></td>
+<td>120+ 模型实现，200+ 已注册架构</td>
+</tr>
+<tr>
+<td><strong>多模态</strong></td>
+<td>图片/音频/视频全面支持，高效视频 token 剪枝</td>
+</tr>
+<tr>
+<td><strong>服务</strong></td>
+<td>OpenAI/Anthropic/MCP/gRPC 多协议入口</td>
+</tr>
+<tr>
+<td><strong>平台</strong></td>
+<td>自动检测 CUDA/ROCm/TPU/XPU/CPU</td>
+</tr>
+<tr>
+<td><strong>编译</strong></td>
+<td>torch.compile + CUDA Graph + 10+ 算子融合</td>
+</tr>
+<tr>
+<td><strong>推测解码</strong></td>
+<td>EAGLE/Medusa/dFlash/N-gram/Suffix 多种策略</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+</article>

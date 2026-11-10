@@ -220,6 +220,45 @@ export const linuxNotesSidebar = [
   }
 ]
 
+// ===== CUDA C++ 学习笔记侧边栏（/cuda-notes/）=====
+export const cudaNotesSidebar = [
+  {
+    text: '编程指南',
+    collapsed: false,
+    items: [
+      { text: '笔记目录', link: '/cuda-notes/' },
+      { text: '1.2 · CUDA 编程模型', link: '/cuda-notes/programming-model' },
+      { text: '1.3 · CUDA 平台', link: '/cuda-notes/cuda-platform' },
+      { text: '2.1 · CUDA C++ 简介', link: '/cuda-notes/cuda-cpp' },
+      { text: '2.2 · CUDA SIMT 内核编写', link: '/cuda-notes/simt-kernels' },
+      { text: '2.3 · 异步执行（摘记）', link: '/cuda-notes/async-execution' }
+    ]
+  }
+]
+
+// ===== vLLM 学习笔记侧边栏（/vllm-notes/）=====
+export const vllmNotesSidebar = [
+  {
+    text: '架构总览',
+    collapsed: false,
+    items: [
+      { text: '笔记目录', link: '/vllm-notes/' },
+      { text: 'vLLM 源码架构分析', link: '/vllm-notes/architecture' }
+    ]
+  },
+  {
+    text: '源码阅读',
+    collapsed: false,
+    items: [
+      { text: '离线推理：LLM 类与调用链', link: '/vllm-notes/offline-inference' },
+      { text: 'V1 Engine：文件职责、依赖与 Tensor IPC', link: '/vllm-notes/engine' },
+      { text: 'EngineCore：核心循环与初始化', link: '/vllm-notes/core' },
+      { text: 'Executor：执行器与 Worker 调用', link: '/vllm-notes/executor' },
+      { text: 'KV Cache 配置：逐代码解析', link: '/vllm-notes/kv-cache-config' }
+    ]
+  }
+]
+
 // VitePress 多侧边栏：按路径前缀匹配
 export const sidebar = {
   '/cs336/': [
@@ -252,5 +291,7 @@ export const sidebar = {
   '/rl-book/': rlBookSidebar,
   '/westlake-rl/': westlakeRlSidebar,
   '/rust-notes/': rustNotesSidebar,
-  '/linux-notes/': linuxNotesSidebar
+  '/linux-notes/': linuxNotesSidebar,
+  '/cuda-notes/': cudaNotesSidebar,
+  '/vllm-notes/': vllmNotesSidebar
 }

@@ -1,0 +1,18 @@
+<article class="native-document format-code" data-format="code" data-design="linux-notebook" aria-label="2.3 · 异步执行（摘记）">
+<header class="document-intro note-hero">
+<p class="note-kicker">CUDA C++ 学习笔记</p>
+<h1 id="article-title" tabindex="-1">2.3 · 异步执行（摘记） <a class="header-anchor" href="#article-title" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">异步接口、主机与设备的并发执行，以及 CUDA 流的原始图解摘记。</p>
+</header>
+<section class="document-section note-panel" aria-labelledby="_2-33-异步执行">
+<h2 id="_2-33-异步执行" tabindex="-1">2.33 异步执行 <a class="header-anchor" href="#_2-33-异步执行" aria-label="Permalink to &quot;2.33 异步执行&quot;">&ZeroWidthSpace;</a></h2>
+<h3 id="_2-3-1-什么是异步并发执行" tabindex="-1">2.3.1 什么是异步并发执行 <a class="header-anchor" href="#_2-3-1-什么是异步并发执行" aria-label="Permalink to &quot;2.3.1 什么是异步并发执行&quot;">&ZeroWidthSpace;</a></h3>
+<p>CUDA允许多个任务的并发执行，包括主机与设备任意的计算，传输和内部传输。</p>
+<p>并发性通过异步接口实现，调用在调度操作完成甚至开始前就返回，应用程序可以在调用后自由执行其他任务。想要获取调度操作的结果时，就需要进行一定的同步操作。</p>
+<p>以下是一个简单的异步执行示例，显然这里的并行是主机与设备之间的并行执行，而CUDA流内是串行的。</p>
+<figure class="note-figure">
+<img src="/cuda-notes/figures/2-3/CUDAstreamTOAsyncConcurrency.png" alt="2-3异步执行">
+<figcaption>图1 使用 CUDA 流进行异步并发执行</figcaption>
+</figure>
+</section>
+</article>

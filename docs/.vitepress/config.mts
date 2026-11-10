@@ -250,12 +250,14 @@ const config = withMermaid({
     // --- 导航栏 ---
     nav: [
       { text: '全部内容', link: '/tags' },
-      { text: '学习笔记', activeMatch: '/(?:cs336|rl-book|westlake-rl|rust-notes|linux-notes)/', items: [
+      { text: '学习笔记', activeMatch: '/(?:cs336|rl-book|westlake-rl|rust-notes|linux-notes|cuda-notes|vllm-notes)/', items: [
         { text: 'CS336学习笔记', link: '/cs336/' },
         { text: 'RL 学习笔记', link: '/rl-book/' },
         { text: '西湖强化学习', link: '/westlake-rl/' },
         { text: 'Rust 笔记', link: '/rust-notes/' },
-        { text: 'Linux 笔记', link: '/linux-notes/' }
+        { text: 'Linux 笔记', link: '/linux-notes/' },
+        { text: 'CUDA C++ 学习笔记', link: '/cuda-notes/' },
+        { text: 'vLLM 学习笔记', link: '/vllm-notes/' }
       ] },
       { text: '论文与项目解读', link: '/papers/' },
       { text: '调研', link: '/research/' },

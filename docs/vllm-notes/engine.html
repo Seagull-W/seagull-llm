@@ -1,0 +1,171 @@
+<article class="native-document format-code" data-format="code" data-design="linux-notebook" aria-label="V1 Engine：文件职责、依赖与 Tensor IPC">
+<header class="document-intro note-hero">
+<p class="note-kicker">vLLM 学习笔记</p>
+<h1 id="article-title" tabindex="-1">V1 Engine：文件职责、依赖与 Tensor IPC <a class="header-anchor" href="#article-title" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">V1 Engine 的文件职责、依赖关系图、分层说明，以及跨进程张量传输的发送与接收。</p>
+</header>
+<div class="document-lead">
+<p>本文先暂时略过<code>OfflineInferenceMixin</code>类，深入解读更为基础的<code>vllm/v1/engine/llm_engine.py</code>的<code>LLMEngine</code>类，或者说解读<code>v1/engine</code>包下的文件。</p>
+</div>
+<section class="document-section note-panel" aria-labelledby="vllm-v1-engine-各文件内容与依赖关系">
+<h2 id="vllm-v1-engine-各文件内容与依赖关系" tabindex="-1"><code>vllm/v1/engine/</code> 各文件内容与依赖关系 <a class="header-anchor" href="#vllm-v1-engine-各文件内容与依赖关系" aria-label="Permalink to &quot;`vllm/v1/engine/` 各文件内容与依赖关系&quot;">&ZeroWidthSpace;</a></h2>
+<h3 id="各文件职责" tabindex="-1">各文件职责 <a class="header-anchor" href="#各文件职责" aria-label="Permalink to &quot;各文件职责&quot;">&ZeroWidthSpace;</a></h3>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>核心类/内容</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td><code>EngineCoreRequest</code>, <code>EngineCoreOutput</code>, <code>EngineCoreOutputs</code>, <code>FinishReason</code>, <code>PauseMode</code> 等</td>
+<td>跨模块共享的数据结构定义，是整个 engine 包的基础</td>
+</tr>
+<tr>
+<td><code>exceptions.py</code></td>
+<td><code>EngineGenerateError</code>, <code>EngineDeadError</code></td>
+<td>异常类型定义</td>
+</tr>
+<tr>
+<td><code>detokenizer.py</code></td>
+<td><code>IncrementalDetokenizer</code></td>
+<td>增量 detokenization，逐 token 解码输出文本</td>
+</tr>
+<tr>
+<td><code>logprobs.py</code></td>
+<td><code>LogprobsProcessor</code></td>
+<td>处理 log probabilities，生成 <code>SampleLogprobs</code> / <code>PromptLogprobs</code></td>
+</tr>
+<tr>
+<td><code>parallel_sampling.py</code></td>
+<td><code>ParentRequest</code></td>
+<td>管理 <code>n&gt;1</code> 的并行采样请求，将父请求拆分为多个子请求并聚合结果</td>
+</tr>
+<tr>
+<td><code>input_processor.py</code></td>
+<td><code>InputProcessor</code></td>
+<td>将 <code>EngineInput</code> → <code>EngineCoreRequest</code>，处理 tokenization、多模态、LoRA 等</td>
+</tr>
+<tr>
+<td><code>output_processor.py</code></td>
+<td><code>OutputProcessor</code>, <code>RequestOutputCollector</code></td>
+<td>将 <code>EngineCoreOutputs</code> → <code>RequestOutput</code>，内部依赖 detokenizer、logprobs、parallel_sampling</td>
+</tr>
+<tr>
+<td><code>tensor_ipc.py</code></td>
+<td><code>TensorIpcSender</code>, <code>TensorIpcReceiver</code>, <code>TensorIpcData</code></td>
+<td>跨进程零拷贝张量传输（通过 <code>torch.multiprocessing.Queue</code>）</td>
+</tr>
+<tr>
+<td><code>coordinator.py</code></td>
+<td><code>DPCoordinator</code>, <code>DPCoordinatorProc</code></td>
+<td>数据并行（DP&gt;1）时的协调进程，负责负载均衡统计和 DP wave 同步</td>
+</tr>
+<tr>
+<td><code>utils.py</code></td>
+<td><code>CoreEngineProcManager</code>, <code>CoreEngineActorManager</code>, <code>EngineZmqAddresses</code></td>
+<td>启动/管理 EngineCore 子进程或 Ray Actor，ZMQ 地址管理</td>
+</tr>
+<tr>
+<td><code>core.py</code></td>
+<td><code>EngineCore</code>, <code>EngineCoreProc</code></td>
+<td>推理核心循环：调度器 + 执行器，是真正执行模型推理的地方</td>
+</tr>
+<tr>
+<td><code>core_client.py</code></td>
+<td><code>EngineCoreClient</code>, <code>InprocClient</code>, <code>SyncMPClient</code>, <code>AsyncMPClient</code></td>
+<td>前端与 EngineCore 通信的客户端抽象，支持进程内/同步多进程/异步多进程三种模式</td>
+</tr>
+<tr>
+<td><code>llm_engine.py</code></td>
+<td><code>LLMEngine</code></td>
+<td>同步推理入口（向后兼容），供离线 <code>LLM</code> 类使用</td>
+</tr>
+<tr>
+<td><code>async_llm.py</code></td>
+<td><code>AsyncLLM</code></td>
+<td>异步推理入口，供在线 API server 使用</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h3 id="依赖关系图" tabindex="-1">依赖关系图 <a class="header-anchor" href="#依赖关系图" aria-label="Permalink to &quot;依赖关系图&quot;">&ZeroWidthSpace;</a></h3>
+
+      <figure class="note-diagram">
+<div class="note-table" tabindex="0" role="region" aria-label="V1 Engine 模块依赖关系图，可横向滚动"><div style="min-width: 1440px">
+<ClientOnly><Mermaid id="vllm-engine-dependencies" graph="graph%20TD%0A%20%20%20%20init%5B%22__init__.py%3Cbr%2F%3E(%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84)%22%5D%20--%3E%20core%5B%22core.py%3Cbr%2F%3E(EngineCore)%22%5D%0A%20%20%20%20init%20--%3E%20client%5B%22core_client.py%3Cbr%2F%3E(EngineCoreClient)%22%5D%0A%20%20%20%20init%20--%3E%20input%5B%22input_processor.py%3Cbr%2F%3E(InputProcessor)%22%5D%0A%20%20%20%20init%20--%3E%20output%5B%22output_processor.py%3Cbr%2F%3E(OutputProcessor)%22%5D%0A%20%20%20%20init%20--%3E%20detok%5B%22detokenizer.py%3Cbr%2F%3E(IncrementalDetokenizer)%22%5D%0A%20%20%20%20init%20--%3E%20logprobs%5B%22logprobs.py%3Cbr%2F%3E(LogprobsProcessor)%22%5D%0A%20%20%20%20init%20--%3E%20ps%5B%22parallel_sampling.py%3Cbr%2F%3E(ParentRequest)%22%5D%0A%20%20%20%20init%20--%3E%20coord%5B%22coordinator.py%3Cbr%2F%3E(DPCoordinator)%22%5D%0A%0A%20%20%20%20exc%5B%22exceptions.py%22%5D%20--%3E%20client%0A%20%20%20%20exc%20--%3E%20async_llm%5B%22async_llm.py%3Cbr%2F%3E(AsyncLLM)%22%5D%0A%0A%20%20%20%20detok%20--%3E%20output%0A%20%20%20%20logprobs%20--%3E%20output%0A%20%20%20%20ps%20--%3E%20output%0A%20%20%20%20ps%20--%3E%20async_llm%0A%0A%20%20%20%20ipc%5B%22tensor_ipc.py%3Cbr%2F%3E(TensorIpc)%22%5D%20--%3E%20core%0A%20%20%20%20ipc%20--%3E%20client%0A%0A%20%20%20%20coord%20--%3E%20utils%5B%22utils.py%3Cbr%2F%3E(CoreEngineProcManager)%22%5D%0A%20%20%20%20coord%20--%3E%20client%0A%0A%20%20%20%20utils%20--%3E%20client%0A%0A%20%20%20%20core%20--%3E%20client%0A%0A%20%20%20%20input%20--%3E%20llm_engine%5B%22llm_engine.py%3Cbr%2F%3E(LLMEngine)%22%5D%0A%20%20%20%20input%20--%3E%20async_llm%0A%20%20%20%20output%20--%3E%20llm_engine%0A%20%20%20%20output%20--%3E%20async_llm%0A%20%20%20%20client%20--%3E%20llm_engine%0A%20%20%20%20client%20--%3E%20async_llm%0A"></Mermaid></ClientOnly>
+</div></div>
+<figcaption>原笔记中的 V1 Engine 模块依赖关系图。图较宽，可在图内横向滚动查看。</figcaption>
+</figure><hr>
+<h3 id="关键分层说明" tabindex="-1">关键分层说明 <a class="header-anchor" href="#关键分层说明" aria-label="Permalink to &quot;关键分层说明&quot;">&ZeroWidthSpace;</a></h3>
+<p><strong>底层（数据/工具层）</strong></p>
+<ul>
+<li><code>__init__.py</code> 定义所有跨模块数据结构，几乎被所有文件依赖 <a href="https://github.com/Seagull-W/vllm/blob/ba22152096b2484faa3579624a253d54804d876d/vllm/v1/engine/__init__.py">1</a></li>
+<li><code>exceptions.py</code> 定义两种异常：可恢复的 <code>EngineGenerateError</code> 和不可恢复的 <code>EngineDeadError</code> <a href="https://github.com/Seagull-W/vllm/blob/ba22152096b2484faa3579624a253d54804d876d/vllm/v1/engine/exceptions.py">2</a></li>
+<li><code>tensor_ipc.py</code> 提供跨进程零拷贝张量传输，被 <code>core.py</code> 和 <code>core_client.py</code> 使用 <a href="https://github.com/Seagull-W/vllm/blob/ba22152096b2484faa3579624a253d54804d876d/vllm/v1/engine/tensor_ipc.py">3</a></li>
+</ul>
+<p><strong>中间层（处理层）</strong></p>
+<ul>
+<li><code>detokenizer.py</code> + <code>logprobs.py</code> + <code>parallel_sampling.py</code> 是 <code>output_processor.py</code> 的内部依赖 <a href="https://github.com/Seagull-W/vllm/blob/ba22152096b2484faa3579624a253d54804d876d/vllm/v1/engine/output_processor.py">4</a></li>
+<li><code>input_processor.py</code> 独立处理输入，不依赖其他 engine 子模块 <a href="https://github.com/Seagull-W/vllm/blob/ba22152096b2484faa3579624a253d54804d876d/vllm/v1/engine/input_processor.py">5</a></li>
+</ul>
+<p><strong>核心层（执行层）</strong></p>
+<ul>
+<li><code>core.py</code> 的 <code>EngineCore</code> 是真正的推理内循环，包含调度器和执行器 <a href="https://github.com/Seagull-W/vllm/blob/ba22152096b2484faa3579624a253d54804d876d/vllm/v1/engine/core.py">6</a></li>
+<li><code>core_client.py</code> 的 <code>EngineCoreClient</code> 封装了与 <code>EngineCore</code> 的通信，<code>InprocClient</code>（进程内）/ <code>SyncMPClient</code>（同步多进程）/ <code>AsyncMPClient</code>（异步多进程）三种实现 <a href="https://github.com/Seagull-W/vllm/blob/ba22152096b2484faa3579624a253d54804d876d/vllm/v1/engine/core_client.py">7</a></li>
+<li><code>coordinator.py</code> 仅在 DP&gt;1 时使用，协调多个 DP rank 的请求波次 <a href="https://github.com/Seagull-W/vllm/blob/ba22152096b2484faa3579624a253d54804d876d/vllm/v1/engine/coordinator.py">8</a></li>
+</ul>
+<p><strong>顶层（入口层）</strong></p>
+<ul>
+<li><code>llm_engine.py</code> 的 <code>LLMEngine</code> 是同步入口，供离线 <code>LLM</code> 类使用 <a href="https://github.com/Seagull-W/vllm/blob/ba22152096b2484faa3579624a253d54804d876d/vllm/v1/engine/llm_engine.py">9</a></li>
+<li><code>async_llm.py</code> 的 <code>AsyncLLM</code> 是异步入口，供在线 API server 使用 <a href="https://github.com/Seagull-W/vllm/blob/ba22152096b2484faa3579624a253d54804d876d/vllm/v1/engine/async_llm.py">10</a></li>
+</ul>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="分层解析">
+<h2 id="分层解析" tabindex="-1">分层解析 <a class="header-anchor" href="#分层解析" aria-label="Permalink to &quot;分层解析&quot;">&ZeroWidthSpace;</a></h2>
+<h3 id="_1-tensor-ipc-py" tabindex="-1">1. <code>tensor_ipc.py </code> <a class="header-anchor" href="#_1-tensor-ipc-py" aria-label="Permalink to &quot;1. `tensor_ipc.py `&quot;">&ZeroWidthSpace;</a></h3>
+<h4 id="simple-and-navie-knowledge" tabindex="-1">simple and navie knowledge <a class="header-anchor" href="#simple-and-navie-knowledge" aria-label="Permalink to &quot;simple and navie knowledge&quot;">&ZeroWidthSpace;</a></h4>
+<ul>
+<li>
+<p>IPC：进程间通信，用于在不同进程间传递数据。传统的<strong>pickle</strong>通过序列化和反序列化的方式传递数据（优势是能够处理复杂的数据），而<code>tensor_ipc.py</code>实现零进程拷贝张量传输（优势是能够处理大张量），具体做法是先将数据放入共享内存空间，通过传递元数据的方式进行数据传递。</p>
+</li>
+<li>
+<p>前后端场景：前端即 <code>TensorIpcSender</code> 所在之处，负责对接受的原始信息进行预处理。（如离线推理的LLM类，逻辑上的前端）；后端即 <code>TensorIpcReceiver</code> 所在之处，负责对接受的原始信息进行后处理，或者说进行实际的模型计算和GPU占用。（如离线推理的EngineCore，逻辑上的后端）</p>
+</li>
+<li>
+<p>OOB: Out-of-Band，即带外运输，是指数据传递的设计模型，控制信号和数据分别走对应的通道（queue和shared memory）。</p>
+</li>
+</ul>
+<h4 id="sender" tabindex="-1">Sender <a class="header-anchor" href="#sender" aria-label="Permalink to &quot;Sender&quot;">&ZeroWidthSpace;</a></h4>
+<p>首先组装元数据，将tensor存入共享内存<code>tensor = tensor.share_memory_()</code>，然后将元数据入列<code>queue.put(ipc_data, timeout=10.0)</code>。</p>
+<h4 id="receiver" tabindex="-1">Receiver <a class="header-anchor" href="#receiver" aria-label="Permalink to &quot;Receiver&quot;">&ZeroWidthSpace;</a></h4>
+<p>由于Sender发送的数据可能因为线程调度异步到达，因此Receiver设计了一个Drain-and-Buffer策略。</p>
+<p>具体来说，当后端请求张量时，先从<code>self._tensor_buffers</code>中查询元数据，如果没有，就循环从<code>queue</code>中获取元数据，并存入<code>self._tensor_buffers</code>，直到找到需要获取的元数据。</p>
+<h5 id="接收端的数据过滤" tabindex="-1">接收端的数据过滤 <a class="header-anchor" href="#接收端的数据过滤" aria-label="Permalink to &quot;接收端的数据过滤&quot;">&ZeroWidthSpace;</a></h5>
+<ul>
+<li>请求端将已有的小于当前请求message_id的对应缓存数据删掉，避免无效占用</li>
+</ul>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 命中目标张量后</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> sender.current_message_id </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">!=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> message_id:  </span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 例如：3 != 5</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">    # 关键循环：按 ID 升序遍历缓存中的 keys</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    while</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> tensors </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">and</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (mid </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">:=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> next</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">iter</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(tensors))) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> message_id:</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">        if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> sender.tensors.pop(mid):</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">            logger.warning(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"Discarding </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">%d</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> stale tensors from sender </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">%s</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, sender_id)</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    sender.current_message_id </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> message_id  </span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 更新为 5</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> tensor</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br></div></div><ul>
+<li>当收到小于当前请求message_id的请求直接continue跳过，避免储存过期数据。</li>
+</ul>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> sender.current_message_id </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">></span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> ipc_data.message_id:</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">                logger.warning(</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                    "Ignoring stale tensor from sender </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">%s</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, ipc_data.sender_id</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">                )</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">                continue</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br></div></div><h3 id="_2-core-py" tabindex="-1">2. <code>core.py</code> <a class="header-anchor" href="#_2-core-py" aria-label="Permalink to &quot;2. `core.py`&quot;">&ZeroWidthSpace;</a></h3>
+<p>见文件<a href="/vllm-notes/core">core.md</a></p>
+</section>
+</article>

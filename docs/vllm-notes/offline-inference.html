@@ -1,0 +1,1231 @@
+<article class="native-document format-code" data-format="code" data-design="linux-notebook" aria-label="离线推理：LLM 类与调用链">
+<header class="document-intro note-hero">
+<p class="note-kicker">vLLM 学习笔记</p>
+<h1 id="article-title" tabindex="-1">离线推理：LLM 类与调用链 <a class="header-anchor" href="#article-title" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">从 LLM 类的入口、继承关系和方法出发，阅读离线推理的引擎与 renderer 调用链。</p>
+</header>
+<div class="document-lead">
+<p>vllm分为online inference和offline inference，我们先从offline inference开始，一边解读代码一边推进对vllm整体的理解。</p>
+</div>
+<section class="document-section note-panel" aria-labelledby="offline-inference">
+<h2 id="offline-inference" tabindex="-1">offline inference <a class="header-anchor" href="#offline-inference" aria-label="Permalink to &quot;offline inference&quot;">&ZeroWidthSpace;</a></h2>
+<h3 id="llm-class" tabindex="-1">LLM class <a class="header-anchor" href="#llm-class" aria-label="Permalink to &quot;LLM class&quot;">&ZeroWidthSpace;</a></h3>
+<p>离线推理的入口为<code>vllm/entrypoints/llm.py</code>中的<code>LLM</code>类，相对地，online inference使用<code>AsyncLLMEngine</code>类。</p>
+<p><code>LLM</code>直接继承<code>BeamSearchOfflineMixin</code>, <code>PoolingOfflineMixin</code>, <code>OfflineInferenceMixin</code>。其中<code>BeamSearchOfflineMixin</code>, <code>PoolingOfflineMixin</code>也继承自<code>OfflineInferenceMixin</code>。
+而<code>OfflineInferenceMixin</code>又以<code>vllm/v1/engine下</code>的<code>lllm_engine.py</code>为核心。</p>
+<h4 id="overview" tabindex="-1">overview <a class="header-anchor" href="#overview" aria-label="Permalink to &quot;overview&quot;">&ZeroWidthSpace;</a></h4>
+<p>基础用法，给定提示和采样参数生成文本的LLM model</p>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">from</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> vllm </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">import</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> LLM</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, SamplingParams</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># Initialize the LLM engine with a model  </span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">llm </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> LLM(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">model</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"facebook/opt-125m"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) </span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># Define sampling parameters  </span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">sampling_params </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> SamplingParams(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">temperature</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">0.8</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">top_p</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">0.95</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)  </span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">outputs </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> llm.generate(prompts, sampling_params)</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br></div></div><p>LLM类包含一个<strong>tokenizer</strong>，一个<strong>language model</strong>(可以在多个GPU上)，以及<strong>为KV-cache分配的GPU内存空间。</strong></p>
+<p>给定一批prompts和采样参数，该类利用<strong>动态批处理机制</strong>和高效的<strong>内存管理</strong>，从模型中生成文本。</p>
+<h4 id="方法解析" tabindex="-1">方法解析 <a class="header-anchor" href="#方法解析" aria-label="Permalink to &quot;方法解析&quot;">&ZeroWidthSpace;</a></h4>
+<h5 id="from-engine-args" tabindex="-1">from_engine_args <a class="header-anchor" href="#from-engine-args" aria-label="Permalink to &quot;from_engine_args&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> from_engine_args</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(cls, engine_args: EngineArgs) -> </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"LLM"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        """Create an LLM instance from EngineArgs."""</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">        return</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> cls</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">**</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">vars</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(engine_args))</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div><p>从<code>EngineArgs</code>创建一个LLM实例。</p>
+<h5 id="get-tokenizer" tabindex="-1">get_tokenizer <a class="header-anchor" href="#get-tokenizer" aria-label="Permalink to &quot;get_tokenizer&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> get_tokenizer</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(self) -> TokenizerLike:</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    return</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.get_tokenizer()</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div><p>获取当前模型对应分词器</p>
+<h5 id="get-world-size" tabindex="-1">get_world_size <a class="header-anchor" href="#get-world-size" aria-label="Permalink to &quot;get_world_size&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> get_world_size</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(self, include_dp: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">bool</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> True</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) -> </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """Get the world size from the parallel config.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Args:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        include_dp: If True (default), returns the world size including</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            data parallelism (TP * PP * DP). If False, returns the world</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            size without data parallelism (TP * PP).</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Returns:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        The world size (tensor_parallel_size * pipeline_parallel_size),</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        optionally multiplied by data_parallel_size if include_dp is True.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    parallel_config </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.vllm_config.parallel_config</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> include_dp:</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">        return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> parallel_config.world_size_across_dp</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> parallel_config.world_size</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br></div></div><p>返回并行GPU数量。</p>
+<p>数据并行DP，张量并行TP，管道并行PP。默认返回TP * PP * DP，若include_dp为False，返回TP * PP。这是因为DP是将批次中的提示词分开，在生成文本时不同DP副本不需要通信，故考虑显存和建立通信时不需要考虑DP。</p>
+<h5 id="reset-mm-cache" tabindex="-1">reset_mm_cache <a class="header-anchor" href="#reset-mm-cache" aria-label="Permalink to &quot;reset_mm_cache&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> reset_mm_cache</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(self) -> </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">    self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.renderer.clear_mm_cache()</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">    self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.reset_mm_cache()</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div><p>重置多模态（Multimodal）缓存。</p>
+<h5 id="get-default-sampling-params" tabindex="-1">get_default_sampling_params <a class="header-anchor" href="#get-default-sampling-params" aria-label="Permalink to &quot;get_default_sampling_params&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> get_default_sampling_params</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(self) -> SamplingParams:</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.default_sampling_params </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">is</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">        self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.default_sampling_params </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.model_config.get_diff_sampling_param()</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.default_sampling_params:</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">        return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> SamplingParams.from_optional(</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">**</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.default_sampling_params)</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> SamplingParams()</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br></div></div><p>获取默认采样参数。</p>
+<h5 id="generate" tabindex="-1">generate <a class="header-anchor" href="#generate" aria-label="Permalink to &quot;generate&quot;">&ZeroWidthSpace;</a></h5>
+<details class="note-details"><summary>展开原代码（64 行）</summary>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> generate</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    self,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    prompts: PromptType </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> Sequence[PromptType],</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    sampling_params: SamplingParams </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> Sequence[SamplingParams] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    *</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    use_tqdm: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">bool</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> Callable[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">...</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, tqdm] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> True</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    lora_request: Sequence[LoRARequest] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> LoRARequest </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    priority: list[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    tokenization_kwargs: dict[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, Any] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    mm_processor_kwargs: dict[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, Any] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) -> list[RequestOutput]:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """Generates the completions for the input prompts.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    This class automatically batches the given prompts, considering</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    the memory constraint. For the best performance, put all of your prompts</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    into a single list and pass it to this method.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Args:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        prompts: The prompts to the LLM. You may pass a sequence of prompts</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            for batch inference. See [PromptType][vllm.inputs.PromptType]</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            for more details about the format of each prompt.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        sampling_params: The sampling parameters for text generation. If</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            None, we use the default sampling parameters.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            When it is a single value, it is applied to every prompt.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            When it is a list, the list must have the same length as the</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            prompts and it is paired one by one with the prompt.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        use_tqdm: If `True`, shows a tqdm progress bar.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            If a callable (e.g., `functools.partial(tqdm, leave=False)`),</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            it is used to create the progress bar.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            If `False`, no progress bar is created.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        lora_request: LoRA request to use for generation, if any.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        priority: The priority of the requests, if any.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            Only applicable when priority scheduling policy is enabled.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            If provided, must be a list of integers matching the length</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            of `prompts`, where each priority value corresponds to the prompt</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            at the same index.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        tokenization_kwargs: Overrides for `tokenizer.encode`.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        mm_processor_kwargs: Overrides for `processor.__call__`.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Returns:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        A list of `RequestOutput` objects containing the</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        generated completions in the same order as the input prompts.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    runner_type </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.model_config.runner_type</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> runner_type </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">!=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> "generate"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">        raise</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> ValueError</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            "LLM.generate() is only supported for generative models. "</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            "Try passing `--runner generate` to use the model as a "</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            "generative model."</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        )</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> sampling_params </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">is</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        sampling_params </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.get_default_sampling_params()</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    return</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">._run_completion(</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        prompts</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">prompts,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        params</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">sampling_params,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        output_type</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">RequestOutput,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        use_tqdm</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">use_tqdm,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        lora_request</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">lora_request,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        tokenization_kwargs</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">tokenization_kwargs,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        priority</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">priority,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        mm_processor_kwargs</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">mm_processor_kwargs,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    )</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br><span class="line-number">35</span><br><span class="line-number">36</span><br><span class="line-number">37</span><br><span class="line-number">38</span><br><span class="line-number">39</span><br><span class="line-number">40</span><br><span class="line-number">41</span><br><span class="line-number">42</span><br><span class="line-number">43</span><br><span class="line-number">44</span><br><span class="line-number">45</span><br><span class="line-number">46</span><br><span class="line-number">47</span><br><span class="line-number">48</span><br><span class="line-number">49</span><br><span class="line-number">50</span><br><span class="line-number">51</span><br><span class="line-number">52</span><br><span class="line-number">53</span><br><span class="line-number">54</span><br><span class="line-number">55</span><br><span class="line-number">56</span><br><span class="line-number">57</span><br><span class="line-number">58</span><br><span class="line-number">59</span><br><span class="line-number">60</span><br><span class="line-number">61</span><br><span class="line-number">62</span><br><span class="line-number">63</span><br><span class="line-number">64</span><br></div></div>
+</details><blockquote>
+<p>语法：
+1.*后的参数传入时必须使用关键字参数。</p>
+</blockquote>
+<p><code>use_tqdm</code>显示GPU推理进度。</p>
+<p><code>lora_request</code>需要在初始化时选择允许lora。</p>
+<p>一个封装，处理细节在<code>_run_completion</code>方法中。</p>
+<h5 id="enqueue" tabindex="-1">enqueue <a class="header-anchor" href="#enqueue" aria-label="Permalink to &quot;enqueue&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> enqueue</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    self,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    prompts: PromptType </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> Sequence[PromptType],</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    sampling_params: SamplingParams </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> Sequence[SamplingParams] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    lora_request: Sequence[LoRARequest] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> LoRARequest </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    priority: list[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    use_tqdm: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">bool</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> Callable[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">...</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, tqdm] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> True</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    tokenization_kwargs: dict[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, Any] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    mm_processor_kwargs: dict[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, Any] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) -> list[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">]:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """Enqueue prompts for generation without waiting for completion.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    This method adds requests to the engine queue but does not start</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    processing them. Use wait_for_completion() to process the queued</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    requests and get results.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Args:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        prompts: The prompts to the LLM. See generate() for details.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        sampling_params: The sampling parameters for text generation.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        lora_request: LoRA request to use for generation, if any.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        priority: The priority of the requests, if any.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        use_tqdm: If True, shows a tqdm progress bar while adding requests.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        tokenization_kwargs: Overrides for `tokenizer.encode`.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        mm_processor_kwargs: Overrides for `processor.__call__`.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Returns:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        A list of request IDs for the enqueued requests.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    runner_type </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.model_config.runner_type</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> runner_type </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">!=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> "generate"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">        raise</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> ValueError</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"LLM.enqueue() is only supported for generative models."</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> sampling_params </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">is</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        sampling_params </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.get_default_sampling_params()</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    return</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">._add_completion_requests(</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        prompts</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">prompts,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        params</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">sampling_params,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        use_tqdm</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">use_tqdm,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        lora_request</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">lora_request,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        priority</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">priority,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        tokenization_kwargs</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">tokenization_kwargs,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        mm_processor_kwargs</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">mm_processor_kwargs,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    )</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br><span class="line-number">35</span><br><span class="line-number">36</span><br><span class="line-number">37</span><br><span class="line-number">38</span><br><span class="line-number">39</span><br><span class="line-number">40</span><br><span class="line-number">41</span><br><span class="line-number">42</span><br><span class="line-number">43</span><br><span class="line-number">44</span><br></div></div><p>和<code>generate</code>方法不同，<code>enqueue</code>方法不会立即返回结果，而是将请求添加到引擎队列中。
+<code>wait_for_completion</code>方法可以用于处理队列中的请求并获取结果。</p>
+<p>是将入列和处理解耦的结果，中间可以进行其他控制，如手动控制批处理窗口等等。</p>
+<p><code>use_tqdm</code>显示CPU预处理进度（如tokenization、mm_processor等）。</p>
+<h5 id="wait-for-completion" tabindex="-1">wait_for_completion <a class="header-anchor" href="#wait-for-completion" aria-label="Permalink to &quot;wait_for_completion&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">@overload</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> wait_for_completion</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">   self,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">   output_type: type[_O] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> tuple[type[_O], </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">...</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">],</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">   *</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">   use_tqdm: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">bool</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> Callable[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">...</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, tqdm] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> True</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) -> list[_O]: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">...</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> wait_for_completion</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">   self,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">   output_type: type[Any] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> tuple[type[Any], </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">...</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">   *</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">   use_tqdm: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">bool</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> Callable[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">...</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, tqdm] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> True</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) -> list[Any]:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">   """Wait for all enqueued requests to complete and return results.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">   This method processes all requests currently in the engine queue</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">   and returns their outputs. Use after enqueue() to get results.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">   Args:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">       output_type: The expected output type(s). If not provided, accepts</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">           both RequestOutput and PoolingRequestOutput.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">       use_tqdm: If True, shows a tqdm progress bar.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">   Returns:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">       A list of output objects for all completed requests.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">   """</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">   if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> output_type </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">is</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">       output_type </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (RequestOutput, PoolingRequestOutput)</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">   return</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">._run_engine(output_type, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">use_tqdm</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">use_tqdm)</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br></div></div><p>封装：<code>vllm.output</code>的<code>RequestOutput, PoolingRequestOutput</code>以及<code>_run_engine</code>方法。</p>
+<p>通过<code>type</code>占位符重载精确类型和任意类型，根据任务（生成，池化，奖励等）返回不同的类型。</p>
+<h5 id="collective-rpc" tabindex="-1">collective_rpc <a class="header-anchor" href="#collective-rpc" aria-label="Permalink to &quot;collective_rpc&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> collective_rpc</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        self,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        method: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> Callable[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">...</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, _R],</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        timeout: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">float</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        args: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">tuple</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (),</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        kwargs: dict[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, Any] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    ) -> list[_R]:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        """</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        Execute an RPC call on all workers.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        Args:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            method: Name of the worker method to execute, or a callable that</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                is serialized and sent to all workers to execute.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                If the method is a callable, it should accept an additional</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                `self` argument, in addition to the arguments passed in `args`</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                and `kwargs`. The `self` argument will be the worker object.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            timeout: Maximum time in seconds to wait for execution. Raises a</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                [`TimeoutError`][] on timeout. `None` means wait indefinitely.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            args: Positional arguments to pass to the worker method.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            kwargs: Keyword arguments to pass to the worker method.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        Returns:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            A list containing the results from each worker.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        Note:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            It is recommended to use this API to only pass control messages,</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            and set up data-plane communication to pass data.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        """</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">        return</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.collective_rpc(method, timeout, args, kwargs)</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br></div></div><p>分布式架构的控制指令通道，可以将函数或方法传递到所有Worker节点（GPU），并收集返回结果。</p>
+<p>method灵活，args和kwargs所有节点共用一套。</p>
+<p>不建议传递数据，只用于传递指令。</p>
+<p>采用pickle序列化可调用对象，因此函数必须可被序列化。</p>
+<p>只能调用 Worker 对象上已有的、预定义好的方法名</p>
+<blockquote>
+<p>e.g.
+前缀缓存重置（Prefix Cache Reset）：当并发请求切换上下文时，主进程调用 <code>collective_rpc(&quot;reset_prefix_cache&quot;)</code>，确保所有 GPU 上的 PagedAttention 缓存索引同步归零。
+LoRA 适配器热加载：虽然 <code>generate</code> 中有单独的 <code>lora_request</code> 参数，但在底层初始化新 LoRA 权重时，主进程会通过 RPC 将新适配器的权重广播到所有张量并行的 GPU 上。
+分布式采样种子同步：在 <code>seed</code> 参数有值时，确保所有 Worker 的随机数生成器状态一致（虽然推理通常不依赖随机种子的一致性，但在调试确定性输出时有用）。
+获取运行时统计信息：调试时，可以传入 <code>method=lambda worker: worker.get_cache_usage()</code> 来收集所有 GPU 的显存碎片情况，用于调优 <code>gpu_memory_utilization</code>。</p>
+</blockquote>
+<h5 id="apply-model" tabindex="-1">apply_model <a class="header-anchor" href="#apply-model" aria-label="Permalink to &quot;apply_model&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> apply_model</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(self, func: Callable[[nn.Module], _R]) -> list[_R]:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Run a function directly on the model inside each worker,</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    returning the result for each of them.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    !!! warning</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        To reduce the overhead of data transfer, avoid returning large</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        arrays or tensors from this method. If you must return them,</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        make sure you move them to CPU first to avoid taking up additional</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        VRAM!</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    return</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.apply_model(func)</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br></div></div><p>可以获取Worker节点（GPU）上的模型作为参数传入回调函数，返回一些轻量的结果（最好不要返回大型张量）。</p>
+<p>常用于调试/修改模型结构（加钩子、替换激活函数）、精细化权重分析等。</p>
+<h5 id="chat" tabindex="-1">chat <a class="header-anchor" href="#chat" aria-label="Permalink to &quot;chat&quot;">&ZeroWidthSpace;</a></h5>
+<details class="note-details"><summary>展开原代码（93 行）</summary>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> chat</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    self,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    messages: list[ChatCompletionMessageParam]</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    |</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> Sequence[list[ChatCompletionMessageParam]],</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    sampling_params: SamplingParams </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> Sequence[SamplingParams] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    use_tqdm: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">bool</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> Callable[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">...</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, tqdm] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> True</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    lora_request: Sequence[LoRARequest] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> LoRARequest </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    chat_template: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    chat_template_content_format: ChatTemplateContentFormatOption </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> "auto"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    add_generation_prompt: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">bool</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> True</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    continue_final_message: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">bool</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> False</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    tools: list[dict[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, Any]] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    chat_template_kwargs: dict[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, Any] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    tokenization_kwargs: dict[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, Any] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    mm_processor_kwargs: dict[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, Any] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) -> list[RequestOutput]:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Generate responses for a chat conversation.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    The chat conversation is converted into a text prompt using the</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    tokenizer and calls the [generate][vllm.LLM.generate] method to generate</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    the responses.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Multi-modal inputs can be passed in the same way you would pass them</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    to the OpenAI API.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Args:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        messages: A sequence of conversations or a single conversation.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            - Each conversation is represented as a list of messages.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            - Each message is a dictionary with 'role' and 'content' keys.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        sampling_params: The sampling parameters for text generation.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            If None, we use the default sampling parameters. When it</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            is a single value, it is applied to every prompt. When it</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            is a list, the list must have the same length as the</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            prompts and it is paired one by one with the prompt.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        use_tqdm: If `True`, shows a tqdm progress bar.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            If a callable (e.g., `functools.partial(tqdm, leave=False)`),</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            it is used to create the progress bar.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            If `False`, no progress bar is created.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        lora_request: LoRA request to use for generation, if any.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        chat_template: The template to use for structuring the chat.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            If not provided, the model's default chat template will be used.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        chat_template_content_format: The format to render message content.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            - "string" will render the content as a string.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                Example: `"Who are you?"`</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            - "openai" will render the content as a list of dictionaries,</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                similar to OpenAI schema.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                Example: `[{"type": "text", "text": "Who are you?"}]`</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        add_generation_prompt: If True, adds a generation template</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            to each message.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        continue_final_message: If True, continues the final message in</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            the conversation instead of starting a new one. Cannot be</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            `True` if `add_generation_prompt` is also `True`.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        chat_template_kwargs: Additional kwargs to pass to the chat</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            template.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        tokenization_kwargs: Overrides for `tokenizer.encode`.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        mm_processor_kwargs: Overrides for `processor.__call__`.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Returns:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        A list of `RequestOutput` objects containing the generated</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        responses in the same order as the input messages.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    model_config </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.model_config</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    runner_type </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> model_config.runner_type</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> runner_type </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">!=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> "generate"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">        raise</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> ValueError</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            "LLM.chat() is only supported for generative models. "</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            "Try passing `--runner generate` to use the model as a "</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            "generative model."</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        )</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> sampling_params </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">is</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        sampling_params </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.get_default_sampling_params()</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    return</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">._run_chat(</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        messages</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">messages,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        params</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">sampling_params,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        output_type</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">RequestOutput,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        use_tqdm</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">use_tqdm,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        lora_request</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">lora_request,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        chat_template</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">chat_template,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        chat_template_content_format</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">chat_template_content_format,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        chat_template_kwargs</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">chat_template_kwargs,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        add_generation_prompt</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">add_generation_prompt,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        continue_final_message</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">continue_final_message,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        tools</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">tools,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        tokenization_kwargs</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">tokenization_kwargs,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        mm_processor_kwargs</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">mm_processor_kwargs,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    )</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br><span class="line-number">35</span><br><span class="line-number">36</span><br><span class="line-number">37</span><br><span class="line-number">38</span><br><span class="line-number">39</span><br><span class="line-number">40</span><br><span class="line-number">41</span><br><span class="line-number">42</span><br><span class="line-number">43</span><br><span class="line-number">44</span><br><span class="line-number">45</span><br><span class="line-number">46</span><br><span class="line-number">47</span><br><span class="line-number">48</span><br><span class="line-number">49</span><br><span class="line-number">50</span><br><span class="line-number">51</span><br><span class="line-number">52</span><br><span class="line-number">53</span><br><span class="line-number">54</span><br><span class="line-number">55</span><br><span class="line-number">56</span><br><span class="line-number">57</span><br><span class="line-number">58</span><br><span class="line-number">59</span><br><span class="line-number">60</span><br><span class="line-number">61</span><br><span class="line-number">62</span><br><span class="line-number">63</span><br><span class="line-number">64</span><br><span class="line-number">65</span><br><span class="line-number">66</span><br><span class="line-number">67</span><br><span class="line-number">68</span><br><span class="line-number">69</span><br><span class="line-number">70</span><br><span class="line-number">71</span><br><span class="line-number">72</span><br><span class="line-number">73</span><br><span class="line-number">74</span><br><span class="line-number">75</span><br><span class="line-number">76</span><br><span class="line-number">77</span><br><span class="line-number">78</span><br><span class="line-number">79</span><br><span class="line-number">80</span><br><span class="line-number">81</span><br><span class="line-number">82</span><br><span class="line-number">83</span><br><span class="line-number">84</span><br><span class="line-number">85</span><br><span class="line-number">86</span><br><span class="line-number">87</span><br><span class="line-number">88</span><br><span class="line-number">89</span><br><span class="line-number">90</span><br><span class="line-number">91</span><br><span class="line-number">92</span><br><span class="line-number">93</span><br></div></div>
+</details><p>对<code>generate</code>的openai风格封装，支持传入结构化messages。
+<code>_run_chat</code>细节见 <code>vllm/entrypoints/offline_utils.py</code> 的 <code>OfflineInferenceMixin</code>。</p>
+<h5 id="enquene-chat" tabindex="-1">enquene_chat <a class="header-anchor" href="#enquene-chat" aria-label="Permalink to &quot;enquene_chat&quot;">&ZeroWidthSpace;</a></h5>
+<details class="note-details"><summary>展开原代码（76 行）</summary>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> enqueue_chat</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    self,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    messages: list[ChatCompletionMessageParam]</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    |</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> Sequence[list[ChatCompletionMessageParam]],</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    sampling_params: SamplingParams </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> Sequence[SamplingParams] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    use_tqdm: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">bool</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> Callable[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">...</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, tqdm] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> True</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    lora_request: Sequence[LoRARequest] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> LoRARequest </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    priority: list[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    chat_template: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    chat_template_content_format: ChatTemplateContentFormatOption </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> "auto"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    add_generation_prompt: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">bool</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> True</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    continue_final_message: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">bool</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> False</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    tools: list[dict[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, Any]] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    chat_template_kwargs: dict[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, Any] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    tokenization_kwargs: dict[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, Any] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    mm_processor_kwargs: dict[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, Any] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) -> list[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">]:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """Enqueue chat conversations for generation without waiting.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    This method renders chat conversations and adds the resulting requests</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    to the engine queue. Use wait_for_completion() to get results. To</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    guarantee that all requests are queued before scheduling starts, pause</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    scheduling with sleep(level=0) before calling this method and resume it</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    with wake_up(tags=["scheduling"]) afterward.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Args:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        messages: A sequence of conversations or a single conversation.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            Each conversation is represented as a list of messages.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        sampling_params: The sampling parameters for text generation.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            If None, we use the default sampling parameters.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        use_tqdm: If `True`, shows a tqdm progress bar while rendering</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            conversations.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        lora_request: LoRA request to use for generation, if any.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        priority: The priority of the requests, if any.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        chat_template: The template to use for structuring the chat.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        chat_template_content_format: The format to render message content.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        add_generation_prompt: If True, adds a generation template</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            to each message.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        continue_final_message: If True, continues the final message in</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            the conversation instead of starting a new one.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        tools: Tools to make available to the model, if any.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        chat_template_kwargs: Additional kwargs to pass to the chat</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            template.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        tokenization_kwargs: Overrides for `tokenizer.encode`.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        mm_processor_kwargs: Overrides for `processor.__call__`.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Returns:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        A list of request IDs for the enqueued requests.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    model_config </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.model_config</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    runner_type </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> model_config.runner_type</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> runner_type </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">!=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> "generate"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">        raise</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> ValueError</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            "LLM.enqueue_chat() is only supported for generative models. "</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            "Try passing `--runner generate` to use the model as a "</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            "generative model."</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        )</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> sampling_params </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">is</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        sampling_params </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.get_default_sampling_params()</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    return</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">._add_chat_requests(</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        messages</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">messages,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        params</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">sampling_params,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        use_tqdm</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">use_tqdm,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        lora_request</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">lora_request,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        priority</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">priority,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        chat_template</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">chat_template,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        chat_template_content_format</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">chat_template_content_format,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        chat_template_kwargs</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">chat_template_kwargs,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        add_generation_prompt</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">add_generation_prompt,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        continue_final_message</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">continue_final_message,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        tools</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">tools,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        tokenization_kwargs</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">tokenization_kwargs,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">        mm_processor_kwargs</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">mm_processor_kwargs,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    )</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br><span class="line-number">35</span><br><span class="line-number">36</span><br><span class="line-number">37</span><br><span class="line-number">38</span><br><span class="line-number">39</span><br><span class="line-number">40</span><br><span class="line-number">41</span><br><span class="line-number">42</span><br><span class="line-number">43</span><br><span class="line-number">44</span><br><span class="line-number">45</span><br><span class="line-number">46</span><br><span class="line-number">47</span><br><span class="line-number">48</span><br><span class="line-number">49</span><br><span class="line-number">50</span><br><span class="line-number">51</span><br><span class="line-number">52</span><br><span class="line-number">53</span><br><span class="line-number">54</span><br><span class="line-number">55</span><br><span class="line-number">56</span><br><span class="line-number">57</span><br><span class="line-number">58</span><br><span class="line-number">59</span><br><span class="line-number">60</span><br><span class="line-number">61</span><br><span class="line-number">62</span><br><span class="line-number">63</span><br><span class="line-number">64</span><br><span class="line-number">65</span><br><span class="line-number">66</span><br><span class="line-number">67</span><br><span class="line-number">68</span><br><span class="line-number">69</span><br><span class="line-number">70</span><br><span class="line-number">71</span><br><span class="line-number">72</span><br><span class="line-number">73</span><br><span class="line-number">74</span><br><span class="line-number">75</span><br><span class="line-number">76</span><br></div></div>
+</details><p>chat和enqueue的综合，支持传入结构化messages，然后传入队列等待处理。</p>
+<p>核心抽象为<code>OfflineInferenceMixin</code>中的<code>_add_chat_requests</code>。</p>
+<h5 id="start-profile" tabindex="-1">start_profile <a class="header-anchor" href="#start-profile" aria-label="Permalink to &quot;start_profile&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> start_profile</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(self, profile_prefix: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) -> </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """Start profiling with optional custom trace prefix.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Args:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        profile_prefix: Optional prefix for the trace file names. If provided,</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                        trace files will be named as "&#x3C;prefix>_dp&#x3C;X>_pp&#x3C;Y>_tp&#x3C;Z>".</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                        If not provided, default naming will be used.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">    self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.start_profile(profile_prefix)</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br></div></div><h5 id="stop-profile" tabindex="-1">stop_profile <a class="header-anchor" href="#stop-profile" aria-label="Permalink to &quot;stop_profile&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> stop_profile</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(self) -> </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">    self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.stop_profile()</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br></div></div><p>用于启动和停止PyTorch Profiler（或 vLLM 自定义的性能追踪器）</p>
+<p>通过将并行维度编码进文件名，你可以在 TensorBoard 或 Chrome Trace Viewer 中同时加载多个 GPU 的追踪文件，对比不同卡上的 CUDA 内核启动耗时，精准定位负载不均或通信瓶颈。</p>
+<p>使用场景：当你怀疑某些层的计算速度异常（如 Attention 算子太慢），或想观察 KV Cache 换入换出的耗时，可以在推理前后包裹这两个方法，生成 .json.gz 追踪文件进行离线分析。</p>
+<h5 id="reset-prefix-cache" tabindex="-1">reset_prefix_cache <a class="header-anchor" href="#reset-prefix-cache" aria-label="Permalink to &quot;reset_prefix_cache&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> reset_prefix_cache</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    self, reset_running_requests: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">bool</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> False</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, reset_connector: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">bool</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> False</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) -> </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">bool</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    return</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.reset_prefix_cache(</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        reset_running_requests, reset_connector</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    )</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br></div></div><blockquote>
+<p>自动前缀缓存（Automatic Prefix Caching）：当多个请求共享相同的系统提示词（System Prompt）或长上下文前缀时，vLLM 会复用这些 Token 的 KV Cache，避免重复计算。</p>
+</blockquote>
+<p><code>reset_running_requests</code>为True时强制清空包括正在运行的请求的前缀缓存。<code>reset_connector</code>为True时强制清空连接器的前缀缓存。（vllm支持将K-V缓存卸载到外部储存）</p>
+<h5 id="sleep" tabindex="-1">sleep <a class="header-anchor" href="#sleep" aria-label="Permalink to &quot;sleep&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> sleep</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(self, level: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">int</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, mode: PauseMode </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> "abort"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">):</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Put the engine to sleep. The engine should not process any requests.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    The caller should guarantee that no requests are being processed</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    during the sleep period, before `wake_up` is called.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Args:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        level: The sleep level.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            - Level 0: Pause scheduling but continue accepting requests.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                        Requests are queued but not processed.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            - Level 1: Offload model weights to CPU, discard KV cache.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                        The content of kv cache is forgotten. Good for</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                        sleeping and waking up the engine to run the same</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                        model again. Please make sure there's enough CPU</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                        memory to store the model weights.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            - Level 2: Discard all GPU memory (weights + KV cache).</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                        Good for sleeping and waking up the engine to run</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                        a different model or update the model, where</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                        previous model weights are not needed. It reduces</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">                        CPU memory pressure.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        mode: How to handle any existing requests, can be "abort", "wait",</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            or "keep".</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">    self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.sleep(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">level</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">level, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">mode</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">mode)</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br></div></div><ul>
+<li>level 0：冻结Scheduler，不再拉请求，但模型权重依然留在 GPU 显存，已处理的 KV Cache 也保留。</li>
+<li>level 1：将模型权重卸载到 CPU 显存，丢弃 KV Cache。</li>
+<li>level 2：丢弃所有 GPU 显存（模型权重 + KV Cache），用于运行不同的模型或更新模型，其中之前的模型权重不再需要。</li>
+</ul>
+<h5 id="wake-up" tabindex="-1">wake_up <a class="header-anchor" href="#wake-up" aria-label="Permalink to &quot;wake_up&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> wake_up</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(self, tags: list[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">):</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Wake up the engine from sleep mode. See the [sleep][vllm.LLM.sleep]</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    method for more details.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Args:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        tags: An optional list of tags to reallocate the engine memory</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            for specific memory allocations. Values must be in</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            `("weights", "kv_cache", "scheduling")`. If None, all memory</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            is reallocated. wake_up should be called with all tags</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            (or None) before the engine is used again.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            Use tags=["scheduling"] to resume from level 0 sleep.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">    self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.wake_up(tags)</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br></div></div><div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th style="text-align:left">之前调用的 <code>sleep</code> 模式</th>
+<th style="text-align:left">对应的 <code>wake_up</code> 调用方式</th>
+<th style="text-align:left">原因解析</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>sleep(level=0)</code>（暂停调度）</td>
+<td style="text-align:left"><code>wake_up(tags=[&quot;scheduling&quot;])</code></td>
+<td style="text-align:left">只恢复调度器（Scheduler），不碰模型权重和 KV Cache（它们本就在显存中）。这是最轻量的唤醒，耗时微秒级。</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>sleep(level=1)</code>（权重卸载至 CPU）</td>
+<td style="text-align:left"><code>wake_up(tags=[&quot;weights&quot;, &quot;scheduling&quot;])</code></td>
+<td style="text-align:left">需要将权重从 CPU 拷贝回 GPU（<code>weights</code>），同时让调度器恢复拉取任务（<code>scheduling</code>）。注意：KV Cache 在 Level 1 时已被丢弃，此时要么通过 <code>kv_cache</code> tag 重新分配，要么在第一个新请求到来时由引擎惰性初始化。</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>sleep(level=2)</code>（丢弃所有）</td>
+<td style="text-align:left"><code>wake_up(tags=None)</code> 或 <br> <code>wake_up(tags=[&quot;weights&quot;, &quot;kv_cache&quot;, &quot;scheduling&quot;])</code></td>
+<td style="text-align:left">一切都要从零重建：加载权重、分配 KV Cache 物理块、启动调度器。传 <code>None</code> 等同于同时恢复所有组件。</td>
+</tr>
+</tbody>
+</table></div>
+<h5 id="get-metrics" tabindex="-1">get_metrics <a class="header-anchor" href="#get-metrics" aria-label="Permalink to &quot;get_metrics&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> get_metrics</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(self) -> list[</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"Metric"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">]:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """Return a snapshot of aggregated metrics from Prometheus.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Returns:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        A `MetricSnapshot` instance capturing the current state</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        of all aggregated metrics from Prometheus.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Note:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        This method is only available with the V1 LLM engine.</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    return</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.get_metrics()</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br></div></div><p>获取监控指标，需要在v1引擎下使用。</p>
+<h5 id="init-weight-transfer-engine" tabindex="-1">init_weight_transfer_engine <a class="header-anchor" href="#init-weight-transfer-engine" aria-label="Permalink to &quot;init_weight_transfer_engine&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> init_weight_transfer_engine</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    self, request: WeightTransferInitRequest </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> dict</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) -> </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Initialize weight transfer for RL training.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    Args:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        request: Weight transfer initialization request with backend-specific info</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    init_info_dict </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        request[</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"init_info"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">if</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> isinstance</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(request, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">dict</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">else</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> request.init_info</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    )</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">    self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.collective_rpc(</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        "init_weight_transfer_engine"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">kwargs</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">{</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"init_info"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">: init_info_dict}</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">    )</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br></div></div><p>建立vllm和训练器之间的高速通道。</p>
+<h5 id="start-weight-update" tabindex="-1">start_weight_update <a class="header-anchor" href="#start-weight-update" aria-label="Permalink to &quot;start_weight_update&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> start_weight_update</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(self) -> </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """Start a new weight update."""</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">    self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.collective_rpc(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"start_weight_update"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div><p>阻塞业务，锁定资源，为更新做准备</p>
+<h5 id="update-weights" tabindex="-1">update_weights <a class="header-anchor" href="#update-weights" aria-label="Permalink to &quot;update_weights&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> update_weights</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(self, request: WeightTransferUpdateRequest </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> dict</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) -> </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        """</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        Update the weights of the model.</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        Args:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            request: Weight update request with backend-specific update info</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">        """</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        update_info_dict </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> (</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">            request[</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"update_info"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">if</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> isinstance</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(request, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">dict</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">else</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> request.update_info</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        )</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">        self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.collective_rpc(</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">            "update_weights"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">kwargs</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">{</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"update_info"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">: update_info_dict}</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        )</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br></div></div><p>更新数据（权重）</p>
+<h5 id="finish-weight-update" tabindex="-1">finish_weight_update <a class="header-anchor" href="#finish-weight-update" aria-label="Permalink to &quot;finish_weight_update&quot;">&ZeroWidthSpace;</a></h5>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> finish_weight_update</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(self) -> </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """Finish the current weight update."""</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">    self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.collective_rpc(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"finish_weight_update"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div><p>结束更新</p>
+<div class="language-python vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">def</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> __repr__</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">(self) -> </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">str</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    """Return a transformers-style hierarchical view of the model."""</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">    # Cache the result to avoid repeated collective_rpc calls</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    if</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">._cached_repr </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">is</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> None</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">        results </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.llm_engine.collective_rpc(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"get_model_inspection"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">        # In distributed settings, we get results from all workers</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">        # Just return the first one (they should all be the same)</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">        if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> results:</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">            self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">._cached_repr </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> results[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">]</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">        else</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">            self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">._cached_repr </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> f</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"LLM(model=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">{self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">.model_config.model</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">!r</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">}</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">)"</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">    return</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> self</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">._cached_repr</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br></div></div><p>分布式读取模型信息并返回缓存。</p>
+<p>huggingface风格输出。﻿## 方法依赖树</p>
+<h3 id="继承关系" tabindex="-1">继承关系 <a class="header-anchor" href="#继承关系" aria-label="Permalink to &quot;继承关系&quot;">&ZeroWidthSpace;</a></h3>
+<div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>LLM</span></span>
+<span class="line"><span> ├── BeamSearchOfflineMixin  ─── 继承自 → OfflineInferenceMixin</span></span>
+<span class="line"><span> ├── PoolingOfflineMixin     ─── 继承自 → OfflineInferenceMixin</span></span>
+<span class="line"><span> └── OfflineInferenceMixin</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br></div></div><p><code>BeamSearchOfflineMixin</code> 和 <code>PoolingOfflineMixin</code> 都直接继承 <code>OfflineInferenceMixin</code>，然后 <code>LLM</code> 使用多重继承同时继承三者。</p>
+<h3 id="核心依赖对象" tabindex="-1">核心依赖对象 <a class="header-anchor" href="#核心依赖对象" aria-label="Permalink to &quot;核心依赖对象&quot;">&ZeroWidthSpace;</a></h3>
+<p>LLM 类所有方法调用最终都可以归类到以下四个核心依赖对象（均在 <code>LLM.__init__</code> 中初始化）：</p>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>对象</th>
+<th>类型</th>
+<th>来源</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>self.llm_engine</code></td>
+<td><code>LLMEngine</code></td>
+<td><code>LLMEngine.from_engine_args(...)</code></td>
+<td>推理引擎，管理请求队列、调度、KV Cache</td>
+</tr>
+<tr>
+<td><code>self.renderer</code></td>
+<td><code>BaseRenderer</code></td>
+<td><code>self.llm_engine.renderer</code></td>
+<td>渲染器，负责 tokenization 和 prompt 预处理</td>
+</tr>
+<tr>
+<td><code>self.model_config</code></td>
+<td><code>ModelConfig</code></td>
+<td><code>self.llm_engine.model_config</code></td>
+<td>模型配置，包含 dtype、runner_type、hf_config 等</td>
+</tr>
+<tr>
+<td><code>self.request_counter</code></td>
+<td><code>Counter</code></td>
+<td><code>Counter()</code></td>
+<td>请求计数器，生成唯一 request_id</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h3 id="一、llm-直接定义的方法-llm-py" tabindex="-1">一、LLM 直接定义的方法（llm.py） <a class="header-anchor" href="#一、llm-直接定义的方法-llm-py" aria-label="Permalink to &quot;一、LLM 直接定义的方法（llm.py）&quot;">&ZeroWidthSpace;</a></h3>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>依赖（归类）</th>
+<th>调用链</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__</code></td>
+<td><code>[llm_engine]</code> <code>[model_config]</code> <code>[renderer]</code> <code>[request_counter]</code></td>
+<td>→ <code>LLMEngine.from_engine_args()</code> → <code>PoolingOfflineMixin.__init__()</code></td>
+</tr>
+<tr>
+<td><code>from_engine_args</code></td>
+<td><code>[self: __init__]</code></td>
+<td>cls → <code>__init__()</code></td>
+</tr>
+<tr>
+<td><code>get_tokenizer</code></td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.get_tokenizer()</code></td>
+</tr>
+<tr>
+<td><code>get_world_size</code></td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.vllm_config.parallel_config</code></td>
+</tr>
+<tr>
+<td><code>reset_mm_cache</code></td>
+<td><code>[renderer]</code> <code>[llm_engine]</code></td>
+<td>→ <code>renderer.clear_mm_cache()</code> + <code>llm_engine.reset_mm_cache()</code></td>
+</tr>
+<tr>
+<td><code>get_default_sampling_params</code></td>
+<td><code>[model_config]</code></td>
+<td>→ <code>model_config.get_diff_sampling_param()</code></td>
+</tr>
+<tr>
+<td><code>generate</code></td>
+<td><code>[model_config]</code> <code>[self: get_default_sampling_params]</code> <code>[OfflineInferenceMixin: _run_completion]</code></td>
+<td>→ <code>get_default_sampling_params()</code> → <code>_run_completion()</code> ☆</td>
+</tr>
+<tr>
+<td><code>enqueue</code></td>
+<td><code>[model_config]</code> <code>[self: get_default_sampling_params]</code> <code>[OfflineInferenceMixin: _add_completion_requests]</code></td>
+<td>→ <code>get_default_sampling_params()</code> → <code>_add_completion_requests()</code> ☆</td>
+</tr>
+<tr>
+<td><code>wait_for_completion</code></td>
+<td><code>[OfflineInferenceMixin: _run_engine]</code></td>
+<td>→ <code>_run_engine()</code> ☆</td>
+</tr>
+<tr>
+<td><code>collective_rpc</code></td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.collective_rpc()</code></td>
+</tr>
+<tr>
+<td><code>apply_model</code></td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.apply_model()</code></td>
+</tr>
+<tr>
+<td><code>chat</code></td>
+<td><code>[model_config]</code> <code>[self: get_default_sampling_params]</code> <code>[OfflineInferenceMixin: _run_chat]</code></td>
+<td>→ <code>get_default_sampling_params()</code> → <code>_run_chat()</code> ☆</td>
+</tr>
+<tr>
+<td><code>enqueue_chat</code></td>
+<td><code>[model_config]</code> <code>[self: get_default_sampling_params]</code> <code>[OfflineInferenceMixin: _add_chat_requests]</code></td>
+<td>→ <code>get_default_sampling_params()</code> → <code>_add_chat_requests()</code> ☆</td>
+</tr>
+<tr>
+<td><code>start_profile</code></td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.start_profile()</code></td>
+</tr>
+<tr>
+<td><code>stop_profile</code></td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.stop_profile()</code></td>
+</tr>
+<tr>
+<td><code>reset_prefix_cache</code></td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.reset_prefix_cache()</code></td>
+</tr>
+<tr>
+<td><code>sleep</code></td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.sleep()</code></td>
+</tr>
+<tr>
+<td><code>wake_up</code></td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.wake_up()</code></td>
+</tr>
+<tr>
+<td><code>get_metrics</code></td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.get_metrics()</code></td>
+</tr>
+<tr>
+<td><code>init_weight_transfer_engine</code></td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.collective_rpc(&quot;init_weight_transfer_engine&quot;)</code></td>
+</tr>
+<tr>
+<td><code>start_weight_update</code></td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.collective_rpc(&quot;start_weight_update&quot;)</code></td>
+</tr>
+<tr>
+<td><code>update_weights</code></td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.collective_rpc(&quot;update_weights&quot;)</code></td>
+</tr>
+<tr>
+<td><code>finish_weight_update</code></td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.collective_rpc(&quot;finish_weight_update&quot;)</code></td>
+</tr>
+<tr>
+<td><code>__repr__</code></td>
+<td><code>[llm_engine]</code> <code>[model_config]</code></td>
+<td>→ <code>llm_engine.collective_rpc(&quot;get_model_inspection&quot;)</code> + <code>model_config.model</code></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>☆ 标记的方法实际执行流程进入 <code>OfflineInferenceMixin</code> 的链式调用，最终落到 <code>_run_engine()</code> → <code>llm_engine.step()</code>。</p>
+</blockquote>
+<hr>
+<h3 id="二、offlineinferencemixin-定义的方法-offline-utils-py" tabindex="-1">二、OfflineInferenceMixin 定义的方法（offline_utils.py） <a class="header-anchor" href="#二、offlineinferencemixin-定义的方法-offline-utils-py" aria-label="Permalink to &quot;二、OfflineInferenceMixin 定义的方法（offline_utils.py）&quot;">&ZeroWidthSpace;</a></h3>
+<p>这是所有离线推理的公共基类，LLM 通过多重继承获得这些方法。</p>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>依赖（归类）</th>
+<th>调用链</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_resolve_mm_lora</code></td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.vllm_config.lora_config</code></td>
+</tr>
+<tr>
+<td><code>_preprocess_cmpl</code></td>
+<td><code>[renderer]</code> <code>[model_config]</code></td>
+<td>→ <code>renderer.render_cmpl()</code></td>
+</tr>
+<tr>
+<td><code>_preprocess_cmpl_one</code></td>
+<td><code>[self: _preprocess_cmpl]</code></td>
+<td>→ <code>_preprocess_cmpl()</code></td>
+</tr>
+<tr>
+<td><code>_preprocess_chat</code></td>
+<td><code>[renderer]</code> <code>[model_config]</code></td>
+<td>→ <code>renderer.render_chat()</code></td>
+</tr>
+<tr>
+<td><code>_preprocess_chat_one</code></td>
+<td><code>[self: _preprocess_chat]</code></td>
+<td>→ <code>_preprocess_chat()</code></td>
+</tr>
+<tr>
+<td><code>_params_to_seq</code></td>
+<td><em>(纯逻辑，无外部依赖)</em></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>_lora_request_to_seq</code></td>
+<td><em>(纯逻辑，无外部依赖)</em></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>_priority_to_seq</code></td>
+<td><em>(纯逻辑，无外部依赖)</em></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>_add_completion_requests</code></td>
+<td><code>[self: _params_to_seq / _lora_request_to_seq / _priority_to_seq / _preprocess_cmpl_one / _render_and_add_requests]</code></td>
+<td>参数序列化 → <code>_preprocess_cmpl_one()</code> → <code>_render_and_add_requests()</code></td>
+</tr>
+<tr>
+<td><code>_run_completion</code></td>
+<td><code>[self: _add_completion_requests / _run_engine]</code></td>
+<td><code>_add_completion_requests()</code> → <code>_run_engine()</code></td>
+</tr>
+<tr>
+<td><code>_run_chat</code></td>
+<td><code>[self: _add_chat_requests / _run_engine]</code></td>
+<td><code>_add_chat_requests()</code> → <code>_run_engine()</code></td>
+</tr>
+<tr>
+<td><code>_add_chat_requests</code></td>
+<td><code>[self: _params_to_seq / _lora_request_to_seq / _priority_to_seq / _adjust_params_for_parsing / _preprocess_chat_one / _render_and_add_requests]</code></td>
+<td>参数序列化 → <code>_adjust_params_for_parsing()</code> → <code>_preprocess_chat_one()</code> → <code>_render_and_add_requests()</code></td>
+</tr>
+<tr>
+<td><code>_adjust_params_for_parsing</code></td>
+<td><code>[model_config]</code> <code>[renderer]</code></td>
+<td>→ <code>renderer.get_tokenizer()</code> + <code>model_config.hf_config</code></td>
+</tr>
+<tr>
+<td><code>_render_and_run_requests</code></td>
+<td><code>[self: _render_and_add_requests / _run_engine]</code></td>
+<td><code>_render_and_add_requests()</code> → <code>_run_engine()</code></td>
+</tr>
+<tr>
+<td><code>_render_and_add_requests</code> ★</td>
+<td><code>[self: _add_request / _resolve_mm_lora]</code> <code>[llm_engine]</code></td>
+<td>遍历 prompts → <code>_resolve_mm_lora()</code> → <code>_add_request()</code>; 异常时 → <code>llm_engine.abort_request()</code></td>
+</tr>
+<tr>
+<td><code>_add_request</code> ★</td>
+<td><code>[request_counter]</code> <code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.add_request()</code></td>
+</tr>
+<tr>
+<td><code>_run_engine</code> ★★★</td>
+<td><code>[llm_engine]</code></td>
+<td>→ <code>llm_engine.get_num_unfinished_requests()</code> → <strong>while</strong> <code>llm_engine.has_unfinished_requests()</code>: <code>llm_engine.step()</code></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>★ <code>_render_and_add_requests</code> 将预处理后的 prompt 逐个添加为 engine 请求。<br>
+★★★ <code>_run_engine</code> 是 <strong>所有 generate/chat/encode/score 的最终汇聚点</strong>，驱动 LLMEngine 的 step 循环直到所有请求完成。</p>
+</blockquote>
+<hr>
+<h3 id="三、beamsearchofflinemixin-定义的方法-generate-beam-search-offline-py" tabindex="-1">三、BeamSearchOfflineMixin 定义的方法（generate/beam_search/offline.py） <a class="header-anchor" href="#三、beamsearchofflinemixin-定义的方法-generate-beam-search-offline-py" aria-label="Permalink to &quot;三、BeamSearchOfflineMixin 定义的方法（generate/beam_search/offline.py）&quot;">&ZeroWidthSpace;</a></h3>
+<p>继承自 OfflineInferenceMixin，为 LLM 提供 <code>beam_search()</code> 方法。</p>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>依赖（归类）</th>
+<th>调用链</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>beam_search</code></td>
+<td><code>[renderer]</code> <code>[OfflineInferenceMixin: _preprocess_cmpl / _lora_request_to_seq]</code> <code>[self: _init_beam_search_structured_output / _beam_search_step]</code></td>
+<td>→ <code>renderer.get_tokenizer()</code> → <code>_preprocess_cmpl()</code> → <code>_lora_request_to_seq()</code> → <code>_init_beam_search_structured_output()</code> → 循环 <code>_beam_search_step()</code></td>
+</tr>
+<tr>
+<td><code>_beam_search_step</code></td>
+<td><code>[self: _build_beam_sampling_params]</code> <code>[OfflineInferenceMixin: _params_to_seq / _render_and_run_requests]</code></td>
+<td>→ <code>_build_beam_sampling_params()</code> → <code>_params_to_seq()</code> → <code>_render_and_run_requests()</code></td>
+</tr>
+<tr>
+<td><code>_init_beam_search_structured_output</code></td>
+<td><code>[llm_engine]</code> <code>[model_config]</code></td>
+<td>→ <code>llm_engine.vllm_config</code> + <code>model_config.get_vocab_size()</code></td>
+</tr>
+<tr>
+<td><code>_build_beam_sampling_params</code></td>
+<td><code>[model_config]</code></td>
+<td>→ <code>model_config.get_vocab_size()</code></td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h3 id="四、poolingofflinemixin-定义的方法-pooling-offline-py" tabindex="-1">四、PoolingOfflineMixin 定义的方法（pooling/offline.py） <a class="header-anchor" href="#四、poolingofflinemixin-定义的方法-pooling-offline-py" aria-label="Permalink to &quot;四、PoolingOfflineMixin 定义的方法（pooling/offline.py）&quot;">&ZeroWidthSpace;</a></h3>
+<p>继承自 OfflineInferenceMixin，为 LLM 提供 <code>encode()</code> / <code>embed()</code> / <code>classify()</code> / <code>score()</code> 方法。</p>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>依赖（归类）</th>
+<th>调用链</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PoolingOfflineMixin.__init__</code></td>
+<td><code>[model_config]</code> <code>[llm_engine]</code> <code>[renderer]</code></td>
+<td>→ <code>model_config.get_pooling_task()</code> → <code>llm_engine.vllm_config</code></td>
+</tr>
+<tr>
+<td><code>encode</code></td>
+<td><code>[self: _verify_pooling_task]</code> <code>[OfflineInferenceMixin: _params_to_seq / _lora_request_to_seq / _priority_to_seq / _render_and_add_requests / _run_engine]</code></td>
+<td>→ <code>_verify_pooling_task()</code> → <code>_params_to_seq()</code> → <code>_lora_request_to_seq()</code> → <code>_priority_to_seq()</code> → <code>_render_and_add_requests()</code> → <code>_run_engine()</code></td>
+</tr>
+<tr>
+<td><code>_verify_pooling_task</code></td>
+<td><code>[self: runner_type / supported_tasks]</code></td>
+<td>属性检查，无方法调用</td>
+</tr>
+<tr>
+<td><code>embed</code></td>
+<td><code>[self: encode]</code></td>
+<td>→ <code>encode(pooling_task=&quot;embed&quot;)</code></td>
+</tr>
+<tr>
+<td><code>classify</code></td>
+<td><code>[self: encode]</code></td>
+<td>→ <code>encode(pooling_task=&quot;classify&quot;)</code></td>
+</tr>
+<tr>
+<td><code>score</code></td>
+<td><code>[OfflineInferenceMixin: _lora_request_to_seq / _params_to_seq / _priority_to_seq / _render_and_add_requests / _run_engine]</code></td>
+<td>→ <code>_lora_request_to_seq()</code> → <code>_params_to_seq()</code> → <code>_priority_to_seq()</code> → <code>_render_and_add_requests()</code> → <code>_run_engine()</code></td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h3 id="五、llm-engine-方法汇聚表" tabindex="-1">五、llm_engine 方法汇聚表 <a class="header-anchor" href="#五、llm-engine-方法汇聚表" aria-label="Permalink to &quot;五、llm_engine 方法汇聚表&quot;">&ZeroWidthSpace;</a></h3>
+<p>以下列出 <code>self.llm_engine</code> 上被调用的所有方法，按使用频率排列：</p>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>llm_engine 方法</th>
+<th>被哪些 LLM 方法调用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>step()</code></td>
+<td><code>_run_engine</code> (所有的 generate/chat/encode/score 最终都经过这里)</td>
+</tr>
+<tr>
+<td><code>has_unfinished_requests()</code></td>
+<td><code>_run_engine</code></td>
+</tr>
+<tr>
+<td><code>get_num_unfinished_requests()</code></td>
+<td><code>_run_engine</code></td>
+</tr>
+<tr>
+<td><code>add_request()</code></td>
+<td><code>_add_request</code> → <code>_render_and_add_requests</code></td>
+</tr>
+<tr>
+<td><code>abort_request()</code></td>
+<td><code>_render_and_add_requests</code></td>
+</tr>
+<tr>
+<td><code>collective_rpc()</code></td>
+<td><code>collective_rpc</code>, <code>init_weight_transfer_engine</code>, <code>start_weight_update</code>, <code>update_weights</code>, <code>finish_weight_update</code>, <code>__repr__</code></td>
+</tr>
+<tr>
+<td><code>get_tokenizer()</code></td>
+<td><code>get_tokenizer</code></td>
+</tr>
+<tr>
+<td><code>apply_model()</code></td>
+<td><code>apply_model</code></td>
+</tr>
+<tr>
+<td><code>start_profile()</code></td>
+<td><code>start_profile</code></td>
+</tr>
+<tr>
+<td><code>stop_profile()</code></td>
+<td><code>stop_profile</code></td>
+</tr>
+<tr>
+<td><code>reset_prefix_cache()</code></td>
+<td><code>reset_prefix_cache</code></td>
+</tr>
+<tr>
+<td><code>reset_mm_cache()</code></td>
+<td><code>reset_mm_cache</code></td>
+</tr>
+<tr>
+<td><code>sleep()</code></td>
+<td><code>sleep</code></td>
+</tr>
+<tr>
+<td><code>wake_up()</code></td>
+<td><code>wake_up</code></td>
+</tr>
+<tr>
+<td><code>get_metrics()</code></td>
+<td><code>get_metrics</code></td>
+</tr>
+<tr>
+<td><code>.vllm_config.parallel_config</code></td>
+<td><code>get_world_size</code></td>
+</tr>
+<tr>
+<td><code>.vllm_config.lora_config</code></td>
+<td><code>_resolve_mm_lora</code></td>
+</tr>
+<tr>
+<td><code>.vllm_config</code></td>
+<td><code>PoolingOfflineMixin.__init__</code>, <code>_init_beam_search_structured_output</code></td>
+</tr>
+<tr>
+<td><code>.renderer</code></td>
+<td><code>LLM.__init__</code> (赋给 self.renderer)</td>
+</tr>
+<tr>
+<td><code>.model_config</code></td>
+<td><code>LLM.__init__</code> (赋给 self.model_config)</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h3 id="六、renderer-方法汇聚表" tabindex="-1">六、renderer 方法汇聚表 <a class="header-anchor" href="#六、renderer-方法汇聚表" aria-label="Permalink to &quot;六、renderer 方法汇聚表&quot;">&ZeroWidthSpace;</a></h3>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>renderer 方法</th>
+<th>被哪些方法调用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>render_cmpl()</code></td>
+<td><code>_preprocess_cmpl</code></td>
+</tr>
+<tr>
+<td><code>render_chat()</code></td>
+<td><code>_preprocess_chat</code></td>
+</tr>
+<tr>
+<td><code>get_tokenizer()</code></td>
+<td><code>_adjust_params_for_parsing</code>, <code>beam_search</code></td>
+</tr>
+<tr>
+<td><code>clear_mm_cache()</code></td>
+<td><code>reset_mm_cache</code></td>
+</tr>
+<tr>
+<td><code>.default_cmpl_tok_params</code></td>
+<td><code>_preprocess_cmpl</code></td>
+</tr>
+<tr>
+<td><code>.default_chat_tok_params</code></td>
+<td><code>_preprocess_chat</code></td>
+</tr>
+<tr>
+<td><code>.tokenizer</code></td>
+<td><code>_preprocess_chat</code></td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h3 id="七、完整调用流程图-简化版" tabindex="-1">七、完整调用流程图（简化版） <a class="header-anchor" href="#七、完整调用流程图-简化版" aria-label="Permalink to &quot;七、完整调用流程图（简化版）&quot;">&ZeroWidthSpace;</a></h3>
+<div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>用户调用</span></span>
+<span class="line"><span>├── generate() ──→ get_default_sampling_params() [model_config]</span></span>
+<span class="line"><span>│   └── _run_completion() ──→ _add_completion_requests()</span></span>
+<span class="line"><span>│       │   ├── _params_to_seq() / _lora_request_to_seq() / _priority_to_seq()  [纯逻辑]</span></span>
+<span class="line"><span>│       │   ├── _preprocess_cmpl_one() ──→ _preprocess_cmpl() ──→ renderer.render_cmpl()</span></span>
+<span class="line"><span>│       │   └── _render_and_add_requests()</span></span>
+<span class="line"><span>│       │       ├── _resolve_mm_lora() ──→ llm_engine.vllm_config.lora_config</span></span>
+<span class="line"><span>│       │       └── _add_request() ──→ request_counter + llm_engine.add_request()</span></span>
+<span class="line"><span>│       └── _run_engine() ★</span></span>
+<span class="line"><span>│           └── while llm_engine.has_unfinished_requests():</span></span>
+<span class="line"><span>│                   llm_engine.step()</span></span>
+<span class="line"><span>│</span></span>
+<span class="line"><span>├── chat() ──→ get_default_sampling_params() [model_config]</span></span>
+<span class="line"><span>│   └── _run_chat() ──→ _add_chat_requests()</span></span>
+<span class="line"><span>│       │   ├── 同上 + _adjust_params_for_parsing() [model_config, renderer]</span></span>
+<span class="line"><span>│       │   ├── _preprocess_chat_one() ──→ _preprocess_chat() ──→ renderer.render_chat()</span></span>
+<span class="line"><span>│       │   └── _render_and_add_requests() (同上)</span></span>
+<span class="line"><span>│       └── _run_engine() ★ (同上)</span></span>
+<span class="line"><span>│</span></span>
+<span class="line"><span>├── enqueue() / enqueue_chat()</span></span>
+<span class="line"><span>│   └── _add_completion_requests() / _add_chat_requests() (同上，不含 _run_engine)</span></span>
+<span class="line"><span>│</span></span>
+<span class="line"><span>├── wait_for_completion()</span></span>
+<span class="line"><span>│   └── _run_engine() ★ (同上)</span></span>
+<span class="line"><span>│</span></span>
+<span class="line"><span>├── encode() [PoolingOfflineMixin]</span></span>
+<span class="line"><span>│   ├── _verify_pooling_task() [runner_type, supported_tasks]</span></span>
+<span class="line"><span>│   ├── _params_to_seq() / _lora_request_to_seq() / _priority_to_seq()</span></span>
+<span class="line"><span>│   ├── _render_and_add_requests() (同上)</span></span>
+<span class="line"><span>│   └── _run_engine() ★ (同上)</span></span>
+<span class="line"><span>│</span></span>
+<span class="line"><span>├── embed() / classify() ──→ encode(pooling_task=...)</span></span>
+<span class="line"><span>│</span></span>
+<span class="line"><span>├── score() [PoolingOfflineMixin]</span></span>
+<span class="line"><span>│   ├── _lora_request_to_seq() / _params_to_seq() / _priority_to_seq()</span></span>
+<span class="line"><span>│   ├── _render_and_add_requests() (同上)</span></span>
+<span class="line"><span>│   └── _run_engine() ★ (同上)</span></span>
+<span class="line"><span>│</span></span>
+<span class="line"><span>├── beam_search() [BeamSearchOfflineMixin]</span></span>
+<span class="line"><span>│   ├── renderer.get_tokenizer()</span></span>
+<span class="line"><span>│   ├── _preprocess_cmpl() ──→ renderer.render_cmpl()</span></span>
+<span class="line"><span>│   ├── _lora_request_to_seq()</span></span>
+<span class="line"><span>│   ├── _init_beam_search_structured_output() ──→ llm_engine.vllm_config + model_config.get_vocab_size()</span></span>
+<span class="line"><span>│   └── 循环 _beam_search_step()</span></span>
+<span class="line"><span>│       ├── _build_beam_sampling_params() ──→ model_config.get_vocab_size()</span></span>
+<span class="line"><span>│       └── _render_and_run_requests()</span></span>
+<span class="line"><span>│           ├── _render_and_add_requests() (同上)</span></span>
+<span class="line"><span>│           └── _run_engine() ★ (同上)</span></span>
+<span class="line"><span>│</span></span>
+<span class="line"><span>└── 透传类方法 (直接委托 llm_engine)</span></span>
+<span class="line"><span>    ├── get_tokenizer() ──→ llm_engine.get_tokenizer()</span></span>
+<span class="line"><span>    ├── collective_rpc() ──→ llm_engine.collective_rpc()</span></span>
+<span class="line"><span>    ├── apply_model() ──→ llm_engine.apply_model()</span></span>
+<span class="line"><span>    ├── start_profile() / stop_profile() ──→ llm_engine.start/stop_profile()</span></span>
+<span class="line"><span>    ├── reset_prefix_cache() ──→ llm_engine.reset_prefix_cache()</span></span>
+<span class="line"><span>    ├── sleep() / wake_up() ──→ llm_engine.sleep/wake_up()</span></span>
+<span class="line"><span>    ├── get_metrics() ──→ llm_engine.get_metrics()</span></span>
+<span class="line"><span>    └── 权重更新四件套 ──→ llm_engine.collective_rpc(...)</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br><span class="line-number">17</span><br><span class="line-number">18</span><br><span class="line-number">19</span><br><span class="line-number">20</span><br><span class="line-number">21</span><br><span class="line-number">22</span><br><span class="line-number">23</span><br><span class="line-number">24</span><br><span class="line-number">25</span><br><span class="line-number">26</span><br><span class="line-number">27</span><br><span class="line-number">28</span><br><span class="line-number">29</span><br><span class="line-number">30</span><br><span class="line-number">31</span><br><span class="line-number">32</span><br><span class="line-number">33</span><br><span class="line-number">34</span><br><span class="line-number">35</span><br><span class="line-number">36</span><br><span class="line-number">37</span><br><span class="line-number">38</span><br><span class="line-number">39</span><br><span class="line-number">40</span><br><span class="line-number">41</span><br><span class="line-number">42</span><br><span class="line-number">43</span><br><span class="line-number">44</span><br><span class="line-number">45</span><br><span class="line-number">46</span><br><span class="line-number">47</span><br><span class="line-number">48</span><br><span class="line-number">49</span><br><span class="line-number">50</span><br><span class="line-number">51</span><br><span class="line-number">52</span><br><span class="line-number">53</span><br><span class="line-number">54</span><br><span class="line-number">55</span><br><span class="line-number">56</span><br><span class="line-number">57</span><br><span class="line-number">58</span><br></div></div><blockquote>
+<p>★ <code>_run_engine()</code> 是所有推理路径的唯一出口，内部驱动 <code>llm_engine.step()</code> 的循环。</p>
+</blockquote>
+<h3 id="八、未在文档中介绍的方法-补全" tabindex="-1">八、未在文档中介绍的方法（补全） <a class="header-anchor" href="#八、未在文档中介绍的方法-补全" aria-label="Permalink to &quot;八、未在文档中介绍的方法（补全）&quot;">&ZeroWidthSpace;</a></h3>
+<p>以下方法同样属于 LLM 类（通过 Mixin 继承），但 Note1.md 正文中未介绍：</p>
+<div class="note-table" tabindex="0" role="region" aria-label="可横向滚动的表格"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>定义类</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>beam_search(prompts, params, ...)</code></td>
+<td><code>BeamSearchOfflineMixin</code></td>
+<td>Beam search 解码，支持 structured output</td>
+</tr>
+<tr>
+<td><code>encode(prompts, pooling_params, ...)</code></td>
+<td><code>PoolingOfflineMixin</code></td>
+<td>通用池化推理入口</td>
+</tr>
+<tr>
+<td><code>embed(prompts, ...)</code></td>
+<td><code>PoolingOfflineMixin</code></td>
+<td>生成 embedding 向量，内部调 <code>encode(pooling_task=&quot;embed&quot;)</code></td>
+</tr>
+<tr>
+<td><code>classify(prompts, ...)</code></td>
+<td><code>PoolingOfflineMixin</code></td>
+<td>生成分类 logits，内部调 <code>encode(pooling_task=&quot;classify&quot;)</code></td>
+</tr>
+<tr>
+<td><code>score(data_1, data_2, ...)</code></td>
+<td><code>PoolingOfflineMixin</code></td>
+<td>计算 cross-encoder 相似度分数</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+</article>

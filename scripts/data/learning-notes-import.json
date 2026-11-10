@@ -1,0 +1,254 @@
+{
+  "imported": "2026-11-10",
+  "policy": "Preserve original prose, code, figures and order. Only adapt document structure, local links and presentation for VitePress. HTML is the maintained body.",
+  "sourceRoots": {
+    "cuda-notes": "cuda_c++",
+    "vllm-notes": "llm_note/vllm"
+  },
+  "vllmSource": {
+    "remote": "https://github.com/Seagull-W/vllm",
+    "checkout": "ba22152096b2484faa3579624a253d54804d876d",
+    "note": "Companion checkout at import time; individual original notes may describe an earlier revision."
+  },
+  "excluded": [
+    ".git/",
+    ".workbuddy/",
+    "vllm_src/ (companion source repository, linked by checkout)",
+    "CUDA编程指南/practice/ (excluded at user request)",
+    "note/structured_output.md (source-path placeholder)",
+    "Original Markdown archives and xhs reference image archive (excluded at user request)"
+  ],
+  "entries": [
+    {
+      "section": "cuda-notes",
+      "source": "CUDA编程指南/1_2编程模型.md",
+      "slug": "programming-model",
+      "title": "1.2 · CUDA 编程模型",
+      "description": "异构系统、GPU 硬件模型、线程块与网格、Warp、SIMT 以及 GPU 内存。",
+      "tags": [
+        "CUDA",
+        "GPU",
+        "SIMT",
+        "内存管理"
+      ],
+      "group": "编程指南",
+      "route": "/cuda-notes/programming-model",
+      "sha256": "674ed2dd5efc42b2d2747d840b394b26312ab86e8c3421957aacc8ca90221994"
+    },
+    {
+      "section": "cuda-notes",
+      "source": "CUDA编程指南/1_3 CUDA平台.md",
+      "slug": "cuda-platform",
+      "title": "1.3 · CUDA 平台",
+      "description": "计算能力、驱动与工具包、运行时 API、PTX、Cubin 和 Fatbin。",
+      "tags": [
+        "CUDA",
+        "GPU",
+        "编译"
+      ],
+      "group": "编程指南",
+      "route": "/cuda-notes/cuda-platform",
+      "sha256": "1b4351b7c2e7310050b0259c39c4ede2438aca44fa4fe9bba1be58ff8b9838e8"
+    },
+    {
+      "section": "cuda-notes",
+      "source": "CUDA编程指南/2-1 CUDA C++简介.md",
+      "slug": "cuda-cpp",
+      "title": "2.1 · CUDA C++ 简介",
+      "description": "NVCC、内核启动、线程索引、内存管理、CPU/GPU 同步、错误检查与线程块集群。",
+      "tags": [
+        "CUDA",
+        "C++",
+        "GPU",
+        "内存管理"
+      ],
+      "group": "编程指南",
+      "route": "/cuda-notes/cuda-cpp",
+      "sha256": "b2fb2890724846b7b1d95b89ab0d18d876e1e976485b723431b0af132f66bb8f"
+    },
+    {
+      "section": "cuda-notes",
+      "source": "CUDA编程指南/2-2 CUDA SIMT内核编写.md",
+      "slug": "simt-kernels",
+      "title": "2.2 · CUDA SIMT 内核编写",
+      "description": "SIMT、线程层次、GPU 内存空间、合并访存与共享内存矩阵转置。",
+      "tags": [
+        "CUDA",
+        "SIMT",
+        "GPU",
+        "性能优化"
+      ],
+      "group": "编程指南",
+      "route": "/cuda-notes/simt-kernels",
+      "sha256": "abd5ced95ce9e742c4362f268aa412ee3bc48ada3f38538a4f35640699227ba4"
+    },
+    {
+      "section": "cuda-notes",
+      "source": "CUDA编程指南/2-3异步执行.md",
+      "slug": "async-execution",
+      "title": "2.3 · 异步执行（摘记）",
+      "description": "异步接口、主机与设备的并发执行，以及 CUDA 流的原始图解摘记。",
+      "tags": [
+        "CUDA",
+        "GPU",
+        "异步执行"
+      ],
+      "group": "编程指南",
+      "route": "/cuda-notes/async-execution",
+      "sha256": "92337b7da452ebd727d4c7e7faafcd65197e866769a26adf4ce491cea1531341"
+    },
+    {
+      "section": "vllm-notes",
+      "source": "vllm_architecture.md",
+      "slug": "architecture",
+      "title": "vLLM 源码架构分析",
+      "description": "保留原稿的项目总览、引擎分层、执行器、底层算子、分布式通信与编译优化架构。",
+      "tags": [
+        "vLLM",
+        "推理引擎",
+        "源码阅读"
+      ],
+      "group": "架构总览",
+      "route": "/vllm-notes/architecture",
+      "sha256": "ab58b9203356c9485dcf9241795944771b2f0cb6ce87879ad8a0415c737d961b"
+    },
+    {
+      "section": "vllm-notes",
+      "source": "note/note1.md",
+      "slug": "offline-inference",
+      "title": "离线推理：LLM 类与调用链",
+      "description": "从 LLM 类的入口、继承关系和方法出发，阅读离线推理的引擎与 renderer 调用链。",
+      "tags": [
+        "vLLM",
+        "离线推理",
+        "源码阅读"
+      ],
+      "group": "源码阅读",
+      "route": "/vllm-notes/offline-inference",
+      "sha256": "dbc9efcc53f52cf157452aa5eba090f08ac5f4195fc72f5bb271de7d796ca7f5"
+    },
+    {
+      "section": "vllm-notes",
+      "source": "note/note2.md",
+      "slug": "engine",
+      "title": "V1 Engine：文件职责、依赖与 Tensor IPC",
+      "description": "V1 Engine 的文件职责、依赖关系图、分层说明，以及跨进程张量传输的发送与接收。",
+      "tags": [
+        "vLLM",
+        "推理引擎",
+        "IPC",
+        "源码阅读"
+      ],
+      "group": "源码阅读",
+      "route": "/vllm-notes/engine",
+      "sha256": "0f51c1226068290d97eb49fe5fe7e4bf26bc3ac6959895b859e5555d8e4e4fc1"
+    },
+    {
+      "section": "vllm-notes",
+      "source": "note/core.md",
+      "slug": "core",
+      "title": "EngineCore：核心循环与初始化",
+      "description": "EngineCore、EngineCoreProc、DPEngineCoreProc 的架构，以及执行器、KV Cache 和调度器的初始化。",
+      "tags": [
+        "vLLM",
+        "推理引擎",
+        "KV Cache",
+        "源码阅读"
+      ],
+      "group": "源码阅读",
+      "route": "/vllm-notes/core",
+      "sha256": "8954c137123251af2ecaeb090af625f7f5f4e4550840e01ddc25d5e39844695f"
+    },
+    {
+      "section": "vllm-notes",
+      "source": "note/executor.md",
+      "slug": "executor",
+      "title": "Executor：执行器与 Worker 调用",
+      "description": "Executor 类型选择、初始化、UniProcExecutor、异步输出、collective_rpc 与外部启动执行器。",
+      "tags": [
+        "vLLM",
+        "分布式推理",
+        "源码阅读"
+      ],
+      "group": "源码阅读",
+      "route": "/vllm-notes/executor",
+      "sha256": "89c6080120046b0b1d67a7ff208dd041641ebc2ab37bafd78c35c52a0a765412"
+    },
+    {
+      "section": "vllm-notes",
+      "source": "note/get_kv_cache_config.md",
+      "slug": "kv-cache-config",
+      "title": "KV Cache 配置：逐代码解析",
+      "description": "get_kv_cache_configs 的规格合并、缓存分组、配置生成与可用容量计算原始笔记。",
+      "tags": [
+        "vLLM",
+        "KV Cache",
+        "内存管理",
+        "源码阅读"
+      ],
+      "group": "源码阅读",
+      "route": "/vllm-notes/kv-cache-config",
+      "sha256": "4dcc80d76ba415d9f7a3f7e11b37f02ba17561bef17dc1c52d13403e09dc0018"
+    }
+  ],
+  "presentationChanges": [
+    "Use adjacent HTML bodies and Markdown metadata for VitePress; preserve original body text and code.",
+    "Remove editor-only global white-background CSS; use existing shared site themes.",
+    "Add page titles where absent without changing original body text.",
+    "Repair local asset paths, cross-note links and pre-existing broken table-of-contents fragments.",
+    "Repair two orphan closing paragraph tags in original figure captions and remove one empty H5.",
+    "Retain original figures and Mermaid graph; put wide tables and the dependency graph in keyboard-focusable scroll regions, and long code in native details."
+  ],
+  "assets": [
+    {
+      "path": "docs/public/cuda-notes/figures/1-3/fatbin.png",
+      "bytes": 47646,
+      "sha256": "d7ed7d633919513720e1f2dacce6ca25e536b7ace03292459e04f8919d434a40"
+    },
+    {
+      "path": "docs/public/cuda-notes/figures/1_2/BLOCKtoSM.png",
+      "bytes": 35439,
+      "sha256": "34564937d3810c7a8b0306ab290975fcb8362f81734b7c33a3b9645f110b33c2"
+    },
+    {
+      "path": "docs/public/cuda-notes/figures/1_2/ClustersToGPC.png",
+      "bytes": 64486,
+      "sha256": "45e5240dc92831d490167b2237e4b451d185f534aa671c70d9f16f91d3077593"
+    },
+    {
+      "path": "docs/public/cuda-notes/figures/1_2/GPU_GPC_SM.png",
+      "bytes": 788701,
+      "sha256": "162da7aa603cffc6a8ada378bf0981416de734b45b6087dfb0baa4e6e5d5ffaf"
+    },
+    {
+      "path": "docs/public/cuda-notes/figures/1_2/GRID_BLOCK.png",
+      "bytes": 247693,
+      "sha256": "49386753c3c91923496d6857b56417d3a0702cecff6ecf9ea7879795ccf7fd64"
+    },
+    {
+      "path": "docs/public/cuda-notes/figures/1_2/warp_divergence.png",
+      "bytes": 291929,
+      "sha256": "fde033ec9eac0f4f25690ad13a7385b492145476ef812f06f5e64b50b08775fe"
+    },
+    {
+      "path": "docs/public/cuda-notes/figures/2-2/global_mem_Merge_Access.png",
+      "bytes": 23250,
+      "sha256": "0815dec287d6e2b0304cb4656d590595cd77ce3e82a3675ca4fd6f1b7e2fbb33"
+    },
+    {
+      "path": "docs/public/cuda-notes/figures/2-2/transpose.png",
+      "bytes": 19316,
+      "sha256": "1151e19645bfcd929a2b970f66d9cbab2fb43dafe44b262452aafbb46d1cd309"
+    },
+    {
+      "path": "docs/public/cuda-notes/figures/2-3/CUDAstreamTOAsyncConcurrency.png",
+      "bytes": 1456531,
+      "sha256": "d07a94ede51643d672c0d7742e3ba53cb52a0216d46c68bbd27d43cc48570e9e"
+    },
+    {
+      "path": "docs/public/cuda-notes/resources/cuda-programming-guide.pdf",
+      "bytes": 12225205,
+      "sha256": "1a0659b7324d10f1c0a57fc0c82aa83ee1aba437fa85dabc90ee8f736e439bea"
+    }
+  ]
+}

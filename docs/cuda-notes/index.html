@@ -1,0 +1,26 @@
+<div class="native-document format-directory" data-format="directory" data-design="linux-notebook" aria-label="CUDA C++ 学习笔记">
+<DirectoryIntro class="note-hero">
+<h1 id="cuda-notes-title" tabindex="-1">CUDA C++ 学习笔记 <a class="header-anchor" href="#cuda-notes-title" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">CUDA 编程模型、平台与 SIMT 内核，沿用原始学习笔记。</p>
+</DirectoryIntro>
+
+<section class="document-section note-panel" aria-labelledby="cuda-notes-编程指南">
+<h2 id="cuda-notes-编程指南" tabindex="-1">编程指南 <a class="header-anchor" href="#cuda-notes-编程指南" aria-label="章节链接">&#8203;</a></h2>
+<ChapterCards :items="[
+  { title: '1.2 · CUDA 编程模型', link: '/cuda-notes/programming-model', description: '异构系统、GPU 硬件模型、线程块与网格、Warp、SIMT 以及 GPU 内存。' },
+  { title: '1.3 · CUDA 平台', link: '/cuda-notes/cuda-platform', description: '计算能力、驱动与工具包、运行时 API、PTX、Cubin 和 Fatbin。' },
+  { title: '2.1 · CUDA C++ 简介', link: '/cuda-notes/cuda-cpp', description: 'NVCC、内核启动、线程索引、内存管理、CPU/GPU 同步、错误检查与线程块集群。' },
+  { title: '2.2 · CUDA SIMT 内核编写', link: '/cuda-notes/simt-kernels', description: 'SIMT、线程层次、GPU 内存空间、合并访存与共享内存矩阵转置。' },
+  { title: '2.3 · 异步执行（摘记）', link: '/cuda-notes/async-execution', description: '异步接口、主机与设备的并发执行，以及 CUDA 流的原始图解摘记。' }
+]" />
+</section>
+
+<section class="document-section note-panel" aria-labelledby="resources">
+<h2 id="resources" tabindex="-1">配套资料 <a class="header-anchor" href="#resources" aria-label="章节链接">&#8203;</a></h2>
+<ul>
+<li><a href="/cuda-notes/resources/cuda-programming-guide.pdf">CUDA Programming Guide（原文件 PDF，约 12 MB）</a></li>
+<li><a href="https://bearneck.github.io/cuda-programming-guide-zh/" target="_blank" rel="noreferrer">CUDA 编程指南中文参考</a></li>
+<li><a href="https://mlc.ai/modern-gpu-programming-for-mlsys/zh/" target="_blank" rel="noreferrer">面向机器学习系统的现代 GPU 编程</a></li>
+</ul>
+</section>
+</div>

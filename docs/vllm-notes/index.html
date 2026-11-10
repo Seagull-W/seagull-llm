@@ -1,0 +1,32 @@
+<div class="native-document format-directory" data-format="directory" data-design="linux-notebook" aria-label="vLLM 学习笔记">
+<DirectoryIntro class="note-hero">
+<h1 id="vllm-notes-title" tabindex="-1">vLLM 学习笔记 <a class="header-anchor" href="#vllm-notes-title" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">从源码架构到离线推理、EngineCore、Executor 与 KV Cache，沿用原始阅读笔记。</p>
+</DirectoryIntro>
+
+<section class="document-section note-panel" aria-labelledby="vllm-notes-架构总览">
+<h2 id="vllm-notes-架构总览" tabindex="-1">架构总览 <a class="header-anchor" href="#vllm-notes-架构总览" aria-label="章节链接">&#8203;</a></h2>
+<ChapterCards :items="[
+  { title: 'vLLM 源码架构分析', link: '/vllm-notes/architecture', description: '保留原稿的项目总览、引擎分层、执行器、底层算子、分布式通信与编译优化架构。' }
+]" />
+</section>
+
+<section class="document-section note-panel" aria-labelledby="vllm-notes-源码阅读">
+<h2 id="vllm-notes-源码阅读" tabindex="-1">源码阅读 <a class="header-anchor" href="#vllm-notes-源码阅读" aria-label="章节链接">&#8203;</a></h2>
+<ChapterCards :items="[
+  { title: '离线推理：LLM 类与调用链', link: '/vllm-notes/offline-inference', description: '从 LLM 类的入口、继承关系和方法出发，阅读离线推理的引擎与 renderer 调用链。' },
+  { title: 'V1 Engine：文件职责、依赖与 Tensor IPC', link: '/vllm-notes/engine', description: 'V1 Engine 的文件职责、依赖关系图、分层说明，以及跨进程张量传输的发送与接收。' },
+  { title: 'EngineCore：核心循环与初始化', link: '/vllm-notes/core', description: 'EngineCore、EngineCoreProc、DPEngineCoreProc 的架构，以及执行器、KV Cache 和调度器的初始化。' },
+  { title: 'Executor：执行器与 Worker 调用', link: '/vllm-notes/executor', description: 'Executor 类型选择、初始化、UniProcExecutor、异步输出、collective_rpc 与外部启动执行器。' },
+  { title: 'KV Cache 配置：逐代码解析', link: '/vllm-notes/kv-cache-config', description: 'get_kv_cache_configs 的规格合并、缓存分组、配置生成与可用容量计算原始笔记。' }
+]" />
+</section>
+
+<section class="document-section note-panel" aria-labelledby="resources">
+<h2 id="resources" tabindex="-1">配套资料 <a class="header-anchor" href="#resources" aria-label="章节链接">&#8203;</a></h2>
+<p>架构总览原稿标注更新时间为 2026-07-06。各篇沿用原始源码阅读记录，文件位置与 API 应结合对应版本阅读。</p>
+<ul>
+<li><a href="https://github.com/Seagull-W/vllm/tree/ba22152096b2484faa3579624a253d54804d876d" target="_blank" rel="noreferrer">配套源码仓库快照（ba22152096b2）</a>：导入时本地 checkout，原稿可能对应更早版本。</li>
+</ul>
+</section>
+</div>

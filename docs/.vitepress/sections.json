@@ -6,5 +6,7 @@
   { "id": "research", "title": "每日调研", "description": "论文与社区进展，按问题整理", "tag": "每日调研" },
   { "id": "rust-notes", "title": "Rust 笔记", "description": "并发编程的概念与代码示例", "tag": "Rust" },
   { "id": "linux-notes", "title": "Linux 笔记", "description": "系统机制、隔离与实践", "tag": "Linux" },
+  { "id": "cuda-notes", "title": "CUDA C++ 学习笔记", "description": "编程模型、平台与 SIMT 内核", "tag": "CUDA" },
+  { "id": "vllm-notes", "title": "vLLM 学习笔记", "description": "推理引擎架构与源码阅读", "tag": "vLLM" },
   { "id": "videos", "title": "科普视频", "description": "通过可视化理解抽象概念", "tag": "科普视频", "kind": "gallery" }
 ]
