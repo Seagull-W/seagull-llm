@@ -8,6 +8,8 @@
 
 进入调研后，再按交付目的选择检索和归纳方式。默认直接交付 Markdown，脚本流水线按需使用；机械检查不代替实际读成稿。可读性按 [可读的调研](.agents/skills/seagull-research/references/readable-survey.md) 检查：读者是谁、从哪里起笔、一级节标题是不是判断句。数字都对但读者读不出该改什么，仍算不合格。
 
+写作同时按 [affirmative-first-writing](.agents/skills/affirmative-first-writing/SKILL.md) 过一遍：正面写机制与事实，删掉未经请求的否定、预设反方和“不是 X 而是 Y”式对照；具体口径写成条件（“在 244 题、pass@32 下”）。事实更正、证据强度限制与安全提示照常写足，这条约束的是防御性修辞，不是准确性。任何成稿都适用，不只调研。
+
 使用新增学术技能前，读 [Hermes/Codex 共用约定](hermes/README.md) 中的“技能与分工”和“本项目对上游规则的适配”。这些项目约定同样适用于 Codex 独立执行：scholar-deep-research 用于多文献检索，scientific-writing 用于有证据的学术写作，unslop-academic-writing 用于初稿修订；不强制三者串行、不恢复以代码评分验收内容的流程。
 
 ## 知乎 CLI
