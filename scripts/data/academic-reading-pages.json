@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1745,
+  "character_count": 1753,
   "pages": [
     {
       "path": "/cs336/a1-bpe.md",
@@ -150,6 +150,10 @@
     {
       "path": "/research/2026-11-09-dong-bin-ai4math.md",
       "title": "解读董彬及合作者的形式化数学工作：陈述翻译、前提检索与证明搜索"
+    },
+    {
+      "path": "/research/2026-11-11-agent-memory-components.md",
+      "title": "解读 Anthropic 的 agent 记忆：经验怎样留到下次会话"
     },
     {
       "path": "/rl-book/cha4对话模板与监督微调.md",
