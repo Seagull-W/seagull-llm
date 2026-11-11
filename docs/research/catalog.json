@@ -1,5 +1,17 @@
 [
   {
+    "date": "2026-11-11",
+    "slug": "agent-memory-components",
+    "title": "解读 Anthropic 的 agent 记忆：经验怎样留到下次会话",
+    "description": "依据 Anthropic《The components of agent memory》与一份中文解读，说明转写、笔记、知识表示和注入上下文的分工，以及离线整理的收益、成本与未定问题。",
+    "route": "/research/2026-11-11-agent-memory-components",
+    "source_urls": [
+      "https://www.anthropic.com/research/components-of-agent-memory"
+    ],
+    "window_end": "2026-11-11T23:59:00+08:00",
+    "origin": "manual"
+  },
+  {
     "date": "2026-11-09",
     "slug": "dong-bin-ai4math",
     "title": "解读董彬及合作者的形式化数学工作：陈述翻译、前提检索与证明搜索",
