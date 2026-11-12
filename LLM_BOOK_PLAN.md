@@ -2,7 +2,7 @@
 
 版本：v0.1，2026-10-09。状态：重构样章阶段。
 
-本总纲用于新版学习地图、样章及后续重写。旧版 `CONTENT_SPEC.md`、`REDESIGN.md` 和 `STYLE_GUIDE.md` 保留为历史材料；其中与本总纲一致的写作原则可以继续使用，旧目录与过度概括的示例不作为新版约束。
+本总纲用于新版学习地图、样章及后续重写。写作体例统一见 [writing/llm-book.md](./writing/llm-book.md)，分层与仲裁见 [writing/README.md](./writing/README.md)。[旧规格与设计记录](./archive/llm-book-docs/README.md) 仅作历史与迁移素材。
 
 ## 读者与学习结果
 

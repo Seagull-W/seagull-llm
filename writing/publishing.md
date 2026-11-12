@@ -1,0 +1,114 @@
+# 网站内容发布流程
+
+在仓库根目录操作。写作类型与体例见 [写作总则](README.md)，正文结构与公式写法见 [HTML_FORMATS.md](../HTML_FORMATS.md)，视觉修改见 [VISUAL_STYLES.md](../VISUAL_STYLES.md)。已有栏目新增一篇文章时，只维护一份正文。
+
+| 这次要发布什么 | 正文放在哪里 | 要更新的入口 |
+| --- | --- | --- |
+| 已有栏目的笔记、讲义或论文解读 | 同名 `.html` 写正文，`.md` 放元数据与 include | 栏目侧边栏和栏目 `index.html` 的文章卡片 |
+| 每日调研 | `docs/research/` 下的 Markdown | 只登记调研目录数据；栏目卡片和侧边栏由它生成 |
+| 全新栏目 | 栏目 `index.html` 写简介和卡片，`index.md` 放目录页元数据 | 栏目清单、顶栏、侧边栏；默认标签与学术阅读版式从栏目清单推导 |
+
+## 正文格式对照
+
+| 内容 | 正文格式 | 元数据 |
+| --- | --- | --- |
+| 笔记、讲义、论文解读 | `name.html` | `name.md`，`contentFormat: html`，include 指向 HTML |
+| 每日调研 | `name.md` 直接写 | 登记 `docs/research/catalog.json` |
+| 栏目首页 | `index.html` + `index.md` | `pageClass: chapter-index` |
+
+公式写法、图注、资源路径与组件按 [HTML_FORMATS.md](../HTML_FORMATS.md)；外观沿用 [VISUAL_STYLES.md](../VISUAL_STYLES.md)。
+
+## 已有栏目加文章
+
+**1. 选路径。** 讲义等扁平式文章可参照 [CS336 第一讲](../docs/cs336/lecture-01.md)，对应路由 `/cs336/lecture-01`。有独立子目录的文章可参照 [DeepSeek-R1 笔记](../docs/papers/deepseek-r1/index.md)，对应 `/papers/deepseek-r1/`。侧边栏和卡片共用同一路由，均省略文件扩展名。
+
+**2. 写正文和元数据。** 例如 CS336 第一讲的元数据文件如下。新增讲义时换成该讲的文件名、标题、摘要与标签，include 指向同目录下的 HTML。
+
+```markdown
+---
+title: 第 1 讲 · 分词与下一词预测
+description: 把一段文本编码成整数序列，用相邻位置构造训练样本，再用 BPE 缩短序列。
+tags: ["CS336","分词","BPE"]
+pageClass: native-html-page
+contentFormat: html
+---
+
+<!--@include: ./lecture-01.html-->
+```
+
+正文文件可参照[本讲格式示例](../docs/cs336/lecture-01.html)。内容组织按选定体例；标题与锚点、公式、图片、Mermaid、交互组件及栏目 HTML 结构统一见 [HTML 正文与板块格式](../HTML_FORMATS.md)。
+
+**3. 登记读者入口。** 在[共享侧边栏](../docs/.vitepress/sidebar.ts)的对应分组追加 `{ text, link }`，并在本栏目 `index.html` 已有的 `ChapterCards` 数组中追加一项。卡片填写 `title`、`link`、`description`，按分组需要可加 `label` 或 `date`。标题与摘要同文章元数据核对，原有条目和顺序要保留。用户明确要求展示的文章补齐入口，不能仅因尚未登记侧边栏就当作隐藏内容。[CS336 栏目卡片示例](../docs/cs336/index.html)
+
+如果这篇属于一组按序阅读的课程，还需在[栏目与阅读顺序配置](../docs/.vitepress/content-catalog.ts)的 `readingSeries` 中核对位置，才能接到对应的上一篇和下一篇。独立笔记按普通文章发布即可。
+
+## 新增每日调研
+
+新增一篇顶层调研只改两处：写 `docs/research/YYYY-MM-DD-slug.md`，再把日期、标题、摘要、路由和来源登记到 [catalog.json](../docs/research/catalog.json)。栏目侧边栏和卡片都读这份数据，普通稿件用日期作卡片标签。四套主题共用一份条目，切换主题也仍指向同一篇文章。
+
+导读等条目可在目录记录中指定 `label` 和 `sidebarTitle`。给专题新增子章节时，把子章的 `text`、`link` 追加到父记录的 `children` 并链接正文。主题导读的文字与分组仍由作者维护。完整步骤、样本与验证见[每日调研接入与发布说明](../research/README.md)。
+
+## 新建栏目
+
+以[CS336 栏目首页](../docs/cs336/index.html)及其[元数据](../docs/cs336/index.md)为例。先定一个稳定的栏目 ID，作为目录名和路由前缀，在下列位置使用同一个值。
+
+1. 在 `docs/<栏目>/` 创建 `index.html` 和 `index.md`。目录页使用 `layout: doc`、`pageClass: chapter-index`、`aside: false`、`contentFormat: html`，填写标题、简介和标签，include 指向 `./index.html`。卡片只指向已经存在的公开文章。
+2. 在[栏目清单](../docs/.vitepress/sections.json)添加一条 `id`、`title`、`description`、`tag`。例如 CS336 的 `id` 是 `cs336`，`tag` 是 `CS336`。首页四种索引、默认栏目标签、面包屑、目录导航与学术阅读版式共用这条记录。文字栏目无需指定类型；`kind: "gallery"` 用于视频类非文章集合。
+3. 在[顶栏配置](../docs/.vitepress/config.mts)的 `themeConfig.nav` 对应分组添加栏目入口，有 `activeMatch` 时同步更新。给[共享侧边栏](../docs/.vitepress/sidebar.ts)登记 `'/<栏目>/'` 和实际的文章路由。课程需要连续翻篇时，再在 [readingSeries](../docs/.vitepress/content-catalog.ts) 登记阅读顺序。
+4. 栏目首页用 `<DirectoryIntro class="note-hero">` 包住原有的一级标题和导语，随后按分组使用 `<ChapterCards :items="…"/>`。这两个共用组件处理四套风格，示例见 [CS336 栏目](../docs/cs336/index.html)。新栏目会先用本风格的默认插图。只有计划绘制专属栏目图时才需要配置素材。
+
+## 写文章与做风格的分工
+
+| 变更 | 应修改的内容 |
+| --- | --- |
+| 新增普通文章 | 正文、元数据、公开入口；加入有序课程时另登记阅读顺序。按内容写标题、小节、图注、公式和代码即可。 |
+| 增加文章内的章节 | 按 [HTML 正文格式](../HTML_FORMATS.md) 维护标题与锚点，再核对阅读定位、上一节／下一节和目录。 |
+| 修改全站某种外观或动效 | 改主题清单、相应的共用界面和样式，一次应用到现有及未来的文章。[风格实现与验收](../VISUAL_STYLES.md)列出了对应文件。 |
+
+普通文章沿用现有站点视觉；涉及风格 ID、昼夜、入场动画或封面时，按 [视觉规范](../VISUAL_STYLES.md) 处理。科学图、表格、代码、公式和主张的来源随文章维护。
+
+## 标签、草稿与改名
+
+- 每篇公开文章写准确的标题、摘要和主题标签。`npm run tags` 会补缺失的 `tags` 字段，保留已有值（包括空数组）。发布者要检查生成的标签并补齐空数组。
+- 标签索引由 `docs/.vitepress/data/tagged-pages.data.mts` 生成，侧边栏登记的路由和发布元数据共同决定文章能否进入公开索引。保持 `public-content.ts` 的公开范围过滤，通过补齐入口与状态处理单篇文章。栏目目录页带 `pageClass: chapter-index`，独立的目录式文章即使也叫 `index.md`，仍按文章登记。`sidebar: false` 仅控制显示。视频另走视频集合入口；具体规则见[公开范围](../docs/.vitepress/public-content.ts)。
+- 草稿使用 `status: draft` 和 `search: false`；其他隐藏内容可用 `hidden: true` 或 `published: false`，同时设 `search: false`。需要阻止搜索引擎收录时，在 frontmatter 的 `head` 中加入 `[['meta', { name: 'robots', content: 'noindex' }]]`。草稿、隐藏内容与网站维护文档均设置 `search: false`，不进入公开卡片或标签索引。已构建页面可能仍能通过直接网址访问；私密材料放在站点源目录之外。
+- 草稿转公开时清理阻止索引的元数据并补齐入口。移动或改名时同步更新侧边栏、卡片、阅读顺序及正文中的旧链接；已有读者引用的小节 ID 尽量保留。
+- LLM 科普书目前整体撤下，以 `srcExclude` 排除构建；源文件保留，构建、导航、首页、卡片、标签、全文搜索和翻页入口均不恢复。恢复发布须由维护者明确决定。它的历史路由与目录不作为新增栏目示例。
+
+## 发布前验证
+
+以下命令从仓库根目录运行。内容检查涵盖 HTML、公开范围、数学公式、阅读排版和内容发现；最后一条用本次构建的实际标题核对搜索结果里的小节链接。
+
+```sh
+npm run tags
+npm run test:content
+npm run build
+node scripts/test-content-discovery.mjs --built
+```
+
+| 本次变更 | 额外核对 |
+| --- | --- |
+| 每日调研 | 运行 `node scripts/check-research-content.mjs`；整站构建后再加 `--built`，检查生成的栏目页确实包含这些入口 |
+| 文章或栏目使用图表、PDF、下载附件 | 在 `npm run preview` 打开的构建预览中，从实际文章进入资源，确认图片加载、图注对应、附件可打开，窄屏下不撑开正文 |
+| 新建栏目、改主题素材、布局或交互 | 运行 `npm run test:styles`；在各风格中检查受影响的入口，抽查昼夜、手机宽度、键盘操作与减少动态效果 |
+| 仅修改仓库维护指南 | 核对示例、相对链接和命令是否仍对应当前项目；无需为文字改动重建网站 |
+
+发布前从栏目卡片打开文章，核对正文直接出现在主文档、目录锚点与侧边栏正常、公式和交互可用，再点击一个文章标签、检查标签筛选并搜索一个有辨识度的小节标题。若变更涉及草稿或内部文档，确认它们未进入公开卡片、标签和搜索结果。准备推送时先同步远端并复核目录差异，尤其是多人都改到同一份栏目卡片的情形。
+
+## 格式迁移、导入与字体维护
+
+HTML 模板中的 Vue 组件、顶层脚本与局部样式通过 `npm run dev` 或构建预览查看。子路径部署还需以 `BASE=/your-base/ npm run build` 构建验证；资源路径的编写方式见 L2。
+
+迁移工具 `scripts/migrate-native-html.mjs` 仅处理尚未迁移的页面，已迁移页面直接维护 HTML。
+
+西湖第 1–6 讲的五篇 PDF 已接入 HTML；重新导入沿用原路由、侧边栏与栏目卡片。导入使用 `scripts/import-westlake-lectures.py`，依赖 Pandoc；来源摘要与 SHA-256 位于 `scripts/data/westlake-lecture-import.json`。HTML 为正文主版本。重跑须显式传 `--overwrite`，执行前核对并保留后续人工修订。用原源目录重新导入后，实际阅读成稿并运行 `node scripts/test-westlake-lectures.mjs`，核对编号、定理标题、证明、表格与 PDF 对照。
+
+新增字符或重新导入讲义后，运行 `python scripts/update-reading-font.py` 更新当前公开文章的字库子集，核对生成的 400／600 WOFF2 和清单。共享字体位于 `docs/.vitepress/theme/fonts/`，原字体缓存于忽略的 `.research/font-cache`，文章清单位于 `scripts/data/academic-reading-pages.json`。字体回退与阅读外观见 L3。
+
+## 视觉变更的发布检查
+
+修改风格、栏目素材或布局后，执行 `npm run test:styles`、`npm run test:content` 和 `npm run build`。风格检查涵盖已登记套装资源、偏好回退、图标网格与昼夜映射；视觉验收标准见 [VISUAL_STYLES.md](../VISUAL_STYLES.md)。
+
+在浏览器从首页下半部进入栏目，再打开一篇有多个小节的文章，检查节间跳转、文末推荐和浏览器后退。新增栏目时查看实际图案或回退素材；修改共享切换时复核刷新恢复、跨页保持、各风格昼夜切换、键盘操作与减少动态效果。实际查看桌面、窄屏、暗色和 320px 手机页面，保留页面截图作为视觉核对依据。
+
+网站以 `scripts/prepare-home-images.mjs` 从保留的首页原图生成 WebP 副本。电影主题的 `scripts/prepare-along-way-images.mjs` 接收原截图目录和生成图目录，复制原始素材，再生成 1680px 和 480px WebP，仅等比缩放和编码；画面、懒加载及部署路径规范见 L3。

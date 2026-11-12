@@ -2,7 +2,9 @@
 
 ## 网站风格与内容的边界
 
-文章作者使用[新增内容指南](./新增内容.md)。文章元数据、栏目和标题层级决定页面有什么内容；读者所选的风格决定这些内容以何种形式显示。以下是同一批数据在各处的实际用途。
+本文是 L3 视觉规范，管理页面外观、配色、动效和视觉验收标准。正文语气与组织见 [写作总则](./writing/README.md)，标记与组件用法见 [正文格式](./HTML_FORMATS.md)，发布和验证命令见 [发布流程](./writing/publishing.md)。文章元数据、栏目和标题层级决定页面有什么内容；所选风格决定这些内容以何种形式显示。以下是同一批数据在各处的实际用途。
+
+正文共用一份，风格 ID、昼夜分支、入场动画与四套封面由共享主题实现；普通文章无需配置装饰图。
 
 | 风格 | 首页下半部和栏目 | 文章开篇、读到中段及文末 |
 | --- | --- | --- |
@@ -31,15 +33,41 @@
 | 身份、文案、封面与资源 | [视觉清单](./docs/.vitepress/theme/visual-styles.ts) 登记稳定 ID、名称、封面简介、栏目与卷尾标题、`iconSet`、昼夜及窄屏资源。图片放 `docs/public/`；封面选择由 `StyleSwitcher.vue` 遍历清单。派生配色可以复用已有界面类型。 |
 | 首页、栏目与标签 | `HomeHero`、`HomeDashboard`、`CollectionIndex`／`GraceCatalog`、`HomeClosing`、`VideoGallery`；目录共用 `DirectoryIntro`、`SectionIllustration` 和 `ChapterCards`，筛选共用 `TagsIndex`。新增界面类型时，在这些共用位置实现其布局或沿用已有布局，并检查未知栏目的素材回退。栏目图案由 `SectionArtwork`、`SectionIcon`、`SectionPhotograph` 或 `GraceEmblem` 提供；新栏目可以直接使用各自的通用图。 |
 | 文章阅读 | `Layout.vue` 挂载 `ArticleContext`、`ReaderNavigation`、`ReadingPosition` 和 `RelatedReading`；[阅读外观](./docs/.vitepress/theme/styles/reader-editions.css) 管理四套分节、目录和相关阅读的呈现。新增文章不用更改这些文件。 |
-| 切换与发布验证 | 主题样式在 `theme/index.ts` 接入。主动换肤见 `theme/appearance-motion.ts` 和 `styles/appearance-motion.css`，换页见 `theme/page-arrival.ts` 与 `styles/route-arrival.css`，工具面板的进入样式在 `styles/toolbar.css`。独立样式 ID 需在相应样式表中声明选择器。顶部操作图标见 `InterfaceIcon`，独有的昼夜控件在 `NavActions` 接入。新风格需检查封面、快捷键、返回滚动位置、手机与减少动态。 |
+| 切换与交互 | 主题样式在 `theme/index.ts` 接入。主动换肤见 `theme/appearance-motion.ts` 和 `styles/appearance-motion.css`，换页见 `theme/page-arrival.ts` 与 `styles/route-arrival.css`，工具面板的进入样式在 `styles/toolbar.css`。独立样式 ID 需在相应样式表中声明选择器。顶部操作图标见 `InterfaceIcon`，独有的昼夜控件在 `NavActions` 接入。新风格需检查封面、快捷键、返回滚动位置、手机与减少动态。 |
 
-修改风格后运行 `npm run test:styles`、`npm run test:content` 和 `npm run build`。从首页下半部点进栏目，再进入一篇有多个小节的文章，试一次节间跳转、文末推荐和浏览器后退。新增数据和调研的检查命令见[调研发布说明](./research/README.md)。
+修改风格后的命令与页面复核流程统一见 [发布流程](./writing/publishing.md)。视觉验收覆盖首页下半部、栏目、多小节文章、节间跳转、文末推荐和浏览器后退后的实际状态。
 
 风格手册的 `coverLight` 和 `coverDark` 使用按卡片尺寸导出的小图；像素原图足够小时可直接复用。首页主图由 `heroImageFor` 根据风格、昼夜和屏宽选择。新增主图时，把桌面与手机路径登记在同一份视觉清单里，首屏预加载和切换预取都会沿用它。若卷尾另有手机构图，可登记 `closingMobile` 和 `closingMobileDark`。这些资源由主题维护，发表文章时无需配图或修改清单。
 
 生产构建按文件内容为主题图生成 `/assets/theme/` 下的地址，Cloudflare Pages 允许浏览器缓存一年。替换同名原图后，下次构建会自动产生新地址；内容相同的图继续复用原缓存。正文中直接引用的固定地址配图使用一小时缓存，同名替换后，已有读者可能在这一小时内看到旧图。新增栏目配图沿用原发布流程。
 
 换风格时，鼠标或键盘在选项上停留片刻才预取当前屏幕需要的图片，点击时直接准备所选图片。省流量或慢速移动连接跳过悬停预取。在首页卷尾切换时优先准备卷尾图，顶部大图等读者接近页首再加载。
+
+## 共享文章阅读版式
+
+### 学术阅读（2026-10-17）
+
+公开学术文章共用西湖讲义的阅读版式，包括该次修订覆盖的六个 HTML 文字栏目和使用 Markdown 的每日调研。`theme/reading-design.ts` 根据源路径与公开范围启用 `academic-reading`，样式位于 `theme/styles/academic-reading.css`。正文使用本地 Noto Serif SC 和 720px 版心，开篇与分节以留白和分隔线划分。代码使用等宽字体，导航、图中标注、表格、图注和交互控件使用无衬线字体。首页、栏目目录、标签索引与视频各有自己的布局。文字栏目由 `docs/.vitepress/sections.json` 识别；阅读风格与定位工具从公开路由和标题自动获得。
+
+共享字体位于 `docs/.vitepress/theme/fonts/`，使用 400／600 两个 WOFF2 子集；未覆盖字符使用系统宋体回退。子集生成与更新见 [发布流程](./writing/publishing.md)。原奖励建模比较开关已结束试用，使用确定后的学术排版。
+
+配色与页面过渡由所选站点主题提供。笔记共用视觉在 `docs/.vitepress/theme/styles/notebook-design.css` 维护，样式限定于 `data-design="linux-notebook"`，不改变调研页面。视觉验收以桌面、窄屏和暗色模式的实际页面为据。
+
+正文沿用共享字体、行长与配色。自定义组件使用站点变量表达背景、正文和分隔线，例如 `--vp-c-bg`、`--vp-c-text-1`、`--vp-c-divider`。实验图、结果区与宽表可局部加宽，表格用等宽数字，页面保留一处主滚动区域。各风格共用同一张内容图。
+
+局部样式限定在自身组件范围内，不覆盖全局 body、导航或侧边栏；共用板块样式在 `docs/.vitepress/theme/styles/native-html.css`。标记写法见 [正文格式](./HTML_FORMATS.md)。
+
+### 文章流程图（2026-10-30）
+
+`figure.note-diagram` 内的 `note-flow` 使用白色阅读底、石墨灰文字与单一靛蓝强调色，共用样式在 `theme/styles/note-flow.css`。节点左对齐，以细线箭头和步骤号表达顺序；并列维度 `note-flow note-flow-options` 以分隔线区分，不显示箭头或步骤号。按文章可用宽度自动切换纵向布局，深色模式同步适配。
+
+图标按节点含义选择，不按位置轮换图标或颜色，不再使用 `tone-0/1/2`。添加图形时使用统一线宽、视框和颜色变量，不在图中绘制正文文字。节点、图注与 SVG 组件的具体用法见 [正文格式](./HTML_FORMATS.md)。
+
+### 西湖讲义学术排版（2026-10-27 试用）
+
+LaTeX 导入的讲义正文采用本地 Noto Serif SC 字体子集、720px 版心、连续分节及轻量的定义／定理／证明／算法区域；共享样式位于 `docs/westlake-rl/lecture-academic.css`，只作用于 `academic-lecture`。开篇与分节使用学术阅读样式，保留留白与连续分节，无需深色 hero 或白色卡片。
+
+长公式与宽表格局部滚动，行内公式遵循数学基线。编号、引用链接与原 PDF 对照的组件格式见 [正文格式](./HTML_FORMATS.md)。
 
 ## 剪纸 · Paper Coast v1.1
 
@@ -70,7 +98,7 @@
 
 ### 素材取舍与来源
 
-原图由用户在网页端生成并放入 `docs/public/images/home/`，继续保留为原始素材。网站通过 `scripts/prepare-home-images.mjs` 生成 WebP 副本。
+原图由用户在网页端生成并放入 `docs/public/images/home/`，继续保留为原始素材。WebP 副本的生成流程见 [发布流程](./writing/publishing.md)。
 
 | 原图 | 网页素材 | 决定 |
 | --- | --- | --- |
@@ -120,7 +148,7 @@
 
 ### 后续多风格接入
 
-各风格共用 `theme/styles/toolbar.css` 中的搜索入口、风格手册、明暗开关和目录操作，各自提供配色和图标。修改共用工具栏时，在各风格下检查手机布局、悬停、键盘焦点和减少动态效果。已有栏目新增普通文章，按[网站新增内容指南](./新增内容.md)接入即可。
+各风格共用 `theme/styles/toolbar.css` 中的搜索入口、风格手册、明暗开关和目录操作，各自提供配色和图标。修改共用工具栏时，在各风格下检查手机布局、悬停、键盘焦点和减少动态效果。已有栏目新增普通文章，按 [发布流程](./writing/publishing.md) 接入。
 
 1. 新套装须准备桌面浅／深表现、手机素材、页尾、图标语言和对应色板；不使用剪纸图标搭配另一套写实背景。
 2. 扩展 `VisualStyle` 和 `visualStyles`，保留稳定的风格 ID。颜色与插画配置一并提供，结构、内容路由和学术图表不变。
@@ -141,7 +169,7 @@
 - 栏目标题、文章链接、搜索、标签筛选和原有公开范围仍可用。
 - 深色只影响目标元素，禁止 `.dark` 选择器意外施加全页 opacity/filter。
 - 装饰 SVG 和图片对辅助技术隐藏，导航仍有真实名称。
-- 执行现有内容检查和构建；用实际页面截图检查，不把构建通过当作视觉验收。
+- 用实际页面截图完成视觉验收；内容检查和构建命令见 [发布流程](./writing/publishing.md)。
 
 ## 像素 · Pixel Voyage v1.3
 
@@ -195,7 +223,7 @@ v1.2 将导航、风格选择、明暗开关和阅读目录收敛为两层轻量
 
 ### 验证
 
-运行 `npm run test:styles` 检查已登记的套装资源、偏好回退、图标网格和昼夜映射；运行 `npm run test:content` 和 `npm run build` 检查内容与构建。新增栏目时，在浏览器确认实际显示的图案或回退素材合适。修改共享风格切换时，在各风格下复核刷新恢复、跨页保持、昼夜切换和手机布局。
+命令与执行流程见 [发布流程](./writing/publishing.md)。验收范围包括已登记的套装资源、偏好回退、图标网格和昼夜映射；新增栏目实际显示的图案或回退素材须合适。共享风格切换覆盖各风格的刷新恢复、跨页保持、昼夜切换和手机布局。
 
 ## 灿烂人生 · Along the Way v1.1
 
@@ -232,7 +260,7 @@ v1.2 将导航、风格选择、明暗开关和阅读目录收敛为两层轻量
 
 网页资产位于 `docs/public/images/along-way/`。原始截图和选用的生成图保存在 `design/along-way/sources/`；生成提示词及工具记录在 `design/along-way/generation-prompts.json`。另生成的公路、峡湾版本未采用，用户原片截图优先。
 
-`scripts/prepare-along-way-images.mjs` 接收原截图目录和生成图目录，复制原始素材，再生成 1680px 和 480px WebP。只进行等比缩小和编码，不改色、不重绘人物。初始首页主图约 71KB，夜间约 54KB；手机版本约 13KB 与 7KB。装饰缩略图懒加载，所有素材使用部署 base 路径。
+网页使用 1680px 和 480px WebP，只进行等比缩小和编码，保留原色与人物。图片生成脚本与输入目录见 [发布流程](./writing/publishing.md)。初始首页主图约 71KB，夜间约 54KB；手机版本约 13KB 与 7KB。装饰缩略图懒加载，所有素材使用部署 base 路径。
 
 ### 实现入口与复核
 

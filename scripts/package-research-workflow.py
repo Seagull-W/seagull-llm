@@ -45,8 +45,16 @@ SOURCES = {
     '.github/workflows/site-build.yml': 'GitHub 构建与产物保存工作流',
     '.gitignore': '凭据、缓存、构建产物与原始运行资料排除规则',
     'AGENTS.md': '当前仓库工作指导',
-    '新增内容.md': '当前内容接入与发布规范（优先阅读）',
-    'STYLE_GUIDE.md': '现有网站写作与风格参考',
+    'writing/README.md': '正文类型路由、跨类硬规则与分层仲裁',
+    'writing/note.md': '知识笔记体例',
+    'writing/llm-book.md': '科普书体例，仅用于零基础入门书',
+    'writing/research.md': '每日调研体例与项目技能入口',
+    'writing/publishing.md': '当前内容接入与发布规范',
+    'HTML_FORMATS.md': '正文文件、公式、图注与组件格式',
+    'VISUAL_STYLES.md': '页面外观、配色与动效',
+    'LLM_BOOK_PLAN.md': '科普书学习地图与素材计划',
+    '.agents/skills/affirmative-first-writing/SKILL.md': '跨类成稿表达检查',
+    '.agents/skills/seagull-research/references/readable-survey.md': '调研可读性检查',
     'package.json': 'Node 依赖与构建命令',
     'package-lock.json': 'Node 依赖版本锁',
     'wrangler.toml': '现有 Pages 项目与构建输出配置',
@@ -56,7 +64,6 @@ SOURCES = {
     'docs/.vitepress/public-content.ts': '公开范围判定，不应绕过',
     'docs/.vitepress/data/tagged-pages.data.mts': '标签数据生成器',
     'docs/.vitepress/components/ChapterCards.vue': '栏目卡片组件',
-    'docs/.vitepress/components/ChapterTag.vue': '侧边栏分组标记组件',
     'docs/.vitepress/components/TagsIndex.vue': '标签筛选组件',
     'docs/.vitepress/theme/index.ts': '组件注册位置参考，依赖完整网站主题',
     'docs/tags.md': '标签页面入口',
@@ -168,7 +175,7 @@ def main():
 1. 本文件：理解范围和验收边界。
 2. [接口与阶段](guides/CONTRACTS.md)：识别可替换 Agent 的 JSON 契约。
 3. [文件地图](guides/FILE_MAP.md)：按任务定位源码。
-4. [操作手册](repo/research/README.md)和[当前规范](repo/新增内容.md)。
+4. [操作手册](repo/research/README.md)和[写作总则](repo/writing/README.md)、[调研体例](repo/writing/research.md)和[发布流程](repo/writing/publishing.md)。
 5. [迁移清单](guides/MIGRATION.md)：在完整仓库或新项目上实施。
 6. [验证记录](repo/research/VALIDATION.md)：区分已验证功能和未验证事项。
 
@@ -260,7 +267,7 @@ catalog 是跨日期去重状态，不能在迁移时随意清空。旧论文修
 - 可直接复用：公开来源适配器、资料包格式、文章 JSON schema、提示词规则、离线测试思路。
 - 需要适配：ROOT 和文章目录、catalog 路由、侧边栏生成器、栏目卡片、标签映射、构建命令、Git 分支、部署与线上核验。
 - 只复制新增栏目及必要接入点。不要覆盖现有 config.mts、sidebar.ts、package.json 或完整主题。
-- 遵守目标仓库规范。当前仓库的发布规则位于 repo/AGENTS.md 与 repo/新增内容.md；其余教材专用规范不适用于本调研栏目。
+- 遵守目标仓库规范。当前仓库以 repo/AGENTS.md 分流任务，repo/writing/README.md 选择体例，repo/writing/publishing.md 管发布；调研正文使用 repo/writing/research.md。
 
 ## 验收条件
 

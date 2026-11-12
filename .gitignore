@@ -32,7 +32,8 @@ __pycache__/
 /.research/
 
 # Local historical handoffs and installation bundles
-/archive/
+/archive/*
+!/archive/llm-book-docs/
 
 # Local agent skills, configuration and Hermes handoff documentation
 /.agents/
