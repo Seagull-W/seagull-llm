@@ -73,7 +73,7 @@ contentFormat: html
 - 标签索引由 `docs/.vitepress/data/tagged-pages.data.mts` 生成，侧边栏登记的路由和发布元数据共同决定文章能否进入公开索引。保持 `public-content.ts` 的公开范围过滤，通过补齐入口与状态处理单篇文章。栏目目录页带 `pageClass: chapter-index`，独立的目录式文章即使也叫 `index.md`，仍按文章登记。`sidebar: false` 仅控制显示。视频另走视频集合入口；具体规则见[公开范围](../docs/.vitepress/public-content.ts)。
 - 草稿使用 `status: draft` 和 `search: false`；其他隐藏内容可用 `hidden: true` 或 `published: false`，同时设 `search: false`。需要阻止搜索引擎收录时，在 frontmatter 的 `head` 中加入 `[['meta', { name: 'robots', content: 'noindex' }]]`。草稿、隐藏内容与网站维护文档均设置 `search: false`，不进入公开卡片或标签索引。已构建页面可能仍能通过直接网址访问；私密材料放在站点源目录之外。
 - 草稿转公开时清理阻止索引的元数据并补齐入口。移动或改名时同步更新侧边栏、卡片、阅读顺序及正文中的旧链接；已有读者引用的小节 ID 尽量保留。
-- LLM 科普书目前整体撤下，以 `srcExclude` 排除构建；源文件保留，构建、导航、首页、卡片、标签、全文搜索和翻页入口均不恢复。恢复发布须由维护者明确决定。它的历史路由与目录不作为新增栏目示例。
+- LLM 科普书目前整体撤下，以 `srcExclude` 排除构建；源文件、书稿规范与恢复条件见 [归档说明](../archive/llm-book-docs/README.md)。它的历史路由与目录不作为新增栏目示例。
 
 ## 发布前验证
 

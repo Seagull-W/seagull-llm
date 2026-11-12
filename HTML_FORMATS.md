@@ -37,7 +37,7 @@ HTML 是页面模板片段，编译后直接出现在主文档中。不要添加
 
 | 板块 | 根元素格式 | 格式补充与体例入口 |
 | --- | --- | --- |
-| LLM 科普书 | `article.format-book` | [科普书体例与内容计划入口](./writing/llm-book.md) |
+| LLM 科普书 | `article.format-book` | 已暂停发布；书稿规范见 [归档材料](./archive/llm-book-docs/README.md) |
 | 论文与项目随谈 | `article.format-paper` | [知识笔记体例](./writing/note.md) |
 | RL 学习笔记 | `article.format-lab` | [知识笔记体例](./writing/note.md)；实验区外观见视觉规范 |
 | 西湖 RL 笔记 | `article.format-course` | [知识笔记体例](./writing/note.md)；LaTeX 导入页额外使用 `academic-lecture`，原 PDF 用 `details` 按需展开 |
@@ -48,8 +48,6 @@ HTML 是页面模板片段，编译后直接出现在主文档中。不要添加
 | 视频 | `div.format-gallery` | `VideoGallery` 管理封面、简介及观看入口 |
 | 网站首页 | `div.format-home` | 首屏文案在 `docs/index.md` 的 `hero` 中维护；栏目入口来自 `docs/.vitepress/sections.json` |
 | 每日调研 | Markdown | [调研体例](./writing/research.md)；目录登记见发布流程 |
-
-科普书的「本章导引」正文和 `〔深入·可选〕` 小节开头的「跳过不影响主线」提示均使用 `<blockquote>`。章节顺序及提示内容按科普书体例确定。
 
 ### 西湖讲义导入格式（2026-10-27 试用）
 
