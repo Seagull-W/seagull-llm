@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1753,
+  "character_count": 1755,
   "pages": [
     {
       "path": "/cs336/a1-bpe.md",
@@ -154,6 +154,10 @@
     {
       "path": "/research/2026-11-11-agent-memory-components.md",
       "title": "解读 Anthropic 的 agent 记忆：经验怎样留到下次会话"
+    },
+    {
+      "path": "/research/2026-11-13-agentic-rl-vs-post-training-rl.md",
+      "title": "Agentic RL 与一般后训练 RL：从回答评分到交互轨迹"
     },
     {
       "path": "/rl-book/cha4对话模板与监督微调.md",
