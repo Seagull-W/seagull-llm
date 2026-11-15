@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1755,
+  "character_count": 1753,
   "pages": [
     {
       "path": "/cs336/a1-bpe.md",
@@ -74,10 +74,6 @@
     {
       "path": "/research/2026-10-14-llm-post-training-agentic-rl.md",
       "title": "2026-10-14 后训练与 agentic RL：从轨迹奖励走向步骤反馈"
-    },
-    {
-      "path": "/research/2026-10-15-llm-post-training-agentic-rl.md",
-      "title": "2026-10-15 大模型强化学习、后训练与 agentic RL"
     },
     {
       "path": "/research/2026-10-16-post-training-rl-benchmarks.md",

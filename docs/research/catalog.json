@@ -18,28 +18,6 @@
     "sidebarTitle": "后训练与 agentic RL：从轨迹奖励走向步骤反馈"
   },
   {
-    "date": "2026-10-15",
-    "slug": "llm-post-training-agentic-rl",
-    "title": "2026-10-15 大模型强化学习、后训练与 agentic RL",
-    "description": "摘要筛选显示，本周 RLVR 仍在处理单轨迹信用分配和动量，自蒸馏方法继续增加，但同期对照研究发现相对 GRPO 的优势并不稳定；语言智能体工作则转向中间动作监督和执行环境内训练。",
-    "route": "/research/2026-10-15-llm-post-training-agentic-rl",
-    "source_urls": [
-      "https://arxiv.org/abs/2610.20497",
-      "https://arxiv.org/abs/2610.19687",
-      "https://arxiv.org/abs/2610.20597",
-      "https://arxiv.org/abs/2610.20413",
-      "https://arxiv.org/abs/2610.19882",
-      "https://arxiv.org/abs/2610.19789",
-      "https://arxiv.org/abs/2610.20584",
-      "https://arxiv.org/abs/2610.20576",
-      "https://arxiv.org/abs/2610.12274",
-      "https://arxiv.org/abs/2610.20181"
-    ],
-    "window_end": "2026-10-16T00:00:00+08:00",
-    "bundle_sha256": "3bbcf666e8ca0b8946ab76fd57971ba8e6a8c1729aa49cae4d870ebe977e45c8",
-    "sidebarTitle": "大模型强化学习、后训练与 agentic RL"
-  },
-  {
     "date": "2026-10-16",
     "slug": "post-training-rl-benchmarks",
     "title": "后训练与 agent 评测：基准分数究竟证明了什么",
@@ -497,7 +475,7 @@
     "date": "2026-11-04",
     "slug": "daily-research-guide",
     "title": "每日调研导读：从后训练全景到奖励、系统与规模边界",
-    "description": "把本站 10 月 14 日以来发布的十六篇每日调研按阅读顺序串起来：哪些先读全景、哪些算系统与信号的账、哪些落到具体机制与相邻领域，每篇给一段几句话的导读。",
+    "description": "把本站 10 月 14 日以来发布的十五篇每日调研按阅读顺序串起来：哪些先读全景、哪些算系统与信号的账、哪些落到具体机制与相邻领域，每篇给一段几句话的导读。",
     "route": "/research/2026-11-04-daily-research-guide",
     "source_urls": [],
     "window_end": "2026-11-04T00:00:00+08:00",
