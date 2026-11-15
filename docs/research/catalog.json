@@ -553,7 +553,7 @@
     "date": "2026-11-13",
     "slug": "agentic-rl-vs-post-training-rl",
     "title": "Agentic RL 与一般后训练 RL：从回答评分到交互轨迹",
-    "description": "从决策边界出发，解释动作、奖励、信用分配、环境、训练负载与评测口径为何随交互轨迹一起改变。",
+    "description": "从单轮训练的边界出发，解释工具调用为何改变下一次输入、一个终局分数怎样落到每个 token、多轮轨迹如何拆分训练，以及环境与评测预算带来的代价。",
     "route": "/research/2026-11-13-agentic-rl-vs-post-training-rl",
     "source_urls": [
       "https://arxiv.org/abs/2509.02547",
