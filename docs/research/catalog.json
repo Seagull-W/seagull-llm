@@ -523,7 +523,7 @@
   {
     "date": "2026-11-08",
     "slug": "agent-harness-cost",
-    "title": "agent 的账不该记在模型头上：固定模型后，harness 与环境各能改动什么",
+    "title": "固定模型后，harness 与环境仍会改变表现和成本：评估须记录这些条件",
     "description": "固定模型后只换脚手架，银行模拟里同一模型的正确率在 82.1% 与 93.6% 之间摆动；重组共享环境把 Haiku 4.5 的测试成本压低 72.7%。以三项干预实验区分正确率、违规与费用，并说明这组证据在什么条件下失效。",
     "route": "/research/2026-11-08-agent-harness-cost",
     "source_urls": [
@@ -543,7 +543,7 @@
   {
     "date": "2026-11-09",
     "slug": "dong-bin-ai4math",
-    "title": "解读董彬及合作者的形式化数学工作：陈述翻译、前提检索与证明搜索",
+    "title": "董彬及合作者的形式化数学工作：从陈述形式化到证明搜索与轨迹训练",
     "description": "依据董彬及合作者的论文，梳理从 Lean 陈述翻译、库引理检索、证明状态转换到搜索与轨迹训练的工作线，说明各段的实验依据，以及文献陈述接入形式库的缺口。",
     "route": "/research/2026-11-09-dong-bin-ai4math",
     "source_urls": [
@@ -562,8 +562,8 @@
   {
     "date": "2026-11-11",
     "slug": "agent-memory-components",
-    "title": "解读 Anthropic 的 agent 记忆：经验怎样留到下次会话",
-    "description": "依据 Anthropic《The components of agent memory》与一份中文解读，说明转写、笔记、知识表示和注入上下文的分工，以及离线整理的收益、成本与未定问题。",
+    "title": "Anthropic 的 agent 记忆：经验如何经整理进入下次会话",
+    "description": "依据 Anthropic《The components of agent memory》，说明会话转写、记忆笔记、整理后的表示与上下文注入的分工，以及 dreaming 的纠错机制、收益与成本。",
     "route": "/research/2026-11-11-agent-memory-components",
     "source_urls": [
       "https://www.anthropic.com/research/components-of-agent-memory"

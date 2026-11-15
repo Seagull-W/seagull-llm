@@ -145,15 +145,15 @@
     },
     {
       "path": "/research/2026-11-08-agent-harness-cost.md",
-      "title": "agent 的账不该记在模型头上：固定模型后，harness 与环境各能改动什么"
+      "title": "固定模型后，harness 与环境仍会改变表现和成本：评估须记录这些条件"
     },
     {
       "path": "/research/2026-11-09-dong-bin-ai4math.md",
-      "title": "解读董彬及合作者的形式化数学工作：陈述翻译、前提检索与证明搜索"
+      "title": "董彬及合作者的形式化数学工作：从陈述形式化到证明搜索与轨迹训练"
     },
     {
       "path": "/research/2026-11-11-agent-memory-components.md",
-      "title": "解读 Anthropic 的 agent 记忆：经验怎样留到下次会话"
+      "title": "Anthropic 的 agent 记忆：经验如何经整理进入下次会话"
     },
     {
       "path": "/research/2026-11-13-agentic-rl-vs-post-training-rl.md",
