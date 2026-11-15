@@ -35,12 +35,20 @@ __pycache__/
 /archive/*
 !/archive/llm-book-docs/
 
-# Local agent skills, configuration and Hermes handoff documentation
-/.agents/
+# Local agent configuration and third-party installs; project-owned guidance is versioned.
+/.agents/*
+!/.agents/skills/
+/.agents/skills/*
+!/.agents/skills/seagull-research/
+!/.agents/skills/affirmative-first-writing/
 /.codex/
 /.hermes/
 /.aws/
-/hermes/
+/hermes/*
+!/hermes/README.md
+!/hermes/task-template.md
+!/hermes/skills.md
+!/hermes/skills-installation.json
 
 # Local workspace overview and connectivity diagnostic
 /scripts/check-github-access.py

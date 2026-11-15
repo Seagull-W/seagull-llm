@@ -53,6 +53,8 @@ SOURCES = {
     'VISUAL_STYLES.md': '页面外观、配色与动效',
     '.agents/skills/affirmative-first-writing/SKILL.md': '跨类成稿表达检查',
     '.agents/skills/seagull-research/references/readable-survey.md': '调研可读性检查',
+    '.agents/skills/seagull-research/references/paper-survey.md': '按问题选用的文献速览方法',
+    '.agents/skills/seagull-research/scripts/prose-scan.py': '可选的正文结构与句式定位工具，不作质量评分',
     'package.json': 'Node 依赖与构建命令',
     'package-lock.json': 'Node 依赖版本锁',
     'wrangler.toml': '现有 Pages 项目与构建输出配置',
@@ -164,6 +166,8 @@ def main():
 
 只有需要结构化交接或恢复已有任务时，才使用 skill 的 references/task-pipeline.md 与 references/delivery-contract.md。这些契约约束文件接口，不证明内容质量。网站接入与发布按当前授权进行。
 
+方案与初稿回传执行 [协作约定](repo/hermes/README.md#阶段回传与反馈)，技能选用见 [技能目录](repo/hermes/skills.md)。需要初稿反馈时在本地报告阶段停下，不能用一键 run 或内部验收跳过操作者反馈。
+
 不带 --task 的兼容日报仍围绕大模型强化学习、后训练与 agentic RL，通过 workflow.json 的固定来源和近期窗口执行；不能用这个默认值回答任意知识问题。
 
 这是工作流源码与规范的精选快照，不是完整网站。`repo/` 保留原仓库相对路径；其中的配置和组件会引用未打包的其他栏目、组件与资产。不要直接在快照内运行全站构建，也不要覆盖目标网站的完整配置。
@@ -178,6 +182,8 @@ def main():
 6. [验证记录](repo/research/VALIDATION.md)：区分已验证功能和未验证事项。
 
 ## 已验证与未验证
+
+以下为历史工作流记录；当前技能与 CLI 的后续验证见 repo/hermes/skills.md，实际可用性在本次运行核对。
 
 - 已验证：公开 arXiv/HF 采集、当前本机 Codex 会话写作、文章接入、本地构建、GitHub 构建、Pages 部署、线上文章内容。
 - 未通过：独立 Codex CLI 生成，历史探测显示未登录且遇到证书信任错误。
@@ -201,6 +207,8 @@ def main():
 迁移到其他网站时保留阶段接口和证据规则，按目标项目重新接入导航、卡片、标签与构建；不要整体覆盖其配置。
 ''')
     write(folder / 'guides/CONTRACTS.md', '''# 数据契约与执行阶段
+
+本页描述程序接口。操作者反馈与发布边界统一执行 [协作约定](../repo/hermes/README.md#阶段回传与反馈)；自动运行只在用户明确免除相应反馈时采用。
 
 ## 可选结构化任务 v2
 

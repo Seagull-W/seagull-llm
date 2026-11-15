@@ -3,6 +3,8 @@
 调研写作体例见 [writing/research.md](../writing/research.md)，证据与数字口径见[写作总则](../writing/README.md#跨类硬规则)。
 已有调研稿要发布到网站，按下文接入。普通笔记和新栏目的流程见[发布流程](../writing/publishing.md)。
 
+手工写作和脚本任务均遵守 [阶段回传与反馈](../hermes/README.md#阶段回传与反馈)。方案先回传，初稿等待操作者反馈后再定稿；程序的 `accepted` 状态不能代替操作者反馈。
+
 ## 将一篇每日调研加入网站
 
 ### 手工稿
@@ -22,7 +24,7 @@
 
 ### 使用已有脚本任务
 
-固定订阅的 `run` 在生成稿件后执行 `integrate`。指定 `--task` 的任务模式将 `run` 停在本地报告，网站接入另用 `integrate`。有 `delivery` 约定时先试读并运行 `accept`；验收后修稿须重新生成、验收、接入。[工作流脚本](../scripts/research-workflow.py)与[任务分派](../scripts/research_tasks.py)负责这些阶段。
+固定订阅的 `run` 在生成稿件后执行 `integrate`，不会自动停下来等待反馈；需要初稿反馈的任务使用分步命令，在本地报告处停下，勿用该一键路径代替协作流程。指定 `--task` 的任务模式将 `run` 停在本地报告，网站接入另用 `integrate`。有 `delivery` 约定时先试读并运行 `accept`；验收后修稿须重新生成、验收、接入。[工作流脚本](../scripts/research-workflow.py)与[任务分派](../scripts/research_tasks.py)负责这些程序阶段。
 
 `integrate` 写本次稿件并按路由更新目录，条目按日期和 slug 倒排。重新接入同一路由会替换其正文，保留该记录的 `label`、`sidebarTitle` 和 `children`。栏目模板与侧边栏程序不会被脚本重写。接入前核对目标路由，特别是同日已有手工稿时。
 
@@ -41,10 +43,10 @@ node scripts/test-content-discovery.mjs --built
 
 专项检查核对顶层记录、卡片、侧边栏以及登记的子章文件与公开状态；`--built` 同时查生成的栏目页面入口。打开 `/research/`，从新卡片进入正文，再点标签、搜索一个小节并试用本页目录。学术字体子集需更新时运行 `python scripts/update-reading-font.py`，检查生成的 WOFF2 和清单。
 
-收到推送要求后再使用 `publish` 或手工提交。自动发布允许目录文件和目录内的顶层稿件，还会检查暂存区、工作区和目标分支。若本批还含子章、字体或站点代码，按实际范围审阅并提交。推送后再验证线上路由。
+落实阶段反馈并核对已有发布授权后，使用 `publish` 或手工提交，无需重复索取已获授权。自动发布允许目录文件和目录内的顶层稿件，还会检查暂存区、工作区和目标分支。若本批还含子章、字体或站点代码，按实际范围审阅并提交。推送后再验证线上路由。
 
 ## 从选题开始的调研
 
-明确布置的主题调研可按交付目的检索、归纳和试读，普通交付直接使用 Markdown。安装了项目本地技能的环境可查阅 `.agents/skills/seagull-research/SKILL.md`。同目录的 `references/task-pipeline.md` 说明结构化任务与恢复，`references/delivery-contract.md` 说明验收，`references/daily.md` 说明固定订阅和定时运行。这些文件随本地技能安装。
+明确布置的主题调研可按交付目的检索、归纳和试读，普通交付直接使用 Markdown。[项目调研技能](../.agents/skills/seagull-research/SKILL.md)及其引用文件随仓库维护：`references/task-pipeline.md` 说明结构化任务与恢复，`references/delivery-contract.md` 说明验收，`references/daily.md` 说明固定订阅和定时运行。可选的第三方研究与表达技能见 [技能目录](../hermes/skills.md)，其安装与本次实际调用分别核实。
 
 本目录中的配置、JSON schema、`examples/` 和 `systemd/` 供相应脚本使用；各 VALIDATION 文件记录过去的实测情况。
