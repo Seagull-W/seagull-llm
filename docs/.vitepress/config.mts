@@ -250,9 +250,10 @@ const config = withMermaid({
     // --- 导航栏 ---
     nav: [
       { text: '全部内容', link: '/tags' },
-      { text: '学习笔记', activeMatch: '/(?:cs336|rl-book|westlake-rl|rust-notes|linux-notes|cuda-notes|vllm-notes)/', items: [
+      { text: '学习笔记', activeMatch: '/(?:cs336|datawhale-agentic-rl|rl-book|westlake-rl|rust-notes|linux-notes|cuda-notes|vllm-notes)/', items: [
         { text: 'CS336学习笔记', link: '/cs336/' },
         { text: 'RL 学习笔记', link: '/rl-book/' },
+        { text: 'DataWhale Agentic RL', link: '/datawhale-agentic-rl/' },
         { text: '西湖强化学习', link: '/westlake-rl/' },
         { text: 'Rust 笔记', link: '/rust-notes/' },
         { text: 'Linux 笔记', link: '/linux-notes/' },

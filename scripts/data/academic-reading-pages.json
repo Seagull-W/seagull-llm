@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1758,
+  "character_count": 1760,
   "pages": [
     {
       "path": "/cs336/a1-bpe.md",
@@ -62,6 +62,10 @@
     {
       "path": "/cuda-notes/simt-kernels.md",
       "title": "2.2 · CUDA SIMT 内核编写"
+    },
+    {
+      "path": "/datawhale-agentic-rl/task-01.md",
+      "title": "Task 01 · Loss Function"
     },
     {
       "path": "/linux-notes/linux-isolation.md",
