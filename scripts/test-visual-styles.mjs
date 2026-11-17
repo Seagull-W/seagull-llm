@@ -8,9 +8,9 @@ import { join, sep } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import sharp from 'sharp'
-import { closingImageFor, heroImageFor, heroMobileMedia, homeHeroPreload, visualStyles, resolveVisualStyle, visualStyleBoot } from '../docs/.vitepress/theme/visual-styles.ts'
+import { closingImageFor, gracePortraitMedia, heroImageFor, heroMediaFor, pageArtPreload, visualStyles, resolveVisualStyle, visualStyleBoot } from '../docs/.vitepress/theme/visual-styles.ts'
 import { pixelDaylightMatrix } from '../docs/.vitepress/theme/pixel-daylight.ts'
-import { graceParties, graceCharacterFor, portraitPath } from '../docs/.vitepress/components/grace-characters.ts'
+import { graceParties, graceCharacterFor, graceReadingPortraits, readingPortraitFor, portraitPath } from '../docs/.vitepress/components/grace-characters.ts'
 import { huntSheetPath, sheets } from '../docs/.vitepress/components/pixel-hunt/choreography.ts'
 import { createThemeImageBuild } from '../docs/.vitepress/versioned-theme-images.mts'
 import { writeImageCacheHeaders } from '../docs/.vitepress/image-cache-headers.mts'
@@ -43,7 +43,8 @@ test('production image URLs match their emitted content, including portraits, sp
       ...Object.values(style.assets), ...Object.values(style.icons || {}), ...Object.values(style.sectionArt || {}),
       ...Object.values(style.sectionPhotos || {}).flatMap(Object.values)
     ]),
-    ...graceParties.flat().map(portraitPath), ...Object.values(sheets).map(huntSheetPath)
+    ...graceParties.flat().map(portraitPath), ...Object.values(graceReadingPortraits).flat(),
+    ...Object.values(sheets).map(huntSheetPath)
   ]
   for (const path of new Set(paths)) {
     const source = await readFile(new URL(path.slice(1), publicDir))
@@ -55,10 +56,10 @@ test('production image URLs match their emitted content, including portraits, sp
   const mobile = visualStyles['grace-archive'].assets.mobileDark
   for (const base of ['/', '/seagull-llm/']) {
     const links = []
-    runInNewContext(homeHeroPreload(base, build.pathFor), {
+    runInNewContext(pageArtPreload(base, build.pathFor), {
       document: { createElement: () => ({}), head: { appendChild: link => links.push(link) } },
       localStorage: { getItem: key => key === 'seagull-visual-style' ? 'grace-archive' : 'dark' },
-      matchMedia: query => ({ matches: query === heroMobileMedia })
+      matchMedia: query => ({ matches: query === gracePortraitMedia })
     })
     assert.equal(links[0].href, base + build.pathFor(mobile).slice(1))
   }
@@ -122,7 +123,7 @@ test('the home head preloads exactly the picture selected for the saved style, s
         const links = []
         const document = { createElement: name => ({ name }), head: { appendChild: link => links.push(link) } }
         const localStorage = { getItem: key => key === 'seagull-visual-style' ? style.id : dark ? 'dark' : 'light' }
-        runInNewContext(homeHeroPreload(base), { document, localStorage, matchMedia: query => ({ matches: query === heroMobileMedia && mobile }) })
+        runInNewContext(pageArtPreload(base), { document, localStorage, matchMedia: query => ({ matches: query === heroMediaFor(style) && mobile }) })
         assert.equal(links.length, 1)
         assert.equal(links[0].rel, 'preload')
         assert.equal(links[0].as, 'image')
@@ -138,10 +139,52 @@ test('first visit preloads the system appearance even if storage is unavailable'
   for (const getItem of [() => null, () => { throw new Error('blocked') }, key => key === 'seagull-visual-style' ? '__proto__' : 'auto']) {
     const links = []
     const document = { createElement: () => ({}), head: { appendChild: link => links.push(link) } }
-    runInNewContext(homeHeroPreload('/'), {
+    runInNewContext(pageArtPreload('/'), {
       document, localStorage: { getItem }, matchMedia: query => ({ matches: query === '(prefers-color-scheme: dark)' }),
     })
     assert.deepEqual(links.map(link => link.href), [visualStyles['paper-coast'].assets.heroDark])
+  }
+})
+
+test('only the Elden Ring edition fetches a landscape on a direct visit to an article', () => {
+  const preload = pageArtPreload('/', path => path, false)
+  for (const style of Object.values(visualStyles)) {
+    const links = []
+    runInNewContext(preload, {
+      document: { createElement: () => ({}), head: { appendChild: link => links.push(link.href) } },
+      localStorage: { getItem: key => key === 'seagull-visual-style' ? style.id : 'light' },
+      matchMedia: query => ({ matches: query === gracePortraitMedia }),
+    })
+    assert.deepEqual(links, style.iconSet === 'grace' ? [style.assets.mobile] : [])
+  }
+})
+
+test('both reading appearances cycle through all five distinct cutouts on the same article', async () => {
+  const all = new Set(Object.values(graceReadingPortraits).flat())
+  assert.equal(all.size, 5)
+  for (const dark of [false, true]) {
+    const group = dark ? graceReadingPortraits.night : graceReadingPortraits.day
+    const sequence = group.map((_, round) => readingPortraitFor('cs336/lecture-01.md', dark, round))
+    assert.deepEqual(new Set(sequence), new Set(group))
+    assert.equal(readingPortraitFor('cs336/lecture-01.md', dark, group.length), sequence[0])
+  }
+  for (const asset of all) {
+    const image = sharp(fileURLToPath(new URL('../docs/public' + asset, import.meta.url)))
+    const { width, height, hasAlpha } = await image.metadata()
+    assert.ok(hasAlpha && height > width, asset)
+    const { min, max } = (await image.stats()).channels[3]
+    assert.deepEqual([min, max], [0, 255], asset)
+  }
+})
+
+test('the pixel homepage uses its landscape and portrait mountain crops in both appearances', async () => {
+  const style = visualStyles['pixel-voyage']
+  assert.notEqual(style.assets.heroLight, style.assets.mobile)
+  for (const mobile of [false, true]) {
+    const crop = heroImageFor(style, false, mobile)
+    assert.equal(heroImageFor(style, true, mobile), crop)
+    const image = await sharp(fileURLToPath(new URL('../docs/public' + crop, import.meta.url))).metadata()
+    assert.deepEqual([image.width, image.height], mobile ? [1086, 1448] : [1838, 856])
   }
 })
 
@@ -185,8 +228,8 @@ test('each closing scene has a distinct day and night artwork on both screen siz
 
 test('pixel artwork rendered with the daylight filter uses its four supported pigments', async () => {
   const style = visualStyles['pixel-voyage']
-  const { heroLight, heroDark, mobile, logo, coverLight, coverDark } = style.assets
-  const assets = new Set([heroLight, heroDark, mobile, logo, coverLight, coverDark, ...Object.values(style.icons), ...Object.values(style.sectionArt)])
+  const { logo, coverLight, coverDark } = style.assets
+  const assets = new Set([logo, coverLight, coverDark, ...Object.values(style.icons), ...Object.values(style.sectionArt)])
   const palette = new Set(['26364a', '79a99b', 'f2c690', 'f6f1e7'])
   for (const asset of assets) {
     if (!asset.endsWith('.png')) continue

@@ -1,0 +1,458 @@
+<script setup lang="ts">
+import '../lecture-academic.css'
+import { defineAsyncComponent, shallowRef } from 'vue'
+import pdfUrl from './时序差分方法.pdf?url'
+import outline from './目录.json'
+const PdfViewer = defineAsyncComponent(() => import('../../.vitepress/components/PdfViewer.vue'))
+const showOriginal = shallowRef(false)
+function toggleOriginal(event: Event) {
+  showOriginal.value = (event.target as HTMLDetailsElement).open
+}
+</script>
+
+<article class="native-document format-course academic-lecture" data-format="course" data-design="linux-notebook" aria-label="第 7 讲：时序差分方法">
+<header class="document-intro note-hero">
+  <p class="note-kicker">西湖 RL 笔记<span>第 7 讲 · 课程讲义</span></p>
+  <h1 id="note-title" tabindex="-1">时序差分方法 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
+  <p class="note-deck">从状态价值的 TD 更新出发，比较 Sarsa、n 步 Sarsa 与 Q-learning 的更新目标。</p>
+  <div class="note-chips"><span>时序差分</span><span>Sarsa</span><span>Q-learning</span></div>
+  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记</p>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航"><a href="#状态价值的td学习">7.1 状态价值的TD学习</a>
+<a href="#动作价值的td学习sarsa">7.2 动作价值的TD学习：Sarsa</a>
+<a href="#动作价值的td学习n步sarsa">7.3 动作价值的TD学习：n步Sarsa</a>
+<a href="#最优动作价值的td学习q-learning">7.4 最优动作价值的TD学习：Q-learning</a>
+<a href="#统一视角">7.5 统一视角</a>
+<a href="#本章小结">7.6 本章小结</a>
+<a href="#常见问题解答">7.7 常见问题解答</a></nav>
+<div id="reading-context" class="lecture-body">
+<p>本章介绍强化学习中的<strong>时序差分（Temporal-Difference, TD）方法</strong>。与蒙特卡洛（MC）学习类似，TD学习也是免模型的（model-free），但由于其增量形式而具有一些优势。在第6章的准备下，读者看到TD学习算法时将不会感到突兀。事实上，TD学习算法可以视为求解贝尔曼方程或贝尔曼最优方程的特殊随机逼近算法。</p>
+<p>由于本章将介绍不少TD算法，我们首先概述这些算法并阐明它们之间的关系：</p>
+<ul>
+<li><p><strong>第7.1节</strong>介绍最基本的TD算法，用于估计给定策略的状态价值。在理解其他TD算法之前，先理解这个基本算法非常重要。</p></li>
+<li><p><strong>第7.2节</strong>介绍Sarsa算法，它可以估计给定策略的动作价值。该算法可以结合策略改进步骤来寻找最优策略。Sarsa算法可以很自然地通过将第7.1节中状态价值估计替换为动作价值估计得到。</p></li>
+<li><p><strong>第7.3节</strong>介绍<span class="math-inline" data-tex="n"></span>步Sarsa算法，它是Sarsa算法的推广。将展示Sarsa和MC学习是<span class="math-inline" data-tex="n"></span>步Sarsa的两个特例。</p></li>
+<li><p><strong>第7.4节</strong>介绍Q-learning算法，这是最经典的强化学习算法之一。其他TD算法旨在求解给定策略的贝尔曼方程，而Q-learning旨在直接求解贝尔曼最优方程以获得最优策略。</p></li>
+<li><p><strong>第7.5节</strong>比较本章介绍的各种TD算法，并提供一个统一的视角。</p></li>
+</ul>
+
+<section class="document-section note-panel" aria-labelledby="状态价值的td学习">
+<h2 class="unnumbered" tabindex="-1" id="状态价值的td学习">7.1 状态价值的TD学习 <a class="header-anchor" href="#状态价值的td学习" aria-label="章节链接">&#8203;</a></h2>
+<p>TD学习通常指一类广泛的强化学习算法。例如，本章介绍的所有算法都属于TD学习的范畴。然而，本节中的TD学习特指一种用于估计状态价值的经典算法。</p>
+<h3 class="unnumbered" tabindex="-1" id="算法描述">7.1.1 算法描述 <a class="header-anchor" href="#算法描述" aria-label="章节链接">&#8203;</a></h3>
+<p>给定策略<span class="math-inline" data-tex="\pi"></span>，我们的目标是估计所有<span class="math-inline" data-tex="s \in \mathcal{S}"></span>的<span class="math-inline" data-tex="v_\pi(s)"></span>。假设我们有一些遵循<span class="math-inline" data-tex="\pi"></span>生成的经验样本<span class="math-inline" data-tex="(s_0, r_1, s_1, \dots, s_t, r_{t+1}, s_{t+1}, \dots)"></span>。这里<span class="math-inline" data-tex="t"></span>表示时间步。以下TD算法可以利用这些样本来估计状态价值：</p>
+<div class="lecture-equation is-numbered" id="eq:td_state"><div class="math-block" data-tex="v_{t+1}(s_t) = v_t(s_t) - \alpha_t(s_t)\Big[v_t(s_t) - \big(r_{t+1} + \gamma v_t(s_{t+1})\big)\Big],"></div><a class="lecture-equation-number" href="#eq:td_state" aria-label="公式 1">(1)</a></div>
+<div class="lecture-equation is-numbered" id="eq:td_unchanged"><div class="math-block" data-tex="v_{t+1}(s) = v_t(s), \quad \forall s \neq s_t,"></div><a class="lecture-equation-number" href="#eq:td_unchanged" aria-label="公式 2">(2)</a></div>
+<p>其中<span class="math-inline" data-tex="t = 0, 1, 2, \dots"></span>。这里，<span class="math-inline" data-tex="v_t(s_t)"></span>是在时刻<span class="math-inline" data-tex="t"></span>对<span class="math-inline" data-tex="v_\pi(s_t)"></span>的估计；<span class="math-inline" data-tex="\alpha_t(s_t)"></span>是在时刻<span class="math-inline" data-tex="t"></span>状态<span class="math-inline" data-tex="s_t"></span>的学习率。</p>
+<p>需要注意的是，在时刻<span class="math-inline" data-tex="t"></span>，只有被访问到的状态<span class="math-inline" data-tex="s_t"></span>的值被更新，未访问到的状态<span class="math-inline" data-tex="s \neq s_t"></span>的值保持不变，如式<a href="#eq:td_unchanged" data-reference-type="eqref" data-reference="eq:td_unchanged">(2)</a>所示。式<a href="#eq:td_unchanged" data-reference-type="eqref" data-reference="eq:td_unchanged">(2)</a>通常为了简洁而被省略，但应牢记在心，因为缺少该式算法在数学上是不完整的。</p>
+<p>第一次看到TD学习算法的读者可能会好奇为什么它被设计成这样。事实上，它可以视为求解贝尔曼方程的一种特殊随机逼近算法。为此，首先回忆状态价值的定义：</p>
+<div class="lecture-equation" id="lecture-equation-3"><div class="math-block" data-tex="v_\pi(s) = \mathbb{E}\big[R_{t+1} + \gamma G_{t+1} \mid S_t = s\big], \quad s \in \mathcal{S}."></div></div>
+<p>可以将上式改写为：</p>
+<div class="lecture-equation" id="lecture-equation-4"><div class="math-block" data-tex="v_\pi(s) = \mathbb{E}\big[R_{t+1} + \gamma v_\pi(S_{t+1}) \mid S_t = s\big], \quad s \in \mathcal{S}."></div></div>
+<p>这是因为<span class="math-inline" data-tex="\mathbb{E}[G_{t+1} \mid S_t = s] = \sum_a \pi(a \mid s) \sum_{s&#x27;} p(s&#x27; \mid s, a) v_\pi(s&#x27;) = \mathbb{E}[v_\pi(S_{t+1}) \mid S_t = s]"></span>。上式是贝尔曼方程的另一种表达形式，有时被称为<strong>贝尔曼期望方程</strong>。</p>
+<p>TD算法可以通过应用Robbins-Monro算法（第6章）求解上述贝尔曼期望方程来推导。感兴趣的读者可以在下面的推导框中查看细节。</p>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p><strong>TD算法的推导</strong></p>
+<p>下面展示式<a href="#eq:td_state" data-reference-type="eqref" data-reference="eq:td_state">(1)</a>中的TD算法可以通过应用Robbins-Monro算法求解贝尔曼期望方程得到。</p>
+<p>对于状态<span class="math-inline" data-tex="s_t"></span>，定义函数：</p>
+<div class="lecture-equation" id="lecture-equation-5"><div class="math-block" data-tex="g(v_\pi(s_t)) := v_\pi(s_t) - \mathbb{E}\big[R_{t+1} + \gamma v_\pi(S_{t+1}) \mid S_t = s_t\big]."></div></div>
+<p>那么，贝尔曼期望方程等价于<span class="math-inline" data-tex="g(v_\pi(s_t)) = 0"></span>。</p>
+<p>由于我们可以获得<span class="math-inline" data-tex="r_{t+1}"></span>和<span class="math-inline" data-tex="s_{t+1}"></span>，它们分别是<span class="math-inline" data-tex="R_{t+1}"></span>和<span class="math-inline" data-tex="S_{t+1}"></span>的样本，因此我们可以得到的<span class="math-inline" data-tex="g(v_\pi(s_t))"></span>的带噪观测为：</p>
+<div class="lecture-equation" id="lecture-equation-6"><div class="math-block" data-tex="\begin{aligned}
+\tilde{g}(v_\pi(s_t)) &amp;= v_\pi(s_t) - \big(r_{t+1} + \gamma v_\pi(s_{t+1})\big) \\
+&amp;= \underbrace{\Big(v_\pi(s_t) - \mathbb{E}\big[R_{t+1} + \gamma v_\pi(S_{t+1}) \mid S_t = s_t\big]\Big)}_{g(v_\pi(s_t))} \\
+&amp;\quad + \underbrace{\Big(\mathbb{E}\big[R_{t+1} + \gamma v_\pi(S_{t+1}) \mid S_t = s_t\big] - \big(r_{t+1} + \gamma v_\pi(s_{t+1})\big)\Big)}_{\eta}.
+\end{aligned}"></div></div>
+<p>因此，用于求解<span class="math-inline" data-tex="g(v_\pi(s_t)) = 0"></span>的Robbins-Monro算法（第6.2节）为：</p>
+<div class="lecture-equation" id="lecture-equation-7"><div class="math-block" data-tex="v_{t+1}(s_t) = v_t(s_t) - \alpha_t(s_t)\,\tilde{g}(v_t(s_t))
+= v_t(s_t) - \alpha_t(s_t)\Big(v_t(s_t) - \big(r_{t+1} + \gamma v_\pi(s_{t+1})\big)\Big),"></div></div>
+<p>其中<span class="math-inline" data-tex="v_t(s_t)"></span>是在时刻<span class="math-inline" data-tex="t"></span>对<span class="math-inline" data-tex="v_\pi(s_t)"></span>的估计，<span class="math-inline" data-tex="\alpha_t(s_t)"></span>是学习率。</p>
+<p>该算法与式<a href="#eq:td_state" data-reference-type="eqref" data-reference="eq:td_state">(1)</a>拥有相似的表达式。唯一的区别是右端包含<span class="math-inline" data-tex="v_\pi(s_{t+1})"></span>，而式<a href="#eq:td_state" data-reference-type="eqref" data-reference="eq:td_state">(1)</a>包含<span class="math-inline" data-tex="v_t(s_{t+1})"></span>。这是因为该算法仅用于在假设其他状态的状态价值已经已知的情况下估计<span class="math-inline" data-tex="s_t"></span>的状态价值。如果我们想要估计所有状态的状态价值，那么右端的<span class="math-inline" data-tex="v_\pi(s_{t+1})"></span>应该替换为<span class="math-inline" data-tex="v_t(s_{t+1})"></span>，这就得到了式<a href="#eq:td_state" data-reference-type="eqref" data-reference="eq:td_state">(1)</a>。这种替换是否仍能保证收敛？答案是肯定的，这将在定理7.1中得到证明。</p>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="性质分析">7.1.2 性质分析 <a class="header-anchor" href="#性质分析" aria-label="章节链接">&#8203;</a></h3>
+<p>我们更仔细地审视TD算法的表达式。式<a href="#eq:td_state" data-reference-type="eqref" data-reference="eq:td_state">(1)</a>可以描述为：</p>
+<div class="lecture-equation" id="lecture-equation-8"><div class="math-block" data-tex="\underbrace{v_{t+1}(s_t)}_{\text{新估计}} = \underbrace{v_t(s_t)}_{\text{当前估计}} - \alpha_t(s_t)\Big(\underbrace{v_t(s_t) - \big(r_{t+1} + \gamma v_t(s_{t+1})\big)}_{\text{TD误差 }\delta_t}\Big),"></div></div>
+<p>其中</p>
+<div class="lecture-equation" id="lecture-equation-9"><div class="math-block" data-tex="\bar{v}_t := r_{t+1} + \gamma v_t(s_{t+1})"></div></div>
+<p>称为<strong>TD目标</strong>，而</p>
+<div class="lecture-equation" id="lecture-equation-10"><div class="math-block" data-tex="\delta_t := v_t(s_t) - \bar{v}_t = v_t(s_t) - \big(r_{t+1} + \gamma v_t(s_{t+1})\big)"></div></div>
+<p>称为<strong>TD误差</strong>。可以看出，新估计<span class="math-inline" data-tex="v_{t+1}(s_t)"></span>是当前估计<span class="math-inline" data-tex="v_t(s_t)"></span>与TD误差<span class="math-inline" data-tex="\delta_t"></span>的组合。</p>
+<ul>
+<li><p><strong>为什么<span class="math-inline" data-tex="\bar{v}_t"></span>被称为TD目标？</strong></p>
+<p>这是因为<span class="math-inline" data-tex="\bar{v}_t"></span>是算法试图将<span class="math-inline" data-tex="v(s_t)"></span>驱动到的目标值。从式<a href="#eq:td_state" data-reference-type="eqref" data-reference="eq:td_state">(1)</a>两端减去<span class="math-inline" data-tex="\bar{v}_t"></span>得到：</p>
+<div class="lecture-equation" id="lecture-equation-11"><div class="math-block" data-tex="v_{t+1}(s_t) - \bar{v}_t = \big(v_t(s_t) - \bar{v}_t\big) - \alpha_t(s_t)\big(v_t(s_t) - \bar{v}_t\big)
+    = [1 - \alpha_t(s_t)]\big(v_t(s_t) - \bar{v}_t\big)."></div></div>
+<p>两边取绝对值得到：</p>
+<div class="lecture-equation" id="lecture-equation-12"><div class="math-block" data-tex="|v_{t+1}(s_t) - \bar{v}_t| = |1 - \alpha_t(s_t)|\,|v_t(s_t) - \bar{v}_t|."></div></div>
+<p>由于<span class="math-inline" data-tex="\alpha_t(s_t)"></span>是一个小的正数，我们有<span class="math-inline" data-tex="0 &lt; 1 - \alpha_t(s_t) &lt; 1"></span>，因此：</p>
+<div class="lecture-equation" id="lecture-equation-13"><div class="math-block" data-tex="|v_{t+1}(s_t) - \bar{v}_t| &lt; |v_t(s_t) - \bar{v}_t|."></div></div>
+<p>这表明新值<span class="math-inline" data-tex="v_{t+1}(s_t)"></span>比旧值<span class="math-inline" data-tex="v_t(s_t)"></span>更接近<span class="math-inline" data-tex="\bar{v}_t"></span>。因此，该算法在数学上将<span class="math-inline" data-tex="v_t(s_t)"></span>驱向<span class="math-inline" data-tex="\bar{v}_t"></span>。这就是<span class="math-inline" data-tex="\bar{v}_t"></span>被称为TD目标的原因。</p></li>
+<li><p><strong>TD误差的解释是什么？</strong></p>
+<p>该误差被称为时序差分（temporal-difference），因为<span class="math-inline" data-tex="\delta_t = v_t(s_t) - (r_{t+1} + \gamma v_t(s_{t+1}))"></span>反映了两个时间步<span class="math-inline" data-tex="t"></span>和<span class="math-inline" data-tex="t+1"></span>之间的差异。其次，当状态价值估计准确时，TD误差在期望意义下为零。当<span class="math-inline" data-tex="v_t = v_\pi"></span>时：</p>
+<div class="lecture-equation" id="lecture-equation-14"><div class="math-block" data-tex="\mathbb{E}[\delta_t \mid S_t = s_t] = \mathbb{E}\big[v_\pi(S_t) - (R_{t+1} + \gamma v_\pi(S_{t+1})) \mid S_t = s_t\big] = 0."></div></div>
+<p>因此，TD误差反映了估计<span class="math-inline" data-tex="v_t"></span>与真实状态价值<span class="math-inline" data-tex="v_\pi"></span>之间的差异。</p>
+<p>在更抽象的层面上，TD误差可以解释为<strong>新息（innovation）</strong>，它表示从经验样本中获得的新信息。TD学习的基本思想是：基于新获得的信息修正对状态价值的当前估计。</p></li>
+</ul>
+<p>第二，式<a href="#eq:td_state" data-reference-type="eqref" data-reference="eq:td_state">(1)</a>中的TD算法只能估计给定策略的状态价值。要寻找最优策略，还需要进一步计算动作价值并进行策略改进，这将在第7.2节中介绍。</p>
+<p>第三，TD学习与MC学习都是免模型的，其优缺点总结在表<a href="#tab:td_vs_mc" data-reference-type="ref" data-reference="tab:td_vs_mc">1</a>中。</p>
+<div id="tab:td_vs_mc">
+<div class="note-table" tabindex="0" role="region" aria-label="讲义数据表">
+<table>
+<caption>表 1：TD学习与MC学习的比较</caption>
+<thead>
+<tr>
+<th style="text-align: center;"><strong>TD学习</strong></th>
+<th style="text-align: center;"><strong>MC学习</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>增量式</strong>：收到经验样本后立即更新状态/动作价值。</td>
+<td style="text-align: left;"><strong>非增量式</strong>：必须等待回合完全收集完毕才能计算折扣回报。</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>可处理持续性任务</strong>：增量形式支持分幕式和持续性任务。</td>
+<td style="text-align: left;"><strong>仅处理分幕式任务</strong>：只能在回合终止后计算回报。</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>自助法（Bootstrapping）</strong>：更新依赖先前估计，需要初始猜测。</td>
+<td style="text-align: left;"><strong>非自助法</strong>：直接估计价值，无需初始猜测。</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>低估计方差</strong>：涉及更少的随机变量。</td>
+<td style="text-align: left;"><strong>高估计方差</strong>：涉及许多随机变量，如<span class="math-inline" data-tex="R_{t+1}, R_{t+2}, \dots"></span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="收敛性分析">7.1.3 收敛性分析 <a class="header-anchor" href="#收敛性分析" aria-label="章节链接">&#8203;</a></h3>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 7.1 TD学习的收敛性</p>
+</div>
+<p>给定策略<span class="math-inline" data-tex="\pi"></span>，通过式<a href="#eq:td_state" data-reference-type="eqref" data-reference="eq:td_state">(1)</a>中的TD算法，<span class="math-inline" data-tex="v_t(s)"></span>在<span class="math-inline" data-tex="t \to \infty"></span>时以概率1收敛到<span class="math-inline" data-tex="v_\pi(s)"></span>（对所有<span class="math-inline" data-tex="s \in \mathcal{S}"></span>），如果满足<span class="math-inline" data-tex="\sum_t \alpha_t(s) = \infty"></span>且<span class="math-inline" data-tex="\sum_t \alpha_t^2(s) &lt; \infty"></span>（对所有<span class="math-inline" data-tex="s \in \mathcal{S}"></span>）。</p>
+</div>
+<p>关于<span class="math-inline" data-tex="\alpha_t"></span>：条件<span class="math-inline" data-tex="\sum_t \alpha_t(s) = \infty"></span>和<span class="math-inline" data-tex="\sum_t \alpha_t^2(s) &lt; \infty"></span>必须对所有<span class="math-inline" data-tex="s \in \mathcal{S}"></span>成立。注意在时刻<span class="math-inline" data-tex="t"></span>，如果<span class="math-inline" data-tex="s"></span>被访问则<span class="math-inline" data-tex="\alpha_t(s) &gt; 0"></span>，否则<span class="math-inline" data-tex="\alpha_t(s) = 0"></span>。条件<span class="math-inline" data-tex="\sum_t \alpha_t(s) = \infty"></span>要求状态<span class="math-inline" data-tex="s"></span>被访问无限次。这要求要么满足探索起点条件，要么使用探索性策略。在实际中，学习率通常选为一个小正常数；此时<span class="math-inline" data-tex="\sum_t \alpha_t^2(s) &lt; \infty"></span>不再成立，但可以证明算法在期望意义下收敛。</p>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p><strong>定理7.1的证明</strong></p>
+<p>我们基于第6章的定理6.3证明收敛性。考虑任意状态<span class="math-inline" data-tex="s \in \mathcal{S}"></span>。在时刻<span class="math-inline" data-tex="t"></span>，由TD算法有：</p>
+<div class="lecture-equation" id="lecture-equation-15"><div class="math-block" data-tex="v_{t+1}(s) = v_t(s) - \alpha_t(s)\Big(v_t(s) - (r_{t+1} + \gamma v_t(s_{t+1}))\Big), \quad \text{若 } s = s_t,"></div></div>
+<p>或<span class="math-inline" data-tex="v_{t+1}(s) = v_t(s)"></span>（若<span class="math-inline" data-tex="s \neq s_t"></span>）。</p>
+<p>定义估计误差为<span class="math-inline" data-tex="\Delta_t(s) := v_t(s) - v_\pi(s)"></span>。从<span class="math-inline" data-tex="s = s_t"></span>情况减去<span class="math-inline" data-tex="v_\pi(s)"></span>：</p>
+<div class="lecture-equation" id="lecture-equation-16"><div class="math-block" data-tex="\Delta_{t+1}(s) = (1 - \alpha_t(s))\Delta_t(s) + \alpha_t(s)\big(r_{t+1} + \gamma v_t(s_{t+1}) - v_\pi(s)\big), \quad s = s_t."></div></div>
+<p>从<span class="math-inline" data-tex="s \neq s_t"></span>情况减去<span class="math-inline" data-tex="v_\pi(s)"></span>得<span class="math-inline" data-tex="\Delta_{t+1}(s) = \Delta_t(s) = (1 - \alpha_t(s))\Delta_t(s) + \alpha_t(s) \cdot 0"></span>。</p>
+<p>因此，无论<span class="math-inline" data-tex="s = s_t"></span>与否，统一表达式为：</p>
+<div class="lecture-equation" id="lecture-equation-17"><div class="math-block" data-tex="\Delta_{t+1}(s) = (1 - \alpha_t(s))\Delta_t(s) + \alpha_t(s)\eta_t(s),"></div></div>
+<p>其中<span class="math-inline" data-tex="\eta_t(s) = r_{t+1} + \gamma v_t(s_{t+1}) - v_\pi(s)"></span>（当<span class="math-inline" data-tex="s = s_t"></span>）或<span class="math-inline" data-tex="\eta_t(s) = 0"></span>（当<span class="math-inline" data-tex="s \neq s_t"></span>）。这就是定理6.3中的过程。</p>
+<p>第一个条件在定理7.1中已假设成立。对于第二个条件<span class="math-inline" data-tex="\|\mathbb{E}[\eta_t(s) \mid \mathcal{H}_t]\|_\infty \leq \gamma \|\Delta_t(s)\|_\infty"></span>：由马尔可夫性质，<span class="math-inline" data-tex="\mathbb{E}[\eta_t(s) \mid \mathcal{H}_t] = \mathbb{E}[\eta_t(s)]"></span>。对于<span class="math-inline" data-tex="s \neq s_t"></span>，<span class="math-inline" data-tex="\eta_t(s) = 0"></span>，平凡成立。对于<span class="math-inline" data-tex="s = s_t"></span>：</p>
+<div class="lecture-equation" id="lecture-equation-18"><div class="math-block" data-tex="\begin{aligned}
+\mathbb{E}[\eta_t(s)] &amp;= \mathbb{E}[r_{t+1} + \gamma v_t(s_{t+1}) - v_\pi(s_t) \mid s_t] \\
+&amp;= \mathbb{E}[r_{t+1} + \gamma v_t(s_{t+1}) \mid s_t] - v_\pi(s_t) \\
+&amp;= \gamma \sum_{s&#x27; \in \mathcal{S}} p(s&#x27; \mid s_t)[v_t(s&#x27;) - v_\pi(s&#x27;)].
+\end{aligned}"></div></div>
+<p>于是<span class="math-inline" data-tex="|\mathbb{E}[\eta_t(s)]| \leq \gamma \sum_{s&#x27;} p(s&#x27; \mid s_t) \max_{s&#x27;} |v_t(s&#x27;) - v_\pi(s&#x27;)| = \gamma \|\Delta_t(s)\|_\infty"></span>。第三个条件由于<span class="math-inline" data-tex="r_{t+1}"></span>有界也成立。因此过程收敛。以上证明受[32]启发。</p>
+</div>
+</section>
+<section class="document-section note-panel" aria-labelledby="动作价值的td学习sarsa">
+<h2 class="unnumbered" tabindex="-1" id="动作价值的td学习sarsa">7.2 动作价值的TD学习：Sarsa <a class="header-anchor" href="#动作价值的td学习sarsa" aria-label="章节链接">&#8203;</a></h2>
+<p>第7.1节介绍的TD算法只能估计状态价值。本节介绍<strong>Sarsa</strong>算法，它可以直接估计动作价值，并可结合策略改进步骤来学习最优策略。</p>
+<h3 class="unnumbered" tabindex="-1" id="算法描述-1">7.2.1 算法描述 <a class="header-anchor" href="#算法描述-1" aria-label="章节链接">&#8203;</a></h3>
+<p>给定策略<span class="math-inline" data-tex="\pi"></span>，假设我们有以下遵循<span class="math-inline" data-tex="\pi"></span>生成的经验样本：<span class="math-inline" data-tex="(s_0, a_0, r_1, s_1, a_1, \dots, s_t, a_t, r_{t+1}, s_{t+1}, a_{t+1}, \dots)"></span>。Sarsa算法为：</p>
+<div class="lecture-equation is-numbered" id="eq:sarsa"><div class="math-block" data-tex="q_{t+1}(s_t, a_t) = q_t(s_t, a_t) - \alpha_t(s_t, a_t)\Big[q_t(s_t, a_t) - \big(r_{t+1} + \gamma q_t(s_{t+1}, a_{t+1})\big)\Big],"></div><a class="lecture-equation-number" href="#eq:sarsa" aria-label="公式 3">(3)</a></div>
+<div class="lecture-equation" id="lecture-equation-20"><div class="math-block" data-tex="q_{t+1}(s, a) = q_t(s, a), \quad \forall (s, a) \neq (s_t, a_t),"></div></div>
+<p>其中<span class="math-inline" data-tex="t = 0, 1, 2, \dots"></span>。这里，<span class="math-inline" data-tex="q_t(s_t, a_t)"></span>是对<span class="math-inline" data-tex="q_\pi(s_t, a_t)"></span>的估计，<span class="math-inline" data-tex="\alpha_t(s_t, a_t)"></span>是学习率。在时刻<span class="math-inline" data-tex="t"></span>，只有<span class="math-inline" data-tex="(s_t, a_t)"></span>的<span class="math-inline" data-tex="q"></span>值被更新。</p>
+<p>关于Sarsa算法的重要性质：</p>
+<ul>
+<li><p><strong>为什么叫"Sarsa"？</strong> 因为每次迭代需要<span class="math-inline" data-tex="(s_t, a_t, r_{t+1}, s_{t+1}, a_{t+1})"></span>。Sarsa是state-action-reward-state-action的缩写。最早在[35]中提出，名称由[3]创造。</p></li>
+<li><p><strong>Sarsa为什么被设计成这样？</strong> Sarsa与TD算法类似，可以通过将状态价值估计替换为动作价值估计很自然地得到。</p></li>
+<li><p><strong>Sarsa在数学上做了什么？</strong> 与TD算法类似，Sarsa是求解给定策略的贝尔曼方程的随机逼近算法：</p>
+<div class="lecture-equation" id="lecture-equation-21"><div class="math-block" data-tex="q_\pi(s, a) = \mathbb{E}[R + \gamma q_\pi(S&#x27;, A&#x27;) \mid s, a], \quad \forall (s, a)."></div></div>
+<p>这是用动作价值表示的贝尔曼方程。</p></li>
+</ul>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p><strong>证明上式是贝尔曼方程</strong></p>
+<p>如第2.8.2节所述，用动作价值表示的贝尔曼方程为：</p>
+<div class="lecture-equation" id="lecture-equation-22"><div class="math-block" data-tex="q_\pi(s, a) = \sum_r r\,p(r \mid s, a) + \gamma \sum_{s&#x27;} \sum_{a&#x27;} q_\pi(s&#x27;, a&#x27;)\,p(s&#x27; \mid s, a)\,\pi(a&#x27; \mid s&#x27;)."></div></div>
+<p>由于<span class="math-inline" data-tex="p(s&#x27;, a&#x27; \mid s, a) = p(s&#x27; \mid s, a)\,p(a&#x27; \mid s&#x27;) := p(s&#x27; \mid s, a)\,\pi(a&#x27; \mid s&#x27;)"></span>（由条件独立性），上式可重写为：</p>
+<div class="lecture-equation" id="lecture-equation-23"><div class="math-block" data-tex="q_\pi(s, a) = \sum_r r\,p(r \mid s, a) + \gamma \sum_{s&#x27;} \sum_{a&#x27;} q_\pi(s&#x27;, a&#x27;)\,p(s&#x27;, a&#x27; \mid s, a)."></div></div>
+<p>根据期望的定义，上式等价于<span class="math-inline" data-tex="q_\pi(s, a) = \mathbb{E}[R + \gamma q_\pi(S&#x27;, A&#x27;) \mid s, a]"></span>。因此，这就是贝尔曼方程。</p>
+</div>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 7.2 Sarsa的收敛性</p>
+</div>
+<p>给定策略<span class="math-inline" data-tex="\pi"></span>，通过式<a href="#eq:sarsa" data-reference-type="eqref" data-reference="eq:sarsa">(3)</a>中的Sarsa算法，<span class="math-inline" data-tex="q_t(s, a)"></span>在<span class="math-inline" data-tex="t \to \infty"></span>时以概率1收敛到动作价值<span class="math-inline" data-tex="q_\pi(s, a)"></span>（对所有<span class="math-inline" data-tex="(s, a)"></span>），如果满足<span class="math-inline" data-tex="\sum_t \alpha_t(s, a) = \infty"></span>且<span class="math-inline" data-tex="\sum_t \alpha_t^2(s, a) &lt; \infty"></span>（对所有<span class="math-inline" data-tex="(s, a)"></span>）。</p>
+</div>
+<p>证明与定理7.1类似，此处省略。</p>
+<h3 class="unnumbered" tabindex="-1" id="通过sarsa学习最优策略">7.2.2 通过Sarsa学习最优策略 <a class="header-anchor" href="#通过sarsa学习最优策略" aria-label="章节链接">&#8203;</a></h3>
+<p>式<a href="#eq:sarsa" data-reference-type="eqref" data-reference="eq:sarsa">(3)</a>中的Sarsa只能估计给定策略的动作价值。要寻找最优策略，需将其与策略改进步骤结合。这种组合通常也统称为Sarsa，实现过程见算法<a href="#alg:sarsa" data-reference-type="ref" data-reference="alg:sarsa">7.1</a>。</p>
+<div class="algobox lecture-box">
+<div class="lecture-box-title">
+<p>算法 7.1：通过Sarsa学习最优策略</p>
+</div>
+<p><span id="alg:sarsa" data-label="alg:sarsa"></span> <strong>初始化：</strong><span class="math-inline" data-tex="\alpha_t(s, a) = \alpha &gt; 0"></span>对所有<span class="math-inline" data-tex="(s, a)"></span>和所有<span class="math-inline" data-tex="t"></span>。<span class="math-inline" data-tex="\epsilon \in (0, 1)"></span>。初始化<span class="math-inline" data-tex="q_0(s, a)"></span>对所有<span class="math-inline" data-tex="(s, a)"></span>。由<span class="math-inline" data-tex="q_0"></span>导出初始<span class="math-inline" data-tex="\epsilon"></span>-贪心策略<span class="math-inline" data-tex="\pi_0"></span>。</p>
+<p><strong>目标：</strong>学习能从初始状态<span class="math-inline" data-tex="s_0"></span>引导智能体到达目标状态的最优路径。</p>
+<p>对于每个回合：</p>
+<ol>
+<li><p>在<span class="math-inline" data-tex="s_0"></span>处遵循<span class="math-inline" data-tex="\pi_0(s_0)"></span>生成<span class="math-inline" data-tex="a_0"></span></p></li>
+<li><p>如果<span class="math-inline" data-tex="s_t"></span>（<span class="math-inline" data-tex="t = 0, 1, 2, \dots"></span>）不是目标状态：</p>
+<ol>
+<li><p>给定<span class="math-inline" data-tex="(s_t, a_t)"></span>收集经验样本<span class="math-inline" data-tex="(r_{t+1}, s_{t+1}, a_{t+1})"></span>：通过与环境交互生成<span class="math-inline" data-tex="r_{t+1}, s_{t+1}"></span>；遵循<span class="math-inline" data-tex="\pi_t(s_{t+1})"></span>生成<span class="math-inline" data-tex="a_{t+1}"></span>。</p></li>
+<li><p>更新<span class="math-inline" data-tex="q"></span>值：</p>
+<div class="lecture-equation" id="lecture-equation-24"><div class="math-block" data-tex="q_{t+1}(s_t, a_t) = q_t(s_t, a_t) - \alpha_t(s_t, a_t)\Big[q_t(s_t, a_t) - \big(r_{t+1} + \gamma q_t(s_{t+1}, a_{t+1})\big)\Big]"></div></div></li>
+<li><p>更新<span class="math-inline" data-tex="s_t"></span>处的<span class="math-inline" data-tex="\epsilon"></span>-贪心策略：</p>
+<div class="lecture-equation" id="lecture-equation-25"><div class="math-block" data-tex="\pi_{t+1}(a \mid s_t) =
+        \begin{cases}
+        1 - \frac{\epsilon}{|\mathcal{A}(s_t)|}(|\mathcal{A}(s_t)| - 1), &amp; a = \arg\max_a q_{t+1}(s_t, a) \\[4pt]
+        \frac{\epsilon}{|\mathcal{A}(s_t)|}, &amp; \text{否则}
+        \end{cases}"></div></div></li>
+<li><p><span class="math-inline" data-tex="s_t \leftarrow s_{t+1}"></span>，<span class="math-inline" data-tex="a_t \leftarrow a_{t+1}"></span></p></li>
+</ol></li>
+</ol>
+</div>
+<p>每次迭代有两个步骤：第一步更新被访问的<span class="math-inline" data-tex="q"></span>值，第二步将策略更新为<span class="math-inline" data-tex="\epsilon"></span>-贪心策略。<span class="math-inline" data-tex="q"></span>值更新仅针对被访问的单个状态-动作对。策略更新基于<strong>广义策略迭代</strong>思想：策略被立即更新并用于生成下一个样本。策略是<span class="math-inline" data-tex="\epsilon"></span>-贪心的以保持探索性。</p>
+<p>仿真示例（图7.2）演示了Sarsa算法。任务是从特定起始状态到目标状态寻找最优路径。奖励设置：<span class="math-inline" data-tex="r_{\text{target}} = 0"></span>，<span class="math-inline" data-tex="r_{\text{forbidden}} = r_{\text{boundary}} = -10"></span>，<span class="math-inline" data-tex="r_{\text{other}} = -1"></span>。<span class="math-inline" data-tex="\alpha = 0.1"></span>，<span class="math-inline" data-tex="\epsilon = 0.1"></span>，初始<span class="math-inline" data-tex="q_0(s, a) = 0"></span>，初始策略均匀分布<span class="math-inline" data-tex="\pi_0(a \mid s) = 0.2"></span>。最终策略能成功引导到目标，但某些状态的策略可能非最优（未被充分探索）。总奖励逐步增加，回合长度逐步减少。<span class="math-inline" data-tex="\epsilon"></span>-贪心策略可能导致偶尔采取非最优动作，使用衰减<span class="math-inline" data-tex="\epsilon"></span>可以缓解此问题。</p>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p><strong>Expected Sarsa</strong></p>
+<p>Expected Sarsa是Sarsa的变体：</p>
+<div class="lecture-equation" id="lecture-equation-26"><div class="math-block" data-tex="q_{t+1}(s_t, a_t) = q_t(s_t, a_t) - \alpha_t(s_t, a_t)\Big[q_t(s_t, a_t) - \big(r_{t+1} + \gamma \mathbb{E}[q_t(s_{t+1}, A)]\big)\Big],"></div></div>
+<p>其中<span class="math-inline" data-tex="\mathbb{E}[q_t(s_{t+1}, A)] = \sum_a \pi_t(a \mid s_{t+1})\,q_t(s_{t+1}, a) := v_t(s_{t+1})"></span>。Expected Sarsa与Sarsa的不同仅在于TD目标：Expected Sarsa使用<span class="math-inline" data-tex="r_{t+1} + \gamma \mathbb{E}[q_t(s_{t+1}, A)]"></span>，而Sarsa使用<span class="math-inline" data-tex="r_{t+1} + \gamma q_t(s_{t+1}, a_{t+1})"></span>。虽然计算期望值略微增加复杂度，但减少了估计方差（随机变量从<span class="math-inline" data-tex="\{s_t, a_t, r_{t+1}, s_{t+1}, a_{t+1}\}"></span>减少到<span class="math-inline" data-tex="\{s_t, a_t, r_{t+1}, s_{t+1}\}"></span>）。</p>
+<p>Expected Sarsa可视为求解以下方程的随机逼近算法：</p>
+<div class="lecture-equation" id="lecture-equation-27"><div class="math-block" data-tex="q_\pi(s, a) = \mathbb{E}\Big[R_{t+1} + \gamma \mathbb{E}[q_\pi(S_{t+1}, A_{t+1}) \mid S_{t+1}] \;\Big|\; S_t = s, A_t = a\Big]."></div></div>
+<p>代入<span class="math-inline" data-tex="\mathbb{E}[q_\pi(S_{t+1}, A_{t+1}) \mid S_{t+1}] = v_\pi(S_{t+1})"></span>即得贝尔曼方程。更多细节见[3, 36, 37]。</p>
+</div>
+</section>
+<section class="document-section note-panel" aria-labelledby="动作价值的td学习n步sarsa">
+<h2 class="unnumbered" tabindex="-1" id="动作价值的td学习n步sarsa">7.3 动作价值的TD学习：<span class="math-inline" data-tex="n"></span>步Sarsa <a class="header-anchor" href="#动作价值的td学习n步sarsa" aria-label="章节链接">&#8203;</a></h2>
+<p>本节介绍<strong><span class="math-inline" data-tex="n"></span>步Sarsa</strong>，它是Sarsa的扩展。Sarsa和MC学习是<span class="math-inline" data-tex="n"></span>步Sarsa的两个极端特例。</p>
+<p>回忆动作价值<span class="math-inline" data-tex="q_\pi(s, a) = \mathbb{E}[G_t \mid S_t = s, A_t = a]"></span>，其中<span class="math-inline" data-tex="G_t = R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \cdots"></span>。</p>
+<p><span class="math-inline" data-tex="G_t"></span>可以分解为不同形式：</p>
+<div class="lecture-equation" id="lecture-equation-28"><div class="math-block" data-tex="\begin{align*}
+\text{Sarsa} &amp;\longleftrightarrow G_t^{(1)} = R_{t+1} + \gamma q_\pi(S_{t+1}, A_{t+1}); \\
+G_t^{(2)} &amp;= R_{t+1} + \gamma R_{t+2} + \gamma^2 q_\pi(S_{t+2}, A_{t+2}); \\
+&amp;\ \ \vdots \\
+\text{$n$步Sarsa} &amp;\longleftrightarrow G_t^{(n)} = R_{t+1} + \gamma R_{t+2} + \cdots + \gamma^n q_\pi(S_{t+n}, A_{t+n}); \\
+&amp;\ \ \vdots \\
+\text{MC} &amp;\longleftrightarrow G_t^{(\infty)} = R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \gamma^3 R_{t+4} + \cdots.
+\end{align*}"></div></div>
+<p>注意<span class="math-inline" data-tex="G_t = G_t^{(1)} = G_t^{(2)} = G_t^{(n)} = G_t^{(\infty)}"></span>，上标仅表示不同分解结构。</p>
+<p>将不同<span class="math-inline" data-tex="G_t^{(n)}"></span>代入<span class="math-inline" data-tex="q_\pi(s, a)"></span>得到不同算法：</p>
+<ul>
+<li><p><strong><span class="math-inline" data-tex="n = 1"></span>：</strong> <span class="math-inline" data-tex="q_\pi(s, a) = \mathbb{E}[R_{t+1} + \gamma q_\pi(S_{t+1}, A_{t+1}) \mid s, a]"></span>，对应Sarsa算法<a href="#eq:sarsa" data-reference-type="eqref" data-reference="eq:sarsa">(3)</a>。</p></li>
+<li><p><strong><span class="math-inline" data-tex="n = \infty"></span>：</strong> <span class="math-inline" data-tex="q_\pi(s, a) = \mathbb{E}[R_{t+1} + \gamma R_{t+2} + \cdots \mid s, a]"></span>，对应MC学习：<span class="math-inline" data-tex="q_{t+1}(s_t, a_t) = g_t := r_{t+1} + \gamma r_{t+2} + \gamma^2 r_{t+3} + \cdots"></span>。</p></li>
+<li><p><strong>一般<span class="math-inline" data-tex="n"></span>：</strong> 对应<span class="math-inline" data-tex="n"></span>步Sarsa：</p>
+<div class="lecture-equation is-numbered" id="eq:nstep_sarsa"><div class="math-block" data-tex="q_{t+1}(s_t, a_t) = q_t(s_t, a_t) - \alpha_t(s_t, a_t)\Big[q_t(s_t, a_t) - \big(r_{t+1} + \gamma r_{t+2} + \cdots + \gamma^n q_t(s_{t+n}, a_{t+n})\big)\Big]."></div><a class="lecture-equation-number" href="#eq:nstep_sarsa" aria-label="公式 4">(4)</a></div></li>
+</ul>
+<p>要实现<span class="math-inline" data-tex="n"></span>步Sarsa，需要等到时刻<span class="math-inline" data-tex="t+n"></span>才能更新<span class="math-inline" data-tex="(s_t, a_t)"></span>的<span class="math-inline" data-tex="q"></span>值。式<a href="#eq:nstep_sarsa" data-reference-type="eqref" data-reference="eq:nstep_sarsa">(4)</a>可重写为：</p>
+<div class="lecture-equation" id="lecture-equation-30"><div class="math-block" data-tex="\begin{aligned}
+q_{t+n}(s_t, a_t) = q_{t+n-1}(s_t, a_t) - \alpha_{t+n-1}(s_t, a_t)\Big[&amp;q_{t+n-1}(s_t, a_t) \\
+&amp;- \big(r_{t+1} + \gamma r_{t+2} + \cdots + \gamma^n q_{t+n-1}(s_{t+n}, a_{t+n})\big)\Big].
+\end{aligned}"></div></div>
+<p><span class="math-inline" data-tex="n"></span>步Sarsa将Sarsa和MC作为两个极端特例，其性能介于两者之间：<span class="math-inline" data-tex="n"></span>较大时接近MC（高方差、小偏差），<span class="math-inline" data-tex="n"></span>较小时接近Sarsa（大偏差、低方差）。这里介绍的<span class="math-inline" data-tex="n"></span>步Sarsa仅用于策略评估，需与策略改进结合以学习最优策略。更多信息见[3, 第7章]。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="最优动作价值的td学习q-learning">
+<h2 class="unnumbered" tabindex="-1" id="最优动作价值的td学习q-learning">7.4 最优动作价值的TD学习：Q-learning <a class="header-anchor" href="#最优动作价值的td学习q-learning" aria-label="章节链接">&#8203;</a></h2>
+<p>本节介绍<strong>Q-learning算法</strong>，这是最经典的强化学习算法之一[38, 39]。Sarsa只能估计给定策略的动作价值，而Q-learning可以直接估计最优动作价值并找到最优策略。</p>
+<h3 class="unnumbered" tabindex="-1" id="算法描述-2">7.4.1 算法描述 <a class="header-anchor" href="#算法描述-2" aria-label="章节链接">&#8203;</a></h3>
+<p>Q-learning算法为：</p>
+<div class="lecture-equation is-numbered" id="eq:qlearning"><div class="math-block" data-tex="q_{t+1}(s_t, a_t) = q_t(s_t, a_t) - \alpha_t(s_t, a_t)\Big[q_t(s_t, a_t) - \big(r_{t+1} + \gamma \max_{a \in \mathcal{A}(s_{t+1})} q_t(s_{t+1}, a)\big)\Big],"></div><a class="lecture-equation-number" href="#eq:qlearning" aria-label="公式 5">(5)</a></div>
+<div class="lecture-equation" id="lecture-equation-32"><div class="math-block" data-tex="q_{t+1}(s, a) = q_t(s, a), \quad \forall (s, a) \neq (s_t, a_t),"></div></div>
+<p>其中<span class="math-inline" data-tex="t = 0, 1, 2, \dots"></span>。<span class="math-inline" data-tex="q_t(s_t, a_t)"></span>是对<span class="math-inline" data-tex="(s_t, a_t)"></span>的最优动作价值的估计。</p>
+<p>Q-learning与Sarsa仅在TD目标上有所不同：Q-learning的TD目标是<span class="math-inline" data-tex="r_{t+1} + \gamma \max_a q_t(s_{t+1}, a)"></span>，而Sarsa的是<span class="math-inline" data-tex="r_{t+1} + \gamma q_t(s_{t+1}, a_{t+1})"></span>。此外，给定<span class="math-inline" data-tex="(s_t, a_t)"></span>，Sarsa需要<span class="math-inline" data-tex="(r_{t+1}, s_{t+1}, a_{t+1})"></span>，而Q-learning仅需<span class="math-inline" data-tex="(r_{t+1}, s_{t+1})"></span>。</p>
+<p>Q-learning是求解以下贝尔曼最优方程的随机逼近算法：</p>
+<div class="lecture-equation" id="lecture-equation-33"><div class="math-block" data-tex="q(s, a) = \mathbb{E}\Big[R_{t+1} + \gamma \max_{a} q(S_{t+1}, a) \;\Big|\; S_t = s, A_t = a\Big]."></div></div>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p><strong>证明上式是贝尔曼最优方程</strong></p>
+<p>根据期望的定义，该方程可重写为：</p>
+<div class="lecture-equation" id="lecture-equation-34"><div class="math-block" data-tex="q(s, a) = \sum_r p(r \mid s, a)\,r + \gamma \sum_{s&#x27;} p(s&#x27; \mid s, a) \max_{a \in \mathcal{A}(s&#x27;)} q(s&#x27;, a)."></div></div>
+<p>对等式两端取最大值得到：</p>
+<div class="lecture-equation" id="lecture-equation-35"><div class="math-block" data-tex="\max_{a \in \mathcal{A}(s)} q(s, a) = \max_{a \in \mathcal{A}(s)}\Big[\sum_r p(r \mid s, a)\,r + \gamma \sum_{s&#x27;} p(s&#x27; \mid s, a) \max_{a \in \mathcal{A}(s&#x27;)} q(s&#x27;, a)\Big]."></div></div>
+<p>记<span class="math-inline" data-tex="v(s) := \max_{a \in \mathcal{A}(s)} q(s, a)"></span>，上式变为：</p>
+<div class="lecture-equation" id="lecture-equation-36"><div class="math-block" data-tex="v(s) = \max_{a \in \mathcal{A}(s)}\Big[\sum_r p(r \mid s, a)\,r + \gamma \sum_{s&#x27;} p(s&#x27; \mid s, a)\,v(s&#x27;)\Big],"></div></div>
+<p>这正是第3章介绍的贝尔曼最优方程。Q-learning的收敛性分析与定理7.1类似，见[32, 39]。</p>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="离线策略off-policyvs-在线策略on-policy">7.4.2 离线策略（Off-policy）vs 在线策略（On-policy） <a class="header-anchor" href="#离线策略off-policyvs-在线策略on-policy" aria-label="章节链接">&#8203;</a></h3>
+<p>使Q-learning略为特殊的是：Q-learning是<strong>离线策略（off-policy）</strong>的，而其他TD算法是<strong>在线策略（on-policy）</strong>的。</p>
+<p>任何RL任务中都存在两个策略：<strong>行为策略</strong>（生成经验样本）和<strong>目标策略</strong>（不断更新以收敛到最优策略）。当行为策略与目标策略相同时，称为在线策略学习；不同时称为离线策略学习。</p>
+<p>离线策略学习的优势在于可以基于其他策略生成的经验样本学习最优策略。行为策略可以选择为强探索性的，以提高学习效率。</p>
+<p>判断方法：</p>
+<ul>
+<li><p><strong>Sarsa是在线策略的。</strong> Sarsa先通过求解贝尔曼方程评估策略<span class="math-inline" data-tex="\pi"></span>（需<span class="math-inline" data-tex="\pi"></span>生成的样本），再基于估计值改进策略。行为策略和目标策略相同。从样本生成看：<span class="math-inline" data-tex="s_t \xrightarrow{\pi_b} a_t \xrightarrow{\text{model}} r_{t+1}, s_{t+1} \xrightarrow{\pi_b} a_{t+1}"></span>，Sarsa评估的策略正是生成样本的策略。</p></li>
+<li><p><strong>Q-learning是离线策略的。</strong> Q-learning求解的是贝尔曼最优方程而非给定策略的贝尔曼方程。样本生成：<span class="math-inline" data-tex="s_t \xrightarrow{\pi_b} a_t \xrightarrow{\text{model}} r_{t+1}, s_{t+1}"></span>。行为策略<span class="math-inline" data-tex="\pi_b"></span>只用于生成<span class="math-inline" data-tex="a_t"></span>；<span class="math-inline" data-tex="(r_{t+1}, s_{t+1})"></span>的生成由环境决定，不涉及<span class="math-inline" data-tex="\pi_b"></span>。因此目标策略可以与行为策略不同。目标策略是基于估计的最优价值获得的贪心策略。</p></li>
+<li><p><strong>MC学习是在线策略的。</strong> 原因与Sarsa类似。</p></li>
+</ul>
+<p>另一个需区分的概念是<strong>在线（online）/离线（offline）</strong>：在线学习指边交互边更新；离线学习指用预收集数据更新。在线策略算法只能以在线方式实现；离线策略算法两种方式均可。</p>
+<h3 class="unnumbered" tabindex="-1" id="实现">7.4.3 实现 <a class="header-anchor" href="#实现" aria-label="章节链接">&#8203;</a></h3>
+<p>Q-learning可以以在线策略或离线策略方式实现。</p>
+<div class="algobox lecture-box">
+<div class="lecture-box-title">
+<p>算法 7.2：通过Q-learning学习最优策略（在线学习版本）</p>
+</div>
+<p><span id="alg:qlearning_on" data-label="alg:qlearning_on"></span> <strong>初始化：</strong><span class="math-inline" data-tex="\alpha_t(s, a) = \alpha &gt; 0"></span>对所有<span class="math-inline" data-tex="(s, a)"></span>和所有<span class="math-inline" data-tex="t"></span>。<span class="math-inline" data-tex="\epsilon \in (0, 1)"></span>。初始化<span class="math-inline" data-tex="q_0(s, a)"></span>对所有<span class="math-inline" data-tex="(s, a)"></span>。由<span class="math-inline" data-tex="q_0"></span>导出初始<span class="math-inline" data-tex="\epsilon"></span>-贪心策略<span class="math-inline" data-tex="\pi_0"></span>。</p>
+<p><strong>目标：</strong>学习能从<span class="math-inline" data-tex="s_0"></span>引导智能体到达目标状态的最优路径。</p>
+<p>对于每个回合：</p>
+<ol>
+<li><p>如果<span class="math-inline" data-tex="s_t"></span>（<span class="math-inline" data-tex="t = 0, 1, 2, \dots"></span>）不是目标状态：</p>
+<ol>
+<li><p>给定<span class="math-inline" data-tex="s_t"></span>收集经验样本<span class="math-inline" data-tex="(a_t, r_{t+1}, s_{t+1})"></span>：遵循<span class="math-inline" data-tex="\pi_t(s_t)"></span>生成<span class="math-inline" data-tex="a_t"></span>；与环境交互生成<span class="math-inline" data-tex="r_{t+1}, s_{t+1}"></span>。</p></li>
+<li><p>更新<span class="math-inline" data-tex="q"></span>值：</p>
+<div class="lecture-equation" id="lecture-equation-37"><div class="math-block" data-tex="q_{t+1}(s_t, a_t) = q_t(s_t, a_t) - \alpha_t(s_t, a_t)\Big[q_t(s_t, a_t) - \big(r_{t+1} + \gamma \max_a q_t(s_{t+1}, a)\big)\Big]"></div></div></li>
+<li><p>更新<span class="math-inline" data-tex="s_t"></span>处的<span class="math-inline" data-tex="\epsilon"></span>-贪心策略：</p>
+<div class="lecture-equation" id="lecture-equation-38"><div class="math-block" data-tex="\pi_{t+1}(a \mid s_t) =
+        \begin{cases}
+        1 - \frac{\epsilon}{|\mathcal{A}(s_t)|}(|\mathcal{A}(s_t)| - 1), &amp; a = \arg\max_a q_{t+1}(s_t, a) \\[4pt]
+        \frac{\epsilon}{|\mathcal{A}(s_t)|}, &amp; \text{否则}
+        \end{cases}"></div></div></li>
+</ol></li>
+</ol>
+</div>
+<div class="algobox lecture-box">
+<div class="lecture-box-title">
+<p>算法 7.3：通过Q-learning学习最优策略（离线学习版本）</p>
+</div>
+<p><span id="alg:qlearning_off" data-label="alg:qlearning_off"></span> <strong>初始化：</strong><span class="math-inline" data-tex="q_0(s, a)"></span>对所有<span class="math-inline" data-tex="(s, a)"></span>。行为策略<span class="math-inline" data-tex="\pi_b(a \mid s)"></span>对所有<span class="math-inline" data-tex="(s, a)"></span>。<span class="math-inline" data-tex="\alpha_t(s, a) = \alpha &gt; 0"></span>。</p>
+<p><strong>目标：</strong>从<span class="math-inline" data-tex="\pi_b"></span>生成的经验样本中学习所有状态的最优目标策略<span class="math-inline" data-tex="\pi_T"></span>。</p>
+<p>对于由<span class="math-inline" data-tex="\pi_b"></span>生成的每个回合<span class="math-inline" data-tex="\{s_0, a_0, r_1, s_1, a_1, r_2, \dots\}"></span>：</p>
+<ol>
+<li><p>对于每步<span class="math-inline" data-tex="t = 0, 1, 2, \dots"></span>：</p>
+<ol>
+<li><p>更新<span class="math-inline" data-tex="q"></span>值：</p>
+<div class="lecture-equation" id="lecture-equation-39"><div class="math-block" data-tex="q_{t+1}(s_t, a_t) = q_t(s_t, a_t) - \alpha_t(s_t, a_t)\Big[q_t(s_t, a_t) - \big(r_{t+1} + \gamma \max_a q_t(s_{t+1}, a)\big)\Big]"></div></div></li>
+<li><p>更新目标策略为贪心：</p>
+<div class="lecture-equation" id="lecture-equation-40"><div class="math-block" data-tex="\pi_{T, t+1}(a \mid s_t) =
+        \begin{cases}
+        1, &amp; a = \arg\max_a q_{t+1}(s_t, a) \\
+        0, &amp; \text{否则}
+        \end{cases}"></div></div></li>
+</ol></li>
+</ol>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="示例演示">7.4.4 示例演示 <a class="header-anchor" href="#示例演示" aria-label="章节链接">&#8203;</a></h3>
+<p>第一个示例（图7.3）演示了在线策略Q-learning：从起始状态找到到目标状态的最优路径。奖励<span class="math-inline" data-tex="r_{\text{target}} = 0"></span>，<span class="math-inline" data-tex="r_{\text{forbidden}} = r_{\text{boundary}} = -10"></span>，<span class="math-inline" data-tex="r_{\text{other}} = -1"></span>，<span class="math-inline" data-tex="\alpha = 0.1"></span>，<span class="math-inline" data-tex="\epsilon = 0.1"></span>。Q-learning最终找到最优路径，回合长度减少，总奖励增加。</p>
+<p>第二个示例（图7.4和7.5）演示了离线策略Q-learning：为所有状态找最优策略。<span class="math-inline" data-tex="r_{\text{boundary}} = r_{\text{forbidden}} = -1"></span>，<span class="math-inline" data-tex="r_{\text{target}} = 1"></span>，<span class="math-inline" data-tex="\gamma = 0.9"></span>，<span class="math-inline" data-tex="\alpha = 0.1"></span>。真实值由基于模型的策略迭代获得（图7.4(a,b)）。行为策略为均匀分布（<span class="math-inline" data-tex="\pi(a \mid s) = 0.2"></span>），生成100,000步的单一回合。学习到的策略（图7.4(e)）是最优的，状态价值误差收敛到零（图7.4(f)）。由于Q-learning是自助式的，初始猜测影响性能：接近真实值时约10,000步收敛（图7.4(g)），否则需要更多步（图7.4(h)）。行为策略的探索能力影响显著：<span class="math-inline" data-tex="\epsilon"></span>从1降到0.5再到0.1时，学习速度显著下降（图7.5）。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="统一视角">
+<h2 class="unnumbered" tabindex="-1" id="统一视角">7.5 统一视角 <a class="header-anchor" href="#统一视角" aria-label="章节链接">&#8203;</a></h2>
+<p>目前为止，我们介绍了Sarsa、<span class="math-inline" data-tex="n"></span>步Sarsa和Q-learning。本节给出统一框架来容纳所有这些算法以及MC学习。</p>
+<p>TD算法（用于动作价值估计）可表示为统一表达式：</p>
+<div class="lecture-equation is-numbered" id="eq:unified"><div class="math-block" data-tex="q_{t+1}(s_t, a_t) = q_t(s_t, a_t) - \alpha_t(s_t, a_t)[q_t(s_t, a_t) - \bar{q}_t],"></div><a class="lecture-equation-number" href="#eq:unified" aria-label="公式 6">(6)</a></div>
+<p>其中<span class="math-inline" data-tex="\bar{q}_t"></span>是<strong>TD目标</strong>。不同算法的TD目标见表<a href="#tab:unified" data-reference-type="ref" data-reference="tab:unified">2</a>。MC学习可视为<span class="math-inline" data-tex="\alpha_t = 1"></span>的特例：<span class="math-inline" data-tex="q_{t+1}(s_t, a_t) = \bar{q}_t"></span>。</p>
+<p>算法<a href="#eq:unified" data-reference-type="eqref" data-reference="eq:unified">(6)</a>可视为求解<span class="math-inline" data-tex="q(s, a) = \mathbb{E}[\bar{q}_t \mid s, a]"></span>的随机逼近算法，该方程在不同<span class="math-inline" data-tex="\bar{q}_t"></span>下有不同表达式（表<a href="#tab:equations" data-reference-type="ref" data-reference="tab:equations">3</a>）。除Q-learning求解贝尔曼最优方程外，所有算法都求解贝尔曼方程。</p>
+<div id="tab:unified">
+<div class="note-table" tabindex="0" role="region" aria-label="讲义数据表">
+<table>
+<caption>表 2：TD算法的统一视角：TD目标<span class="math-inline" data-tex="\bar{q}_t"></span>的表达式</caption>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>算法</strong></th>
+<th style="text-align: left;"><strong><span class="math-inline" data-tex="\bar{q}_t"></span>的表达式</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Sarsa</td>
+<td style="text-align: left;"><span class="math-inline" data-tex="\bar{q}_t = r_{t+1} + \gamma q_t(s_{t+1}, a_{t+1})"></span></td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math-inline" data-tex="n"></span>步Sarsa</td>
+<td style="text-align: left;"><span class="math-inline" data-tex="\bar{q}_t = r_{t+1} + \gamma r_{t+2} + \cdots + \gamma^n q_t(s_{t+n}, a_{t+n})"></span></td>
+</tr>
+<tr>
+<td style="text-align: left;">Q-learning</td>
+<td style="text-align: left;"><span class="math-inline" data-tex="\bar{q}_t = r_{t+1} + \gamma \max_a q_t(s_{t+1}, a)"></span></td>
+</tr>
+<tr>
+<td style="text-align: left;">蒙特卡洛</td>
+<td style="text-align: left;"><span class="math-inline" data-tex="\bar{q}_t = r_{t+1} + \gamma r_{t+2} + \gamma^2 r_{t+3} + \cdots"></span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="tab:equations">
+<div class="note-table" tabindex="0" role="region" aria-label="讲义数据表">
+<table>
+<caption>表 3：各算法旨在求解的方程（BE：贝尔曼方程，BOE：贝尔曼最优方程）</caption>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>算法</strong></th>
+<th style="text-align: left;"><strong>待求解的方程</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Sarsa</td>
+<td style="text-align: left;">BE: <span class="math-inline" data-tex="q_\pi(s, a) = \mathbb{E}[R_{t+1} + \gamma q_\pi(S_{t+1}, A_{t+1}) \mid S_t = s, A_t = a]"></span></td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math-inline" data-tex="n"></span>步Sarsa</td>
+<td style="text-align: left;">BE: <span class="math-inline" data-tex="q_\pi(s, a) = \mathbb{E}[R_{t+1} + \gamma R_{t+2} + \cdots + \gamma^n q_\pi(S_{t+n}, A_{t+n}) \mid s, a]"></span></td>
+</tr>
+<tr>
+<td style="text-align: left;">Q-learning</td>
+<td style="text-align: left;">BOE: <span class="math-inline" data-tex="q(s, a) = \mathbb{E}[R_{t+1} + \gamma \max_a q(S_{t+1}, a) \mid S_t = s, A_t = a]"></span></td>
+</tr>
+<tr>
+<td style="text-align: left;">蒙特卡洛</td>
+<td style="text-align: left;">BE: <span class="math-inline" data-tex="q_\pi(s, a) = \mathbb{E}[R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \cdots \mid s, a]"></span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<section class="document-section note-panel" aria-labelledby="本章小结">
+<h2 class="unnumbered" tabindex="-1" id="本章小结">7.6 本章小结 <a class="header-anchor" href="#本章小结" aria-label="章节链接">&#8203;</a></h2>
+<p>本章介绍了一类重要的强化学习算法——TD学习，包括Sarsa、<span class="math-inline" data-tex="n"></span>步Sarsa和Q-learning。所有这些算法都可视为求解贝尔曼方程或贝尔曼最优方程的随机逼近算法。</p>
+<p>除Q-learning外，本章的TD算法用于评估给定策略（从经验样本中估计状态/动作价值），结合策略改进可学习最优策略。这些算法是在线策略的：目标策略用作行为策略生成经验样本。</p>
+<p>Q-learning是离线策略的，目标策略可与行为策略不同。根本原因是Q-learning旨在求解贝尔曼最优方程而非给定策略的贝尔曼方程。</p>
+<p>将在线策略算法转换为离线策略算法可使用重要性采样[3, 40]（第10章介绍）。TD算法还有众多变体和扩展[41-45]，如<span class="math-inline" data-tex="\text{TD}(\lambda)"></span>方法提供了更一般的统一框架[3, 20, 46]。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="常见问题解答">
+<h2 class="unnumbered" tabindex="-1" id="常见问题解答">7.7 常见问题解答 <a class="header-anchor" href="#常见问题解答" aria-label="章节链接">&#8203;</a></h2>
+<ul>
+<li><p><strong>Q：TD学习中的"TD"是什么意思？</strong></p>
+<p>A：每个TD算法都有一个TD误差，表示新样本与当前估计之间的差异。由于该差异在不同时间步之间计算，因此称为时序差分（temporal-difference）。</p></li>
+<li><p><strong>Q：TD学习中的"学习"是什么意思？</strong></p>
+<p>A：从数学角度看，"学习"就是"估计"——从样本中估计状态/动作价值，然后基于估计价值获得策略。</p></li>
+<li><p><strong>Q：Sarsa如何用于学习最优策略？</strong></p>
+<p>A：价值估计过程必须与策略改进过程交互（广义策略迭代）。价值更新后立即更新策略，新策略生成新样本用于继续估计。</p></li>
+<li><p><strong>Q：为什么Sarsa使用<span class="math-inline" data-tex="\epsilon"></span>-贪心策略？</strong></p>
+<p>A：策略也用于生成估计价值的样本，需要探索性以生成充足经验样本。</p></li>
+<li><p><strong>Q：定理7.1和7.2要求学习率衰减到零，为什么实践中常用常数？</strong></p>
+<p>A：在最优策略学习过程中，被评估的策略不断变化（非平稳）。常数学习率能有效跟踪变化。衰减学习率可能太小而无法有效评估。虽然常数学习率可能导致最终波动，但只要足够小就可以忽略。</p></li>
+<li><p><strong>Q：应学习所有状态还是部分状态的最优策略？</strong></p>
+<p>A：取决于任务。如寻找固定起始到目标的路径，不需要探索所有状态，但可能只获得局部最优路径。充分探索可以保证全局最优性。</p></li>
+<li><p><strong>Q：为什么Q-learning是离线策略的而其他算法是在线策略的？</strong></p>
+<p>A：根本原因是Q-learning求解贝尔曼最优方程，而其他算法求解给定策略的贝尔曼方程。详见第7.4.2节。</p></li>
+<li><p><strong>Q：离线策略Q-learning为什么更新为贪心而非<span class="math-inline" data-tex="\epsilon"></span>-贪心策略？</strong></p>
+<p>A：目标策略不用于生成经验样本，因此不需要具备探索性。</p></li>
+</ul>
+
+</section>
+</div>
+<details class="lecture-original note-details" @toggle="toggleOriginal">
+  <summary>对照原版 PDF<span>保留原页码与讲义目录</span></summary>
+  <div class="lecture-original-content">
+    <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
+    <p><a :href="pdfUrl" target="_blank" rel="noopener">在新窗口打开原版 PDF</a></p>
+    <ClientOnly><PdfViewer v-if="showOriginal" :src="pdfUrl" title="时序差分方法" :outline="outline" /></ClientOnly>
+  </div>
+</details>
+</article>

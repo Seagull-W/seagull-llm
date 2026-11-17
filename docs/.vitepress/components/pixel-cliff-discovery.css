@@ -1,0 +1,152 @@
+.pixel-cliff-discovery {
+  --cliff-ink: #fbf8f0;
+  --cliff-soft: #dbe8fb;
+  --cliff-rule: rgb(222 237 255 / .42);
+  --cliff-accent: #ffdd9e;
+  --cliff-serif: 'Seagull Academic Serif', 'Noto Serif SC', 'Songti SC', SimSun, serif;
+  color: var(--cliff-ink);
+}
+.cliff-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.pixel-cliff-discovery a { color: inherit; text-decoration: none; }
+.pixel-cliff-discovery :is(a, button):focus-visible {
+  outline: 2px solid var(--cliff-accent);
+  outline-offset: 3px;
+}
+.cliff-stage {
+  position: relative;
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+/* Overlap editions to reserve the tallest one. Each edition flows from the top. */
+.cliff-edition {
+  grid-area: 1 / 1;
+  align-self: start;
+  min-width: 0;
+  visibility: hidden;
+}
+.cliff-edition.is-current { visibility: visible; }
+.cliff-shuffle {
+  position: absolute;
+  top: -6px;
+  right: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.cliff-shuffle img { display: block; width: 26px; height: 26px; image-rendering: pixelated; }
+.cliff-shuffle:hover img { transform: rotate(-12deg); }
+.cliff-shuffle:active img { transform: rotate(8deg); }
+.cliff-sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: end;
+  align-items: baseline;
+  column-gap: 10px;
+  padding-right: 48px;
+  color: var(--cliff-soft);
+  font: 500 14px/1.55 var(--vp-font-family-base);
+}
+.cliff-sources > span { display: inline-flex; align-items: baseline; gap: 10px; }
+.cliff-source { padding-block: 4px; }
+.cliff-slash { opacity: .65; }
+.cliff-source:is(:hover, .is-traced) { text-decoration: underline; text-underline-offset: .25em; }
+.cliff-edition h2 {
+  margin: 6px 0 12px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  font: 600 clamp(30px, 6.5cqw, 46px)/1.25 var(--cliff-serif);
+  letter-spacing: -.035em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+.cliff-items {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cliff-items li { min-width: 0; margin: 0; }
+.cliff-items .cliff-story {
+  display: inline-block;
+  padding-block: 5px;
+  color: var(--cliff-ink);
+  font: 450 clamp(15px, 1.22vw, 18px)/1.55 var(--vp-font-family-base);
+  text-decoration: underline;
+  text-decoration-color: var(--cliff-rule);
+  text-underline-offset: .25em;
+  overflow-wrap: anywhere;
+}
+.cliff-items .cliff-story:hover { text-decoration-color: currentColor; }
+.cliff-arrow { margin-left: .35em; font-size: .78em; color: var(--cliff-soft); }
+.cliff-reading + .cliff-directory { margin-top: clamp(34px, 6vh, 64px); }
+.cliff-directory h2 {
+  margin: 0;
+  padding: 0 0 10px;
+  border: 0;
+  border-bottom: 1px solid var(--cliff-rule);
+  color: inherit;
+  font: 600 clamp(24px, 2vw, 32px)/1.35 var(--cliff-serif);
+}
+.cliff-links {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 18px;
+}
+.cliff-links .cliff-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: 46px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgb(222 237 255 / .26);
+  color: var(--cliff-ink);
+  font: 500 15px/1.5 var(--vp-font-family-base);
+  overflow-wrap: anywhere;
+}
+.cliff-section::after {
+  content: '';
+  flex: 0 0 4px;
+  height: 4px;
+  margin-right: 2px;
+}
+.cliff-section.is-lit::after { background: var(--cliff-accent); }
+.cliff-links .cliff-section:hover {
+  border-color: var(--cliff-soft);
+  text-decoration: underline;
+  text-underline-offset: .25em;
+}
+@media (max-width: 1000px) {
+  .cliff-links { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 639px) {
+  .cliff-reading + .cliff-directory { margin-top: 20px; }
+  .cliff-sources { column-gap: 6px; font-size: 12px; }
+  .cliff-sources > span { gap: 6px; }
+  .cliff-edition h2 { margin-block: 4px 10px; font-size: clamp(26px, 7vw, 35px); }
+  .cliff-links { column-gap: 12px; }
+  .cliff-links .cliff-section { min-height: 44px; font-size: 14px; }
+}
+@media (pointer: coarse) {
+  .cliff-source { display: inline-block; min-height: 28px; }
+  .cliff-items .cliff-story { padding-block: 9px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cliff-shuffle:is(:hover, :active) img { transform: none; }
+}

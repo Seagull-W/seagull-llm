@@ -126,7 +126,7 @@ time { color: var(--vp-c-text-2); font-size: 12px; }
 .video-gallery[data-index='paper'] .source-badge,.video-gallery[data-index='cinema'] .source-badge { display:none; }
 .video-gallery[data-index='pixel'] .video-card { padding:8px; box-shadow:none; border:0; border-bottom:2px solid var(--pixel-edge); background:var(--pixel-panel); }
 .video-gallery[data-index='pixel'] .video-info { padding:12px 8px 6px; }
-.video-gallery[data-index='pixel'] .video-reel { display:block; padding:2px 5px; font:12px/1.4 var(--vp-font-family-mono); background:var(--vp-c-brand-1); color:var(--vp-button-brand-text); }
+.video-gallery[data-index='pixel']:not(.is-preview) .video-reel { display:block; padding:2px 5px; font:12px/1.4 var(--vp-font-family-mono); background:var(--vp-c-brand-1); color:var(--vp-button-brand-text); }
 .video-gallery[data-index='cinema'] .video-card { border:0; border-radius:0; background:transparent; }
 .video-gallery[data-index='cinema'] .video-cover { aspect-ratio:1.85; }
 .video-gallery[data-index='cinema'] .video-info { padding:12px 0; border-bottom:1px solid var(--vp-c-divider); }

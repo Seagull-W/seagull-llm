@@ -1,4 +1,4 @@
-"""Import the five published Westlake lectures from their original LaTeX.
+"""Import the published Westlake lectures from their original LaTeX.
 
 HTML is the editable authoritative body after import. Reruns require --overwrite.
 Requires Pandoc; does not modify source files or publish additional lectures.
@@ -30,6 +30,14 @@ PAGES = [
      '从增量均值估计进入 Robbins–Monro 递推、Dvoretzky 收敛定理与随机梯度下降，连接采样噪声和收敛条件。',
      ['随机近似', 'Robbins–Monro', '随机梯度下降']),
 ]
+PAGES.extend([
+    ('cha7', '时序差分方法', 'index', '第 7 讲',
+     '从状态价值的 TD 更新出发，比较 Sarsa、n 步 Sarsa 与 Q-learning 的更新目标。', ['时序差分', 'Sarsa', 'Q-learning']),
+    ('cha8', '价值函数方法', 'index', '第 8 讲',
+     '用函数近似表示价值，推导状态价值与动作价值的 TD 更新，再看 DQN 如何训练。', ['函数近似', '时序差分', 'DQN']),
+    ('cha9', '策略梯度方法', 'index', '第 9 讲',
+     '从策略参数化与目标函数出发，推导策略梯度，并用 REINFORCE 从采样轨迹更新策略。', ['策略参数化', '策略梯度', 'REINFORCE']),
+])
 BOX_NAMES = {'definitionbox': '定义', 'theorembox': '定理', 'proofbox': '证明',
              'remarkbox': '备注', 'algobox': '算法'}
 
@@ -68,6 +76,28 @@ def inline_text(value):
 
 class Converter:
     def __init__(self, source):
+        # Keep each numbered align row addressable; unnumbered continuation
+        # rows belong to the same equation as the next numbered row.
+        def expand_align(match):
+            groups, pending = [], []
+            for row in match[1].split(r'\\'):
+                pending.append(row.replace(r'\nonumber', '').strip())
+                if r'\nonumber' not in row:
+                    groups.append(r'\begin{equation}\begin{aligned}' + r'\\'.join(pending)
+                                  + r'\end{aligned}\end{equation}')
+                    pending = []
+            assert not pending
+            return '\n'.join(groups)
+        source = re.sub(r'\\begin\{align\}(.*?)\\end\{align\}', expand_align, source, flags=re.S)
+        # Three explicitly titled algorithm panels in chapter 7 use tcolorbox
+        # directly; Pandoc otherwise drops their titles and numbers.
+        self.algorithm_refs = {}
+        def algorithm_panel(match):
+            title = re.search(r'title=\\textbf\{算法([^}]+)\}', match[1])[1]
+            self.algorithm_refs[match[2]] = title.split('：')[0]
+            return r'\begin{algobox}[' + title + r']\label{' + match[2] + '}' + match[3] + r'\end{algobox}'
+        source = re.sub(r'\\begin\{tcolorbox\}\[(.*?)\]\s*\\label\{(alg:[^}]+)\}(.*?)\\end\{tcolorbox\}',
+                        algorithm_panel, source, flags=re.S)
         self.ast = json.loads(pandoc(source, 'latex', 'json'))
         self.original_nodes = list(nodes(self.ast['blocks']))
         assert not any(n.get('t') in ('RawBlock', 'RawInline', 'Image') for n in self.original_nodes)
@@ -90,6 +120,18 @@ class Converter:
                 self.equation_number[tex] = number
                 for label in re.findall(r'\\label\{([^}]+)\}', tex):
                     self.equations[label] = number
+        self.other_refs = {}
+        for n in self.original_nodes:
+            if n.get('t') == 'Div' and n['c'][0][0].startswith('tab:'):
+                label = n['c'][0][0]
+                number = str(len(self.other_refs) + 1)
+                self.other_refs[label] = number
+                table = next(x for x in nodes(n['c'][1]) if x.get('t') == 'Table')
+                table['c'][1][1][0]['c'][:0] = [{'t': 'Str', 'c': '表 ' + number + '：'}]
+        for n in self.original_nodes:
+            if n.get('t') == 'Span' and n['c'][0][0].startswith('alg:'):
+                label = n['c'][0][0]
+                self.other_refs[label] = self.algorithm_refs[label]
         self.display_index = 0
         self.headings = []
         self.references = 0
@@ -122,9 +164,9 @@ class Converter:
             props = dict(attrs[2])
             if 'reference' in props:
                 label = props['reference']
-                if label not in self.equations:
+                if label not in self.equations and label not in self.other_refs:
                     raise ValueError(f'Unresolved equation reference: {label}')
-                number = str(self.equations[label])
+                number = str(self.equations.get(label, self.other_refs.get(label)))
                 node['c'][1] = [{'t': 'Str', 'c': '(' + number + ')' if props['reference-type'] == 'eqref' else number}]
                 self.references += 1
         if t in ('Strong', 'Emph', 'Strikeout', 'Superscript', 'Subscript', 'SmallCaps'):
@@ -241,17 +283,20 @@ class Converter:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source-root', type=Path, required=True)
+    parser.add_argument('--chapter', action='append', choices=[p[0] for p in PAGES])
     parser.add_argument('--overwrite', action='store_true')
     args = parser.parse_args()
     report = []
     for key, title, stem, chapter, description, tags in PAGES:
+        if args.chapter and key not in args.chapter:
+            continue
         source_path = args.source_root / 'chapters' / key / (key + '.tex')
         source = source_path.read_text(encoding='utf-8')
         converter = Converter(source)
         body = converter.render(key == 'cha1_2')
         directory = ROOT / 'docs' / 'westlake-rl' / title
         target = directory / (stem + '.html')
-        if 'PdfViewer' not in target.read_text(encoding='utf-8') and not args.overwrite:
+        if target.exists() and not args.overwrite:
             raise ValueError(f'{target}: edited HTML body; pass --overwrite to regenerate intentionally')
         pdf_name = title + '.pdf'
         jumps = '\n'.join(f'<a href="#{attr(h["id"])}">{attr(h["title"].replace(chr(92) + "varepsilon", "ε"))}</a>' for h in converter.headings if h['level'] == 2)
@@ -292,7 +337,9 @@ function toggleOriginal(event: Event) {{
 '''
         target.write_text(output, encoding='utf-8')
         meta = directory / (stem + '.md')
-        content = meta.read_text(encoding='utf-8')
+        content = meta.read_text(encoding='utf-8') if meta.exists() else (
+            f'---\ntags: {json.dumps(["强化学习", *tags], ensure_ascii=False)}\nlayout: doc\ntitle: {chapter}：{title}\n'
+            f'description: {description}\ncontentFormat: html\n---\n\n<!--@include: ./{stem}.html-->\n')
         content = re.sub(r'^(?:outline: false|aside: false|pdf: true)\r?\n', '', content, flags=re.M)
         content = re.sub(r'^description:.*$', 'description: ' + description, content, flags=re.M)
         if 'outline: [2, 3]' not in content:
@@ -308,6 +355,10 @@ function toggleOriginal(event: Event) {{
                        'boxes': dict(converter.boxes), 'headings': converter.headings,
                        'numbered_equations': len(converter.equation_number), 'equation_references': converter.references})
     dest = ROOT / 'scripts' / 'data' / 'westlake-lecture-import.json'
+    if args.chapter:
+        existing = {p['chapter']: p for p in json.loads(dest.read_text(encoding='utf-8'))['pages']}
+        existing.update({p['chapter']: p for p in report})
+        report = [existing[p[0]] for p in PAGES if p[0] in existing]
     dest.parent.mkdir(exist_ok=True)
     dest.write_text(json.dumps({'source_project': '西湖大学强化学习/Study', 'pandoc': '3.9.0.2', 'pages': report}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     print(json.dumps([{'chapter': r['chapter'], 'math': r['math'], 'boxes': r['boxes']} for r in report]))

@@ -10,10 +10,11 @@ import SearchDialog from '../components/SearchDialog.vue'
 import ArticleContext from '../components/ArticleContext.vue'
 import RelatedReading from '../components/RelatedReading.vue'
 import ReadingMedia from '../components/ReadingMedia.vue'
+import GraceReadingPortrait from '../components/GraceReadingPortrait.vue'
 import PixelThemeFilter from '../components/PixelThemeFilter.vue'
 import { usesAcademicReading } from './reading-design'
 import { sectionFor } from '../content-catalog'
-import { createVisualStyleControls, visualStyles, visualStyleKey, visualStyleControlsKey } from './visual-styles'
+import { createVisualStyleControls, gracePortraitMedia, heroImageFor, heroMobileMedia, visualStyles, visualStyleKey, visualStyleControlsKey } from './visual-styles'
 import './styles/route-arrival.css'
 import { showPageArrival } from './page-arrival'
 const styleControls = createVisualStyleControls()
@@ -21,7 +22,8 @@ const visualStyle = computed(() => visualStyles[styleControls.selected.value])
 provide(visualStyleKey, visualStyle)
 provide(visualStyleControlsKey, styleControls)
 const { Layout } = DefaultTheme
-const { frontmatter, page } = useData()
+const { frontmatter, page, isDark } = useData()
+const pixelHome = computed(() => frontmatter.value.layout === 'home' && visualStyle.value.iconSet === 'pixel')
 let stopHomeOpening: (() => void) | undefined
 onMounted(() => {
   // A direct visit to the home page gives this tab one opening shot. Wait for
@@ -51,8 +53,19 @@ const sectionClass = computed(() => {
 })
 </script>
 <template>
-  <Layout :data-visual-style="visualStyle.id" :class="[sectionClass, { 'academic-reading': academicReading }]">
-    <template #layout-top><PixelThemeFilter /><ClientOnly><ReadingProgress v-if="academicReading" /></ClientOnly></template>
+  <Layout :data-visual-style="visualStyle.id" :class="[sectionClass, { 'academic-reading': academicReading, 'pixel-mountain-home': pixelHome }]">
+    <template #layout-top>
+      <picture v-if="pixelHome" class="pixel-mountain-world" aria-hidden="true">
+        <source :media="heroMobileMedia" :srcset="withBase(heroImageFor(visualStyle, isDark, true))" />
+        <img :src="withBase(heroImageFor(visualStyle, isDark, false))" alt="" fetchpriority="high" />
+      </picture>
+      <picture v-else-if="visualStyle.iconSet === 'grace'" class="grace-world" aria-hidden="true">
+        <source :media="gracePortraitMedia" :srcset="withBase(heroImageFor(visualStyle, isDark, true))" />
+        <img :src="withBase(heroImageFor(visualStyle, isDark, false))" alt="" fetchpriority="high" />
+      </picture>
+      <GraceReadingPortrait v-if="visualStyle.iconSet === 'grace' && academicReading" :key="page.relativePath" />
+      <PixelThemeFilter /><ClientOnly><ReadingProgress v-if="academicReading" /></ClientOnly>
+    </template>
     <template #nav-bar-content-before><SearchDialog /></template>
     <template #nav-bar-title-before><img class="logo visual-logo" :src="withBase(visualStyle.assets.logo)" alt="seagull 首页" width="36" height="36" /></template>
     <template #nav-bar-content-after><NavActions /></template>

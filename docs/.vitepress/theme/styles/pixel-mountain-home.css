@@ -1,0 +1,75 @@
+/* The picture belongs to the layout so its framing survives the entire scroll. */
+.Layout.pixel-mountain-home {
+  isolation: isolate;
+  background: #193e77;
+  --mountain-gutter: max(6%, calc((100% - 1440px) / 2));
+  --mountain-measure: min(630px, 45vw);
+}
+.Layout.pixel-mountain-home::before, .Layout.pixel-mountain-home::after { content: none; }
+.pixel-mountain-world { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.pixel-mountain-world img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: 63% 65%; image-rendering: pixelated; }
+.pixel-mountain-world::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgb(1 15 44 / .68), rgb(4 21 52 / .40) 43%, transparent 67%);
+}
+.dark .pixel-mountain-world img { filter: brightness(.69); }
+.pixel-mountain-home :is(.VPHome, .VPFooter, .VPNav) {
+  --vp-c-text-1: #fbf8f0; --vp-c-text-2: #d9e6f4; --vp-c-text-3: #c4d7e8;
+  --vp-c-brand-1: #f6edcf; --vp-c-brand-2: #fff8e5;
+  --vp-c-divider: rgb(215 232 250 / .38); --vp-c-border: var(--vp-c-divider);
+  --pixel-edge: rgb(215 232 250 / .42);
+  color: var(--vp-c-text-1);
+}
+.pixel-mountain-home .VPNav {
+  --vp-c-bg: #142d4d; --vp-c-bg-alt: #152e4c; --vp-c-bg-elv: #142d4d;
+  --vp-c-bg-soft: #254465; --vp-nav-screen-bg-color: #142d4d;
+  --vp-nav-bg-color: rgb(7 24 49 / .93);
+}
+.Layout.pixel-mountain-home .VPNav .VPNavBar { background: rgb(7 24 49 / .72); border-color: var(--vp-c-divider); }
+.Layout.pixel-mountain-home .VPNavBar .content-body { background: transparent; }
+.pixel-mountain-home .VPNavBar .visual-logo { filter: none; }
+.pixel-mountain-home .VPHome {
+  margin-bottom: 0;
+  --mountain-scrim: linear-gradient(95deg, rgb(5 23 52 / .87), rgb(7 28 60 / .74) 70%, rgb(7 28 60 / .58));
+}
+.pixel-mountain-home .VPHome .VPHero {
+  margin: 0;
+  padding: clamp(32px, 6vh, 76px) var(--mountain-gutter) clamp(30px, 5vh, 66px);
+}
+.pixel-mountain-home .VPHome .VPHero .container { max-width: none; }
+.pixel-mountain-home .home-illustrated-hero { min-height: 0; overflow: visible; background: transparent; border: 0; }
+.pixel-mountain-home .home-illustrated-hero .hero-copy { width: auto; padding: 0; }
+.pixel-mountain-home .seagull-hero-wordmark { font-size: clamp(70px, 7.2vw, 118px); line-height: .98; }
+.pixel-mountain-home .VPHome > .vp-doc {
+  width: auto; max-width: none; margin: 0 var(--mountain-gutter); padding: 0 0 30px;
+}
+.pixel-mountain-home .format-home { width: var(--mountain-measure); max-width: 100%; }
+.pixel-mountain-home .VPHome .pixel-journal { display: block; margin-top: clamp(34px,6vh,66px); padding: 0; border: 0; }
+.pixel-mountain-home .VPHome .pixel-journal h2 { padding-bottom: 10px; border-bottom: 1px solid var(--vp-c-divider); font: 600 clamp(24px,2vw,32px)/1.35 'Seagull Academic Serif', SimSun, serif; }
+.pixel-mountain-home .pixel-journal ul { gap: 0; }
+.pixel-mountain-home .pixel-journal li { gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--vp-c-divider); }
+.pixel-mountain-home .pixel-journal li a { font-weight: 400; }
+.pixel-mountain-home .VPHome .video-gallery { padding: clamp(30px,6vh,66px) 0 0; }
+.pixel-mountain-home .video-gallery .gallery-header { border: 0; padding: 0 0 10px; margin-bottom: 14px; border-bottom: 1px solid var(--vp-c-divider); }
+.pixel-mountain-home .video-gallery .gallery-header h2 { font: 600 clamp(24px,2vw,32px)/1.35 'Seagull Academic Serif', SimSun, serif; }
+.pixel-mountain-home .video-gallery .gallery-header h2::before { content: none; }
+.pixel-mountain-home .video-gallery .video-card { --pixel-panel: rgb(8 27 55 / .78); }
+.pixel-mountain-home .VPHome .video-gallery .gallery-intro { display: none; }
+.pixel-mountain-home .home-colophon .closing-line { border-top: 1px solid var(--vp-c-divider); }
+.pixel-mountain-home .home-colophon .closing-line a { display: flex; align-items: center; min-height: 44px; }
+.pixel-mountain-home .home-colophon .closing-line a:first-child { margin-left: 0; }
+.Layout.pixel-mountain-home .VPFooter { background: rgb(6 22 43 / .76); border-top: 1px solid var(--vp-c-divider); box-shadow: none; }
+@media (min-width: 640px) and (max-width: 1000px) {
+  .Layout.pixel-mountain-home { --mountain-measure: 52vw; }
+}
+@media (max-width: 639px) {
+  .Layout.pixel-mountain-home { --mountain-gutter: clamp(14px, 4.6vw, 24px); --mountain-measure: 100%; }
+  .pixel-mountain-world img { object-position: 34% 52%; }
+  .pixel-mountain-world::after { background: linear-gradient(90deg, rgb(3 20 48 / .20), transparent 78%); }
+  .pixel-mountain-home .VPHome .VPHero { padding-top: 28px; padding-bottom: clamp(98px, 27svh, 224px); }
+  .pixel-mountain-home .seagull-hero-wordmark { font-size: clamp(43px, 11vw, 68px); text-shadow: 0 1px 4px #0c274f; }
+  .pixel-mountain-home .VPHome .format-home :is(.cliff-reading, .cliff-directory, .pixel-journal, .video-gallery, .closing-line) {
+    background: var(--mountain-scrim); padding: 17px 15px;
+  }
+  .pixel-mountain-home .VPHome .format-home :is(.pixel-journal, .video-gallery) { margin-top: 22px; }
+}

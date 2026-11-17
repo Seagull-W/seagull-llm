@@ -3,6 +3,7 @@ import { useData } from 'vitepress'
 import InterfaceIcon from './InterfaceIcon.vue'
 import StyleSwitcher from './StyleSwitcher.vue'
 import WindowLight from './WindowLight.vue'
+import GraceTransitionLight from './GraceTransitionLight.vue'
 import { useVisualStyle } from '../theme/visual-styles'
 import { cancelPicturePreview, changeAppearance, previewAppearancePicture, warmAppearancePicture } from '../theme/appearance-motion'
 import '../theme/styles/appearance-motion.css'
@@ -11,13 +12,14 @@ const style = useVisualStyle()
 
 function toggleDaylight() {
   warmAppearancePicture(style.value, !isDark.value)
-  changeAppearance(style.value.iconSet, () => { isDark.value = !isDark.value })
+  changeAppearance(style.value.iconSet, () => { isDark.value = !isDark.value }, isDark.value ? 'blessing' : 'moonlight')
 }
 </script>
 
 <template>
   <div class="seagull-nav-actions"><slot />
     <StyleSwitcher />
+    <ClientOnly><Teleport to="body"><GraceTransitionLight v-if="style.iconSet === 'grace'" /></Teleport></ClientOnly>
     <button class="theme-toggle" type="button" :aria-pressed="isDark" :title="isDark ? '切换到浅色模式' : '切换到深色模式'" aria-label="深色主题"
       @pointerenter="previewAppearancePicture(style, !isDark)" @pointerleave="cancelPicturePreview"
       @focus="previewAppearancePicture(style, !isDark)" @blur="cancelPicturePreview" @click="toggleDaylight">

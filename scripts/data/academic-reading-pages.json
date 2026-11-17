@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1753,
+  "character_count": 1766,
   "pages": [
     {
       "path": "/cs336/a1-bpe.md",
@@ -204,8 +204,16 @@
       "title": "离线推理：LLM 类与调用链"
     },
     {
+      "path": "/papers/count-counts/index.md",
+      "title": "Count Counts：用访问频率引导推理探索"
+    },
+    {
       "path": "/papers/deepseek-r1/index.md",
       "title": "DeepSeek-R1 技术报告阅读笔记"
+    },
+    {
+      "path": "/papers/echo-chamber/index.md",
+      "title": "Echo Chamber：强化学习会放大哪些预训练行为？"
     },
     {
       "path": "/papers/engineering/async-and-consistency.md",
@@ -352,12 +360,8 @@
       "title": "奖励数据的行为支持：从token概率到价值约束"
     },
     {
-      "path": "/westlake-rl/TD算法/TD.md",
-      "title": "TD 算法"
-    },
-    {
-      "path": "/westlake-rl/价值函数/index.md",
-      "title": "价值函数"
+      "path": "/westlake-rl/价值函数方法/index.md",
+      "title": "第 8 讲：价值函数方法"
     },
     {
       "path": "/westlake-rl/值迭代与策略迭代/index.md",
@@ -368,20 +372,20 @@
       "title": "第 1–2 讲：强化学习基本概念与贝尔曼方程"
     },
     {
+      "path": "/westlake-rl/时序差分方法/index.md",
+      "title": "第 7 讲：时序差分方法"
+    },
+    {
       "path": "/westlake-rl/最优状态价值与贝尔曼最优方程/index.md",
       "title": "第 3 讲：最优状态价值与贝尔曼最优方程"
     },
     {
-      "path": "/westlake-rl/策略梯度/index.md",
-      "title": "策略梯度"
+      "path": "/westlake-rl/策略梯度方法/index.md",
+      "title": "第 9 讲：策略梯度方法"
     },
     {
       "path": "/westlake-rl/蒙特卡洛方法/index.md",
       "title": "第 5 讲：蒙特卡洛方法"
-    },
-    {
-      "path": "/westlake-rl/随机近似/index.md",
-      "title": "随机近似"
     },
     {
       "path": "/westlake-rl/随机近似/课程讲义.md",

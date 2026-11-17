@@ -10,6 +10,21 @@ export const graceParties = [
 ] as const
 
 export const graceCharacters = graceParties.flat()
+const readingArt = '/images/grace-archive/reading-figures/'
+export const graceReadingPortraits = {
+  day: [readingArt + 'millicent-portrait.webp', readingArt + 'melina-grace.webp', readingArt + 'marika-gold.webp'],
+  night: [readingArt + 'ranni-moon.webp', readingArt + 'melina-dusk.webp'],
+}
+
+// Give each article a repeatable starting pair. Returning to an appearance
+// during the same reading session advances to the next portrait in its group.
+export function readingPortraitFor(article: string, dark: boolean, round: number) {
+  const portraits = dark ? graceReadingPortraits.night : graceReadingPortraits.day
+  let offset = round
+  for (const character of article) offset += character.charCodeAt(0)
+  return portraits[offset % portraits.length]
+}
+
 export function graceCharacterFor(section: string) {
   return graceCharacters.find(character => character.section === section) ?? graceCharacters[0]
 }

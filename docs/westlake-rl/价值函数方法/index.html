@@ -1,0 +1,548 @@
+<script setup lang="ts">
+import '../lecture-academic.css'
+import { defineAsyncComponent, shallowRef } from 'vue'
+import pdfUrl from './价值函数方法.pdf?url'
+import outline from './目录.json'
+const PdfViewer = defineAsyncComponent(() => import('../../.vitepress/components/PdfViewer.vue'))
+const showOriginal = shallowRef(false)
+function toggleOriginal(event: Event) {
+  showOriginal.value = (event.target as HTMLDetailsElement).open
+}
+</script>
+
+<article class="native-document format-course academic-lecture" data-format="course" data-design="linux-notebook" aria-label="第 8 讲：价值函数方法">
+<header class="document-intro note-hero">
+  <p class="note-kicker">西湖 RL 笔记<span>第 8 讲 · 课程讲义</span></p>
+  <h1 id="note-title" tabindex="-1">价值函数方法 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
+  <p class="note-deck">用函数近似表示价值，推导状态价值与动作价值的 TD 更新，再看 DQN 如何训练。</p>
+  <div class="note-chips"><span>函数近似</span><span>时序差分</span><span>DQN</span></div>
+  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记</p>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航"><a href="#价值表示从表格到函数">8.1 价值表示：从表格到函数</a>
+<a href="#基于函数近似的状态价值td学习">8.2 基于函数近似的状态价值TD学习</a>
+<a href="#基于函数近似的动作价值td学习">8.3 基于函数近似的动作价值TD学习</a>
+<a href="#深度-q-learning">8.4 深度 Q-learning</a>
+<a href="#本章小结">8.5 本章小结</a>
+<a href="#常见问题解答">8.6 常见问题解答</a></nav>
+<div id="reading-context" class="lecture-body">
+<p>在前几章中，状态价值和动作价值均以<strong>表格</strong>形式表示。表格方法直观易懂，但在处理大规模状态空间或动作空间时效率低下。为解决这一问题，本章引入<strong>价值函数方法</strong>，使用函数来近似价值，这已成为表示价值的标准方法。正是在这里，人工神经网络作为函数近似器被融入强化学习。价值函数的思想也可以扩展到策略函数，详见第9章。</p>
+<p>本章与前后章节的关联如下：第7讲介绍了表格形式的TD学习算法，本章将TD学习推广到函数近似的情形；第9讲将函数近似的思想进一步推广到策略函数的表示。</p>
+
+<section class="document-section note-panel" aria-labelledby="价值表示从表格到函数">
+<h2 class="unnumbered" tabindex="-1" id="价值表示从表格到函数">8.1 价值表示：从表格到函数 <a class="header-anchor" href="#价值表示从表格到函数" aria-label="章节链接">&#8203;</a></h2>
+<p>我们通过一个例子来说明表格方法和函数近似方法的区别。</p>
+<p>假设有 <span class="math-inline" data-tex="n"></span> 个状态 <span class="math-inline" data-tex="\{s_i\}_{i=1}^{n}"></span>，其状态价值为 <span class="math-inline" data-tex="\{v_\pi(s_i)\}_{i=1}^{n}"></span>，其中 <span class="math-inline" data-tex="\pi"></span> 是给定的策略。设 <span class="math-inline" data-tex="\{\hat{v}(s_i)\}_{i=1}^{n}"></span> 为真实状态价值的估计。如果使用表格方法，估计值可以保存在下表所示的表格中，该表可以以数组或向量的形式存储在内存中。</p>
+<div class="center">
+<div class="note-table" tabindex="0" role="region" aria-label="讲义数据表">
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">状态</th>
+<th style="text-align: center;"><span class="math-inline" data-tex="s_1"></span></th>
+<th style="text-align: center;"><span class="math-inline" data-tex="s_2"></span></th>
+<th style="text-align: center;"><span class="math-inline" data-tex="\cdots"></span></th>
+<th style="text-align: center;"><span class="math-inline" data-tex="s_n"></span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">估计值</td>
+<td style="text-align: center;"><span class="math-inline" data-tex="\hat{v}(s_1)"></span></td>
+<td style="text-align: center;"><span class="math-inline" data-tex="\hat{v}(s_2)"></span></td>
+<td style="text-align: center;"><span class="math-inline" data-tex="\cdots"></span></td>
+<td style="text-align: center;"><span class="math-inline" data-tex="\hat{v}(s_n)"></span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>要检索或更新某个价值，只需直接读取或重写表格中的对应条目即可。</p>
+<p>然而，上述表格中的数值也可以用函数来近似。具体而言，点集 <span class="math-inline" data-tex="\{(s_i, \hat{v}(s_i))\}_{i=1}^{n}"></span> 可以看作 <span class="math-inline" data-tex="n"></span> 个数据点，用一条曲线来拟合。最简单的曲线是直线，可以描述为：</p>
+<div class="lecture-equation" id="lecture-equation-1"><div class="math-block" data-tex="\hat{v}(s; \boldsymbol{w}) = a s + b = \underbrace{[s, \; 1]}_{\boldsymbol{\phi}^T(s)} \underbrace{\begin{bmatrix} a \\ b \end{bmatrix}}_{\boldsymbol{w}} = \boldsymbol{\phi}^T(s) \boldsymbol{w}
+\tag{8.1}"></div></div>
+<p>其中 <span class="math-inline" data-tex="\hat{v}(s; \boldsymbol{w})"></span> 是用于近似 <span class="math-inline" data-tex="v_\pi(s)"></span> 的函数，由状态 <span class="math-inline" data-tex="s"></span> 和参数向量 <span class="math-inline" data-tex="\boldsymbol{w} \in \mathbb{R}^2"></span> 共同决定。<span class="math-inline" data-tex="\hat{v}(s; \boldsymbol{w})"></span> 有时也写作 <span class="math-inline" data-tex="\hat{v}_{\boldsymbol{w}}(s)"></span>。这里 <span class="math-inline" data-tex="\boldsymbol{\phi}(s) \in \mathbb{R}^2"></span> 称为状态 <span class="math-inline" data-tex="s"></span> 的<strong>特征向量</strong>。</p>
+<p>表格方法与函数近似方法在价值的检索和更新方面存在显著差异。</p>
+<ul>
+<li><p><strong>如何检索价值</strong>：当价值以表格形式表示时，可以直接读取表中对应的条目。而当价值以函数形式表示时，需要将状态 <span class="math-inline" data-tex="s"></span> 输入函数并计算函数值。对于 (8.1) 中的例子，我们需要先计算特征向量 <span class="math-inline" data-tex="\boldsymbol{\phi}(s)"></span>，然后计算 <span class="math-inline" data-tex="\boldsymbol{\phi}^T(s)\boldsymbol{w}"></span>。如果函数是人工神经网络，则需要进行从输入层到输出层的前向传播。</p>
+<p>函数近似方法在存储方面更加高效。具体而言，表格方法需要存储 <span class="math-inline" data-tex="n"></span> 个值，而函数近似方法只需要存储一个低维参数向量 <span class="math-inline" data-tex="\boldsymbol{w}"></span>，从而极大提升存储效率。但这种好处是有代价的：状态价值可能无法被函数精确表示。从根本上看，用低维向量表示高维数据集必然会损失一些信息。因此，函数近似方法以牺牲精度为代价换取存储效率。</p></li>
+<li><p><strong>如何更新价值</strong>：当价值以表格形式表示时，可以直接重写表中对应的条目。而当价值以函数形式表示时，更新某个价值的方法完全不同：必须通过更新 <span class="math-inline" data-tex="\boldsymbol{w}"></span> 来间接改变价值。如何通过更新 <span class="math-inline" data-tex="\boldsymbol{w}"></span> 来寻找最优状态价值将在后文详细讨论。</p>
+<p>由于状态价值的更新方式不同，函数近似方法还具有另一个优点：其泛化能力比表格方法更强。使用表格方法时，只有在某个状态被访问到时才能更新该状态的价值，未访问状态的价值无法更新。而使用函数近似方法时，需要通过更新 <span class="math-inline" data-tex="\boldsymbol{w}"></span> 来更新某个状态的价值，<span class="math-inline" data-tex="\boldsymbol{w}"></span> 的更新也会影响其他状态的价值，即便这些状态尚未被访问。因此，一个状态的经验样本可以泛化并帮助估计其他状态的价值。</p></li>
+</ul>
+<p>以上分析可以通过一个包含三个状态 <span class="math-inline" data-tex="\{s_1, s_2, s_3\}"></span> 的例子来说明。假设我们有状态 <span class="math-inline" data-tex="s_3"></span> 的经验样本，并希望更新 <span class="math-inline" data-tex="\hat{v}(s_3)"></span>。使用表格方法时，只能更新 <span class="math-inline" data-tex="\hat{v}(s_3)"></span>，而不会改变 <span class="math-inline" data-tex="\hat{v}(s_1)"></span> 或 <span class="math-inline" data-tex="\hat{v}(s_2)"></span>。使用函数近似方法时，更新 <span class="math-inline" data-tex="\boldsymbol{w}"></span> 不仅可以更新 <span class="math-inline" data-tex="\hat{v}(s_3)"></span>，同时也会改变 <span class="math-inline" data-tex="\hat{v}(s_1)"></span> 和 <span class="math-inline" data-tex="\hat{v}(s_2)"></span>。因此，<span class="math-inline" data-tex="s_3"></span> 的经验样本可以帮助更新其邻近状态的价值。</p>
+<p>除了直线，我们还可以使用具有更强近似能力的复杂函数。例如，考虑一个二阶多项式：</p>
+<div class="lecture-equation" id="lecture-equation-2"><div class="math-block" data-tex="\hat{v}(s; \boldsymbol{w}) = a s^2 + b s + c = \underbrace{[s^2, \; s, \; 1]}_{\boldsymbol{\phi}^T(s)} \underbrace{\begin{bmatrix} a \\ b \\ c \end{bmatrix}}_{\boldsymbol{w}} = \boldsymbol{\phi}^T(s) \boldsymbol{w}
+\tag{8.2}"></div></div>
+<p>甚至可以使用更高阶的多项式曲线来拟合数据点。随着曲线阶数的增加，近似精度会提高，但参数向量的维数也会增大，需要更多的存储和计算资源。</p>
+<p>注意，(8.1) 或 (8.2) 中的 <span class="math-inline" data-tex="\hat{v}(s; \boldsymbol{w})"></span> 关于 <span class="math-inline" data-tex="\boldsymbol{w}"></span> 是线性的（尽管关于 <span class="math-inline" data-tex="s"></span> 可能非线性）。这类方法称为<strong>线性函数近似</strong>，是最简单的函数近似方法。要实现线性函数近似，需要选择合适的特征向量 <span class="math-inline" data-tex="\boldsymbol{\phi}(s)"></span>。特征向量的选择需要一定的先验知识：对任务理解越深，越能选择好的特征向量。例如，如果事先知道数据点大致分布在一条直线上，就可以用直线来拟合。但实践中通常不具备这样的先验知识，因此常用的方法是使用人工神经网络作为非线性函数近似器。</p>
+<p>另一个重要问题是如何求最优参数向量。如果已知 <span class="math-inline" data-tex="\{v_\pi(s_i)\}_{i=1}^{n}"></span>，这就变成了一个最小二乘问题，可以通过优化以下目标函数来获得最优参数：</p>
+<div class="lecture-equation" id="lecture-equation-3"><div class="math-block" data-tex="J = \frac{1}{n}\sum_{i=1}^{n} \big( \hat{v}(s_i; \boldsymbol{w}) - v_\pi(s_i) \big)^2
+    = \frac{1}{n}\sum_{i=1}^{n} \big( \boldsymbol{\phi}^T(s_i)\boldsymbol{w} - v_\pi(s_i) \big)^2
+    = \frac{1}{n}\left\|
+        \underbrace{\begin{bmatrix}
+            \boldsymbol{\phi}^T(s_1) \\ \vdots \\ \boldsymbol{\phi}^T(s_n)
+        \end{bmatrix}}_{\boldsymbol{\Phi}}
+        \boldsymbol{w} - 
+        \underbrace{\begin{bmatrix} v_\pi(s_1) \\ \vdots \\ v_\pi(s_n) \end{bmatrix}}_{\boldsymbol{v}_\pi}
+    \right\|^2
+    := \frac{1}{n}\|\boldsymbol{\Phi}\boldsymbol{w} - \boldsymbol{v}_\pi\|^2"></div></div>
+<p>其中</p>
+<div class="lecture-equation" id="lecture-equation-4"><div class="math-block" data-tex="\boldsymbol{\Phi} := \begin{bmatrix}
+    \boldsymbol{\phi}^T(s_1) \\ \vdots \\ \boldsymbol{\phi}^T(s_n)
+\end{bmatrix} \in \mathbb{R}^{n \times 2},\quad
+\boldsymbol{v}_\pi := \begin{bmatrix} v_\pi(s_1) \\ \vdots \\ v_\pi(s_n) \end{bmatrix} \in \mathbb{R}^{n}"></div></div>
+<p>可以证明，该最小二乘问题的最优解为：</p>
+<div class="lecture-equation" id="lecture-equation-5"><div class="math-block" data-tex="\boldsymbol{w}^* = (\boldsymbol{\Phi}^T \boldsymbol{\Phi})^{-1} \boldsymbol{\Phi} \boldsymbol{v}_\pi"></div></div>
+<p>本节介绍的曲线拟合示例说明了价值函数近似的基本思想，下一节将正式引入这一思想。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="基于函数近似的状态价值td学习">
+<h2 class="unnumbered" tabindex="-1" id="基于函数近似的状态价值td学习">8.2 基于函数近似的状态价值TD学习 <a class="header-anchor" href="#基于函数近似的状态价值td学习" aria-label="章节链接">&#8203;</a></h2>
+<p>本节介绍如何将函数近似方法融入TD学习，以估计给定策略的状态价值。该算法将在8.3节中扩展为学习动作价值和最优策略。</p>
+<p>本节内容丰富且连贯性强，建议先概览以下内容再深入细节：</p>
+<ul>
+<li><p>函数近似方法被形式化为一个优化问题，其目标函数在8.2.1节中介绍。用于优化该目标函数的TD学习算法在8.2.2节中介绍。</p></li>
+<li><p>要应用TD学习算法，需要选择合适的特征向量，8.2.3节讨论这一问题。</p></li>
+<li><p>8.2.4节给出示例，演示TD算法以及不同特征向量的影响。</p></li>
+<li><p>8.2.5节对TD算法进行理论分析，这部分数学难度较大，读者可根据兴趣选择性阅读。</p></li>
+</ul>
+<h3 class="unnumbered" tabindex="-1" id="目标函数">8.2.1 目标函数 <a class="header-anchor" href="#目标函数" aria-label="章节链接">&#8203;</a></h3>
+<p>设 <span class="math-inline" data-tex="v_\pi(s)"></span> 和 <span class="math-inline" data-tex="\hat{v}(s; \boldsymbol{w})"></span> 分别为 <span class="math-inline" data-tex="s \in \mathcal{S}"></span> 的真实状态价值和近似状态价值。目标是寻找最优的 <span class="math-inline" data-tex="\boldsymbol{w}"></span>，使得 <span class="math-inline" data-tex="\hat{v}(s; \boldsymbol{w})"></span> 对每个 <span class="math-inline" data-tex="s"></span> 都能最佳地近似 <span class="math-inline" data-tex="v_\pi(s)"></span>。具体的目标函数为：</p>
+<div class="lecture-equation is-numbered" id="eq:J_obj"><div class="math-block" data-tex="J(\boldsymbol{w}) = \mathbb{E}\big[ (v_\pi(S) - \hat{v}(S; \boldsymbol{w}))^2 \big]"></div><a class="lecture-equation-number" href="#eq:J_obj" aria-label="公式 1">(1)</a></div>
+<p>其中期望是关于随机变量 <span class="math-inline" data-tex="S \in \mathcal{S}"></span> 计算的。<span class="math-inline" data-tex="S"></span> 是随机变量，那么其概率分布是什么？这个问题对于理解目标函数至关重要。定义 <span class="math-inline" data-tex="S"></span> 的概率分布有以下几种方式。</p>
+<ul>
+<li><p><strong>均匀分布</strong>：将所有状态视为同等重要，将每个状态的概率设为 <span class="math-inline" data-tex="1/n"></span>。此时目标函数变为</p>
+<div class="lecture-equation" id="lecture-equation-7"><div class="math-block" data-tex="J(\boldsymbol{w}) = \frac{1}{n}\sum_{s \in \mathcal{S}}(v_\pi(s) - \hat{v}(s; \boldsymbol{w}))^2"></div></div>
+<p>这是所有状态近似误差的平均值。然而，这种方式没有考虑给定策略下马尔可夫过程的真实动态特性。某些状态可能很少被某个策略访问，因此将所有状态同等看待可能并不合理。</p></li>
+<li><p><strong>平稳分布</strong>（本章的重点）：平稳分布描述了马尔可夫决策过程的长期行为。具体而言，智能体在充分长的时间内执行某个给定策略后，其位于任一状态的概率可以由平稳分布描述（详见专栏8.1）。</p>
+<p>设 <span class="math-inline" data-tex="\{d_\pi(s)\}_{s \in \mathcal{S}}"></span> 为策略 <span class="math-inline" data-tex="\pi"></span> 下马尔可夫过程的平稳分布，即长期运行后智能体访问状态 <span class="math-inline" data-tex="s"></span> 的概率为 <span class="math-inline" data-tex="d_\pi(s)"></span>。由定义可知 <span class="math-inline" data-tex="\sum_{s \in \mathcal{S}} d_\pi(s) = 1"></span>。则目标函数可重写为：</p>
+<div class="lecture-equation is-numbered" id="eq:J_weighted"><div class="math-block" data-tex="J(\boldsymbol{w}) = \sum_{s \in \mathcal{S}} d_\pi(s) (v_\pi(s) - \hat{v}(s; \boldsymbol{w}))^2"></div><a class="lecture-equation-number" href="#eq:J_weighted" aria-label="公式 2">(2)</a></div>
+<p>这是近似误差的加权平均，访问概率更高的状态被赋予更大的权重。</p></li>
+</ul>
+<p>值得注意的是，<span class="math-inline" data-tex="d_\pi(s)"></span> 的具体值并非平凡可求，因为需要知道状态转移概率矩阵 <span class="math-inline" data-tex="\boldsymbol{P}_\pi"></span>（见专栏 8.1）。但幸运的是，如下一节所示，我们并不需要计算 <span class="math-inline" data-tex="d_\pi(s)"></span> 的具体值来最小化该目标函数。此外，(8.4) 和 (8.5) 是在状态数量有限的前提下引入的，当状态空间连续时，可将求和替换为积分。</p>
+<h3 class="unnumbered" tabindex="-1" id="专栏-8.1马尔可夫决策过程的平稳分布">专栏 8.1：马尔可夫决策过程的平稳分布 <a class="header-anchor" href="#专栏-8.1马尔可夫决策过程的平稳分布" aria-label="章节链接">&#8203;</a></h3>
+<p>分析平稳分布的关键工具是策略 <span class="math-inline" data-tex="\pi"></span> 下的概率转移矩阵 <span class="math-inline" data-tex="\boldsymbol{P}_\pi \in \mathbb{R}^{n \times n}"></span>。若状态编号为 <span class="math-inline" data-tex="s_1, \dots, s_n"></span>，则 <span class="math-inline" data-tex="[\boldsymbol{P}_\pi]_{ij}"></span> 定义为智能体从 <span class="math-inline" data-tex="s_i"></span> 转移到 <span class="math-inline" data-tex="s_j"></span> 的概率。</p>
+<p><strong><span class="math-inline" data-tex="\boldsymbol{P}_\pi^k"></span> 的含义</strong>（<span class="math-inline" data-tex="k = 1, 2, 3, \dots"></span>）。首先需要考察 <span class="math-inline" data-tex="\boldsymbol{P}_\pi^k"></span> 中各条目的含义。智能体从 <span class="math-inline" data-tex="s_i"></span> 转移到 <span class="math-inline" data-tex="s_j"></span> 恰好使用 <span class="math-inline" data-tex="k"></span> 步的概率记为</p>
+<div class="lecture-equation" id="lecture-equation-9"><div class="math-block" data-tex="p_{ij}^{(k)} = \Pr(S_{t_k} = j \mid S_{t_0} = i)"></div></div>
+<p>由 <span class="math-inline" data-tex="\boldsymbol{P}_\pi"></span> 的定义可知 <span class="math-inline" data-tex="[\boldsymbol{P}_\pi]_{ij} = p_{ij}^{(1)}"></span>，即 <span class="math-inline" data-tex="[\boldsymbol{P}_\pi]_{ij}"></span> 是恰好用一步从 <span class="math-inline" data-tex="s_i"></span> 转移到 <span class="math-inline" data-tex="s_j"></span> 的概率。其次，考虑 <span class="math-inline" data-tex="\boldsymbol{P}_\pi^2"></span>：</p>
+<div class="lecture-equation" id="lecture-equation-10"><div class="math-block" data-tex="[\boldsymbol{P}_\pi^2]_{ij} = [\boldsymbol{P}_\pi \boldsymbol{P}_\pi]_{ij} = \sum_{q=1}^n [\boldsymbol{P}_\pi]_{iq} [\boldsymbol{P}_\pi]_{qj}"></div></div>
+<p>因为 <span class="math-inline" data-tex="[\boldsymbol{P}_\pi]_{iq}[\boldsymbol{P}_\pi]_{qj}"></span> 是从 <span class="math-inline" data-tex="s_i"></span> 转移到 <span class="math-inline" data-tex="s_q"></span> 再转移到 <span class="math-inline" data-tex="s_j"></span> 的联合概率，所以 <span class="math-inline" data-tex="[\boldsymbol{P}_\pi^2]_{ij}"></span> 是恰好用两步从 <span class="math-inline" data-tex="s_i"></span> 转移到 <span class="math-inline" data-tex="s_j"></span> 的概率，即 <span class="math-inline" data-tex="[\boldsymbol{P}_\pi^2]_{ij} = p_{ij}^{(2)}"></span>。类似地，有 <span class="math-inline" data-tex="[\boldsymbol{P}_\pi^k]_{ij} = p_{ij}^{(k)}"></span>。</p>
+<p><strong>平稳分布的定义</strong>。设 <span class="math-inline" data-tex="\boldsymbol{d}_0 \in \mathbb{R}^n"></span> 为初始时刻状态的分布向量，<span class="math-inline" data-tex="\boldsymbol{d}_k \in \mathbb{R}^n"></span> 为从 <span class="math-inline" data-tex="\boldsymbol{d}_0"></span> 出发恰好经过 <span class="math-inline" data-tex="k"></span> 步后的分布向量，则有：</p>
+<div class="lecture-equation" id="lecture-equation-11"><div class="math-block" data-tex="d_k(s_i) = \sum_{j=1}^n d_0(s_j) [\boldsymbol{P}_\pi^k]_{ji}, \quad i = 1, 2, \dots"></div></div>
+<p>其矩阵-向量形式为：</p>
+<div class="lecture-equation" id="lecture-equation-12"><div class="math-block" data-tex="\boldsymbol{d}_k^T = \boldsymbol{d}_0^T \boldsymbol{P}_\pi^k"></div></div>
+<p>考虑马尔可夫过程的长期行为，在特定条件下有：</p>
+<div class="lecture-equation" id="lecture-equation-13"><div class="math-block" data-tex="\lim_{k \to \infty} \boldsymbol{P}_\pi^k = \boldsymbol{1}_n \boldsymbol{d}_\pi^T"></div></div>
+<p>其中 <span class="math-inline" data-tex="\boldsymbol{1}_n = [1, \dots, 1]^T \in \mathbb{R}^n"></span>，<span class="math-inline" data-tex="\boldsymbol{1}_n \boldsymbol{d}_\pi^T"></span> 是一个所有行都等于 <span class="math-inline" data-tex="\boldsymbol{d}_\pi^T"></span> 的常数矩阵。代入上式得：</p>
+<div class="lecture-equation" id="lecture-equation-14"><div class="math-block" data-tex="\lim_{k \to \infty} \boldsymbol{d}_k^T = \boldsymbol{d}_0^T \lim_{k \to \infty} \boldsymbol{P}_\pi^k = \boldsymbol{d}_0^T \boldsymbol{1}_n \boldsymbol{d}_\pi^T = \boldsymbol{d}_\pi^T"></div></div>
+<p>这意味着状态分布 <span class="math-inline" data-tex="\boldsymbol{d}_k"></span> 收敛到一个常值 <span class="math-inline" data-tex="\boldsymbol{d}_\pi"></span>，称为<strong>极限分布</strong>。极限分布取决于系统模型和策略 <span class="math-inline" data-tex="\pi"></span>，但与初始分布 <span class="math-inline" data-tex="\boldsymbol{d}_0"></span> 无关。<span class="math-inline" data-tex="\boldsymbol{d}_\pi"></span> 的值可通过下式计算：对 <span class="math-inline" data-tex="\boldsymbol{d}_k^T = \boldsymbol{d}_{k-1}^T \boldsymbol{P}_\pi"></span> 两边取极限，得 <span class="math-inline" data-tex="\boldsymbol{d}_\pi^T = \boldsymbol{d}_\pi^T \boldsymbol{P}_\pi"></span>。因此，<span class="math-inline" data-tex="\boldsymbol{d}_\pi"></span> 是 <span class="math-inline" data-tex="\boldsymbol{P}_\pi"></span> 对应于特征值 <span class="math-inline" data-tex="1"></span> 的左特征向量，称为<strong>平稳分布</strong>。有 <span class="math-inline" data-tex="\sum_{s \in \mathcal{S}} d_\pi(s) = 1"></span> 且 <span class="math-inline" data-tex="d_\pi(s) &gt; 0"></span> 对所有 <span class="math-inline" data-tex="s \in \mathcal{S}"></span> 成立。</p>
+<p><strong>平稳分布唯一性的条件</strong>。满足唯一平稳（或极限）分布的一类马尔可夫过程是<strong>不可约</strong>（或<strong>正则</strong>）马尔可夫过程。相关定义如下：</p>
+<ul>
+<li><p>若存在有限整数 <span class="math-inline" data-tex="k"></span> 使得 <span class="math-inline" data-tex="[\boldsymbol{P}_\pi]_{ij}^k &gt; 0"></span>，则称 <span class="math-inline" data-tex="s_j"></span> 从 <span class="math-inline" data-tex="s_i"></span> 可达。</p></li>
+<li><p>若 <span class="math-inline" data-tex="s_i"></span> 和 <span class="math-inline" data-tex="s_j"></span> 互相可达，则称这两个状态<strong>互通</strong>。</p></li>
+<li><p>若所有状态都互通，则马尔可夫过程称为<strong>不可约</strong>的。</p></li>
+<li><p>若存在 <span class="math-inline" data-tex="k \geq 1"></span> 使得 <span class="math-inline" data-tex="[\boldsymbol{P}_\pi^k]_{ij} &gt; 0"></span> 对所有 <span class="math-inline" data-tex="i, j"></span> 成立，则马尔可夫过程称为<strong>正则</strong>的。此时有 <span class="math-inline" data-tex="\boldsymbol{P}_\pi^k &gt; 0"></span>（按元素）。正则马尔可夫过程也是不可约的，反之不一定成立。但如果不可约且存在 <span class="math-inline" data-tex="i"></span> 使得 <span class="math-inline" data-tex="[\boldsymbol{P}_\pi]_{ii} &gt; 0"></span>，则也是正则的。此外，若 <span class="math-inline" data-tex="\boldsymbol{P}_\pi^k &gt; 0"></span>，则对任意 <span class="math-inline" data-tex="k&#x27; \geq k"></span> 都有 <span class="math-inline" data-tex="\boldsymbol{P}_\pi^{k&#x27;} &gt; 0"></span>。由此可知 <span class="math-inline" data-tex="d_\pi(s) &gt; 0"></span> 对每个 <span class="math-inline" data-tex="s"></span> 成立。</p></li>
+</ul>
+<p><strong>能产生唯一平稳分布的策略</strong>。一旦策略给定，MDP 就变为马尔可夫过程，其长期行为由策略和系统模型共同决定。什么类型的策略能产生正则马尔可夫过程？一般来说，探索性策略（如 <span class="math-inline" data-tex="\varepsilon"></span>-greedy 策略）可做到这一点，因为探索性策略在任何状态下选择任何动作的概率均为正，因此只要系统模型允许，状态之间就可以互通。</p>
+<h3 class="unnumbered" tabindex="-1" id="优化算法">8.2.2 优化算法 <a class="header-anchor" href="#优化算法" aria-label="章节链接">&#8203;</a></h3>
+<p>为最小化目标函数 <span class="math-inline" data-tex="J(\boldsymbol{w})"></span>，可以使用梯度下降算法：</p>
+<div class="lecture-equation" id="lecture-equation-15"><div class="math-block" data-tex="\boldsymbol{w}_{k+1} = \boldsymbol{w}_k - \alpha_k \nabla_{\boldsymbol{w}} J(\boldsymbol{w}_k)"></div></div>
+<p>其中</p>
+<div class="lecture-equation" id="lecture-equation-16"><div class="math-block" data-tex="\nabla_{\boldsymbol{w}} J(\boldsymbol{w}_k) = \nabla_{\boldsymbol{w}} \mathbb{E}\big[(v_\pi(S) - \hat{v}(S; \boldsymbol{w}_k))^2\big]
+    = -2\mathbb{E}\big[(v_\pi(S) - \hat{v}(S; \boldsymbol{w}_k)) \nabla_{\boldsymbol{w}} \hat{v}(S; \boldsymbol{w}_k)\big]"></div></div>
+<p>因此梯度下降算法为：</p>
+<div class="lecture-equation is-numbered" id="eq:gd"><div class="math-block" data-tex="\boldsymbol{w}_{k+1} = \boldsymbol{w}_k + 2\alpha_k \mathbb{E}\big[(v_\pi(S) - \hat{v}(S; \boldsymbol{w}_k)) \nabla_{\boldsymbol{w}} \hat{v}(S; \boldsymbol{w}_k)\big]"></div><a class="lecture-equation-number" href="#eq:gd" aria-label="公式 3">(3)</a></div>
+<p>其中系数 <span class="math-inline" data-tex="2"></span> 可以被合并到 <span class="math-inline" data-tex="\alpha_k"></span> 中。该算法需要计算期望，按照随机梯度下降的思想，用随机梯度替换真实梯度，得到：</p>
+<div class="lecture-equation is-numbered" id="eq:sgd"><div class="math-block" data-tex="\boldsymbol{w}_{t+1} = \boldsymbol{w}_t + \alpha_t \big(v_\pi(s_t) - \hat{v}(s_t; \boldsymbol{w}_t)\big) \nabla_{\boldsymbol{w}} \hat{v}(s_t; \boldsymbol{w}_t)"></div><a class="lecture-equation-number" href="#eq:sgd" aria-label="公式 4">(4)</a></div>
+<p>其中 <span class="math-inline" data-tex="s_t"></span> 是 <span class="math-inline" data-tex="S"></span> 在时刻 <span class="math-inline" data-tex="t"></span> 的样本。</p>
+<p>值得注意的是，(8.12) 并非可直接实现的算法，因为它需要真实的状态价值 <span class="math-inline" data-tex="v_\pi"></span>，而 <span class="math-inline" data-tex="v_\pi"></span> 是未知的，必须通过近似来估计。可以用以下两种方法替代 <span class="math-inline" data-tex="v_\pi(s_t)"></span>：</p>
+<ul>
+<li><p><strong>蒙特卡洛方法</strong>：假设有一个轨迹 <span class="math-inline" data-tex="(s_0, r_1, s_1, r_2, \dots)"></span>，令 <span class="math-inline" data-tex="G_t"></span> 为从 <span class="math-inline" data-tex="s_t"></span> 开始的折扣回报，则 <span class="math-inline" data-tex="G_t"></span> 可以作为 <span class="math-inline" data-tex="v_\pi(s_t)"></span> 的近似。算法变为：</p>
+<div class="lecture-equation" id="lecture-equation-19"><div class="math-block" data-tex="\boldsymbol{w}_{t+1} = \boldsymbol{w}_t + \alpha_t \big(G_t - \hat{v}(s_t; \boldsymbol{w}_t)\big) \nabla_{\boldsymbol{w}} \hat{v}(s_t; \boldsymbol{w}_t)"></div></div>
+<p>这就是带函数近似的蒙特卡洛学习算法。</p></li>
+<li><p><strong>时间差分方法</strong>：按照 TD 学习的思想，<span class="math-inline" data-tex="r_{t+1} + \gamma \hat{v}(s_{t+1}; \boldsymbol{w}_t)"></span> 可以作为 <span class="math-inline" data-tex="v_\pi(s_t)"></span> 的近似。算法变为：</p>
+<div class="lecture-equation is-numbered" id="eq:td_fa"><div class="math-block" data-tex="\boldsymbol{w}_{t+1} = \boldsymbol{w}_t + \alpha_t \big[r_{t+1} + \gamma \hat{v}(s_{t+1}; \boldsymbol{w}_t) - \hat{v}(s_t; \boldsymbol{w}_t)\big] \nabla_{\boldsymbol{w}} \hat{v}(s_t; \boldsymbol{w}_t)"></div><a class="lecture-equation-number" href="#eq:td_fa" aria-label="公式 5">(5)</a></div>
+<p>这就是带函数近似的 TD 学习算法，总结在算法 8.1 中。</p></li>
+</ul>
+<p>理解 (8.13) 中的 TD 算法对学习本章其他算法至关重要。需要注意的是，(8.13) 只能学习给定策略的状态价值，8.3.1 和 8.3.2 节将把它扩展为能够学习动作价值的算法。</p>
+<h3 class="unnumbered" tabindex="-1" id="函数近似器的选择">8.2.3 函数近似器的选择 <a class="header-anchor" href="#函数近似器的选择" aria-label="章节链接">&#8203;</a></h3>
+<p>要应用 (8.13) 中的 TD 算法，需要选择合适的 <span class="math-inline" data-tex="\hat{v}(s; \boldsymbol{w})"></span>。有两种方式：第一种是使用人工神经网络作为非线性函数近似器，网络的输入是状态，输出是 <span class="math-inline" data-tex="\hat{v}(s; \boldsymbol{w})"></span>，网络的参数是 <span class="math-inline" data-tex="\boldsymbol{w}"></span>。第二种是简单地使用线性函数：</p>
+<div class="lecture-equation" id="lecture-equation-21"><div class="math-block" data-tex="\hat{v}(s; \boldsymbol{w}) = \boldsymbol{\phi}^T(s) \boldsymbol{w}"></div></div>
+<p>其中 <span class="math-inline" data-tex="\boldsymbol{\phi}(s) \in \mathbb{R}^m"></span> 是状态 <span class="math-inline" data-tex="s"></span> 的特征向量。<span class="math-inline" data-tex="\boldsymbol{\phi}(s)"></span> 和 <span class="math-inline" data-tex="\boldsymbol{w}"></span> 的长度都等于 <span class="math-inline" data-tex="m"></span>，通常远小于状态数。在线性情况下，梯度为 <span class="math-inline" data-tex="\nabla_{\boldsymbol{w}} \hat{v}(s; \boldsymbol{w}) = \boldsymbol{\phi}(s)"></span>，代入 (8.13) 得：</p>
+<div class="lecture-equation is-numbered" id="eq:td_linear"><div class="math-block" data-tex="\boldsymbol{w}_{t+1} = \boldsymbol{w}_t + \alpha_t \big[r_{t+1} + \gamma \boldsymbol{\phi}^T(s_{t+1})\boldsymbol{w}_t - \boldsymbol{\phi}^T(s_t)\boldsymbol{w}_t\big] \boldsymbol{\phi}(s_t)"></div><a class="lecture-equation-number" href="#eq:td_linear" aria-label="公式 6">(6)</a></div>
+<p>这就是带线性函数近似的 TD 学习算法，简称为<strong>TD-Linear</strong>。</p>
+<p>线性情形的理论性质远好于非线性情形，但其近似能力有限。对于复杂任务，选择合适的特征向量也并非易事。相比之下，人工神经网络可以作为黑盒通用非线性近似器来近似价值，使用更加友好。</p>
+<p>不过，研究线性情形仍然很有意义。更好地理解线性情形有助于更好地掌握函数近似方法的思想。而且，线性情形对于本书中考虑的简单网格世界任务已经足够。更重要的是，线性情形仍然很强大，因为表格方法可以视为一种特殊的线性情形，详见专栏 8.2。</p>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p><strong>专栏 8.2：表格 TD 学习是 TD-Linear 的特殊情形</strong></p>
+<p>下面证明第7章中的表格 TD 算法 (7.1) 是 TD-Linear 算法 (8.14) 的特殊情形。</p>
+<p>考虑以下特殊特征向量，对任意 <span class="math-inline" data-tex="s \in \mathcal{S}"></span>：</p>
+<div class="lecture-equation" id="lecture-equation-23"><div class="math-block" data-tex="\boldsymbol{\phi}(s) = \boldsymbol{e}_s \in \mathbb{R}^n"></div></div>
+<p>其中 <span class="math-inline" data-tex="\boldsymbol{e}_s"></span> 是对应于 <span class="math-inline" data-tex="s"></span> 的条目为 <span class="math-inline" data-tex="1"></span>、其余条目为 <span class="math-inline" data-tex="0"></span> 的向量。此时有：</p>
+<div class="lecture-equation" id="lecture-equation-24"><div class="math-block" data-tex="\hat{v}(s; \boldsymbol{w}) = \boldsymbol{e}_s^T \boldsymbol{w} = w(s)"></div></div>
+<p>其中 <span class="math-inline" data-tex="w(s)"></span> 是 <span class="math-inline" data-tex="\boldsymbol{w}"></span> 中对应于 <span class="math-inline" data-tex="s"></span> 的条目。代入 (8.14) 得：</p>
+<div class="lecture-equation" id="lecture-equation-25"><div class="math-block" data-tex="\boldsymbol{w}_{t+1} = \boldsymbol{w}_t + \alpha_t \big(r_{t+1} + \gamma w_t(s_{t+1}) - w_t(s_t)\big) \boldsymbol{e}_{s_t}"></div></div>
+<p>上式仅更新 <span class="math-inline" data-tex="w_t(s_t)"></span> 这一条目。两边同时左乘 <span class="math-inline" data-tex="\boldsymbol{e}_{s_t}^T"></span> 得：</p>
+<div class="lecture-equation" id="lecture-equation-26"><div class="math-block" data-tex="w_{t+1}(s_t) = w_t(s_t) + \alpha_t \big(r_{t+1} + \gamma w_t(s_{t+1}) - w_t(s_t)\big)"></div></div>
+<p>这正是表格 TD 算法 (7.1)。</p>
+<p>总之，通过选择特征向量 <span class="math-inline" data-tex="\boldsymbol{\phi}(s) = \boldsymbol{e}_s"></span>，TD-Linear 算法就变成了表格 TD 算法。</p>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="示例说明">8.2.4 示例说明 <a class="header-anchor" href="#示例说明" aria-label="章节链接">&#8203;</a></h3>
+<p>下面通过一些示例演示如何使用 TD-Linear 算法 (8.14) 来估计给定策略的状态价值，并展示如何选择特征向量。</p>
+<p>考虑一个 <span class="math-inline" data-tex="5 \times 5"></span> 的网格世界。给定策略在每个状态下以 <span class="math-inline" data-tex="0.2"></span> 的概率选择任一动作。目标是估计该策略下的状态价值，共有 25 个状态价值。仿真设置如下：由给定策略生成 500 个 episode，每个 episode 有 500 步，从一个随机选择的状态-动作对按均匀分布出发。此外，每次仿真试验中参数向量 <span class="math-inline" data-tex="\boldsymbol{w}"></span> 随机初始化，每个元素从均值为 <span class="math-inline" data-tex="0"></span>、标准差为 <span class="math-inline" data-tex="1"></span> 的标准正态分布中抽取。设 <span class="math-inline" data-tex="r_{\text{forbidden}} = r_{\text{boundary}} = -1"></span>，<span class="math-inline" data-tex="r_{\text{target}} = 1"></span>，<span class="math-inline" data-tex="\gamma = 0.9"></span>。</p>
+<p>要使用 TD-Linear 算法，首先需要选择特征向量 <span class="math-inline" data-tex="\boldsymbol{\phi}(s)"></span>。以下给出一些不同的选择方式。</p>
+<p><strong>第一类特征向量基于多项式</strong>。在网格世界中，状态 <span class="math-inline" data-tex="s"></span> 对应一个二维位置。令 <span class="math-inline" data-tex="x"></span> 和 <span class="math-inline" data-tex="y"></span> 分别表示 <span class="math-inline" data-tex="s"></span> 的列索引和行索引。为避免数值问题，将 <span class="math-inline" data-tex="x"></span> 和 <span class="math-inline" data-tex="y"></span> 归一化到 <span class="math-inline" data-tex="[-1, +1]"></span> 区间。最简单的特征向量是：</p>
+<div class="lecture-equation" id="lecture-equation-27"><div class="math-block" data-tex="\boldsymbol{\phi}(s) = \begin{bmatrix} x \\ y \end{bmatrix} \in \mathbb{R}^2"></div></div>
+<p>此时 <span class="math-inline" data-tex="\hat{v}(s; \boldsymbol{w}) = \boldsymbol{\phi}^T(s)\boldsymbol{w} = w_1 x + w_2 y"></span>，表示一个过原点的二维平面。由于状态价值的曲面可能不过原点，需要引入偏置项。为此考虑如下三维特征向量：</p>
+<div class="lecture-equation is-numbered" id="eq:phi3"><div class="math-block" data-tex="\boldsymbol{\phi}(s) = \begin{bmatrix} 1 \\ x \\ y \end{bmatrix} \in \mathbb{R}^3"></div><a class="lecture-equation-number" href="#eq:phi3" aria-label="公式 7">(7)</a></div>
+<p>此时 <span class="math-inline" data-tex="\hat{v}(s; \boldsymbol{w}) = w_1 + w_2 x + w_3 y"></span>，对应于一个可以不过原点的平面。为增强近似能力，可以增加特征向量的维数：</p>
+<div class="lecture-equation is-numbered" id="eq:phi6"><div class="math-block" data-tex="\begin{aligned}\boldsymbol{\phi}(s) &amp;= [1, x, y, x^2, y^2, xy]^T \in \mathbb{R}^6 \end{aligned}"></div><a class="lecture-equation-number" href="#eq:phi6" aria-label="公式 8">(8)</a></div>
+<div class="lecture-equation is-numbered" id="eq:phi10"><div class="math-block" data-tex="\begin{aligned}\boldsymbol{\phi}(s) &amp;= [1, x, y, x^2, y^2, xy, x^3, y^3, x^2 y, x y^2]^T \in \mathbb{R}^{10} \end{aligned}"></div><a class="lecture-equation-number" href="#eq:phi10" aria-label="公式 9">(9)</a></div>
+<p>特征向量越长，状态价值近似越精确。但由于这些线性近似器的近似能力有限，在所有三种情况下，估计误差都无法收敛到零。</p>
+<p><strong>此外还有基于傅里叶基和瓦片编码的特征向量</strong>。将每个状态的 <span class="math-inline" data-tex="x"></span> 和 <span class="math-inline" data-tex="y"></span> 归一化到 <span class="math-inline" data-tex="[0, 1]"></span> 区间。得到的傅里叶特征向量为：</p>
+<div class="lecture-equation" id="lecture-equation-31"><div class="math-block" data-tex="\boldsymbol{\phi}(s) = \begin{bmatrix}
+    \vdots \\
+    \cos(\pi(c_1 x + c_2 y)) \\
+    \vdots
+\end{bmatrix} \in \mathbb{R}^{(q+1)^2}"></div></div>
+<p>其中 <span class="math-inline" data-tex="\pi"></span> 表示圆周率（<span class="math-inline" data-tex="3.1415\dots"></span>），不是策略。<span class="math-inline" data-tex="c_1"></span> 或 <span class="math-inline" data-tex="c_2"></span> 可以取 <span class="math-inline" data-tex="\{0, 1, \dots, q\}"></span> 中的任意整数，<span class="math-inline" data-tex="q"></span> 是用户指定的整数。因此 <span class="math-inline" data-tex="(c_1, c_2)"></span> 共有 <span class="math-inline" data-tex="(q+1)^2"></span> 种可能的取值，<span class="math-inline" data-tex="\boldsymbol{\phi}(s)"></span> 的维数为 <span class="math-inline" data-tex="(q+1)^2"></span>。例如 <span class="math-inline" data-tex="q=1"></span> 时：</p>
+<div class="lecture-equation" id="lecture-equation-32"><div class="math-block" data-tex="\boldsymbol{\phi}(s) = \begin{bmatrix}
+    \cos(\pi(0x + 0y)) \\
+    \cos(\pi(0x + 1y)) \\
+    \cos(\pi(1x + 0y)) \\
+    \cos(\pi(1x + 1y))
+\end{bmatrix} = \begin{bmatrix}
+    1 \\ \cos(\pi y) \\ \cos(\pi x) \\ \cos(\pi(x+y))
+\end{bmatrix} \in \mathbb{R}^4"></div></div>
+<p>当 <span class="math-inline" data-tex="q = 1, 2, 3"></span> 时，特征向量的维数分别为 <span class="math-inline" data-tex="4, 9, 16"></span>。特征向量维数越高，状态价值近似越精确。</p>
+<h3 class="unnumbered" tabindex="-1" id="理论分析">8.2.5 理论分析 <a class="header-anchor" href="#理论分析" aria-label="章节链接">&#8203;</a></h3>
+<p>至此，带函数近似的 TD 学习的故事已经讲完。这个故事从目标函数 (8.3) 出发，为优化该目标函数引入了随机算法 (8.12)，最后将算法中未知的真实价值函数替换为近似，得到了 TD 算法 (8.13)。尽管这个故事有助于理解价值函数近似的基本思想，但它并不严格。例如，(8.13) 中的算法实际上并不最小化 (8.3) 中的目标函数。</p>
+<p>下面给出 (8.13) 中 TD 算法的理论分析，以揭示该算法为何有效以及它解决了什么数学问题。由于一般非线性近似器难以分析，本部分只考虑线性情形。这部分数学难度较大，读者可根据兴趣选择性阅读。</p>
+<h3 class="unnumbered" tabindex="-1" id="收敛性分析">收敛性分析 <a class="header-anchor" href="#收敛性分析" aria-label="章节链接">&#8203;</a></h3>
+<p>为研究 (8.13) 的收敛性质，首先考虑以下确定性算法：</p>
+<div class="lecture-equation is-numbered" id="eq:det_td"><div class="math-block" data-tex="\boldsymbol{w}_{t+1} = \boldsymbol{w}_t + \alpha_t \mathbb{E}\Big[\big(r_{t+1} + \gamma \boldsymbol{\phi}^T(s_{t+1})\boldsymbol{w}_t - \boldsymbol{\phi}^T(s_t)\boldsymbol{w}_t\big) \boldsymbol{\phi}(s_t)\Big]"></div><a class="lecture-equation-number" href="#eq:det_td" aria-label="公式 10">(10)</a></div>
+<p>其中期望是对随机变量 <span class="math-inline" data-tex="s_t, s_{t+1}, r_{t+1}"></span> 计算的。<span class="math-inline" data-tex="s_t"></span> 的分布假设为平稳分布 <span class="math-inline" data-tex="d_\pi"></span>。(8.19) 是确定性的，因为计算期望后随机变量 <span class="math-inline" data-tex="s_t, s_{t+1}, r_{t+1}"></span> 都消失了。</p>
+<p>为什么要考虑这个确定性算法？首先，该确定性算法的收敛性更容易分析。其次，更重要的是，该确定性算法的收敛蕴含了随机 TD 算法 (8.13) 的收敛，因为 (8.13) 可以看作 (8.19) 的随机梯度下降实现。因此只需研究确定性算法的收敛性质。</p>
+<p>虽然 (8.19) 的表达式初看可能复杂，但可以通过以下定义简化。令</p>
+<div class="lecture-equation is-numbered" id="eq:Phi_D"><div class="math-block" data-tex="\boldsymbol{\Phi} = \begin{bmatrix} \vdots \\ \boldsymbol{\phi}^T(s) \\ \vdots \end{bmatrix} \in \mathbb{R}^{n \times m},\quad
+\boldsymbol{D} = \begin{bmatrix} \ddots &amp; &amp; \\ &amp; d_\pi(s) &amp; \\ &amp; &amp; \ddots \end{bmatrix} \in \mathbb{R}^{n \times n}"></div><a class="lecture-equation-number" href="#eq:Phi_D" aria-label="公式 11">(11)</a></div>
+<p>其中 <span class="math-inline" data-tex="\boldsymbol{\Phi}"></span> 是包含所有特征向量的矩阵，<span class="math-inline" data-tex="\boldsymbol{D}"></span> 是对角线为平稳分布的对角矩阵。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 8.1</p>
+</div>
+<p>(8.19) 中的期望可以重写为：</p>
+<div class="lecture-equation" id="lecture-equation-35"><div class="math-block" data-tex="\mathbb{E}\Big[\big(r_{t+1} + \gamma \boldsymbol{\phi}^T(s_{t+1})\boldsymbol{w}_t - \boldsymbol{\phi}^T(s_t)\boldsymbol{w}_t\big) \boldsymbol{\phi}(s_t)\Big] = \boldsymbol{b} - \boldsymbol{A}\boldsymbol{w}_t"></div></div>
+<p>其中</p>
+<div class="lecture-equation is-numbered" id="eq:A_b"><div class="math-block" data-tex="\begin{aligned}
+\boldsymbol{A} &amp;:= \boldsymbol{\Phi}^T \boldsymbol{D} (\boldsymbol{I} - \gamma \boldsymbol{P}_\pi) \boldsymbol{\Phi} \in \mathbb{R}^{m \times m}\end{aligned}"></div><a class="lecture-equation-number" href="#eq:A_b" aria-label="公式 12">(12)</a></div>
+<div class="lecture-equation is-numbered" id="lecture-equation-37"><div class="math-block" data-tex="\begin{aligned}\boldsymbol{b} &amp;:= \boldsymbol{\Phi}^T \boldsymbol{D} \boldsymbol{r}_\pi \in \mathbb{R}^{m}\end{aligned}"></div><a class="lecture-equation-number" href="#lecture-equation-37" aria-label="公式 13">(13)</a></div>
+<p>这里 <span class="math-inline" data-tex="\boldsymbol{P}_\pi, \boldsymbol{r}_\pi"></span> 是贝尔曼方程 <span class="math-inline" data-tex="\boldsymbol{v}_\pi = \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_\pi"></span> 中的两项，<span class="math-inline" data-tex="\boldsymbol{I}"></span> 是适当维数的单位矩阵。</p>
+</div>
+<p>借助引理 8.1 的表达式，确定性算法 (8.19) 可重写为：</p>
+<div class="lecture-equation is-numbered" id="eq:det_td_simple"><div class="math-block" data-tex="\boldsymbol{w}_{t+1} = \boldsymbol{w}_t + \alpha_t (\boldsymbol{b} - \boldsymbol{A}\boldsymbol{w}_t)"></div><a class="lecture-equation-number" href="#eq:det_td_simple" aria-label="公式 14">(14)</a></div>
+<p>这是一个简单的确定性过程。</p>
+<p>首先，<span class="math-inline" data-tex="\boldsymbol{w}_t"></span> 的收敛值是什么？假设 <span class="math-inline" data-tex="\boldsymbol{w}_t"></span> 收敛到一个常值 <span class="math-inline" data-tex="\boldsymbol{w}^*"></span>（当 <span class="math-inline" data-tex="t \to \infty"></span>），则 (8.22) 蕴含 <span class="math-inline" data-tex="\boldsymbol{w}^* = \boldsymbol{w}^* + \alpha_\infty(\boldsymbol{b} - \boldsymbol{A}\boldsymbol{w}^*)"></span>，由此得 <span class="math-inline" data-tex="\boldsymbol{b} - \boldsymbol{A}\boldsymbol{w}^* = 0"></span>，即：</p>
+<div class="lecture-equation" id="lecture-equation-39"><div class="math-block" data-tex="\boldsymbol{w}^* = \boldsymbol{A}^{-1} \boldsymbol{b}"></div></div>
+<p>关于该收敛值有以下几点说明。</p>
+<ul>
+<li><p><span class="math-inline" data-tex="\boldsymbol{A}"></span> 是否可逆？答案是可以。事实上 <span class="math-inline" data-tex="\boldsymbol{A}"></span> 不仅是可逆的，还是正定的。正定性的证明见专栏 8.4。</p></li>
+<li><p><span class="math-inline" data-tex="\boldsymbol{w}^* = \boldsymbol{A}^{-1}\boldsymbol{b}"></span> 的解释是什么？它实际上是最小化<strong>投影贝尔曼误差</strong>的最优解，详见 8.2.5 节。</p></li>
+<li><p>表格方法是特殊情况。当 <span class="math-inline" data-tex="\boldsymbol{w}"></span> 的维数等于 <span class="math-inline" data-tex="n = |\mathcal{S}|"></span> 且 <span class="math-inline" data-tex="\boldsymbol{\phi}(s) = [0, \dots, 1, \dots, 0]^T"></span>（对应 <span class="math-inline" data-tex="s"></span> 的条目为 <span class="math-inline" data-tex="1"></span>）时，有 <span class="math-inline" data-tex="\boldsymbol{w}^* = \boldsymbol{A}^{-1}\boldsymbol{b} = \boldsymbol{v}_\pi"></span>。这表明要学习的参数向量实际上就是真实的状态价值。这与表格 TD 算法是 TD-Linear 算法的特例（专栏 8.2）一致。验证如下：此时 <span class="math-inline" data-tex="\boldsymbol{\Phi} = \boldsymbol{I}"></span>，因此 <span class="math-inline" data-tex="\boldsymbol{A} = \boldsymbol{\Phi}^T\boldsymbol{D}(\boldsymbol{I} - \gamma\boldsymbol{P}_\pi)\boldsymbol{\Phi} = \boldsymbol{D}(\boldsymbol{I} - \gamma\boldsymbol{P}_\pi)"></span>，<span class="math-inline" data-tex="\boldsymbol{b} = \boldsymbol{\Phi}^T\boldsymbol{D}\boldsymbol{r}_\pi = \boldsymbol{D}\boldsymbol{r}_\pi"></span>。于是 <span class="math-inline" data-tex="\boldsymbol{w}^* = \boldsymbol{A}^{-1}\boldsymbol{b} = (\boldsymbol{I} - \gamma\boldsymbol{P}_\pi)^{-1}\boldsymbol{D}^{-1}\boldsymbol{D}\boldsymbol{r}_\pi = (\boldsymbol{I} - \gamma\boldsymbol{P}_\pi)^{-1}\boldsymbol{r}_\pi = \boldsymbol{v}_\pi"></span>。</p></li>
+</ul>
+<p>其次，可以证明 (8.22) 中的 <span class="math-inline" data-tex="\boldsymbol{w}_t"></span> 收敛到 <span class="math-inline" data-tex="\boldsymbol{w}^* = \boldsymbol{A}^{-1}\boldsymbol{b}"></span>（当 <span class="math-inline" data-tex="t \to \infty"></span>）。证明方式如下：</p>
+<p><strong>证明一</strong>：定义收敛误差 <span class="math-inline" data-tex="\tilde{\boldsymbol{w}}_t := \boldsymbol{w}_t - \boldsymbol{w}^*"></span>。只需证明 <span class="math-inline" data-tex="\tilde{\boldsymbol{w}}_t"></span> 收敛到零。将 <span class="math-inline" data-tex="\boldsymbol{w}_t = \tilde{\boldsymbol{w}}_t + \boldsymbol{w}^*"></span> 代入 (8.22) 得：</p>
+<div class="lecture-equation" id="lecture-equation-40"><div class="math-block" data-tex="\tilde{\boldsymbol{w}}_{t+1} = \tilde{\boldsymbol{w}}_t - \alpha_t \boldsymbol{A}\tilde{\boldsymbol{w}}_t = (\boldsymbol{I} - \alpha_t \boldsymbol{A})\tilde{\boldsymbol{w}}_t"></div></div>
+<p>因此 <span class="math-inline" data-tex="\tilde{\boldsymbol{w}}_{t+1} = (\boldsymbol{I} - \alpha_t \boldsymbol{A}) \cdots (\boldsymbol{I} - \alpha_0 \boldsymbol{A}) \tilde{\boldsymbol{w}}_0"></span>。考虑简单情形 <span class="math-inline" data-tex="\alpha_t = \alpha"></span>，则有：</p>
+<div class="lecture-equation" id="lecture-equation-41"><div class="math-block" data-tex="\|\tilde{\boldsymbol{w}}_{t+1}\|_2 \leq \|\boldsymbol{I} - \alpha \boldsymbol{A}\|_2^{t+1} \|\tilde{\boldsymbol{w}}_0\|_2"></div></div>
+<p>当 <span class="math-inline" data-tex="\alpha &gt; 0"></span> 足够小时，<span class="math-inline" data-tex="\|\boldsymbol{I} - \alpha \boldsymbol{A}\|_2 &lt; 1"></span> 成立（因为 <span class="math-inline" data-tex="\boldsymbol{A}"></span> 正定），因此 <span class="math-inline" data-tex="\tilde{\boldsymbol{w}}_t \to 0"></span>。</p>
+<p><strong>证明二</strong>：考虑 <span class="math-inline" data-tex="\boldsymbol{g}(\boldsymbol{w}) := \boldsymbol{b} - \boldsymbol{A}\boldsymbol{w}"></span>。由于 <span class="math-inline" data-tex="\boldsymbol{w}^*"></span> 是 <span class="math-inline" data-tex="\boldsymbol{g}(\boldsymbol{w}) = 0"></span> 的根，这实际上是一个求根问题。(8.22) 中的算法实际上是 Robbins-Monro (RM) 算法，当 <span class="math-inline" data-tex="\sum_t \alpha_t = \infty"></span> 且 <span class="math-inline" data-tex="\sum_t \alpha_t^2 &lt; \infty"></span> 时 <span class="math-inline" data-tex="\boldsymbol{w}_t"></span> 收敛到 <span class="math-inline" data-tex="\boldsymbol{w}^*"></span>。</p>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p><strong>专栏 8.3：引理 8.1 的证明</strong></p>
+<p>利用全期望公式：</p>
+<div class="lecture-equation" id="lecture-equation-42"><div class="math-block" data-tex="\begin{aligned}
+\mathbb{E}&amp;\big[r_{t+1}\boldsymbol{\phi}(s_t) + \boldsymbol{\phi}(s_t)\big(\gamma\boldsymbol{\phi}^T(s_{t+1}) - \boldsymbol{\phi}^T(s_t)\big)\boldsymbol{w}_t\big] \\
+&amp;= \sum_{s \in \mathcal{S}} d_\pi(s) \mathbb{E}\Big[r_{t+1}\boldsymbol{\phi}(s_t) + \boldsymbol{\phi}(s_t)\big(\gamma\boldsymbol{\phi}^T(s_{t+1}) - \boldsymbol{\phi}^T(s_t)\big)\boldsymbol{w}_t \;\Big|\; s_t = s\Big] \\
+&amp;= \sum_{s \in \mathcal{S}} d_\pi(s) \mathbb{E}\big[r_{t+1}\boldsymbol{\phi}(s_t) \mid s_t = s\big] + \sum_{s \in \mathcal{S}} d_\pi(s) \mathbb{E}\Big[\boldsymbol{\phi}(s_t)\big(\gamma\boldsymbol{\phi}^T(s_{t+1}) - \boldsymbol{\phi}^T(s_t)\big)\boldsymbol{w}_t \;\Big|\; s_t = s\Big]
+\end{aligned}"></div></div>
+<p>首先，第一项注意到 <span class="math-inline" data-tex="\mathbb{E}[r_{t+1}\boldsymbol{\phi}(s_t) \mid s_t = s] = \boldsymbol{\phi}(s)\mathbb{E}[r_{t+1} \mid s_t = s] = \boldsymbol{\phi}(s) r_\pi(s)"></span>，其中 <span class="math-inline" data-tex="r_\pi(s) = \sum_a \pi(a|s) \sum_r r p(r|s,a)"></span>。因此第一项可重写为 <span class="math-inline" data-tex="\sum_{s \in \mathcal{S}} d_\pi(s)\boldsymbol{\phi}(s)r_\pi(s) = \boldsymbol{\Phi}^T\boldsymbol{D}\boldsymbol{r}_\pi"></span>。</p>
+<p>其次，第二项中：</p>
+<div class="lecture-equation" id="lecture-equation-43"><div class="math-block" data-tex="\begin{aligned}
+\mathbb{E}&amp;\Big[\boldsymbol{\phi}(s_t)\big(\gamma\boldsymbol{\phi}^T(s_{t+1}) - \boldsymbol{\phi}^T(s_t)\big)\boldsymbol{w}_t \;\Big|\; s_t = s\Big] \\
+&amp;= -\mathbb{E}\big[\boldsymbol{\phi}(s_t)\boldsymbol{\phi}^T(s_t)\boldsymbol{w}_t \mid s_t = s\big] + \mathbb{E}\big[\gamma\boldsymbol{\phi}(s_t)\boldsymbol{\phi}^T(s_{t+1})\boldsymbol{w}_t \mid s_t = s\big] \\
+&amp;= -\boldsymbol{\phi}(s)\boldsymbol{\phi}^T(s)\boldsymbol{w}_t + \gamma\boldsymbol{\phi}(s) \mathbb{E}\big[\boldsymbol{\phi}^T(s_{t+1}) \mid s_t = s\big] \boldsymbol{w}_t \\
+&amp;= -\boldsymbol{\phi}(s)\boldsymbol{\phi}^T(s)\boldsymbol{w}_t + \gamma\boldsymbol{\phi}(s) \sum_{s&#x27; \in \mathcal{S}} p(s&#x27;|s)\boldsymbol{\phi}^T(s&#x27;)\boldsymbol{w}_t
+\end{aligned}"></div></div>
+<p>因此第二项变为：</p>
+<div class="lecture-equation" id="lecture-equation-44"><div class="math-block" data-tex="\sum_{s \in \mathcal{S}} d_\pi(s) \boldsymbol{\phi}(s) \Big[-\boldsymbol{\phi}(s) + \gamma\sum_{s&#x27; \in \mathcal{S}} p(s&#x27;|s)\boldsymbol{\phi}(s&#x27;)\Big]^T \boldsymbol{w}_t
+= \boldsymbol{\Phi}^T\boldsymbol{D}(-\boldsymbol{\Phi} + \gamma\boldsymbol{P}_\pi\boldsymbol{\Phi})\boldsymbol{w}_t
+= -\boldsymbol{\Phi}^T\boldsymbol{D}(\boldsymbol{I} - \gamma\boldsymbol{P}_\pi)\boldsymbol{\Phi}\boldsymbol{w}_t"></div></div>
+<p>合并两项即得：</p>
+<div class="lecture-equation" id="lecture-equation-45"><div class="math-block" data-tex="\mathbb{E}\Big[\big(r_{t+1} + \gamma\boldsymbol{\phi}^T(s_{t+1})\boldsymbol{w}_t - \boldsymbol{\phi}^T(s_t)\boldsymbol{w}_t\big)\boldsymbol{\phi}(s_t)\Big]
+= \boldsymbol{\Phi}^T\boldsymbol{D}\boldsymbol{r}_\pi - \boldsymbol{\Phi}^T\boldsymbol{D}(\boldsymbol{I} - \gamma\boldsymbol{P}_\pi)\boldsymbol{\Phi}\boldsymbol{w}_t
+:= \boldsymbol{b} - \boldsymbol{A}\boldsymbol{w}_t"></div></div>
+</div>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p><strong>专栏 8.4：证明 <span class="math-inline" data-tex="\boldsymbol{A} = \boldsymbol{\Phi}^T\boldsymbol{D}(\boldsymbol{I} - \gamma\boldsymbol{P}_\pi)\boldsymbol{\Phi}"></span> 可逆且正定</strong></p>
+<p>若对任意非零向量 <span class="math-inline" data-tex="\boldsymbol{x}"></span> 有 <span class="math-inline" data-tex="\boldsymbol{x}^T\boldsymbol{A}\boldsymbol{x} &gt; 0"></span>，则 <span class="math-inline" data-tex="\boldsymbol{A}"></span> 正定（记作 <span class="math-inline" data-tex="\boldsymbol{A} \succ 0"></span>）。注意 <span class="math-inline" data-tex="\boldsymbol{A}"></span> 可能不对称，但非对称矩阵也可以是正定的。</p>
+<p>证明思路是：先证 <span class="math-inline" data-tex="\boldsymbol{D}(\boldsymbol{I} - \gamma\boldsymbol{P}_\pi) := \boldsymbol{M} \succ 0"></span>，则 <span class="math-inline" data-tex="\boldsymbol{A} = \boldsymbol{\Phi}^T\boldsymbol{M}\boldsymbol{\Phi} \succ 0"></span>（因为 <span class="math-inline" data-tex="\boldsymbol{\Phi}"></span> 是满列秩的高型矩阵，假设特征向量线性无关）。</p>
+<p>注意到 <span class="math-inline" data-tex="\boldsymbol{M} = \frac{\boldsymbol{M} + \boldsymbol{M}^T}{2} + \frac{\boldsymbol{M} - \boldsymbol{M}^T}{2}"></span>，由于 <span class="math-inline" data-tex="\boldsymbol{M} - \boldsymbol{M}^T"></span> 是反对称的，<span class="math-inline" data-tex="\boldsymbol{x}^T(\boldsymbol{M} - \boldsymbol{M}^T)\boldsymbol{x} = 0"></span> 对任意 <span class="math-inline" data-tex="\boldsymbol{x}"></span> 成立。因此 <span class="math-inline" data-tex="\boldsymbol{M} \succ 0"></span> 当且仅当 <span class="math-inline" data-tex="\boldsymbol{M} + \boldsymbol{M}^T \succ 0"></span>。为证明 <span class="math-inline" data-tex="\boldsymbol{M} + \boldsymbol{M}^T \succ 0"></span>，运用严格对角占优矩阵正定的结论。</p>
+<p>首先，<span class="math-inline" data-tex="(\boldsymbol{M} + \boldsymbol{M}^T)\boldsymbol{1}_n &gt; 0"></span>。因为 <span class="math-inline" data-tex="\boldsymbol{M}\boldsymbol{1}_n = \boldsymbol{D}(\boldsymbol{I} - \gamma\boldsymbol{P}_\pi)\boldsymbol{1}_n = \boldsymbol{D}(\boldsymbol{1}_n - \gamma\boldsymbol{1}_n) = (1-\gamma)\boldsymbol{d}_\pi"></span>，且 <span class="math-inline" data-tex="\boldsymbol{M}^T\boldsymbol{1}_n = (\boldsymbol{I} - \gamma\boldsymbol{P}_\pi^T)\boldsymbol{D}\boldsymbol{1}_n = (\boldsymbol{I} - \gamma\boldsymbol{P}_\pi^T)\boldsymbol{d}_\pi = (1-\gamma)\boldsymbol{d}_\pi"></span>（因为 <span class="math-inline" data-tex="\boldsymbol{P}_\pi^T\boldsymbol{d}_\pi = \boldsymbol{d}_\pi"></span>）。因此 <span class="math-inline" data-tex="(\boldsymbol{M} + \boldsymbol{M}^T)\boldsymbol{1}_n = 2(1-\gamma)\boldsymbol{d}_\pi &gt; 0"></span>（所有元素）。</p>
+<p>其次，按元素的写法为 <span class="math-inline" data-tex="\sum_{j=1}^n [\boldsymbol{M} + \boldsymbol{M}^T]_{ij} &gt; 0"></span>，即 <span class="math-inline" data-tex="[\boldsymbol{M} + \boldsymbol{M}^T]_{ii} + \sum_{j \neq i} [\boldsymbol{M} + \boldsymbol{M}^T]_{ij} &gt; 0"></span>。根据 <span class="math-inline" data-tex="\boldsymbol{M}"></span> 的表达式，<span class="math-inline" data-tex="\boldsymbol{M}"></span> 的对角线元素为正、非对角线元素为非正，因此上述不等式可改写为：</p>
+<div class="lecture-equation" id="lecture-equation-46"><div class="math-block" data-tex="|[\boldsymbol{M} + \boldsymbol{M}^T]_{ii}| &gt; \sum_{j \neq i} |[\boldsymbol{M} + \boldsymbol{M}^T]_{ij}|"></div></div>
+<p>这表明 <span class="math-inline" data-tex="\boldsymbol{M} + \boldsymbol{M}^T"></span> 严格对角占优，因此正定。证毕。</p>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="td-学习最小化投影贝尔曼误差">TD 学习最小化投影贝尔曼误差 <a class="header-anchor" href="#td-学习最小化投影贝尔曼误差" aria-label="章节链接">&#8203;</a></h3>
+<p>上面已经证明 TD-Linear 算法收敛到 <span class="math-inline" data-tex="\boldsymbol{w}^* = \boldsymbol{A}^{-1}\boldsymbol{b}"></span>，下面进一步说明 <span class="math-inline" data-tex="\boldsymbol{w}^*"></span> 是使<strong>投影贝尔曼误差</strong>最小的最优解。为此，先回顾三种目标函数。</p>
+<ul>
+<li><p><strong>第一种目标函数</strong>：</p>
+<div class="lecture-equation" id="lecture-equation-47"><div class="math-block" data-tex="J_E(\boldsymbol{w}) = \mathbb{E}\big[(v_\pi(S) - \hat{v}(S; \boldsymbol{w}))^2\big]"></div></div>
+<p>可用矩阵-向量形式重写为 <span class="math-inline" data-tex="J_E(\boldsymbol{w}) = \|\hat{\boldsymbol{v}}(\boldsymbol{w}) - \boldsymbol{v}_\pi\|_{\boldsymbol{D}}^2"></span>，其中 <span class="math-inline" data-tex="\|\boldsymbol{x}\|_{\boldsymbol{D}}^2 = \boldsymbol{x}^T\boldsymbol{D}\boldsymbol{x} = \|\boldsymbol{D}^{1/2}\boldsymbol{x}\|_2^2"></span>。这是讨论函数近似时能想到的最简单的目标函数，但依赖于未知的真实状态价值。</p></li>
+<li><p><strong>第二种目标函数是贝尔曼误差</strong>。因为 <span class="math-inline" data-tex="\boldsymbol{v}_\pi"></span> 满足贝尔曼方程 <span class="math-inline" data-tex="\boldsymbol{v}_\pi = \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_\pi"></span>，期望估计值 <span class="math-inline" data-tex="\hat{\boldsymbol{v}}(\boldsymbol{w})"></span> 也尽可能满足该方程。贝尔曼误差定义为：</p>
+<div class="lecture-equation" id="lecture-equation-48"><div class="math-block" data-tex="J_{BE}(\boldsymbol{w}) = \|\hat{\boldsymbol{v}}(\boldsymbol{w}) - (\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \hat{\boldsymbol{v}}(\boldsymbol{w}))\|_{\boldsymbol{D}}^2
+    := \|\hat{\boldsymbol{v}}(\boldsymbol{w}) - T_\pi(\hat{\boldsymbol{v}}(\boldsymbol{w}))\|_{\boldsymbol{D}}^2"></div></div>
+<p>其中 <span class="math-inline" data-tex="T_\pi(\cdot)"></span> 是贝尔曼算子，定义为 <span class="math-inline" data-tex="T_\pi(\boldsymbol{x}) := \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{x}"></span>。最小化贝尔曼误差是标准的最小二乘问题。</p></li>
+<li><p><strong>第三种目标函数是投影贝尔曼误差</strong>。由于近似器的近似能力有限，<span class="math-inline" data-tex="J_{BE}(\boldsymbol{w})"></span> 可能无法最小化到零。而可以被最小化到零的目标函数是投影贝尔曼误差：</p>
+<div class="lecture-equation" id="lecture-equation-49"><div class="math-block" data-tex="J_{PBE}(\boldsymbol{w}) = \|\hat{\boldsymbol{v}}(\boldsymbol{w}) - \boldsymbol{M} T_\pi(\hat{\boldsymbol{v}}(\boldsymbol{w}))\|_{\boldsymbol{D}}^2"></div></div>
+<p>其中 <span class="math-inline" data-tex="\boldsymbol{M} \in \mathbb{R}^{n \times n}"></span> 是正交投影矩阵，几何上将任意向量投影到所有近似的空间上。</p></li>
+</ul>
+<p>事实上，TD 学习算法 (8.13) 的目标是最小化投影贝尔曼误差 <span class="math-inline" data-tex="J_{PBE}"></span>，而非 <span class="math-inline" data-tex="J_E"></span> 或 <span class="math-inline" data-tex="J_{BE}"></span>。考虑线性情形 <span class="math-inline" data-tex="\hat{\boldsymbol{v}}(\boldsymbol{w}) = \boldsymbol{\Phi}\boldsymbol{w}"></span>，<span class="math-inline" data-tex="\boldsymbol{\Phi}"></span> 的列空间是所有可能线性近似的集合。则 <span class="math-inline" data-tex="\boldsymbol{M} = \boldsymbol{\Phi}(\boldsymbol{\Phi}^T\boldsymbol{D}\boldsymbol{\Phi})^{-1}\boldsymbol{\Phi}^T\boldsymbol{D}"></span> 是投影矩阵。可以证明最小化 <span class="math-inline" data-tex="J_{PBE}(\boldsymbol{w})"></span> 的解就是 <span class="math-inline" data-tex="\boldsymbol{w}^* = \boldsymbol{A}^{-1}\boldsymbol{b}"></span>：</p>
+<div class="lecture-equation" id="lecture-equation-50"><div class="math-block" data-tex="\boldsymbol{w}^* = \boldsymbol{A}^{-1}\boldsymbol{b} = \arg\min_{\boldsymbol{w}} J_{PBE}(\boldsymbol{w})"></div></div>
+<p>证明见专栏 8.5。</p>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p><strong>专栏 8.5：证明 <span class="math-inline" data-tex="\boldsymbol{w}^* = \boldsymbol{A}^{-1}\boldsymbol{b}"></span> 最小化 <span class="math-inline" data-tex="J_{PBE}(\boldsymbol{w})"></span></strong></p>
+<p>由于 <span class="math-inline" data-tex="J_{PBE}(\boldsymbol{w}) = 0"></span> 要求 <span class="math-inline" data-tex="\hat{\boldsymbol{v}}(\boldsymbol{w}) - \boldsymbol{M} T_\pi(\hat{\boldsymbol{v}}(\boldsymbol{w})) = 0"></span>，只需研究 <span class="math-inline" data-tex="\hat{\boldsymbol{v}}(\boldsymbol{w}) = \boldsymbol{M} T_\pi(\hat{\boldsymbol{v}}(\boldsymbol{w}))"></span> 的根。在线性情形下，代入 <span class="math-inline" data-tex="\hat{\boldsymbol{v}}(\boldsymbol{w}) = \boldsymbol{\Phi}\boldsymbol{w}"></span> 及 <span class="math-inline" data-tex="\boldsymbol{M}"></span> 的表达式：</p>
+<div class="lecture-equation" id="lecture-equation-51"><div class="math-block" data-tex="\boldsymbol{\Phi}\boldsymbol{w} = \boldsymbol{\Phi}(\boldsymbol{\Phi}^T\boldsymbol{D}\boldsymbol{\Phi})^{-1}\boldsymbol{\Phi}^T\boldsymbol{D}(\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{\Phi}\boldsymbol{w})"></div></div>
+<p>由于 <span class="math-inline" data-tex="\boldsymbol{\Phi}"></span> 具有满列秩，<span class="math-inline" data-tex="\boldsymbol{\Phi}\boldsymbol{x} = \boldsymbol{\Phi}\boldsymbol{y} \iff \boldsymbol{x} = \boldsymbol{y}"></span>，因此：</p>
+<div class="lecture-equation" id="lecture-equation-52"><div class="math-block" data-tex="\begin{aligned}
+\boldsymbol{w} &amp;= (\boldsymbol{\Phi}^T\boldsymbol{D}\boldsymbol{\Phi})^{-1}\boldsymbol{\Phi}^T\boldsymbol{D}(\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{\Phi}\boldsymbol{w}) \\
+\iff \boldsymbol{\Phi}^T\boldsymbol{D}(\boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{\Phi}\boldsymbol{w}) &amp;= (\boldsymbol{\Phi}^T\boldsymbol{D}\boldsymbol{\Phi})\boldsymbol{w} \\
+\iff \boldsymbol{\Phi}^T\boldsymbol{D}\boldsymbol{r}_\pi + \gamma\boldsymbol{\Phi}^T\boldsymbol{D}\boldsymbol{P}_\pi\boldsymbol{\Phi}\boldsymbol{w} &amp;= (\boldsymbol{\Phi}^T\boldsymbol{D}\boldsymbol{\Phi})\boldsymbol{w} \\
+\iff \boldsymbol{\Phi}^T\boldsymbol{D}\boldsymbol{r}_\pi &amp;= \boldsymbol{\Phi}^T\boldsymbol{D}(\boldsymbol{I} - \gamma\boldsymbol{P}_\pi)\boldsymbol{\Phi}\boldsymbol{w} \\
+\iff \boldsymbol{w} &amp;= (\boldsymbol{\Phi}^T\boldsymbol{D}(\boldsymbol{I} - \gamma\boldsymbol{P}_\pi)\boldsymbol{\Phi})^{-1}\boldsymbol{\Phi}^T\boldsymbol{D}\boldsymbol{r}_\pi = \boldsymbol{A}^{-1}\boldsymbol{b}
+\end{aligned}"></div></div>
+<p>因此 <span class="math-inline" data-tex="\boldsymbol{w}^* = \boldsymbol{A}^{-1}\boldsymbol{b}"></span> 是使 <span class="math-inline" data-tex="J_{PBE}(\boldsymbol{w})"></span> 最小的最优解。</p>
+</div>
+<p>既然 TD 算法旨在最小化 <span class="math-inline" data-tex="J_{PBE}"></span> 而非 <span class="math-inline" data-tex="J_E"></span>，自然要问估计价值 <span class="math-inline" data-tex="\hat{\boldsymbol{v}}(\boldsymbol{w})"></span> 离真实状态价值 <span class="math-inline" data-tex="\boldsymbol{v}_\pi"></span> 有多近。在线性情形下，最小化投影贝尔曼误差的估计值为 <span class="math-inline" data-tex="\hat{\boldsymbol{v}}(\boldsymbol{w}^*) = \boldsymbol{\Phi}\boldsymbol{w}^*"></span>，其与真实状态价值 <span class="math-inline" data-tex="\boldsymbol{v}_\pi"></span> 的偏差满足：</p>
+<div class="lecture-equation" id="lecture-equation-53"><div class="math-block" data-tex="\|\hat{\boldsymbol{v}}(\boldsymbol{w}^*) - \boldsymbol{v}_\pi\|_{\boldsymbol{D}} = \|\boldsymbol{\Phi}\boldsymbol{w}^* - \boldsymbol{v}_\pi\|_{\boldsymbol{D}}
+    \leq \frac{1}{1-\gamma} \min_{\boldsymbol{w}} \|\hat{\boldsymbol{v}}(\boldsymbol{w}) - \boldsymbol{v}_\pi\|_{\boldsymbol{D}}
+    = \frac{1}{1-\gamma} \min_{\boldsymbol{w}} \sqrt{J_E(\boldsymbol{w})}"></div></div>
+<p>该不等式的证明见专栏 8.6。它表明 <span class="math-inline" data-tex="\boldsymbol{\Phi}\boldsymbol{w}^*"></span> 与 <span class="math-inline" data-tex="\boldsymbol{v}_\pi"></span> 之间的差异被 <span class="math-inline" data-tex="J_E(\boldsymbol{w})"></span> 的最小值所界定。然而这个界是宽松的，尤其当 <span class="math-inline" data-tex="\gamma"></span> 接近 <span class="math-inline" data-tex="1"></span> 时，因此主要具有理论价值。</p>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p><strong>专栏 8.6：误差界 (8.32) 的证明</strong></p>
+<p>注意到：</p>
+<div class="lecture-equation" id="lecture-equation-54"><div class="math-block" data-tex="\begin{aligned}
+\|\boldsymbol{\Phi}\boldsymbol{w}^* - \boldsymbol{v}_\pi\|_{\boldsymbol{D}}
+&amp;= \|\boldsymbol{\Phi}\boldsymbol{w}^* - \boldsymbol{M}\boldsymbol{v}_\pi + \boldsymbol{M}\boldsymbol{v}_\pi - \boldsymbol{v}_\pi\|_{\boldsymbol{D}} \\
+&amp;\leq \|\boldsymbol{\Phi}\boldsymbol{w}^* - \boldsymbol{M}\boldsymbol{v}_\pi\|_{\boldsymbol{D}} + \|\boldsymbol{M}\boldsymbol{v}_\pi - \boldsymbol{v}_\pi\|_{\boldsymbol{D}} \\
+&amp;= \|\boldsymbol{M}T_\pi(\boldsymbol{\Phi}\boldsymbol{w}^*) - \boldsymbol{M}T_\pi(\boldsymbol{v}_\pi)\|_{\boldsymbol{D}} + \|\boldsymbol{M}\boldsymbol{v}_\pi - \boldsymbol{v}_\pi\|_{\boldsymbol{D}}
+\end{aligned}"></div></div>
+<p>其中最后一步利用了 <span class="math-inline" data-tex="\boldsymbol{\Phi}\boldsymbol{w}^* = \boldsymbol{M}T_\pi(\boldsymbol{\Phi}\boldsymbol{w}^*)"></span> 和 <span class="math-inline" data-tex="\boldsymbol{v}_\pi = T_\pi(\boldsymbol{v}_\pi)"></span>。代入：</p>
+<div class="lecture-equation" id="lecture-equation-55"><div class="math-block" data-tex="\boldsymbol{M}T_\pi(\boldsymbol{\Phi}\boldsymbol{w}^*) - \boldsymbol{M}T_\pi(\boldsymbol{v}_\pi) = \boldsymbol{M}(\boldsymbol{r}_\pi + \gamma\boldsymbol{P}_\pi\boldsymbol{\Phi}\boldsymbol{w}^*) - \boldsymbol{M}(\boldsymbol{r}_\pi + \gamma\boldsymbol{P}_\pi\boldsymbol{v}_\pi) = \gamma\boldsymbol{M}\boldsymbol{P}_\pi(\boldsymbol{\Phi}\boldsymbol{w}^* - \boldsymbol{v}_\pi)"></div></div>
+<p>代入不等式得：</p>
+<div class="lecture-equation" id="lecture-equation-56"><div class="math-block" data-tex="\|\boldsymbol{\Phi}\boldsymbol{w}^* - \boldsymbol{v}_\pi\|_{\boldsymbol{D}} \leq \gamma\|\boldsymbol{M}\|_{\boldsymbol{D}}\|\boldsymbol{P}_\pi(\boldsymbol{\Phi}\boldsymbol{w}^* - \boldsymbol{v}_\pi)\|_{\boldsymbol{D}} + \|\boldsymbol{M}\boldsymbol{v}_\pi - \boldsymbol{v}_\pi\|_{\boldsymbol{D}}"></div></div>
+<p>由于 <span class="math-inline" data-tex="\|\boldsymbol{M}\|_{\boldsymbol{D}} = 1"></span> 且 <span class="math-inline" data-tex="\|\boldsymbol{P}_\pi\boldsymbol{x}\|_{\boldsymbol{D}} \leq \|\boldsymbol{x}\|_{\boldsymbol{D}}"></span> 对任意 <span class="math-inline" data-tex="\boldsymbol{x}"></span> 成立（证明见下文），因此：</p>
+<div class="lecture-equation" id="lecture-equation-57"><div class="math-block" data-tex="\|\boldsymbol{\Phi}\boldsymbol{w}^* - \boldsymbol{v}_\pi\|_{\boldsymbol{D}} \leq \gamma\|\boldsymbol{\Phi}\boldsymbol{w}^* - \boldsymbol{v}_\pi\|_{\boldsymbol{D}} + \|\boldsymbol{M}\boldsymbol{v}_\pi - \boldsymbol{v}_\pi\|_{\boldsymbol{D}}"></div></div>
+<p>整理得：</p>
+<div class="lecture-equation" id="lecture-equation-58"><div class="math-block" data-tex="\|\boldsymbol{\Phi}\boldsymbol{w}^* - \boldsymbol{v}_\pi\|_{\boldsymbol{D}} \leq \frac{1}{1-\gamma} \|\boldsymbol{M}\boldsymbol{v}_\pi - \boldsymbol{v}_\pi\|_{\boldsymbol{D}}
+= \frac{1}{1-\gamma} \min_{\boldsymbol{w}} \|\hat{\boldsymbol{v}}(\boldsymbol{w}) - \boldsymbol{v}_\pi\|_{\boldsymbol{D}}"></div></div>
+<p>其中最后一个等式是因为 <span class="math-inline" data-tex="\|\boldsymbol{M}\boldsymbol{v}_\pi - \boldsymbol{v}_\pi\|_{\boldsymbol{D}}"></span> 是 <span class="math-inline" data-tex="\boldsymbol{v}_\pi"></span> 与其在所有可能近似空间上的正交投影之间的误差，因此是最小可能误差。</p>
+<p>以下证明已在上文中使用的事实：</p>
+<ul>
+<li><p><span class="math-inline" data-tex="\|\boldsymbol{M}\|_{\boldsymbol{D}} = 1"></span>：因为 <span class="math-inline" data-tex="\|\boldsymbol{M}\|_{\boldsymbol{D}} = \|\boldsymbol{D}^{1/2}\boldsymbol{\Phi}(\boldsymbol{\Phi}^T\boldsymbol{D}\boldsymbol{\Phi})^{-1}\boldsymbol{\Phi}^T\boldsymbol{D}\boldsymbol{D}^{-1/2}\|_2 = 1"></span>，其中 <span class="math-inline" data-tex="L_2"></span>-范数下的矩阵是正交投影矩阵，其 <span class="math-inline" data-tex="L_2"></span>-范数恒为 <span class="math-inline" data-tex="1"></span>。</p></li>
+<li><p><span class="math-inline" data-tex="\|\boldsymbol{P}_\pi\boldsymbol{x}\|_{\boldsymbol{D}} \leq \|\boldsymbol{x}\|_{\boldsymbol{D}}"></span>：由 <span class="math-inline" data-tex="\|\boldsymbol{P}_\pi\boldsymbol{x}\|_{\boldsymbol{D}}^2 = \boldsymbol{x}^T\boldsymbol{P}_\pi^T\boldsymbol{D}\boldsymbol{P}_\pi\boldsymbol{x} = \sum_k [\boldsymbol{D}]_{kk} (\sum_i [\boldsymbol{P}_\pi]_{ki} x_i)^2 \leq \sum_k [\boldsymbol{D}]_{kk} (\sum_i [\boldsymbol{P}_\pi]_{ki} x_i^2) = \sum_i (\sum_k [\boldsymbol{D}]_{kk} [\boldsymbol{P}_\pi]_{ki}) x_i^2 = \sum_i [\boldsymbol{D}]_{ii} x_i^2 = \|\boldsymbol{x}\|_{\boldsymbol{D}}^2"></span>，其中利用了 Jensen 不等式和 <span class="math-inline" data-tex="\boldsymbol{d}_\pi^T\boldsymbol{P}_\pi = \boldsymbol{d}_\pi^T"></span>。</p></li>
+</ul>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="最小二乘-td-lstd">最小二乘 TD (LSTD) <a class="header-anchor" href="#最小二乘-td-lstd" aria-label="章节链接">&#8203;</a></h3>
+<p>接下来介绍一种称为<strong>最小二乘TD</strong>（Least-Squares TD，LSTD）的算法。与 TD-Linear 算法一样，LSTD 也旨在最小化投影贝尔曼误差，但具有一些优势。</p>
+<p>回顾最小化投影贝尔曼误差的最优参数为 <span class="math-inline" data-tex="\boldsymbol{w}^* = \boldsymbol{A}^{-1}\boldsymbol{b}"></span>。事实上，由 (8.27) 可知 <span class="math-inline" data-tex="\boldsymbol{A}"></span> 和 <span class="math-inline" data-tex="\boldsymbol{b}"></span> 也可以写作期望形式：</p>
+<div class="lecture-equation" id="lecture-equation-59"><div class="math-block" data-tex="\boldsymbol{A} = \mathbb{E}\big[\boldsymbol{\phi}(s_t)\big(\boldsymbol{\phi}(s_t) - \gamma\boldsymbol{\phi}(s_{t+1})\big)^T\big],\quad
+\boldsymbol{b} = \mathbb{E}\big[r_{t+1}\boldsymbol{\phi}(s_t)\big]"></div></div>
+<p>LSTD 的思想很简单：如果能用随机样本直接获得 <span class="math-inline" data-tex="\boldsymbol{A}"></span> 和 <span class="math-inline" data-tex="\boldsymbol{b}"></span> 的估计 <span class="math-inline" data-tex="\hat{\boldsymbol{A}}"></span> 和 <span class="math-inline" data-tex="\hat{\boldsymbol{b}}"></span>，则最优参数可直接估计为 <span class="math-inline" data-tex="\boldsymbol{w}^* \approx \hat{\boldsymbol{A}}^{-1}\hat{\boldsymbol{b}}"></span>。</p>
+<p>具体而言，假设 <span class="math-inline" data-tex="(s_0, r_1, s_1, \dots, s_t, r_{t+1}, s_{t+1}, \dots)"></span> 是遵循给定策略 <span class="math-inline" data-tex="\pi"></span> 的轨迹。设 <span class="math-inline" data-tex="\hat{\boldsymbol{A}}_t"></span> 和 <span class="math-inline" data-tex="\hat{\boldsymbol{b}}_t"></span> 分别为时刻 <span class="math-inline" data-tex="t"></span> 时 <span class="math-inline" data-tex="\boldsymbol{A}"></span> 和 <span class="math-inline" data-tex="\boldsymbol{b}"></span> 的估计值，作为样本的平均值：</p>
+<div class="lecture-equation" id="lecture-equation-60"><div class="math-block" data-tex="\hat{\boldsymbol{A}}_t = \sum_{k=0}^{t-1} \boldsymbol{\phi}(s_k)\big(\boldsymbol{\phi}(s_k) - \gamma\boldsymbol{\phi}(s_{k+1})\big)^T,\quad
+\hat{\boldsymbol{b}}_t = \sum_{k=0}^{t-1} r_{k+1}\boldsymbol{\phi}(s_k)"></div></div>
+<p>则估计参数为 <span class="math-inline" data-tex="\boldsymbol{w}_t = \hat{\boldsymbol{A}}_t^{-1}\hat{\boldsymbol{b}}_t"></span>。由于 <span class="math-inline" data-tex="\hat{\boldsymbol{A}}_t"></span> 在 <span class="math-inline" data-tex="t"></span> 较小时可能不可逆，通常将其偏移一个小常数矩阵 <span class="math-inline" data-tex="\varepsilon\boldsymbol{I}"></span>（<span class="math-inline" data-tex="\varepsilon &gt; 0"></span>）。</p>
+<p>LSTD 的优点是比 TD 方法更高效地利用经验样本，收敛更快。其缺点包括：只能估计状态价值（而 TD 算法可以扩展为估计动作价值）；只允许线性近似器；计算成本更高（每步需更新 <span class="math-inline" data-tex="m \times m"></span> 矩阵并计算其逆，复杂度 <span class="math-inline" data-tex="O(m^3)"></span>）。</p>
+<p>解决矩阵求逆问题的方法是利用递归最小二乘，直接更新 <span class="math-inline" data-tex="\hat{\boldsymbol{A}}_t"></span> 的逆而非 <span class="math-inline" data-tex="\hat{\boldsymbol{A}}_t"></span> 本身：</p>
+<div class="lecture-equation" id="lecture-equation-61"><div class="math-block" data-tex="\begin{aligned}
+\hat{\boldsymbol{A}}_{t+1} &amp;= \sum_{k=0}^{t} \boldsymbol{\phi}(s_k)\big(\boldsymbol{\phi}(s_k) - \gamma\boldsymbol{\phi}(s_{k+1})\big)^T \\
+&amp;= \hat{\boldsymbol{A}}_t + \boldsymbol{\phi}(s_t)\big(\boldsymbol{\phi}(s_t) - \gamma\boldsymbol{\phi}(s_{t+1})\big)^T
+\end{aligned}"></div></div>
+<p>其逆可通过 Sherman-Morrison 公式递归计算：</p>
+<div class="lecture-equation" id="lecture-equation-62"><div class="math-block" data-tex="\hat{\boldsymbol{A}}_{t+1}^{-1} = \hat{\boldsymbol{A}}_t^{-1} - \frac{\hat{\boldsymbol{A}}_t^{-1}\boldsymbol{\phi}(s_t)\big(\boldsymbol{\phi}(s_t) - \gamma\boldsymbol{\phi}(s_{t+1})\big)^T\hat{\boldsymbol{A}}_t^{-1}}{1 + \big(\boldsymbol{\phi}(s_t) - \gamma\boldsymbol{\phi}(s_{t+1})\big)^T\hat{\boldsymbol{A}}_t^{-1}\boldsymbol{\phi}(s_t)}"></div></div>
+<p>该递归算法不需要步长，但需要设置 <span class="math-inline" data-tex="\hat{\boldsymbol{A}}_0^{-1}"></span> 的初始值，通常选择 <span class="math-inline" data-tex="\hat{\boldsymbol{A}}_0^{-1} = \varepsilon\boldsymbol{I}"></span>（<span class="math-inline" data-tex="\varepsilon &gt; 0"></span>）。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="基于函数近似的动作价值td学习">
+<h2 class="unnumbered" tabindex="-1" id="基于函数近似的动作价值td学习">8.3 基于函数近似的动作价值TD学习 <a class="header-anchor" href="#基于函数近似的动作价值td学习" aria-label="章节链接">&#8203;</a></h2>
+<p>8.2 节介绍了状态价值估计问题，本节介绍如何估计<strong>动作价值</strong>。将表格 Sarsa 和表格 Q-learning 算法扩展到价值函数近似的情形，扩展非常直接。</p>
+<h3 class="unnumbered" tabindex="-1" id="带函数近似的-sarsa">8.3.1 带函数近似的 Sarsa <a class="header-anchor" href="#带函数近似的-sarsa" aria-label="章节链接">&#8203;</a></h3>
+<p>带函数近似的 Sarsa 算法可直接从 (8.13) 将状态价值替换为动作价值得到。假设 <span class="math-inline" data-tex="q_\pi(s, a)"></span> 被近似为 <span class="math-inline" data-tex="\hat{q}(s, a; \boldsymbol{w})"></span>。将 (8.13) 中的 <span class="math-inline" data-tex="\hat{v}(s; \boldsymbol{w})"></span> 替换为 <span class="math-inline" data-tex="\hat{q}(s, a; \boldsymbol{w})"></span> 得：</p>
+<div class="lecture-equation is-numbered" id="eq:sarsa_fa"><div class="math-block" data-tex="\boldsymbol{w}_{t+1} = \boldsymbol{w}_t + \alpha_t \big[r_{t+1} + \gamma \hat{q}(s_{t+1}, a_{t+1}; \boldsymbol{w}_t) - \hat{q}(s_t, a_t; \boldsymbol{w}_t)\big] \nabla_{\boldsymbol{w}} \hat{q}(s_t, a_t; \boldsymbol{w}_t)"></div><a class="lecture-equation-number" href="#eq:sarsa_fa" aria-label="公式 15">(15)</a></div>
+<p>其分析与 (8.13) 类似，此处从略。当使用线性函数时有：</p>
+<div class="lecture-equation" id="lecture-equation-64"><div class="math-block" data-tex="\hat{q}(s, a; \boldsymbol{w}) = \boldsymbol{\phi}^T(s, a) \boldsymbol{w}"></div></div>
+<p>其中 <span class="math-inline" data-tex="\boldsymbol{\phi}(s, a)"></span> 是特征向量。此时 <span class="math-inline" data-tex="\nabla_{\boldsymbol{w}} \hat{q}(s, a; \boldsymbol{w}) = \boldsymbol{\phi}(s, a)"></span>。</p>
+<p>(8.35) 中的价值估计步骤可以与策略改进步骤结合以学习最优策略。该过程总结在算法 8.2 中。需要注意的是，准确估计给定策略的动作价值要求 (8.35) 运行充分多次，但在算法 8.2 中 (8.35) 仅在策略改进步骤前执行一次，这与表格 Sarsa 算法类似。此外，算法 8.2 的目的是找到一条从指定起始状态到目标状态的良好路径，因此无法找到所有状态的最优策略。然而，如果有足够的经验数据，可以很容易地修改实现过程以找到所有状态的最优策略。</p>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>备注</p>
+</div>
+<p><strong>算法 8.2：带函数近似的 Sarsa</strong></p>
+<p><strong>初始化</strong>：初始参数 <span class="math-inline" data-tex="\boldsymbol{w}_0"></span>。初始策略 <span class="math-inline" data-tex="\pi_0"></span>。<span class="math-inline" data-tex="\alpha_t = \alpha &gt; 0"></span> 对所有 <span class="math-inline" data-tex="t"></span>。<span class="math-inline" data-tex="\varepsilon \in (0, 1)"></span>。</p>
+<p><strong>目标</strong>：学习一个最优策略，使智能体从初始状态 <span class="math-inline" data-tex="s_0"></span> 到达目标状态。</p>
+<p>对每个 episode：</p>
+<ol>
+<li><p>在 <span class="math-inline" data-tex="s_0"></span> 处按 <span class="math-inline" data-tex="\pi_0(s_0)"></span> 生成 <span class="math-inline" data-tex="a_0"></span></p></li>
+<li><p>若 <span class="math-inline" data-tex="s_t"></span>（<span class="math-inline" data-tex="t = 0, 1, 2, \dots"></span>）不是目标状态，则执行：</p>
+<ul>
+<li><p>在 <span class="math-inline" data-tex="(s_t, a_t)"></span> 下收集经验样本 <span class="math-inline" data-tex="(r_{t+1}, s_{t+1}, a_{t+1})"></span>：通过与环境的交互生成 <span class="math-inline" data-tex="r_{t+1}, s_{t+1}"></span>；按 <span class="math-inline" data-tex="\pi_t(s_{t+1})"></span> 生成 <span class="math-inline" data-tex="a_{t+1}"></span>。</p></li>
+<li><p>更新 q 值：</p>
+<div class="lecture-equation" id="lecture-equation-65"><div class="math-block" data-tex="\boldsymbol{w}_{t+1} = \boldsymbol{w}_t + \alpha_t \big[r_{t+1} + \gamma \hat{q}(s_{t+1}, a_{t+1}; \boldsymbol{w}_t) - \hat{q}(s_t, a_t; \boldsymbol{w}_t)\big] \nabla_{\boldsymbol{w}} \hat{q}(s_t, a_t; \boldsymbol{w}_t)"></div></div></li>
+<li><p>更新策略（<span class="math-inline" data-tex="\varepsilon"></span>-greedy）：</p>
+<div class="lecture-equation" id="lecture-equation-66"><div class="math-block" data-tex="\pi_{t+1}(a|s_t) = 
+        \begin{cases}
+        1 - \frac{\varepsilon}{|\mathcal{A}(s_t)|}(|\mathcal{A}(s_t)|-1), &amp; a = \arg\max_{a \in \mathcal{A}(s_t)} \hat{q}(s_t, a; \boldsymbol{w}_{t+1}) \\
+        \frac{\varepsilon}{|\mathcal{A}(s_t)|}, &amp; \text{否则}
+        \end{cases}"></div></div></li>
+<li><p><span class="math-inline" data-tex="s_t \leftarrow s_{t+1}"></span>，<span class="math-inline" data-tex="a_t \leftarrow a_{t+1}"></span></p></li>
+</ul></li>
+</ol>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="带函数近似的-q-learning">8.3.2 带函数近似的 Q-learning <a class="header-anchor" href="#带函数近似的-q-learning" aria-label="章节链接">&#8203;</a></h3>
+<p>表格 Q-learning 也可以扩展到函数近似的情形。更新规则为：</p>
+<div class="lecture-equation is-numbered" id="eq:ql_fa"><div class="math-block" data-tex="\boldsymbol{w}_{t+1} = \boldsymbol{w}_t + \alpha_t \big[r_{t+1} + \gamma \max_{a \in \mathcal{A}(s_{t+1})} \hat{q}(s_{t+1}, a; \boldsymbol{w}_t) - \hat{q}(s_t, a_t; \boldsymbol{w}_t)\big] \nabla_{\boldsymbol{w}} \hat{q}(s_t, a_t; \boldsymbol{w}_t)"></div><a class="lecture-equation-number" href="#eq:ql_fa" aria-label="公式 16">(16)</a></div>
+<p>上述更新规则与 (8.35) 类似，只是将 (8.35) 中的 <span class="math-inline" data-tex="\hat{q}(s_{t+1}, a_{t+1}; \boldsymbol{w}_t)"></span> 替换为 <span class="math-inline" data-tex="\max_{a \in \mathcal{A}(s_{t+1})} \hat{q}(s_{t+1}, a; \boldsymbol{w}_t)"></span>。</p>
+<p>与表格情形类似，(8.36) 既可以实现为 on-policy 形式也可以实现为 off-policy 形式。on-policy 版本见算法 8.3。</p>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>备注</p>
+</div>
+<p><strong>算法 8.3：带函数近似的 Q-learning（on-policy 版本）</strong></p>
+<p><strong>初始化</strong>：初始参数 <span class="math-inline" data-tex="\boldsymbol{w}_0"></span>。初始策略 <span class="math-inline" data-tex="\pi_0"></span>。<span class="math-inline" data-tex="\alpha_t = \alpha &gt; 0"></span> 对所有 <span class="math-inline" data-tex="t"></span>。<span class="math-inline" data-tex="\varepsilon \in (0, 1)"></span>。</p>
+<p><strong>目标</strong>：学习一条从初始状态 <span class="math-inline" data-tex="s_0"></span> 到目标状态的最优路径。</p>
+<p>对每个 episode：</p>
+<ol>
+<li><p>若 <span class="math-inline" data-tex="s_t"></span>（<span class="math-inline" data-tex="t = 0, 1, 2, \dots"></span>）不是目标状态，则执行：</p>
+<ul>
+<li><p>在 <span class="math-inline" data-tex="s_t"></span> 下收集经验样本 <span class="math-inline" data-tex="(a_t, r_{t+1}, s_{t+1})"></span>：按 <span class="math-inline" data-tex="\pi_t(s_t)"></span> 生成 <span class="math-inline" data-tex="a_t"></span>；通过与环境的交互生成 <span class="math-inline" data-tex="r_{t+1}, s_{t+1}"></span>。</p></li>
+<li><p>更新 q 值：</p>
+<div class="lecture-equation" id="lecture-equation-68"><div class="math-block" data-tex="\boldsymbol{w}_{t+1} = \boldsymbol{w}_t + \alpha_t \big[r_{t+1} + \gamma \max_{a \in \mathcal{A}(s_{t+1})} \hat{q}(s_{t+1}, a; \boldsymbol{w}_t) - \hat{q}(s_t, a_t; \boldsymbol{w}_t)\big] \nabla_{\boldsymbol{w}} \hat{q}(s_t, a_t; \boldsymbol{w}_t)"></div></div></li>
+<li><p>更新策略（<span class="math-inline" data-tex="\varepsilon"></span>-greedy）：</p>
+<div class="lecture-equation" id="lecture-equation-69"><div class="math-block" data-tex="\pi_{t+1}(a|s_t) = 
+        \begin{cases}
+        1 - \frac{\varepsilon}{|\mathcal{A}(s_t)|}(|\mathcal{A}(s_t)|-1), &amp; a = \arg\max_{a \in \mathcal{A}(s_t)} \hat{q}(s_t, a; \boldsymbol{w}_{t+1}) \\
+        \frac{\varepsilon}{|\mathcal{A}(s_t)|}, &amp; \text{否则}
+        \end{cases}"></div></div></li>
+</ul></li>
+</ol>
+</div>
+<p>带线性函数近似的 Q-learning 可以成功学习最优策略，这里使用五阶线性傅里叶基函数。off-policy 版本将推迟到 8.4 节介绍深度 Q-learning 时演示。</p>
+<p>值得注意的是，在算法 8.2 和算法 8.3 中，虽然价值是用函数表示的，但策略 <span class="math-inline" data-tex="\pi(a|s)"></span> 仍然以表格形式表示，因此仍需假设状态和动作数量有限。第 9 章将展示策略也可以用函数表示，从而处理连续状态和动作空间。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="深度-q-learning">
+<h2 class="unnumbered" tabindex="-1" id="深度-q-learning">8.4 深度 Q-learning <a class="header-anchor" href="#深度-q-learning" aria-label="章节链接">&#8203;</a></h2>
+<p>我们可以将深度神经网络融入 Q-learning，得到<strong>深度 Q-learning</strong>或<strong>深度Q网络</strong>（Deep Q-Network，DQN）。深度 Q-learning 是最早也是最成功的深度强化学习算法之一。值得注意的是，神经网络不必很深，对于本书的网格世界等简单任务，一到两个隐藏层的浅层网络可能就足够了。</p>
+<p>深度 Q-learning 可以看作算法 (8.36) 的扩展。但其数学形式化和实现技术与之前有本质不同，值得特别关注。</p>
+<h3 class="unnumbered" tabindex="-1" id="算法描述">8.4.1 算法描述 <a class="header-anchor" href="#算法描述" aria-label="章节链接">&#8203;</a></h3>
+<p>从数学角度来看，深度 Q-learning 旨在最小化以下目标函数：</p>
+<div class="lecture-equation is-numbered" id="eq:dqn_obj"><div class="math-block" data-tex="J = \mathbb{E}\left[\Big(R + \gamma \max_{a \in \mathcal{A}(S&#x27;)} \hat{q}(S&#x27;, a; \boldsymbol{w}) - \hat{q}(S, A; \boldsymbol{w})\Big)^2\right]"></div><a class="lecture-equation-number" href="#eq:dqn_obj" aria-label="公式 17">(17)</a></div>
+<p>其中 <span class="math-inline" data-tex="(S, A, R, S&#x27;)"></span> 是分别表示状态、动作、即时奖励和下一状态的随机变量。该目标函数可以看作<strong>贝尔曼最优误差的平方</strong>。这是因为</p>
+<div class="lecture-equation" id="lecture-equation-71"><div class="math-block" data-tex="q(s, a) = \mathbb{E}\Big[R_{t+1} + \gamma \max_{a \in \mathcal{A}(S_{t+1})} q(S_{t+1}, a) \;\Big|\; S_t = s, A_t = a\Big], \quad \forall s, a"></div></div>
+<p>是贝尔曼最优方程。因此，当 <span class="math-inline" data-tex="\hat{q}(S, A; \boldsymbol{w})"></span> 能精确近似最优动作价值时，<span class="math-inline" data-tex="R + \gamma \max_{a \in \mathcal{A}(S&#x27;)} \hat{q}(S&#x27;, a; \boldsymbol{w}) - \hat{q}(S, A; \boldsymbol{w})"></span> 在期望意义下应等于零。</p>
+<p>为最小化目标函数 (8.37)，可使用梯度下降算法。需要计算 <span class="math-inline" data-tex="J"></span> 关于 <span class="math-inline" data-tex="\boldsymbol{w}"></span> 的梯度。注意参数 <span class="math-inline" data-tex="\boldsymbol{w}"></span> 不仅出现在 <span class="math-inline" data-tex="\hat{q}(S, A; \boldsymbol{w})"></span> 中，还出现在 <span class="math-inline" data-tex="y := R + \gamma \max_{a \in \mathcal{A}(S&#x27;)} \hat{q}(S&#x27;, a; \boldsymbol{w})"></span> 中，因此直接计算梯度并非易事。为简化计算，假设 <span class="math-inline" data-tex="y"></span> 中的 <span class="math-inline" data-tex="\boldsymbol{w}"></span> （在短时间内）固定不变，从而使得梯度计算变得容易得多。</p>
+<p>具体而言，引入两个网络：一个是<strong>主网络</strong>，表示 <span class="math-inline" data-tex="\hat{q}(s, a; \boldsymbol{w})"></span>；另一个是<strong>目标网络</strong> <span class="math-inline" data-tex="\hat{q}(s, a; \boldsymbol{w}_T)"></span>。此时目标函数变为：</p>
+<div class="lecture-equation is-numbered" id="eq:dqn_obj_target"><div class="math-block" data-tex="J = \mathbb{E}\left[\Big(R + \gamma \max_{a \in \mathcal{A}(S&#x27;)} \hat{q}(S&#x27;, a; \boldsymbol{w}_T) - \hat{q}(S, A; \boldsymbol{w})\Big)^2\right]"></div><a class="lecture-equation-number" href="#eq:dqn_obj_target" aria-label="公式 18">(18)</a></div>
+<p>其中 <span class="math-inline" data-tex="\boldsymbol{w}_T"></span> 是目标网络的参数。当 <span class="math-inline" data-tex="\boldsymbol{w}_T"></span> 固定时，<span class="math-inline" data-tex="J"></span> 的梯度为：</p>
+<div class="lecture-equation is-numbered" id="eq:dqn_grad"><div class="math-block" data-tex="\nabla_{\boldsymbol{w}} J = -\mathbb{E}\left[\Big(R + \gamma \max_{a \in \mathcal{A}(S&#x27;)} \hat{q}(S&#x27;, a; \boldsymbol{w}_T) - \hat{q}(S, A; \boldsymbol{w})\Big) \nabla_{\boldsymbol{w}} \hat{q}(S, A; \boldsymbol{w})\right]"></div><a class="lecture-equation-number" href="#eq:dqn_grad" aria-label="公式 19">(19)</a></div>
+<p>要利用 (8.38) 中的梯度来最小化目标函数，需要注意以下关键技术。</p>
+<ul>
+<li><p><strong>双网络技术</strong>：如上所述，使用一个主网络和一个目标网络。设 <span class="math-inline" data-tex="\boldsymbol{w}"></span> 和 <span class="math-inline" data-tex="\boldsymbol{w}_T"></span> 分别为主网络和目标网络的参数，初始时设为相同。</p>
+<p>每次迭代中，从<strong>经验回放缓冲区</strong>中抽取一个小批量的样本 <span class="math-inline" data-tex="\{(s, a, r, s&#x27;)\}"></span>。主网络的输入是 <span class="math-inline" data-tex="s"></span> 和 <span class="math-inline" data-tex="a"></span>，输出 <span class="math-inline" data-tex="y = \hat{q}(s, a; \boldsymbol{w})"></span> 为估计的 q 值。输出的目标值为 <span class="math-inline" data-tex="y_T := r + \gamma \max_{a \in \mathcal{A}(s&#x27;)} \hat{q}(s&#x27;, a; \boldsymbol{w}_T)"></span>。通过最小化小批量样本上的 TD 误差（也称为损失函数）<span class="math-inline" data-tex="\sum (y - y_T)^2"></span> 来更新主网络。</p>
+<p>主网络在每次迭代中更新。目标网络则每经过一定次数的迭代后设置为主网络的副本，以满足计算梯度时 <span class="math-inline" data-tex="\boldsymbol{w}_T"></span> 固定的假设。</p></li>
+<li><p><strong>经验回放</strong>：收集到一些经验样本后，不是按收集顺序使用它们，而是将它们存储在一个称为<strong>经验回放缓冲区</strong>的数据集中。设 <span class="math-inline" data-tex="(s, a, r, s&#x27;)"></span> 为一个经验样本，<span class="math-inline" data-tex="\mathcal{B} := \{(s, a, r, s&#x27;)\}"></span> 为回放缓冲区。每次更新主网络时，从回放缓冲区中按<strong>均匀分布</strong>抽取一个小批量经验样本。</p>
+<p>为什么深度 Q-learning 需要经验回放，又为什么必须遵循均匀分布？答案在于目标函数 (8.37)。为良好定义目标函数，必须确定 <span class="math-inline" data-tex="S, A, R, S&#x27;"></span> 的概率分布。一旦给定了 <span class="math-inline" data-tex="(S, A)"></span>，<span class="math-inline" data-tex="R"></span> 和 <span class="math-inline" data-tex="S&#x27;"></span> 的分布由系统模型决定。描述状态-动作对 <span class="math-inline" data-tex="(S, A)"></span> 分布的最简单方式是假设其均匀分布。</p>
+<p>然而，在实践中状态-动作样本是序列化生成的，不一定均匀分布，因此需要打破序列中样本之间的相关性来满足均匀分布的假设。通过从回放缓冲区中均匀抽样来实现经验回放，正是出于这一数学原因。随机采样的一个额外好处是每个经验样本可能被多次使用，从而提高了数据效率。</p></li>
+</ul>
+<p>深度 Q-learning 的实现过程总结在算法 8.4 中。该实现是 off-policy 的，如有需要也可以改为 on-policy。</p>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>备注</p>
+</div>
+<p><strong>算法 8.4：深度 Q-learning（off-policy 版本）</strong></p>
+<p><strong>初始化</strong>：一个主网络和一个目标网络，具有相同的初始参数。</p>
+<p><strong>目标</strong>：学习一个最优目标网络，从给定行为策略 <span class="math-inline" data-tex="\pi_b"></span> 生成的经验样本中近似最优动作价值。</p>
+<ol>
+<li><p>将 <span class="math-inline" data-tex="\pi_b"></span> 生成的经验样本存储到回放缓冲区 <span class="math-inline" data-tex="\mathcal{B} = \{(s, a, r, s&#x27;)\}"></span> 中</p></li>
+<li><p>每次迭代：</p>
+<ul>
+<li><p>从 <span class="math-inline" data-tex="\mathcal{B}"></span> 中均匀抽取一个小批量样本</p></li>
+<li><p>对每个样本 <span class="math-inline" data-tex="(s, a, r, s&#x27;)"></span>，计算目标值 <span class="math-inline" data-tex="y_T = r + \gamma \max_{a \in \mathcal{A}(s&#x27;)} \hat{q}(s&#x27;, a; \boldsymbol{w}_T)"></span>，其中 <span class="math-inline" data-tex="\boldsymbol{w}_T"></span> 是目标网络的参数</p></li>
+<li><p>利用小批量样本更新主网络，最小化 <span class="math-inline" data-tex="(y_T - \hat{q}(s, a; \boldsymbol{w}))^2"></span></p></li>
+<li><p>每隔 <span class="math-inline" data-tex="C"></span> 次迭代设置 <span class="math-inline" data-tex="\boldsymbol{w}_T = \boldsymbol{w}"></span></p></li>
+</ul></li>
+</ol>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="示例说明-1">8.4.2 示例说明 <a class="header-anchor" href="#示例说明-1" aria-label="章节链接">&#8203;</a></h3>
+<p>以下示例演示算法 8.4，目标是学习所有状态-动作对的最优动作价值。</p>
+<p>一个 episode 由图 8.11(a) 所示的行为策略生成。该行为策略是探索性的：在任何状态下选择任何动作的概率相同。如图所示，episode 仅有 1000 步。由于行为策略的强探索能力，episode 中几乎所有的状态-动作对都被访问了。回放缓冲区包含 1000 个经验样本。小批量大小为 100，意味着每次从回放缓冲区中均匀抽取 100 个样本。</p>
+<p>主网络和目标网络具有相同的结构：一个带有 100 个神经元隐藏层的神经网络。该神经网络有三个输入和一个输出。前两个输入是状态的归一化行索引和列索引，第三个输入是归一化后的动作索引（"归一化"指将值映射到 <span class="math-inline" data-tex="[0, 1]"></span> 区间）。网络输出是估计价值。之所以将输入设计为状态的行列坐标而非状态索引，是因为已知状态对应网格中的二维位置，使用的状态信息越多，网络性能越好。此外，神经网络也可以有其他设计方式，例如有两个输入和五个输出（两个输入为归一化的行列坐标，输出为输入状态下五个动作的估计价值）。</p>
+<p>损失函数（定义为每个小批量中平均平方 TD 误差）收敛到零，意味着网络可以很好地拟合训练样本。状态价值估计误差也收敛到零，表明最优动作价值的估计足够精确。因此，对应的贪心策略是最优的。</p>
+<p>该示例展示了深度 Q-learning 的高效性。特别是仅需 1000 步的短 episode 就足以获得最优策略，而表格 Q-learning 需要 100,000 步。高效的原因之一是函数近似方法具有较强的泛化能力，另一个原因是经验样本可以被重复使用。</p>
+<p>我们接着有意用更少的经验样本来挑战深度 Q-learning 算法。图 8.12 展示了一个仅有 100 步的 episode 示例。此时，虽然损失函数仍然可以收敛到零（网络可以很好地拟合给定的经验样本），但状态估计误差无法收敛到零。这意味着经验样本太少，不足以精确估计最优动作价值。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="本章小结">
+<h2 class="unnumbered" tabindex="-1" id="本章小结">8.5 本章小结 <a class="header-anchor" href="#本章小结" aria-label="章节链接">&#8203;</a></h2>
+<p>本章继续介绍 TD 学习算法，但核心从表格方法切换到了<strong>函数近似方法</strong>。理解函数近似方法的关键在于认识到它是一个优化问题。最简单的目标函数是真实状态价值与估计值之间的平方误差，此外还有贝尔曼误差和投影贝尔曼误差等目标函数。本章证明了 TD-Linear 算法实际上是在最小化投影贝尔曼误差。还介绍了 Sarsa 和 Q-learning 等优化算法在价值近似下的扩展。</p>
+<p>价值函数近似方法之所以重要，原因之一是它使人工神经网络能够与强化学习相结合。例如，深度 Q-learning 就是最成功的深度强化学习算法之一。虽然神经网络作为非线性函数近似器已被广泛使用，但本章对线性函数情形进行了全面的介绍，充分理解线性情形对于更好地理解非线性情形至关重要。</p>
+<p><strong>平稳分布</strong>是本章引入的一个重要概念。它在价值函数近似方法中定义合适的目标函数时发挥着关键作用，也将在第 9 章中使用函数近似策略时发挥关键作用。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="常见问题解答">
+<h2 class="unnumbered" tabindex="-1" id="常见问题解答">8.6 常见问题解答 <a class="header-anchor" href="#常见问题解答" aria-label="章节链接">&#8203;</a></h2>
+<ul>
+<li><p><strong>Q：表格方法和函数近似方法有什么区别？</strong></p>
+<p>A：一个重要区别是价值的更新和检索方式。</p>
+<p><strong>如何检索价值</strong>：表格方法中可以直接读取表中对应的条目。函数近似方法则需要将状态 <span class="math-inline" data-tex="s"></span> 输入函数并计算函数值。如果函数是人工神经网络，还需要进行从前向传播的过程。</p>
+<p><strong>如何更新价值</strong>：表格方法中可以直接重写表中对应的条目。函数近似方法则必须通过更新函数参数来间接改变价值。</p></li>
+<li><p><strong>Q：函数近似方法相比表格方法有哪些优点？</strong></p>
+<p>A：由于状态价值的检索方式不同，函数近似方法在存储上更高效。表格方法需要存储 <span class="math-inline" data-tex="|\mathcal{S}|"></span> 个值，而函数近似方法只需要存储一个参数向量，其维数通常远小于 <span class="math-inline" data-tex="|\mathcal{S}|"></span>。由于状态价值的更新方式不同，函数近似方法还具有更强的泛化能力：更新函数参数会同时影响多个状态的价值，因此一个状态的经验样本可以泛化帮助估计其他状态的价值。</p></li>
+<li><p><strong>Q：表格方法和函数近似方法可以统一吗？</strong></p>
+<p>A：可以。表格方法可以视为函数近似方法的一种特殊情形。详细内容见专栏 8.2。</p></li>
+<li><p><strong>Q：什么是平稳分布？为什么它很重要？</strong></p>
+<p>A：平稳分布描述马尔可夫决策过程的长期行为。智能体在充分长时间内执行某个策略后，访问各状态的概率可由平稳分布描述（详见专栏 8.1）。</p>
+<p>平稳分布之所以在本章出现，是因为定义有效的目标函数需要它。目标函数涉及状态的概率分布，通常选择平稳分布。平稳分布不仅对价值近似方法重要，对第 9 章将介绍策略梯度方法也很关键。</p></li>
+<li><p><strong>Q：线性函数近似方法有哪些优点和缺点？</strong></p>
+<p>A：线性函数近似是最简单的情形，其理论性质可以得到全面分析。但它的近似能力有限，对于复杂任务也难以选择合适的特征向量。相比之下，人工神经网络可以作为黑盒通用非线性近似器来近似价值，使用更加友好。然而，研究线性情形仍然有助于更好地掌握函数近似方法的思想。此外，线性情形能力也很强大，因为表格方法可以视为一种特殊的线性情形（专栏 8.2）。</p></li>
+<li><p><strong>Q：为什么深度 Q-learning 需要经验回放？</strong></p>
+<p>A：原因在于目标函数 (8.37)。为良好定义目标函数，必须确定 <span class="math-inline" data-tex="S, A, R, S&#x27;"></span> 的概率分布。一旦 <span class="math-inline" data-tex="(S, A)"></span> 给定，<span class="math-inline" data-tex="R"></span> 和 <span class="math-inline" data-tex="S&#x27;"></span> 的分布由系统模型决定。描述状态-动作对 <span class="math-inline" data-tex="(S, A)"></span> 分布的最简单方式是假设其均匀分布。然而实践中状态-动作样本是序列化生成的，不一定均匀分布，因此需要打破序列中样本的相关性来满足均匀分布的假设。通过从回放缓冲区中均匀抽样来进行经验回放，正是出于这一数学原因。经验回放的一个额外好处是每个样本可能被多次使用，提高数据效率。</p></li>
+<li><p><strong>Q：表格 Q-learning 可以使用经验回放吗？</strong></p>
+<p>A：虽然表格 Q-learning 不要求经验回放，但由于其 off-policy 属性，它对样本的获取方式没有限制，因此也可以使用经验回放而不会遇到问题。好处是样本可以被重复使用，更加高效。</p></li>
+<li><p><strong>Q：为什么深度 Q-learning 需要两个网络？</strong></p>
+<p>A：根本原因是为了简化目标函数 (8.37) 梯度的计算。由于 <span class="math-inline" data-tex="\boldsymbol{w}"></span> 不仅出现在 <span class="math-inline" data-tex="\hat{q}(S, A; \boldsymbol{w})"></span> 中，还出现在 <span class="math-inline" data-tex="R + \gamma \max_{a \in \mathcal{A}(S&#x27;)} \hat{q}(S&#x27;, a; \boldsymbol{w})"></span> 中，直接计算梯度并非易事。一方面，如果固定 <span class="math-inline" data-tex="R + \gamma \max_{a \in \mathcal{A}(S&#x27;)} \hat{q}(S&#x27;, a; \boldsymbol{w})"></span> 中的 <span class="math-inline" data-tex="\boldsymbol{w}"></span>，梯度可以容易地计算，如 (8.38) 所示。这暗示应当维持两个网络：主网络的参数每次迭代更新，目标网络的参数在特定周期内保持不变。另一方面，目标网络的参数不能永远固定，应当每隔一定迭代次数进行更新。</p></li>
+<li><p><strong>Q：当使用人工神经网络作为非线性函数近似器时，如何更新其参数？</strong></p>
+<p>A：必须注意不应直接使用 (8.36) 等方式更新参数向量，而应遵循神经网络的训练流程来更新参数。这一流程可以借助目前已成熟且广泛可用的神经网络训练工具包来实现。</p></li>
+</ul>
+
+</section>
+</div>
+<details class="lecture-original note-details" @toggle="toggleOriginal">
+  <summary>对照原版 PDF<span>保留原页码与讲义目录</span></summary>
+  <div class="lecture-original-content">
+    <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
+    <p><a :href="pdfUrl" target="_blank" rel="noopener">在新窗口打开原版 PDF</a></p>
+    <ClientOnly><PdfViewer v-if="showOriginal" :src="pdfUrl" title="价值函数方法" :outline="outline" /></ClientOnly>
+  </div>
+</details>
+</article>

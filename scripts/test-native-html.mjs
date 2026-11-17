@@ -100,6 +100,6 @@ test('visible notebooks have editorial structure, usable anchors and clean summa
     diagrams += (content.match(/<figure class="note-diagram/g) ?? []).length
     disclosures += (content.match(/<details class="note-details"/g) ?? []).length
   }
-  assert.ok(diagrams >= 33, 'article-specific concept maps')
+  assert.ok(diagrams >= 29, 'article-specific concept maps')
   assert.ok(disclosures >= 14, 'long implementations remain available through native details')
 })

@@ -42,7 +42,7 @@ test('visibility flags take precedence over navigation entries', () => {
 
 test('encoded routes and Markdown index paths resolve to the same public page', () => {
   assert.equal(normalizeContentPath('/papers/deepseek-r1/index.md'), '/papers/deepseek-r1')
-  assert.equal(isPublicContent('/westlake-rl/' + encodeURIComponent('随机近似') + '/index.md', {}), true)
+  assert.equal(isPublicContent('/westlake-rl/' + encodeURIComponent('时序差分方法') + '/index.md', {}), true)
   assert.equal(isPublicContent('/papers/deepseek-r1/index.html#overview', {}), true)
 })
 

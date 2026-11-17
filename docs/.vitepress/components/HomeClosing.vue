@@ -3,7 +3,6 @@ import { defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue'
 import { useData, withBase } from 'vitepress'
 import { closingImageFor, heroMobileMedia, useVisualStyle } from '../theme/visual-styles'
 import FilmClosingScene from './FilmClosingScene.vue'
-import GraceClosingScene from './GraceClosingScene.vue'
 
 const PixelClosingScene = defineAsyncComponent(() => import('./PixelClosingScene.vue'))
 const style = useVisualStyle()
@@ -36,18 +35,18 @@ onUnmounted(() => {
 
 <template>
   <footer ref="footer" class="home-colophon" :class="{ 'is-scene-active': sceneActive }" :data-index="style.iconSet" aria-label="首页结尾">
-    <GraceClosingScene v-if="style.iconSet === 'grace'" />
-    <div v-else-if="style.iconSet === 'pixel'" class="pixel-closing-frame">
+    <div v-if="style.iconSet === 'pixel'" class="pixel-closing-frame">
       <img class="hunt-land" :src="withBase(closingImageFor(style, isDark))" width="512" height="160" loading="lazy" decoding="async" alt="" />
       <PixelClosingScene :active="sceneActive" />
     </div>
     <FilmClosingScene v-else-if="style.iconSet === 'cinema'" />
-    <picture v-else class="paper-closing-scene">
+    <picture v-else-if="style.iconSet === 'paper'" class="paper-closing-scene">
       <source :media="heroMobileMedia" :srcset="withBase(closingImageFor(style, isDark, true))" width="720" height="295" />
       <img :src="withBase(closingImageFor(style, isDark))" width="1440" height="480" loading="lazy" decoding="async" fetchpriority="low" alt="剪纸海鸥掠过翻开的书，层叠的纸浪延伸到远处的灯塔。" />
     </picture>
     <div class="closing-line">
       <span v-if="style.iconSet !== 'pixel'">{{ style.closingTitle }}<i v-if="style.iconSet === 'cinema'" lang="it">Fine</i></span>
+      <a v-else :href="withBase('/tags')">全部内容 →</a>
       <a href="#VPContent">返回页首 ↑</a>
     </div>
   </footer>

@@ -84,7 +84,7 @@ button,summary,select { cursor:pointer; }
 .dark .Layout .VPDoc .vp-doc pre code { background:transparent; color:#e4eff0; }
 .dark .Layout .VPDoc .vp-doc .shiki span { color:var(--shiki-dark,inherit); }
 .VPDoc .vp-doc table { display:block; max-width:100%; overflow-x:auto; font-size:14px; }
-.VPDoc .vp-doc th { white-space:normal; }
+.VPDoc .vp-doc th { white-space:normal; color:var(--vp-c-text-1); }
 .VPDoc .vp-doc details > summary { min-height:44px; cursor:pointer; }
 .VPDoc .vp-doc details[open] > summary { color:var(--vp-c-brand-1); }
 .VPDoc .vp-doc mjx-container[display='true'] { min-width:0 !important; max-width:100%; overflow:auto; }

@@ -23,7 +23,55 @@ html[data-appearance-motion='cinema']::view-transition-new(seagull-film-frame) {
   mix-blend-mode: normal;
 }
 
+.grace-transition-light { display: none; }
+
 @media (prefers-reduced-motion: no-preference) {
+  html[data-appearance-motion='moonlight'] {
+    --grace-sweep-duration: 560ms;
+    --grace-reveal: grace-moon-reveal;
+    --grace-mask: var(--moonlight-mask);
+  }
+  html[data-appearance-motion='blessing'] {
+    --grace-sweep-duration: 500ms;
+    --grace-reveal: grace-day-reveal;
+    --grace-mask: var(--blessing-mask);
+  }
+  html:is([data-appearance-motion='moonlight'], [data-appearance-motion='blessing']) .grace-transition-light {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    overflow: hidden;
+    pointer-events: none;
+    view-transition-name: grace-light;
+  }
+  html:is([data-appearance-motion='moonlight'], [data-appearance-motion='blessing'])::view-transition-group(grace-light) {
+    z-index: 2;
+    animation: none;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  html[data-appearance-motion]::view-transition-old(grace-light) { display: none; }
+  html[data-appearance-motion]::view-transition-new(grace-light) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+
+  .grace-previous-scene {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-size: cover;
+    background-repeat: no-repeat;
+  }
+  html:is([data-appearance-motion='moonlight'], [data-appearance-motion='blessing'])::view-transition-new(root),
+  html[data-grace-fallback] picture.grace-world {
+    mask-image: var(--grace-mask);
+    mask-size: 100% 250%;
+    mask-repeat: no-repeat;
+    animation: var(--grace-reveal) var(--grace-sweep-duration) linear both;
+  }
   html[data-appearance-motion='paper']::view-transition-new(root) {
     animation: seagull-paper-edge 540ms cubic-bezier(.37, .09, .22, 1) both;
   }
@@ -39,6 +87,15 @@ html[data-appearance-motion='cinema']::view-transition-new(seagull-film-frame) {
   html[data-appearance-motion='grace']::view-transition-new(root) {
     animation: seagull-grace-arch 620ms cubic-bezier(.32,.08,.23,1) both;
   }
+}
+
+@keyframes grace-moon-reveal {
+  from { mask-position: 0 100%; }
+  to { mask-position: 0 0%; }
+}
+@keyframes grace-day-reveal {
+  from { mask-position: 0 0%; }
+  to { mask-position: 0 100%; }
 }
 
 @keyframes seagull-projection-gate {

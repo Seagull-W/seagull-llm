@@ -8,7 +8,7 @@ layout: doc
 title: 西湖大学强化学习笔记
 pageClass: chapter-index
 aside: false
-description: 以概念笔记连接课程讲义，循序理解价值函数、策略梯度、随机近似与强化学习算法。
+description: 按第 1–9 讲顺序阅读，从贝尔曼方程、采样估计和时序差分学到价值函数近似与策略梯度。
 contentFormat: html
 ---
 

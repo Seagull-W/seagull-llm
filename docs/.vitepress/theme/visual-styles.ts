@@ -8,7 +8,7 @@ export interface VisualStyle {
   closingTitle: string
   version: number
   iconSet: 'paper' | 'pixel' | 'cinema' | 'grace'
-  assets: { heroLight: string; heroDark: string; mobile: string; mobileDark?: string; coverLight: string; coverDark: string; closing: string; closingDark?: string; closingMobile?: string; closingMobileDark?: string; logo: string }
+  assets: { heroLight: string; heroDark: string; mobile: string; mobileDark?: string; coverLight: string; coverDark: string; closing: string; closingDark?: string; closingMobile?: string; closingMobileDark?: string; logo: string; shuffleDie?: string }
   icons?: Record<string, string>
   sectionArt?: Record<string, string>
   sectionPhotos?: Record<string, { src: string; night?: string }>
@@ -47,13 +47,14 @@ export const visualStyles = {
     },
   },
   'pixel-voyage': {
-    id: 'pixel-voyage', name: '像素', version: 1.3, iconSet: 'pixel',
-    description: '像素、海岛与探索', collectionTitle: '栏目航线', closingTitle: '返航',
+    id: 'pixel-voyage', name: '像素', version: 1.5, iconSet: 'pixel',
+    description: '雪峰、云丝与细像素', collectionTitle: '栏目', closingTitle: '返航',
     assets: {
       logo: '/logo-pixel-voyage.svg',
-      heroLight: '/images/pixel-voyage/mobile.png',
-      heroDark: '/images/pixel-voyage/mobile.png',
-      mobile: '/images/pixel-voyage/mobile.png',
+      heroLight: '/images/pixel-voyage/snowpeak-wide.webp',
+      heroDark: '/images/pixel-voyage/snowpeak-wide.webp',
+      mobile: '/images/pixel-voyage/snowpeak-portrait.webp',
+      shuffleDie: '/images/pixel-voyage/cliff-dice.png',
       coverLight: '/images/pixel-voyage/mobile.png',
       coverDark: '/images/pixel-voyage/mobile.png',
       closing: '/images/pixel-voyage/closing/mountain-day.png',
@@ -90,14 +91,14 @@ export const visualStyles = {
     },
   },
   'grace-archive': {
-    id: 'grace-archive', name: '艾尔登法环', version: 1, iconSet: 'grace',
-    description: '古卷、金枝与烛光', collectionTitle: '馆藏目录', closingTitle: '卷末印记',
+    id: 'grace-archive', name: '艾尔登法环', version: 1.1, iconSet: 'grace',
+    description: '亚坛晴昼与艾雷月夜', collectionTitle: '栏目索引', closingTitle: '卷末印记',
     assets: {
       logo: '/logo-grace-archive.svg',
-      heroLight: '/images/grace-archive/limgrave.webp',
-      heroDark: '/images/grace-archive/night-sky.webp',
-      mobile: '/images/grace-archive/limgrave-small.webp',
-      mobileDark: '/images/grace-archive/night-sky-small.webp',
+      heroLight: '/images/grace-archive/discovery/lands-between-day.webp',
+      heroDark: '/images/grace-archive/discovery/elleh-night.webp',
+      mobile: '/images/grace-archive/discovery/lands-between-day-small.webp',
+      mobileDark: '/images/grace-archive/discovery/elleh-night-small.webp',
       coverLight: '/images/grace-archive/cover-light.webp',
       coverDark: '/images/grace-archive/cover-dark.webp',
       closing: '/images/grace-archive/closing/rest-day.webp',
@@ -124,6 +125,10 @@ export type VisualStyleId = keyof typeof visualStyles
 export const defaultVisualStyle: VisualStyleId = 'paper-coast'
 export const visualStyleStorageKey = 'seagull-visual-style'
 export const heroMobileMedia = '(max-width: 639px)'
+export const gracePortraitMedia = '(max-aspect-ratio: 1/1)'
+export function heroMediaFor(style: VisualStyle) {
+  return style.iconSet === 'grace' ? gracePortraitMedia : heroMobileMedia
+}
 export function heroImageFor(style: VisualStyle, dark: boolean, mobile: boolean): string {
   const assets = style.assets
   if (mobile) return dark ? assets.mobileDark || assets.mobile : assets.mobile
@@ -137,8 +142,9 @@ export function closingImageFor(style: VisualStyle, dark: boolean, mobile = fals
 
 // Runs before stylesheets and VitePress's own appearance script, so use the
 // persisted preference (or the system scheme) rather than the initial DOM.
-export function homeHeroPreload(base: string, resolveImage: (path: string) => string = themeImagePath) {
-  const paths = Object.fromEntries(Object.values(visualStyles).map(style => [
+export function pageArtPreload(base: string, resolveImage: (path: string) => string = themeImagePath, isHome = true) {
+  const styles = isHome ? Object.values(visualStyles) : [visualStyles['grace-archive']]
+  const paths = Object.fromEntries(styles.map(style => [
     style.id,
     [false, true].map(mobile => [false, true].map(dark =>
       base.replace(/\/$/, '') + resolveImage(heroImageFor(style, dark, mobile)))),
@@ -151,12 +157,13 @@ export function homeHeroPreload(base: string, resolveImage: (path: string) => st
       scheme=localStorage.getItem('vitepress-theme-appearance');
     } catch {}
     const sources=Object.hasOwn(paths,style)?paths[style]:paths['${defaultVisualStyle}'];
+    if (!sources) return;
     const dark=!scheme||scheme==='auto'?matchMedia('(prefers-color-scheme: dark)').matches:scheme==='dark';
     const link=document.createElement('link');
     link.rel='preload';
     link.as='image';
     link.fetchPriority='high';
-    link.href=sources[+matchMedia('${heroMobileMedia}').matches][+dark];
+    link.href=sources[+matchMedia(style==='grace-archive'?'${gracePortraitMedia}':'${heroMobileMedia}').matches][+dark];
     document.head.appendChild(link);
   })()`
 }

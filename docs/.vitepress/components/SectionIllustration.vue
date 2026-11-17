@@ -10,7 +10,7 @@ import { useVisualStyle } from '../theme/visual-styles'
 const props = defineProps<{ section: string }>()
 const style = useVisualStyle()
 const banner = computed(() => style.value.iconSet === 'pixel'
-  ? style.value.sectionArt?.[props.section] || style.value.sectionArt?.papers || style.value.assets.mobile
+  ? style.value.sectionArt?.[props.section] || style.value.sectionArt?.papers || style.value.assets.coverLight
   : undefined)
 const hasStudy = computed(() => Object.hasOwn(sectionArtwork, props.section))
 </script>
@@ -18,7 +18,7 @@ const hasStudy = computed(() => Object.hasOwn(sectionArtwork, props.section))
   <div class="section-illustration" :class="{ 'pixel-section-art': banner, 'film-section-art': style.iconSet === 'cinema' }" aria-hidden="true">
     <SectionPhotograph v-if="style.iconSet === 'cinema'" :section="section" />
     <img v-else-if="style.iconSet === 'grace'" class="grace-directory-portrait" :src="withBase(portraitPath(graceCharacterFor(section)))" alt="" width="154" height="116" loading="lazy" decoding="async" fetchpriority="low" />
-    <picture v-else-if="banner" class="pixel-banner"><source media="(max-width:639px)" :srcset="withBase(style.icons?.[section] || style.assets.mobile)" /><img :src="withBase(banner)" alt="" width="2304" height="768" /></picture>
+    <picture v-else-if="banner" class="pixel-banner"><source media="(max-width:639px)" :srcset="withBase(style.icons?.[section] || style.assets.coverLight)" /><img :src="withBase(banner)" alt="" width="2304" height="768" /></picture>
     <SectionArtwork v-else-if="hasStudy" :section="section" />
     <svg v-else class="paper-landscape" viewBox="0 0 200 130" fill="none">
       <path d="M10 100Q60 56 105 88T195 80L186 125H14Z" fill="var(--illustration-mist)" />

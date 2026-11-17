@@ -25,15 +25,14 @@ export const westlakeRlSidebar = [
     text: '学习笔记',
     collapsed: false,
     items: [
-      { text: '随机近似', link: '/westlake-rl/随机近似/' },
-      { text: '价值函数', link: '/westlake-rl/价值函数/' },
-      { text: '策略梯度', link: '/westlake-rl/策略梯度/' },
       { text: '第 1–2 讲 强化学习基本概念与贝尔曼方程', link: '/westlake-rl/强化学习基本概念与贝尔曼方程/' },
       { text: '第 3 讲 最优状态价值与贝尔曼最优方程', link: '/westlake-rl/最优状态价值与贝尔曼最优方程/' },
       { text: '第 4 讲 值迭代与策略迭代', link: '/westlake-rl/值迭代与策略迭代/' },
       { text: '第 5 讲 蒙特卡洛方法', link: '/westlake-rl/蒙特卡洛方法/' },
       { text: '第 6 讲 随机近似', link: '/westlake-rl/随机近似/课程讲义' },
-      { text: 'TD 算法', link: '/westlake-rl/TD算法/TD' }
+      { text: '第 7 讲 时序差分方法', link: '/westlake-rl/时序差分方法/' },
+      { text: '第 8 讲 价值函数方法', link: '/westlake-rl/价值函数方法/' },
+      { text: '第 9 讲 策略梯度方法', link: '/westlake-rl/策略梯度方法/' }
     ]
   }
 ]
@@ -59,6 +58,14 @@ export const papersSidebar = [
       {
         "text": "MAI-Gym：GUI 智能体的一体化评测与在线 RL 平台",
         "link": "/papers/mai-gym/"
+      },
+      {
+        "text": "Count Counts：用访问频率引导推理探索",
+        "link": "/papers/count-counts/"
+      },
+      {
+        "text": "Echo Chamber：强化学习会放大哪些预训练行为？",
+        "link": "/papers/echo-chamber/"
       }
     ]
   },

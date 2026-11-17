@@ -7,19 +7,52 @@ import matter from 'gray-matter'
 // Exercise the real catalog transform against repository content without
 // starting Vite. Only the framework's loader registration is replaced.
 const result = await build({
-  stdin: { contents: "export * from './docs/.vitepress/data/catalog-source.ts'; export * from './docs/.vitepress/content-catalog.ts'", resolveDir: process.cwd(), loader: 'ts' },
+  stdin: {
+    contents: [
+      "export * from './docs/.vitepress/data/catalog-source.ts'",
+      "export * from './docs/.vitepress/content-catalog.ts'",
+      "export * from './docs/.vitepress/components/home-discovery-data.ts'",
+      "export * from './docs/.vitepress/components/grace-home-data.ts'"
+    ].join('\n'),
+    resolveDir: process.cwd(), loader: 'ts'
+  },
   bundle: true, write: false, platform: 'node', format: 'esm',
   plugins: [{ name: 'loader-registration', setup(build) {
     build.onResolve({ filter: /^vitepress$/ }, () => ({ path: 'vitepress', namespace: 'loader' }))
     build.onLoad({ filter: /.*/, namespace: 'loader' }, () => ({ contents: 'export function createContentLoader(patterns, options) { return { patterns, ...options } }' }))
   } }]
 })
-const { catalogLoader, searchContent, topicTags, readingSeries } = await import('data:text/javascript;base64,' + Buffer.from(result.outputFiles[0].text).toString('base64'))
+const { catalogLoader, searchContent, topicTags, readingSeries, sections, getHomeTopics, discoveryGroups, graceColumns, graceIssues, connectedColumns } = await import('data:text/javascript;base64,' + Buffer.from(result.outputFiles[0].text).toString('base64'))
 const inputs = readdirSync('docs', { recursive: true }).map(f => f.replaceAll('\\', '/')).filter(f => f.endsWith('.md') && !/^(?:\.vitepress|public)\//.test(f)).map(f => {
   const src = readFileSync('docs/' + f, 'utf8')
   return { src, frontmatter: matter(src).data, url: '/' + f.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '') }
 })
 const pages = catalogLoader().transform(inputs), documents = catalogLoader(true).transform(inputs)
+test('grace day and night offer every direct column, whole research issues and video deep links', () => {
+  const columns = graceColumns(pages)
+  assert.deepEqual(columns.map(c => c.url), sections.map(s => '/' + s.id + '/'))
+  assert.deepEqual(columns.find(c => c.id === 'research').items.map(p => p.url).sort(), graceIssues.map(issue => issue.route).sort())
+  assert.ok(columns.find(c => c.id === 'videos').items.every(item => item.url.includes('#BV')))
+  const story = pages.find(p => p.url === '/cs336/lecture-05')
+  const related = connectedColumns(story, columns, getHomeTopics(pages))
+  assert.deepEqual(related.columns.map(c => c.id), ['cuda-notes'])
+  assert.ok(graceColumns([]).every(c => !c.items.length))
+  assert.deepEqual(connectedColumns({ ...story, tags: [] }, columns, []).columns, [])
+})
+test('home directory covers each column once and topic readings resolve to public articles', () => {
+  assert.deepEqual(discoveryGroups.flatMap(group => group.sectionIds).sort(), sections.map(s => s.id).sort())
+  const topics = getHomeTopics(pages)
+  assert.deepEqual(topics.map(t => t.key).sort(), ['gpu', 'reward', 'sandbox'])
+  for (const topic of topics) {
+    assert.equal(topic.readings.length, 3, topic.name)
+    assert.ok(new Set(topic.readings.map(r => r.page.section)).size >= 2, topic.name)
+  }
+  const only = pages.find(p => p.url === '/linux-notes/linux-isolation')
+  const sparse = getHomeTopics([only])
+  assert.deepEqual(sparse.map(t => t.readings.map(r => r.page)), [[only]])
+  assert.equal(sparse[0].deck, '')
+  assert.deepEqual(getHomeTopics([]), [])
+})
 test('one public catalog includes articles and individually addressable videos', () => {
   assert.equal(pages.length, documents.length + 2)
   assert.equal(new Set(pages.map(p => p.url)).size, pages.length)
@@ -33,7 +66,8 @@ test('full text finds commands and groups matches by article with useful context
   assert.ok(commands.some(r => r.page.url === '/linux-notes/linux-isolation'))
   const approximation = searchContent(pages, documents, '随机近似')
   assert.ok(approximation.some(r => r.page.kind === '课程讲义'))
-  assert.ok(approximation.some(r => r.page.kind === '学习笔记'))
+  assert.ok(approximation.some(r => r.page.url === '/westlake-rl/随机近似/课程讲义'))
+  assert.ok(!pages.some(p => ['/westlake-rl/随机近似/', '/westlake-rl/策略梯度/', '/westlake-rl/价值函数/', '/westlake-rl/TD算法/TD'].includes(p.url)))
   assert.equal(new Set(approximation.map(r => r.page.url)).size, approximation.length)
   assert.ok(approximation.every(r => r.matches.length <= 2))
 })
@@ -50,7 +84,7 @@ test('topic aliases and explicit course order do not create arbitrary sequences'
   assert.deepEqual(topicTags(['Agent', '智能体', '论文精读']), ['智能体'])
   assert.ok(topicTags(['GUI Agent']).includes('智能体'))
   const course = readingSeries.find(s => s.title.includes('课程讲义'))
-  assert.equal(course.paths.length, 5)
+  assert.equal(course.paths.length, 8)
   assert.ok(!course.paths.includes('/westlake-rl/策略梯度'))
   assert.ok(!readingSeries.some(s => s.paths.some(p => p.startsWith('/papers/'))))
 })

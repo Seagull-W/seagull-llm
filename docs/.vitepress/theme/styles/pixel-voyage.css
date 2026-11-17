@@ -27,12 +27,6 @@
 .Layout[data-visual-style='pixel-voyage'] .visual-logo { image-rendering:pixelated; }
 .Layout[data-visual-style='pixel-voyage'] .home-search { border-radius:0; }
 
-.Layout[data-visual-style='pixel-voyage'] .home-illustrated-hero { background:var(--pixel-panel); border-radius:0; }
-.Layout[data-visual-style='pixel-voyage'] .hero-art { inset:16px 24px 16px auto; width:42%; }
-.Layout[data-visual-style='pixel-voyage'] .hero-art img { object-fit:contain; image-rendering:pixelated; }
-.Layout[data-visual-style='pixel-voyage'] :is(.seagull-hero-title,.seagull-hero-wordmark) { color:var(--pixel-panel-text); }
-.Layout[data-visual-style='pixel-voyage'] .seagull-hero-tagline { color:var(--pixel-panel-muted); }
-
 .Layout.Layout[data-visual-style='pixel-voyage'] .vp-doc .illustrated-directory-intro {
   isolation:isolate; overflow:hidden; background:var(--pixel-panel); border:0; border-radius:0;
   padding:30px 54% 30px 28px; min-height:280px; color:var(--pixel-panel-text); margin-bottom:28px;
@@ -47,11 +41,6 @@
   .Layout[data-visual-style='pixel-voyage'] .pixel-banner img { object-fit:contain; }
 }
 @media(max-width:639px) {
-  .Layout[data-visual-style='pixel-voyage'] .home-illustrated-hero { min-height:260px; overflow:hidden; }
-  .Layout[data-visual-style='pixel-voyage'] .hero-copy { padding:24px 16px; }
-  .Layout[data-visual-style='pixel-voyage'] .hero-art { inset:8px 4px auto auto; width:112px; height:112px; }
-  .Layout[data-visual-style='pixel-voyage'] .seagull-hero-heading { gap:50px; }
-  .Layout[data-visual-style='pixel-voyage'] .seagull-hero-wordmark { font-size:clamp(32px,9vw,48px); }
   .Layout.Layout[data-visual-style='pixel-voyage'] .vp-doc .illustrated-directory-intro { padding:20px; min-height:0; }
   .Layout[data-visual-style='pixel-voyage'] .pixel-section-art { inset:20px 16px auto auto; width:40px; height:40px; }
   .Layout[data-visual-style='pixel-voyage'] .pixel-banner img { object-fit:contain; }
@@ -75,26 +64,6 @@ html[data-visual-style='pixel-voyage'] .Layout[data-visual-style='paper-coast'] 
 .Layout[data-visual-style='pixel-voyage'] .search-suggestions button { box-shadow:2px 2px 0 var(--pixel-shadow); }
 .Layout[data-visual-style='pixel-voyage'] :is(a,button,select,input,summary):focus-visible { outline-style:dashed; outline-offset:4px; }
 
-/* The title is the only pixel lettering. Chinese UI and all prose stay crisp. */
-.Layout[data-visual-style='pixel-voyage'] .home-illustrated-hero {
-  border:8px solid transparent; border-image:var(--pixel-frame) 4 / 8px / 0 stretch;
-  background-clip:padding-box;
-}
-.Layout[data-visual-style='pixel-voyage'] .hero-copy { padding:48px 0 56px 32px; }
-.Layout[data-visual-style='pixel-voyage'] .pixel-wordmark { display:block; width:369px; max-width:100%; height:auto; }
-.Layout[data-visual-style='pixel-voyage'] .seagull-hero-heading { gap:32px; }
-.Layout[data-visual-style='pixel-voyage'] .seagull-hero-title { font-family:var(--vp-font-family-base); font-size:clamp(20px,2.2vw,27px); font-weight:500; }
-.Layout[data-visual-style='pixel-voyage'] .seagull-hero-tagline { margin-top:12px; }
-.Layout[data-visual-style='pixel-voyage'] .home-illustrated-hero::after {
-  content:''; position:absolute; left:32px; right:32px; bottom:20px; height:8px; pointer-events:none;
-  background:repeating-linear-gradient(90deg,var(--pixel-edge) 0 24px,transparent 24px 32px) left bottom / 96px 2px no-repeat,
-    repeating-linear-gradient(90deg,var(--pixel-edge) 0 4px,transparent 4px 12px) right top / 84px 4px no-repeat;
-  opacity:.65;
-}
-.Layout[data-visual-style='pixel-voyage'] .hero-art::before {
-  content:''; position:absolute; inset:8% 4%; z-index:-1; opacity:.12;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Cpath d='M0 0h2v2H0Z' fill='%2379a99b'/%3E%3C/svg%3E");
-}
 .Layout[data-visual-style='pixel-voyage'] .home-search {
   border:2px solid var(--pixel-edge); box-shadow:4px 4px 0 var(--pixel-shadow);
   color:var(--vp-c-text-2);
@@ -105,10 +74,10 @@ html[data-visual-style='pixel-voyage'] .Layout[data-visual-style='paper-coast'] 
 }
 
 /* Section boundaries share a square landmark and a stepped rule. */
-.Layout[data-visual-style='pixel-voyage'] :is(.home-heading,.gallery-header) { padding-top:12px; border-top:2px solid var(--pixel-edge); }
+.Layout[data-visual-style='pixel-voyage'] .gallery-header { padding-top:12px; border-top:2px solid var(--pixel-edge); }
 .Layout[data-visual-style='pixel-voyage'] .gallery-header :is(h1,h2) { margin:0; padding:0; border:0; }
-.Layout[data-visual-style='pixel-voyage'] :is(.home-heading h2,.gallery-header h2,.reader-toc > h2) { display:flex; align-items:center; gap:12px; }
-.Layout[data-visual-style='pixel-voyage'] :is(.home-heading h2,.gallery-header h2,.reader-toc > h2)::before {
+.Layout[data-visual-style='pixel-voyage'] :is(.gallery-header h2,.reader-toc > h2) { display:flex; align-items:center; gap:12px; }
+.Layout[data-visual-style='pixel-voyage'] :is(.gallery-header h2,.reader-toc > h2)::before {
   content:''; flex:none; width:8px; height:8px; background:var(--pixel-signal); box-shadow:4px 4px 0 var(--pixel-shadow);
 }
 .Layout[data-visual-style='pixel-voyage'] .section-grid { border-top:0; gap:12px 24px; }
@@ -127,15 +96,6 @@ html[data-visual-style='pixel-voyage'] .Layout[data-visual-style='paper-coast'] 
   align-self:center; width:14px; height:14px; flex:none; font-size:0; background:var(--vp-c-brand-1);
   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'%3E%3Cpath d='M3 0h1v1H3ZM4 1h1v1H4ZM5 2h1v1H5ZM0 3h7v1H0ZM5 4h1v1H5ZM4 5h1v1H4ZM3 6h1v1H3Z'/%3E%3C/svg%3E") center / contain no-repeat;
 }
-.Layout[data-visual-style='pixel-voyage'] .update-filters { gap:8px; flex-wrap:wrap; padding-bottom:14px; }
-.Layout[data-visual-style='pixel-voyage'] .update-filters button {
-  min-height:36px; padding:6px 12px; border:1px solid var(--vp-c-divider); color:var(--vp-c-text-2); background:var(--vp-c-bg-alt);
-}
-.Layout[data-visual-style='pixel-voyage'] .update-filters button[aria-pressed='true'] {
-  border-color:var(--vp-c-brand-1); background:var(--vp-c-brand-1); color:var(--vp-button-brand-text); box-shadow:3px 3px 0 var(--pixel-shadow);
-}
-.Layout[data-visual-style='pixel-voyage'] .update-grid > a { border-bottom-style:dashed; }
-.Layout[data-visual-style='pixel-voyage'] .update-meta::before { content:''; width:5px; height:5px; margin-top:6px; background:var(--pixel-edge); }
 
 /* Directory/list treatments never truncate titles or change article diagrams. */
 .Layout.Layout[data-visual-style='pixel-voyage'] .vp-doc .illustrated-directory-intro {
@@ -180,23 +140,11 @@ html[data-visual-style='pixel-voyage'] .Layout[data-visual-style='paper-coast'] 
   .Layout[data-visual-style='pixel-voyage']::before { left:20px; }
   .Layout[data-visual-style='pixel-voyage']::after { right:20px; }
 }
-@media(max-width:959px) and (min-width:640px) {
-  .Layout[data-visual-style='pixel-voyage'] .pixel-wordmark { width:287px; }
-  .Layout[data-visual-style='pixel-voyage'] .hero-copy { padding-left:20px; }
-}
 @media(max-width:639px) {
-  .Layout[data-visual-style='pixel-voyage'] .hero-copy { padding:28px 12px 40px; }
-  .Layout[data-visual-style='pixel-voyage'] .pixel-wordmark { width:205px; }
-  .Layout[data-visual-style='pixel-voyage'] .hero-art { inset:48px 0 auto auto; width:104px; height:104px; }
-  .Layout[data-visual-style='pixel-voyage'] .seagull-hero-heading { gap:100px; }
-  .Layout[data-visual-style='pixel-voyage'] .seagull-hero-title { max-width:none; font-size:19px; line-height:1.7; }
-  .Layout[data-visual-style='pixel-voyage'] .home-illustrated-hero::after { left:12px; right:12px; bottom:12px; }
   .Layout[data-visual-style='pixel-voyage'] .section-grid { gap:12px; }
   .Layout[data-visual-style='pixel-voyage'] .section-grid > a { padding:14px 10px; }
   .Layout[data-visual-style='pixel-voyage'] .section-grid h3 { gap:6px; font-size:14px; }
   .Layout[data-visual-style='pixel-voyage'] .home-search { padding:10px; }
-  .Layout[data-visual-style='pixel-voyage'] .update-filters { gap:6px; }
-  .Layout[data-visual-style='pixel-voyage'] .update-filters button { padding-inline:10px; }
 }
 @media(prefers-reduced-motion:reduce) {
   .Layout[data-visual-style='pixel-voyage'] .home-search:active { transform:none; }

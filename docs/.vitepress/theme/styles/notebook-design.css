@@ -50,10 +50,9 @@
 .note-table { max-width: 100%; overflow-x: auto; margin: 24px 0; border: 1px solid var(--note-line); border-radius: 10px; }
 .VPDoc .vp-doc [data-design] .note-table table { display: table; width: 100%; max-width: none; margin: 0; border: 0; border-collapse: collapse; border-radius: 0; font-size: 14px; font-variant-numeric: tabular-nums; }
 .VPDoc .vp-doc [data-design] .note-table th, .VPDoc .vp-doc [data-design] .note-table td { padding: 12px 14px; border: 0; border-bottom: 1px solid var(--note-line); border-right: 1px solid var(--note-line); white-space: normal; min-width: 100px; vertical-align: top; line-height: 1.8; }
-.VPDoc .vp-doc [data-design] .note-table th { background: #edf3fa; color: var(--vp-c-text-1); font-weight: 650; }
-.dark .section-cs336 .VPDoc .vp-doc [data-design] .note-table th { background: var(--vp-c-bg-soft); color: var(--vp-c-text-1); }
+.VPDoc .vp-doc [data-design] .note-table th { font-weight: 650; }
 .section-cs336 .VPDoc .vp-doc .format-directory .note-kicker { color: var(--vp-c-text-2); }
-.VPDoc .vp-doc [data-design] .note-table tr:nth-child(2n) { background: #f9fbfd; }
+.VPDoc .vp-doc [data-design] .note-table tbody tr:nth-child(2n) { background: var(--vp-c-bg-alt); }
 .VPDoc .vp-doc [data-design] .note-table tr:last-child td { border-bottom: 0; }
 .VPDoc .vp-doc [data-design] .note-table :where(th,td):last-child { border-right: 0; }
 .VPDoc .vp-doc [data-design] mjx-container[display='true'] { margin: 22px 0; padding: 20px 12px; border: 1px solid var(--note-line); border-radius: 10px; background: var(--vp-c-bg-soft); color: var(--vp-c-text-1); min-width: 0 !important; }
@@ -67,7 +66,6 @@
 [data-design] :where(a,summary,[tabindex='0']):focus-visible { outline: 3px solid var(--note-blue); outline-offset: 3px; }
 .dark [data-design] { --note-paper: #151f2d; --note-line: #2d3d53; --note-tint: #1b2e48; --note-shadow: none; --note-blue: #8bbbf6; --note-green: #81ceb8; --note-orange: #edc184; }
 /* Match the component selectors' specificity so light surfaces cannot win. */
-.dark .VPDoc .vp-doc [data-design] .note-table tr:nth-child(2n) { background: #182436; }
 .dark .note-compare-label { color: #a2ddcb; }
 .dark .neutral .note-compare-label { color: #b3d1fc; }
 .dark .VPDoc .vp-doc [data-design] .note-panel .custom-block.warning { background: #3b3020; }

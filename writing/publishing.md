@@ -101,7 +101,7 @@ HTML 模板中的 Vue 组件、顶层脚本与局部样式通过 `npm run dev` �
 
 迁移工具 `scripts/migrate-native-html.mjs` 仅处理尚未迁移的页面，已迁移页面直接维护 HTML。
 
-西湖第 1–6 讲的五篇 PDF 已接入 HTML；重新导入沿用原路由、侧边栏与栏目卡片。导入使用 `scripts/import-westlake-lectures.py`，依赖 Pandoc；来源摘要与 SHA-256 位于 `scripts/data/westlake-lecture-import.json`。HTML 为正文主版本。重跑须显式传 `--overwrite`，执行前核对并保留后续人工修订。用原源目录重新导入后，实际阅读成稿并运行 `node scripts/test-westlake-lectures.mjs`，核对编号、定理标题、证明、表格与 PDF 对照。
+西湖第 1–9 讲的八篇 PDF 已接入 HTML；重新导入沿用原路由、侧边栏与栏目卡片。导入使用 `scripts/import-westlake-lectures.py`，依赖 Pandoc；来源摘要与 SHA-256 位于 `scripts/data/westlake-lecture-import.json`。HTML 为正文主版本。重跑须显式传 `--overwrite`，执行前核对并保留后续人工修订。用原源目录重新导入后，实际阅读成稿并运行 `node scripts/test-westlake-lectures.mjs`，核对编号、定理标题、证明、表格与 PDF 对照。
 
 新增字符或重新导入讲义后，运行 `python scripts/update-reading-font.py` 更新当前公开文章的字库子集，核对生成的 400／600 WOFF2 和清单。共享字体位于 `docs/.vitepress/theme/fonts/`，原字体缓存于忽略的 `.research/font-cache`，文章清单位于 `scripts/data/academic-reading-pages.json`。字体回退与阅读外观见 L3。
 

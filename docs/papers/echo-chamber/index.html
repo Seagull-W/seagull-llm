@@ -1,0 +1,159 @@
+<article class="native-document format-paper" data-format="paper" data-design="linux-notebook" aria-label="Echo Chamber：强化学习会放大哪些预训练行为？">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文精读<span>Rosie Zhao 等 · COLM 2025</span></p>
+  <h1 id="echo-chamber" tabindex="-1">Echo Chamber：强化学习会放大哪些预训练行为？ <a class="header-anchor" href="#echo-chamber" aria-label="链接到Echo Chamber：强化学习会放大哪些预训练行为？">&#8203;</a></h1>
+  <p class="note-deck">同样用 PPO 做 GSM8K，150M 模型逐渐把解答写成 Python 函数，1B 模型却转向自然语言。两者用过相同的预训练配方。作者沿训练过程同时追踪两件事：模型更常采用哪种解法，以及采用这种解法时能答对多少题。</p>
+</header>
+
+<aside class="reading-comment" aria-labelledby="reading-comment-label">
+  <p class="reading-comment-label" id="reading-comment-label"><span lang="en">COMMENT</span> · 阅读手记</p>
+  <p>最大的特点是在受控预训练模型下探索RL的具体表现，预训练模型确实是后训练的重要混杂因素，当前的方法过度依赖（无奈之举）于不透明的模型。缺点也很明显，自行训练模型有很大的局限性，很难规模化，希望之后能有完全开源的中小模型。</p>
+</aside>
+
+<nav class="note-jump" aria-label="本篇阅读导航">
+  <a href="#motivation">为什么要从零预训练</a>
+  <a href="#setup">实验设置与三种解答格式</a>
+  <a href="#convergence">PPO 如何改变解答格式</a>
+  <a href="#mixture">改变数据配比后的反例</a>
+  <a href="#within-format">同一种格式内的进步</a>
+  <a href="#scale">模型规模与格式偏好</a>
+</nav>
+
+<section class="document-section note-panel" aria-labelledby="motivation">
+<h2 id="motivation" tabindex="-1">为什么要从零预训练 <a class="header-anchor" href="#motivation" aria-label="链接到为什么要从零预训练">&#8203;</a></h2>
+<p>直接在现成基座上做强化学习（RL），可以测出后训练前后分数相差多少，却很难判断新出现的解法在预训练时出现过多少次。如果基座的训练配方不透明，即使两个模型采用同一种 RL 算法，它们之间的差异也可能来自预训练。</p>
+<p>作者从零训练模型，把几种解答风格不同的公开数学数据集按已知比例混合，再用相同的数学题做后训练。这样，训练前就知道模型见过哪些格式，还能单独改变某一种数据的重复次数，观察后续 RL 会放大哪种行为。<a href="https://arxiv.org/pdf/2504.07912v2#page=2">论文 §1</a></p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="setup">
+<h2 id="setup" tabindex="-1">实验设置与三种解答格式 <a class="header-anchor" href="#setup" aria-label="链接到实验设置与三种解答格式">&#8203;</a></h2>
+<p>作者用 OLMo 代码库训练了 150M 和 1B 两种规模的解码器模型。基础数学语料包括 FineMath-3+ 和 Proof-Pile-2 中的 Algebraic-Stack。三种指令数据以题目和解答直接拼接的形式混入语料。文中的 4× 表示将该数据集重复使用四遍。预训练采用 AdamW，峰值学习率为 0.001，权重衰减为 0.1，线性预热 5,000 步后按余弦曲线降至峰值的 10%。<a href="https://arxiv.org/pdf/2504.07912v2#page=3">§2.1</a></p>
+<p>三组数据都包含数学题，区别在于答案留下了不同的格式标记。下面按附录 B 的原题重排问答框，题面译为中文，解答保留用于识别格式的部分。</p>
+
+<h3 id="tinygsm" tabindex="-1">TinyGSM：把题目写进 Python 函数 <a class="header-anchor" href="#tinygsm" aria-label="链接到TinyGSM：把题目写进 Python 函数">&#8203;</a></h3>
+<p>这组数据有 1,230 万对合成问答，来自 GSM8K 与 GSM-IC 的训练子集，代码解答由 GPT-3.5 生成。作者通过函数签名识别这种格式，执行代码取得数值，并另行记录文档字符串是否复述了原题。<a href="https://arxiv.org/pdf/2504.07912v2#page=17">附录 B.1</a></p>
+<dl class="format-example">
+  <dt>题目</dt><dd>橙子每个 0.75 美元。Benjamin 带了 18 美元，结账时还差 9 美元，朋友替他补齐。他买了多少个橙子？</dd>
+  <dt>解答</dt><dd><pre v-pre><code>def simple_math_problem() -&gt; int:
+    """橙子每个 0.75 美元，带了 18 美元，还差 9 美元。买了多少个？"""
+    total_cost = 18 + 9
+    result = total_cost / 0.75
+    return result</code></pre><p>执行结果为 36。</p></dd>
+</dl>
+
+<h3 id="omi1" tabindex="-1">OpenMathInstruct1：用标签标出可执行代码 <a class="header-anchor" href="#omi1" aria-label="链接到OpenMathInstruct1：用标签标出可执行代码">&#8203;</a></h3>
+<p>这组数据有 180 万对问答，题目来自 GSM8K 和 MATH 的训练子集，解答由 Mixtral-8x7B 生成。GSM8K 评测可以执行 <code>&lt;llm-code&gt;</code> 标签内的代码来核对答案。<a href="https://arxiv.org/pdf/2504.07912v2#page=18">附录 B.2</a></p>
+<dl class="format-example">
+  <dt>题目</dt><dd>Martha 有 18 支蜡笔，丢了一半，随后新买 20 支。她现在有多少支？</dd>
+  <dt>解答</dt><dd><pre v-pre><code>&lt;llm-code&gt;
+remaining = 18 / 2
+total = remaining + 20
+total
+&lt;/llm-code&gt;
+&lt;llm-code-output&gt;
+Output: 29.0
+&lt;/llm-code-output&gt;</code></pre><p>她现在有 29 支蜡笔。</p></dd>
+</dl>
+
+<h3 id="omi2" tabindex="-1">OpenMathInstruct2：用自然语言写出推导 <a class="header-anchor" href="#omi2" aria-label="链接到OpenMathInstruct2：用自然语言写出推导">&#8203;</a></h3>
+<p>这组数据有 1,400 万对问答，同样源于 GSM8K 和 MATH 的训练子集，由 Llama 3.1-405B-Instruct 生成，通常用自然语言推导并框出答案。论文将未命中前两种代码标记的生成归入 <strong>Text</strong>。这是一条格式分类规则，只能据此推测输出与 OpenMathInstruct2 风格接近。<a href="https://arxiv.org/pdf/2504.07912v2#page=19">附录 B.3</a></p>
+<dl class="format-example">
+  <dt>题目</dt><dd>袋中有 8 个红球和若干个蓝球。随机摸一个球，红球赢 3 美元，蓝球输 3 美元。如果每次游戏的期望收益为 1 美元，袋中有几个蓝球？</dd>
+  <dt>解答</dt><dd><p>设蓝球有 <i>b</i> 个。红球和蓝球的概率分别为 8/(8 + <i>b</i>) 和 <i>b</i>/(8 + <i>b</i>)。按两种结果计算期望收益，可得</p><div class="math-block" data-tex="\frac{24-3b}{8+b}=1 \quad\Longrightarrow\quad 24-3b=8+b \quad\Longrightarrow\quad \boxed{b=4}."></div></dd>
+</dl>
+
+<h3 id="rl-evaluation" tabindex="-1">RL 微调与评测口径 <a class="header-anchor" href="#rl-evaluation" aria-label="链接到RL 微调与评测口径">&#8203;</a></h3>
+<p>PPO 与 GRPO 使用可验证的 0/1 奖励，最终答案与标准答案匹配就得 1 分。另一种对照是专家迭代（EI）：每题采样 64 个解答，筛出答对的、去重，再用它们监督微调初始基座。以下主要分析 PPO，训练问题来自 GSM8K 训练集，图中成绩取自测试集。<a href="https://arxiv.org/pdf/2504.07912v2#page=4">§2.2–3</a></p>
+<p>读图时要区分<strong>某种格式占输出的比例</strong>与<strong>只看这种格式时的正确率</strong>。全体回答的三个指标也各有含义：本文的 pass@1 使用一次贪心解码；pass@64 看温度 0.7 下采样 64 次能否至少答对一次；majority@64 看这 64 次中最常见的答案是否正确。<a href="https://arxiv.org/pdf/2504.07912v2#page=19">附录 B.4</a></p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="convergence">
+<h2 id="convergence" tabindex="-1">PPO 如何改变解答格式 <a class="header-anchor" href="#convergence" aria-label="链接到PPO 如何改变解答格式">&#8203;</a></h2>
+<p>在同时接触过三种指令数据的 150M 模型上，训练刚开始时三种格式都能采样到。一个 epoch 内，TinyGSM 风格的 Python 函数几乎占据全部输出。同期单次作答的正确率明显上升，但到训练末期，64 次采样至少答对一次的比例略有下降。<a href="https://arxiv.org/pdf/2504.07912v2#page=5">§3.1，图 2</a></p>
+<figure class="note-figure">
+  <a href="/papers/echo-chamber/figure-2.png" aria-label="查看图 2 原尺寸图片"><img src="/papers/echo-chamber/figure-2.png" alt="150M 模型在 PPO 中转向 TinyGSM"></a>
+  <figcaption><strong>图 2 · 150M 模型在 PPO 中转向 TinyGSM。</strong>左图记录三种格式的生成占比；右图记录各格式正确率和总体指标。横轴是训练中累计使用的样本数。 <a href="https://arxiv.org/pdf/2504.07912v2#page=5">论文原图</a></figcaption>
+</figure>
+<p>在同一基座上，把 KL 惩罚系数从 0.001 提到 0.01，策略偏离初始模型的代价变大。图 3 中仍有一部分回答采用自然语言，最终 pass@1 与图 2 接近，pass@64 也较稳定。附录 G 从另一个角度核对了格式偏好：不同格式起始 token 的平均概率同样发生了偏移。<a href="https://arxiv.org/pdf/2504.07912v2#page=5">§3.1，图 3</a></p>
+<figure class="note-figure">
+  <a href="/papers/echo-chamber/figure-3.png" aria-label="查看图 3 原尺寸图片"><img src="/papers/echo-chamber/figure-3.png" alt="更强的 KL 约束保留了部分自然语言解答"></a>
+  <figcaption><strong>图 3 · 更强的 KL 约束保留了部分自然语言解答。</strong>同图 2 的基座与指标，仅将 KL 系数提高到 0.01。可对照两张图左侧 Text 曲线的末端。 <a href="https://arxiv.org/pdf/2504.07912v2#page=5">论文原图</a></figcaption>
+</figure>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="mixture">
+<h2 id="mixture" tabindex="-1">改变数据配比后的反例 <a class="header-anchor" href="#mixture" aria-label="链接到改变数据配比后的反例">&#8203;</a></h2>
+<p>图 4(a) 提供了一个反例。微调开始时，OpenMathInstruct1（OMI1）风格约占 62%，TinyGSM 约占 28%，模型却在第一个 epoch 内转向 TinyGSM。初始时更常生成的格式，并不一定会成为最后占主导的格式。<a href="https://arxiv.org/pdf/2504.07912v2#page=6">§3.2</a></p>
+<figure class="note-figure">
+  <a href="/papers/echo-chamber/figure-4.png" aria-label="查看图 4 原尺寸图片"><img src="/papers/echo-chamber/figure-4.png" alt="OMI1 从四遍增至八遍后，PPO 选中了另一种格式"></a>
+  <figcaption><strong>图 4 · OMI1 从四遍增至八遍后，PPO 选中了另一种格式。</strong>上排为 4× OMI1，下排为 8× OMI1；两组均含 TinyGSM。左列读占比，右列读正确率。 <a href="https://arxiv.org/pdf/2504.07912v2#page=6">论文原图</a></figcaption>
+</figure>
+<p>在图 4(b) 中，作者将预训练中 OMI1 的用量翻倍。初始生成比例和图 4(a) 相近，起初仍是 TinyGSM 风格的答案更准确，但 PPO 最终几乎只生成 OMI1 风格，整体成绩低于图 4(a)，并在训练末期继续下滑。作者将此视为一种失败模式。多数 150M 实验中，RL 确实偏向初始正确率较高的格式；这组对照说明，单看初始正确率也无法完全预测训练走向。<a href="https://arxiv.org/pdf/2504.07912v2#page=6">图 4 及正文</a></p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="within-format">
+<h2 id="within-format" tabindex="-1">同一种格式内的进步 <a class="header-anchor" href="#within-format" aria-label="链接到同一种格式内的进步">&#8203;</a></h2>
+<p>前两组结果留下一个问题：即使输出全部采用同一种格式，RL 还能让模型做对更多题吗？作者先将 TinyGSM 在预训练中分别重复 1、2、4、8 遍。图 5 左比较各次运行在 PPO 期间取得的最好成绩，右边则保留 pass@1 的训练曲线。重复次数最多的模型既取得最高的最终 pass@1，从起点到终点的提升也最大。<a href="https://arxiv.org/pdf/2504.07912v2#page=7">§3.3，图 5</a></p>
+<figure class="note-figure">
+  <a href="/papers/echo-chamber/figure-5.png" aria-label="查看图 5 原尺寸图片"><img src="/papers/echo-chamber/figure-5.png" alt="TinyGSM 的预训练用量影响后续收益"></a>
+  <figcaption><strong>图 5 · TinyGSM 的预训练用量影响后续收益。</strong>左图按预训练用量比较三个指标在训练期间的最高值，右图展示各用量下 pass@1 随 PPO 训练的变化。 <a href="https://arxiv.org/pdf/2504.07912v2#page=7">论文原图</a></figcaption>
+</figure>
+<p>更直接的检验是把其他数据全部拿掉。作者只用 4× TinyGSM 从零预训练一个 150M 模型，连 FineMath-3+ 和 Algebraic-Stack 也移除。做 PPO 后，pass@1 仍然上升。随着训练进行，生成函数更常在文档字符串中复述题意，引号写法也更一致。在只有一种预训练来源时，模型仍能改进这一格式下的输出；图中观察到的书写习惯与准确率同步变化，尚不能据此断定引号本身提高了正确率。<a href="https://arxiv.org/pdf/2504.07912v2#page=8">图 6</a></p>
+<figure class="note-figure">
+  <a href="/papers/echo-chamber/figure-6.png" aria-label="查看图 6 原尺寸图片"><img src="/papers/echo-chamber/figure-6.png" alt="只用 TinyGSM 预训练后的变化"></a>
+  <figcaption><strong>图 6 · 只用 TinyGSM 预训练后的变化。</strong>左图是测试成绩；右图分别追踪题面复述、注释和文档字符串引号等可识别的书写特征。 <a href="https://arxiv.org/pdf/2504.07912v2#page=8">论文原图</a></figcaption>
+</figure>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="scale">
+<h2 id="scale" tabindex="-1">模型规模与格式偏好 <a class="header-anchor" href="#scale" aria-label="链接到模型规模与格式偏好">&#8203;</a></h2>
+<p>最后一个对照固定预训练配方，改变模型规模。图 7 的 1B 模型与图 2 的 150M 模型接触了同一混合数据。尽管 1B 模型起初的 TinyGSM 格式正确率更高，且自然语言占比最低，PPO 最后仍把自然语言推到了主导地位。其他配方中，1B 模型也可能偏向 OMI1 风格的代码。<a href="https://arxiv.org/pdf/2504.07912v2#page=8">§3.4，图 7</a></p>
+<figure class="note-figure">
+  <a href="/papers/echo-chamber/figure-7.png" aria-label="查看图 7 原尺寸图片"><img src="/papers/echo-chamber/figure-7.png" alt="相同配方下，1B 模型转向自然语言"></a>
+  <figcaption><strong>图 7 · 相同配方下，1B 模型转向自然语言。</strong>指标布局与图 2 相同。比较两图左侧便可看出，改变模型规模后，占据主导地位的输出格式发生了变化。 <a href="https://arxiv.org/pdf/2504.07912v2#page=8">论文原图</a></figcaption>
+</figure>
+<p>作者推测，较大的模型更有能力用自然语言完成计算，较小的模型可能更依赖结构简单、可执行的代码。这里直接观察到的是<strong>格式偏好随规模改变</strong>；关于原因的解释仍是作者的推测。<a href="https://arxiv.org/pdf/2504.07912v2#page=8">§3.4</a></p>
+</section>
+
+<footer>
+<p><strong>原文</strong>　Rosie Zhao、Alexandru Meterez、Sham Kakade、Cengiz Pehlevan、Samy Jelassi、Eran Malach，<cite>Echo Chamber: RL Post-training Amplifies Behaviors Learned in Pretraining</cite>，COLM 2025。本文对应原稿所读的 §1–3.4 与附录 B，采用 arXiv v2 的图号及页码。<a href="https://arxiv.org/html/2504.07912v2">论文 HTML</a> · <a href="https://arxiv.org/pdf/2504.07912v2">论文 PDF</a></p>
+<p>图 2–7 裁自作者论文，保留原图例与坐标，图注为中文整理；三组题例为译写和节选。原作采用 <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> 许可。</p>
+</footer>
+</article>
+
+<style scoped>
+.reading-comment {
+  margin: 0 0 1.75rem;
+  padding: 1rem clamp(1rem, 3vw, 1.5rem);
+  border-inline-start: 3px solid var(--vp-c-brand-1);
+  border-radius: 0 8px 8px 0;
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-1);
+}
+.reading-comment p { margin: 0; }
+.reading-comment .reading-comment-label {
+  margin-bottom: .4rem;
+  color: var(--vp-c-brand-1);
+  font-size: .8125rem;
+  font-weight: 650;
+}
+.reading-comment-label span { letter-spacing: .09em; }
+.format-example { margin: 1rem 0 1.5rem; }
+.format-example dt {
+  padding: .5rem .9rem 0;
+  border: 1px solid var(--vp-c-divider);
+  border-bottom: 0;
+  background: var(--vp-c-bg-soft);
+  font-weight: 650;
+}
+.format-example dd {
+  margin: 0 0 .5rem;
+  padding: .35rem .9rem .75rem;
+  border: 1px solid var(--vp-c-divider);
+  border-top: 0;
+  background: var(--vp-c-bg-soft);
+  overflow-wrap: anywhere;
+}
+.format-example dd pre { max-width: 100%; overflow-x: auto; }
+.format-example dd p { margin: .4rem 0; }
+</style>

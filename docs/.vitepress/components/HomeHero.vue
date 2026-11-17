@@ -2,7 +2,6 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useData, withBase } from 'vitepress'
 import { defaultVisualStyle, heroImageFor, heroMobileMedia, useVisualStyle, visualStyles } from '../theme/visual-styles'
-import PixelWordmark from './PixelWordmark.vue'
 import FilmHero from './FilmHero.vue'
 import GraceHero from './GraceHero.vue'
 
@@ -51,16 +50,16 @@ const paperSources = {
 <template>
   <div ref="frame">
     <FilmHero v-if="style.iconSet === 'cinema'" :load-image="loadImage" />
-    <GraceHero v-else-if="style.iconSet === 'grace'" :load-image="loadImage" />
+    <GraceHero v-else-if="style.iconSet === 'grace'" />
     <div v-else class="home-illustrated-hero">
-      <picture v-if="loadImage" class="hero-art" aria-hidden="true">
+      <picture v-if="loadImage && style.iconSet !== 'pixel'" class="hero-art" aria-hidden="true">
         <source :media="heroMobileMedia" :srcset="withBase(heroImageFor(style, isDark, true))" />
         <img :src="withBase(heroImageFor(style, isDark, false))" alt="" width="1672" height="941" fetchpriority="high" />
       </picture>
       <span v-else-if="!mounted" class="hero-art paper-first-paint" :style="paperSources" aria-hidden="true"></span>
       <div class="hero-copy">
-        <h1 class="seagull-hero-heading"><span class="seagull-hero-wordmark" aria-label="SEAGULL"><PixelWordmark v-if="style.iconSet === 'pixel'" /><span v-else aria-hidden="true">S<span class="wordmark-e">E</span><span class="wordmark-a">A</span>GULL</span></span><span class="seagull-hero-title">{{ frontmatter.hero.text }}</span></h1>
-        <p class="seagull-hero-tagline">{{ frontmatter.hero.tagline }}</p>
+        <h1 class="seagull-hero-heading"><span class="seagull-hero-wordmark" aria-label="SEAGULL"><span aria-hidden="true">S<span class="wordmark-e">E</span><span class="wordmark-a">A</span>GULL</span></span><span v-if="style.iconSet !== 'pixel'" class="seagull-hero-title">{{ frontmatter.hero.text }}</span></h1>
+        <p v-if="style.iconSet !== 'pixel'" class="seagull-hero-tagline">{{ frontmatter.hero.tagline }}</p>
       </div>
     </div>
   </div>

@@ -12,7 +12,8 @@ export const readingSeries = [
   { title: 'RL BOOK · 阅读章节', paths: ['/rl-book/cha4对话模板与监督微调', '/rl-book/cha5奖励建模', '/rl-book/cha6强化学习'] },
   { title: '西湖强化学习 · 课程讲义', paths: [
     '/westlake-rl/强化学习基本概念与贝尔曼方程', '/westlake-rl/最优状态价值与贝尔曼最优方程',
-    '/westlake-rl/值迭代与策略迭代', '/westlake-rl/蒙特卡洛方法', '/westlake-rl/随机近似/课程讲义'
+    '/westlake-rl/值迭代与策略迭代', '/westlake-rl/蒙特卡洛方法', '/westlake-rl/随机近似/课程讲义',
+    '/westlake-rl/时序差分方法', '/westlake-rl/价值函数方法', '/westlake-rl/策略梯度方法'
   ] },
   { title: 'CS336 · 课程讲义', paths: [
     '/cs336/lecture-01', '/cs336/lecture-02', '/cs336/lecture-03',
@@ -46,7 +47,7 @@ export function kindFor(url: string) {
   if (path.startsWith('/cs336/a2-')) return '实验'
   if (readingSeries[1].paths.includes(path)) return '课程讲义'
   if (path.startsWith('/research/')) return '调研'
-  if (/^\/papers\/(deepseek-r1|gigpo|graph-gpo|mai-gym)$/.test(path)) return '论文精读'
+  if (/^\/papers\/(deepseek-r1|gigpo|graph-gpo|mai-gym|count-counts|echo-chamber)$/.test(path)) return '论文精读'
   if (path.startsWith('/papers/')) return '项目笔记'
   if (/实验|experiment/.test(path)) return '实验'
   return '学习笔记'

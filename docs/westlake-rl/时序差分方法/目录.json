@@ -1,0 +1,66 @@
+[
+  {
+    "title": "7.1 状态价值的TD 学习",
+    "page": 1
+  },
+  {
+    "title": "7.1.1 算法描述",
+    "page": 1
+  },
+  {
+    "title": "7.1.2 性质分析",
+    "page": 2
+  },
+  {
+    "title": "7.1.3 收敛性分析",
+    "page": 3
+  },
+  {
+    "title": "7.2 动作价值的TD 学习：Sarsa",
+    "page": 4
+  },
+  {
+    "title": "7.2.1 算法描述",
+    "page": 4
+  },
+  {
+    "title": "7.2.2 通过Sarsa 学习最优策略",
+    "page": 5
+  },
+  {
+    "title": "7.3 动作价值的TD 学习：n 步Sarsa",
+    "page": 7
+  },
+  {
+    "title": "7.4 最优动作价值的TD 学习：Q-learning",
+    "page": 7
+  },
+  {
+    "title": "7.4.1 算法描述",
+    "page": 7
+  },
+  {
+    "title": "7.4.2 离线策略（Off-policy）vs 在线策略（On-policy）",
+    "page": 8
+  },
+  {
+    "title": "7.4.3 实现",
+    "page": 8
+  },
+  {
+    "title": "7.4.4 示例演示",
+    "page": 9
+  },
+  {
+    "title": "7.5 统一视角",
+    "page": 10
+  },
+  {
+    "title": "7.6 本章小结",
+    "page": 10
+  },
+  {
+    "title": "7.7 常见问题解答",
+    "page": 10
+  }
+]

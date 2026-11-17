@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { basename, extname, join } from 'node:path'
 import type { Plugin } from 'vite'
-import { graceCharacters, portraitPath } from './components/grace-characters.ts'
+import { graceCharacters, graceReadingPortraits, portraitPath } from './components/grace-characters.ts'
 import { huntSheetPath, sheets } from './components/pixel-hunt/choreography.ts'
 import { styleImageGroups, visualStyles } from './theme/visual-styles.ts'
 
@@ -15,6 +15,7 @@ function registeredImages() {
     }
   }
   for (const character of graceCharacters) paths.add(portraitPath(character))
+  for (const path of Object.values(graceReadingPortraits).flat()) paths.add(path)
   for (const sheet of Object.values(sheets)) paths.add(huntSheetPath(sheet))
   return paths
 }

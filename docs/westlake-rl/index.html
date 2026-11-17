@@ -1,20 +1,8 @@
 <div class="native-document format-directory" data-format="directory" aria-label="西湖大学强化学习笔记" data-design="linux-notebook">
 <DirectoryIntro class="note-hero">
   <h1 id="西湖大学强化学习笔记" tabindex="-1">西湖大学强化学习笔记 <a class="header-anchor" href="#西湖大学强化学习笔记" aria-label="Permalink to &quot;西湖大学强化学习笔记&quot;">&ZeroWidthSpace;</a></h1>
-  <p class="note-deck">以概念笔记连接课程讲义，循序理解价值函数、策略梯度、随机近似与强化学习算法。课程讲义采用连续的网页学术排版，原版 PDF 可在文末对照阅读。</p>
+  <p class="note-deck">按第 1–9 讲顺序阅读，从贝尔曼方程、采样估计和时序差分学到价值函数近似与策略梯度。课程讲义采用连续的网页学术排版，原版 PDF 可在文末对照阅读。</p>
 </DirectoryIntro>
-
-
-
-<section class="document-section note-panel" aria-labelledby="概念与算法">
-<h2 id="概念与算法" tabindex="-1">概念与算法 <a class="header-anchor" href="#概念与算法" aria-label="Permalink to &quot;概念与算法&quot;">&ZeroWidthSpace;</a></h2>
-<ChapterCards :items="[
-  { title: '随机近似', link: '/westlake-rl/随机近似/', description: 'Robbins–Monro 算法、收敛性条件等随机近似基础内容。' },
-  { title: '价值函数', link: '/westlake-rl/价值函数/', description: '函数逼近、梯度下降求解价值函数与 DQN。' },
-  { title: '策略梯度', link: '/westlake-rl/策略梯度/', description: '策略参数化、指标选择与 REINFORCE 算法。' },
-  { title: 'TD 算法', link: '/westlake-rl/TD算法/TD', description: 'Q-learning、Sarsa、on-policy 与 off-policy。' }
-]" />
-</section>
 
 <section class="document-section note-panel" aria-labelledby="课程讲义">
 <h2 id="课程讲义" tabindex="-1">课程讲义 <a class="header-anchor" href="#课程讲义" aria-label="Permalink to &quot;课程讲义&quot;">&ZeroWidthSpace;</a></h2>
@@ -23,7 +11,10 @@
   { label: '第 3 讲 · 网页讲义 / 附原版 PDF', title: '最优状态价值与贝尔曼最优方程', link: '/westlake-rl/最优状态价值与贝尔曼最优方程/', description: '从策略改进进入最优状态价值，通过压缩映射理解贝尔曼最优方程的唯一解与贪心最优策略。' },
   { label: '第 4 讲 · 网页讲义 / 附原版 PDF', title: '值迭代与策略迭代', link: '/westlake-rl/值迭代与策略迭代/', description: '沿着策略评估与策略改进两条线索，比较值迭代、策略迭代与截断策略迭代的更新方式和收敛性。' },
   { label: '第 5 讲 · 网页讲义 / 附原版 PDF', title: '蒙特卡洛方法', link: '/westlake-rl/蒙特卡洛方法/', description: '用采样回报替代已知模型，从 MC Basic 到 Exploring Starts 与 ε-greedy，理解估计、控制和探索之间的关系。' },
-  { label: '第 6 讲 · 网页讲义 / 附原版 PDF', title: '随机近似', link: '/westlake-rl/随机近似/课程讲义', description: '从增量均值估计进入 Robbins–Monro 递推、Dvoretzky 收敛定理与随机梯度下降，连接采样噪声和收敛条件。' }
+  { label: '第 6 讲 · 网页讲义 / 附原版 PDF', title: '随机近似', link: '/westlake-rl/随机近似/课程讲义', description: '从增量均值估计进入 Robbins–Monro 递推、Dvoretzky 收敛定理与随机梯度下降，连接采样噪声和收敛条件。' },
+  { label: '第 7 讲 · 网页讲义 / 附原版 PDF', title: '时序差分方法', link: '/westlake-rl/时序差分方法/', description: '从状态价值的 TD 更新出发，比较 Sarsa、n 步 Sarsa 与 Q-learning 的更新目标。' },
+  { label: '第 8 讲 · 网页讲义 / 附原版 PDF', title: '价值函数方法', link: '/westlake-rl/价值函数方法/', description: '用函数近似表示价值，推导状态价值与动作价值的 TD 更新，再看 DQN 如何训练。' },
+  { label: '第 9 讲 · 网页讲义 / 附原版 PDF', title: '策略梯度方法', link: '/westlake-rl/策略梯度方法/', description: '从策略参数化与目标函数出发，推导策略梯度，并用 REINFORCE 从采样轨迹更新策略。' }
 ]" />
 </section>
 </div>

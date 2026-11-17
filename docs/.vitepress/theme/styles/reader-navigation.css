@@ -1,11 +1,17 @@
 /* One layout owner: article 820 px, directory 960 px, desktop outline 220 px. */
 .Layout .VPLocalNav,.Layout .VPSidebar,.Layout .VPDoc > .container > .aside { display:none; }
-.Layout .VPDoc { --page-width:820px; padding:36px 32px 72px; }
+.Layout .VPDoc {
+  --page-width:820px;
+  --reader-column-gap:32px;
+  --reader-outline-width:220px;
+  --reader-spread-width:var(--page-width);
+  padding:36px 32px 72px;
+}
 .Layout.chapter-index .VPDoc { --page-width:960px; }
 .Layout .VPDoc > .container { display:block; min-width:0; width:100%; max-width:var(--page-width); margin:0 auto; }
 .Layout .VPDoc > .container > .content { min-width:0; width:100%; max-width:none; padding:0; margin:0; }
 .Layout .VPDoc > .container > .content > .content-container { max-width:none; }
-.Layout .VPDoc:has(.reader-navigation) { display:grid; grid-template-columns:minmax(0,var(--page-width)); justify-content:center; column-gap:32px; align-items:start; }
+.Layout .VPDoc:has(.reader-navigation) { display:grid; grid-template-columns:minmax(0,var(--page-width)); justify-content:center; column-gap:var(--reader-column-gap); align-items:start; }
 .reader-navigation { display:contents; }
 .Layout .VPDoc:has(.reader-navigation) > .container { grid-column:1; grid-row:2; }
 .reader-tools { grid-column:1/-1; grid-row:1; display:flex; justify-content:space-between; gap:16px; margin:-16px 0 22px; align-items:center; }
@@ -39,7 +45,10 @@
 .reader-collection-list a[aria-current] { color:var(--vp-c-brand-1); background:var(--vp-c-bg-soft); }
 .reader-collection-list .collection-home { color:var(--vp-c-brand-1); padding-top:4px; }
 @media(min-width:1100px) {
-  .Layout .VPDoc:has(.reader-navigation.has-toc) { grid-template-columns:minmax(0,820px) 220px; }
+  .Layout .VPDoc:has(.reader-navigation.has-toc) {
+    --reader-spread-width:calc(var(--page-width) + var(--reader-column-gap) + var(--reader-outline-width));
+    grid-template-columns:minmax(0,var(--page-width)) var(--reader-outline-width);
+  }
   .reader-toc { display:block; }
   .reader-tools .toc-mobile { display:none; }
 }

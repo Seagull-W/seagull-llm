@@ -1,0 +1,116 @@
+<article class="native-document format-paper" data-format="paper" data-design="linux-notebook" aria-label="Count Counts：用访问频率引导推理探索">
+<header class="document-intro note-hero">
+  <p class="note-kicker">论文精读<span>Xuan Zhang 等 · ICLR 2026</span></p>
+  <h1 id="count-counts" tabindex="-1">Count Counts：用访问频率引导推理探索 <a class="header-anchor" href="#count-counts" aria-label="链接到Count Counts：用访问频率引导推理探索">&#8203;</a></h1>
+  <p class="note-deck">一道题有两条解法。模型已经熟悉第一条，偶尔才会试到第二条。如果两条都能答对，结果奖励给它们相同的分数。MERCI 额外估计一条回答经过了多少少见的推理状态，让答对且较少尝试的路线在下一次更新中获得更大的权重。</p>
+  <div class="note-chips"><span>强化学习后训练</span><span>探索奖励</span><span>GRPO</span><span>DAPO</span></div>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航">
+  <a href="#motivation"><span>01</span>结果奖励留下的探索问题</a>
+  <a href="#known"><span>02</span>已知的状态转移简化了什么</a>
+  <a href="#cfn"><span>03</span>抛硬币如何估计访问频率</a>
+  <a href="#bonus"><span>04</span>从 token 新颖性到轨迹奖励</a>
+  <a href="#guard"><span>05</span>探索项如何保留任务优势的符号</a>
+  <a href="#training"><span>06</span>一次 MERCI 训练迭代</a>
+  <a href="#evidence"><span>07</span>数学与 SQL 实验</a>
+  <a href="#limits"><span>08</span>方法的适用边界</a>
+  <a href="#references"><span>09</span>原文与代码</a>
+</nav>
+
+<section class="document-section note-panel" aria-labelledby="motivation">
+<h2 id="motivation" tabindex="-1">结果奖励留下的探索问题 <a class="header-anchor" href="#motivation" aria-label="链接到结果奖励留下的探索问题">&#8203;</a></h2>
+<p>在数学推理训练中，模型生成一整条回答，验证器才给出最终得分。一条熟悉的路线只要经常答对，就能反复获得正反馈。另一条路线可能要连续走对好几步才有机会得到同样的反馈。提高生成分布的熵可以让下一步有更多选项，但换个措辞也能提高词元（token）的多样性，解题思路可能依旧相同。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=1">论文 §1</a></p>
+<p>MERCI 采用一个可计算的判断依据：若一段推理经过的状态在训练中很少被访问，就给它一定的探索激励。困难在于，几乎每个完整文本前缀都独一无二，逐字匹配很难积累有意义的计数。作者沿用 Coin Flipping Network（CFN），在隐藏表示上学习访问频率的代理量，再决定这份新颖性应当在多大程度上影响策略更新。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=3">§2、§3.2</a></p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="known">
+<h2 id="known" tabindex="-1">已知的状态转移简化了什么 <a class="header-anchor" href="#known" aria-label="链接到已知的状态转移简化了什么">&#8203;</a></h2>
+<p>对自包含的文本推理，令问题为 <i>q</i>，已经生成的前缀为 <i>y</i><sub>&lt;t</sub>，状态为二者的组合。动作是下一个 token。策略可以随机采样动作，一旦 token 选定，下一状态就由拼接操作唯一确定。</p>
+<div class="math-block" data-tex="s_t=(q,y_{&lt;t}),\qquad s_{t+1}=(s_t,y_t)"></div>
+<p>这个观察省去了一类不确定性：模型无须估计“执行这个动作后，环境会转移到哪里”。剩下的问题是对这条路线的回报有多大把握。论文用不确定性贝尔曼方程（UBE）描述这种不确定性如何从后续步骤传回来。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=4">§3.1，命题 1</a></p>
+<div class="math-block" data-tex="U_t(s,a)\leq v_t(s)+\mathbb{E}_{a'\sim\pi(\cdot\mid s')}\!\left[U_{t+1}(s',a')\right]"></div>
+<p>这里 <i>U</i> 是动作价值估计的后验方差，<i>v</i> 是局部平均奖励估计的后验方差，<i>s′</i> 是拼接后的状态，期望取在策略下一步的动作上。这个上界依赖附录 D 中的条件独立假设。用访问次数的倒数近似局部方差，是作者随后引入的建模选择。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=4">§3.1 与附录 D</a></p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="cfn">
+<h2 id="cfn" tabindex="-1">抛硬币如何估计访问频率 <a class="header-anchor" href="#cfn" aria-label="链接到抛硬币如何估计访问频率">&#8203;</a></h2>
+<p>设同一状态出现了 <i>n</i> 次。每次访问都重新抛 <i>d</i> 枚独立的公平硬币，把正反面编码为 +1 和 −1，得到一个随机标签向量。CFN 以该状态的隐藏表示 <i>h</i> 为输入，通过平方损失拟合历次标签。论文取 <i>d</i> = 20。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=3">§2，式 (1)–(2)</a> · <a href="https://openreview.net/pdf?id=9xIBbfItGP#page=8">§5.1</a></p>
+<div class="math-block" data-tex="\mathcal L_{\rm CFN}=\sum_i\lVert f_\phi(h_i)-c_i\rVert_2^2,\qquad c_i\in\{-1,+1\}^{d}"></div>
+<p>对于相同的输入，平方损失最小的预测是这些标签的平均值。只访问一次时，每个坐标都是 +1 或 −1。访问次数多了，同一坐标上出现的正负号会彼此抵消。平均向量缩小的速度，恰好提供了频率信息。</p>
+<div class="math-block" data-tex="\mathbb E\!\left[\frac{\lVert\bar c\rVert_2^2}{d}\right]=\frac1n,\qquad u(h)=\frac{\lVert f_\phi(h)\rVert_2^2}{d}"></div>
+<p>左式是对随机标签取期望得到的统计关系，右式是实际用网络输出计算的<strong>逆伪计数</strong>。理想情况下，访问一次时归一化平方模长为 1，访问 100 次时其期望为 0.01。对真实文本，前缀很少完全重复，可用信号依赖网络对相近表示的泛化。较大的 <i>u</i> 表示 CFN 将该位置判断为较少访问。</p>
+<details class="note-details"><summary>推导：每个坐标的二阶矩为什么等于 1/n？</summary>
+<p>记第 <i>i</i> 次访问的第 <i>j</i> 个标签为 <i>c</i><sub>ij</sub>。每个标签均值为零、平方为一，不同访问的交叉项期望为零。因此</p>
+<div class="math-block" data-tex="\bar c_j=\frac1n\sum_{i=1}^n c_{ij},\qquad \mathbb E[\bar c_j^2]=\frac1{n^2}\sum_{i=1}^n\mathbb E[c_{ij}^2]=\frac1n."></div>
+<p>再对所有坐标平均就得到上式。增加坐标数可以降低抽样波动，训练不充分或隐藏表示泛化不当仍然会引入误差。</p>
+</details>
+<p>实现上，作者使用两个独立的语言模型实例。策略模型生成回答，CFN 分支在自己的最后一层隐藏状态上接一个 MLP 并拟合随机标签。计算成本除了这个小预测头，还包括独立的 CFN 分支。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=5">§3.2，图 1</a></p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="bonus">
+<h2 id="bonus" tabindex="-1">从 token 新颖性到轨迹奖励 <a class="header-anchor" href="#bonus" aria-label="链接到从 token 新颖性到轨迹奖励">&#8203;</a></h2>
+<p>逆伪计数逐位置计算，策略更新需要评价一整条回答。受方差上界沿路径累积的启发，MERCI 先累加局部方差代理，再开平方。聚合次序会改变长回答的激励：假设有 64 步且每步代理量均为 1，在做长度归一化之前，先求和再开方得到 8，逐步开方再求和得到 64。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=6">§3.3</a></p>
+<p>实际算法先筛选位置，再按回答长度归一化。设 <i>Lᵢ</i> 为第 <i>i</i> 条回答的<strong>完整长度</strong>，<i>Iᵢ</i> 为保留位置的集合，<i>uᵢₜ</i> 为该回答第 <i>t</i> 步的逆伪计数，其轨迹探索分数为</p>
+<div class="math-block" data-tex="B_i=\sqrt{\frac{1}{L_i}\sum_{t\in I_i}u_{it}}."></div>
+<p>分母包含被过滤的位置，因此一条长回答中偶然出现的少数罕见 token 很难单独抬高整条轨迹的得分。这里的 <i>Bᵢ</i> 是经过筛选和归一化的探索分数。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=7">式 (6)</a></p>
+<ul>
+<li><strong>分位数过滤。</strong>按每条回答自身的分数保留高分位置。数学任务主配置保留前 30%，图 2 的 50% 用于图示。</li>
+<li><strong>连续性过滤。</strong>保留相邻位置持续较高的片段，去掉孤立尖峰。</li>
+<li><strong>任务噪声过滤。</strong>剔除重复内容、与当前任务无关的代码等可能靠异常文本获得奖励的情形。具体规则随任务配置。</li>
+</ul>
+<p><a href="https://openreview.net/pdf?id=9xIBbfItGP#page=6">图 2</a> · <a href="https://openreview.net/pdf?id=9xIBbfItGP#page=15">附录 C</a> · <a href="https://openreview.net/pdf?id=9xIBbfItGP#page=18">表 5</a></p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="guard">
+<h2 id="guard" tabindex="-1">探索项如何保留任务优势的符号 <a class="header-anchor" href="#guard" aria-label="链接到探索项如何保留任务优势的符号">&#8203;</a></h2>
+<p>同一道题的一组回答会得到一组分数 <i>Bᵢ</i>。作者先用组内均值和标准差将分数标准化，只取正的部分。于是低于平均新颖性的回答获得零探索增量。</p>
+<div class="math-block" data-tex="E_i=\max\!\left(0,\frac{B_i-\mu_B}{\sigma_B}\right)"></div>
+<p>原任务奖励给出的优势记为 <i>A</i><sub>old</sub>。探索系数 γ 控制增量的大小，比例上限 α 限制增量相对原优势的幅度。原文的分段公式可等价写为</p>
+<div class="math-block" data-tex="A_{\rm new}=A_{\rm old}+\min\!\left(\gamma E_i,\alpha\lvert A_{\rm old}\rvert\right),\qquad 0&lt;\alpha&lt;1,\ \gamma\geq0."></div>
+<p>取 α = 0.5。若原优势为 +1，新优势落在 [1, 1.5]；若原优势为 −1，新优势落在 [−1, −0.5]。对后一条回答，即使探索分数很高，策略更新仍会压低它的概率，只是压低的力度可以减小。若原优势为零，允许增加的上限也为零。这意味着组内任务奖励完全相同且原优势全零时，按该融合式无法产生新的学习信号。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=7">式 (7)–(8)</a></p>
+<p>数学任务主配置取初始 γ = 0.4、α = 0.5。γ 采用余弦调度，到第 200 步降至初值的 10%，探索项对更新的影响随训练逐渐减弱。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=18">附录 E.3</a></p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="training">
+<h2 id="training" tabindex="-1">一次 MERCI 训练迭代 <a class="header-anchor" href="#training" aria-label="链接到一次 MERCI 训练迭代">&#8203;</a></h2>
+<p>训练前，作者用初始策略生成的回答预训练 CFN。进入强化学习阶段后，每轮更新的顺序决定了“少见”相对于哪一刻的访问历史。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=8">§5.2</a> · <a href="https://openreview.net/pdf?id=9xIBbfItGP#page=16">算法 1</a></p>
+<ol>
+<li>策略为同一问题采样多条回答，用数学答案或 SQL 执行结果计算外部奖励及原始组内优势。</li>
+<li>用当前 CFN 给各条回答逐位置评分。筛选位置、按完整长度聚合，得到每条回答的探索分数。</li>
+<li>在同题组内标准化探索分数，截去负值，并按原优势的绝对值限制增量，得到 GRPO 或 DAPO 使用的新优势。</li>
+<li>用新优势更新策略。同时为这批访问重新采样随机标签，更新 CFN。先给轨迹评分，再让 CFN 吸收这批访问，下一轮的评分才会反映这段新历史。</li>
+</ol>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="evidence">
+<h2 id="evidence" tabindex="-1">数学与 SQL 实验 <a class="header-anchor" href="#evidence" aria-label="链接到数学与 SQL 实验">&#8203;</a></h2>
+<p>数学实验在 DAPO-17K 上训练 Qwen2.5-Math-7B。SQL 实验用 BIRD 训练 Llama-3.1-8B-Instruct，并在 BIRD 和 Spider 上评测。下表摘录作者报告的结果，分数单位为百分数，变化为百分点。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=8">§5.1</a> · <a href="https://openreview.net/pdf?id=9xIBbfItGP#page=9">表 1</a> · <a href="https://openreview.net/pdf?id=9xIBbfItGP#page=10">表 2</a></p>
+<div class="note-table" role="region" aria-label="MERCI 与原训练方法的成绩对照" tabindex="0">
+<table><thead><tr><th>任务与指标</th><th>基线</th><th>原方法</th><th>加入 MERCI</th><th>变化</th></tr></thead><tbody>
+<tr><td>数学六集平均 mean@k</td><td>GRPO</td><td>40.5</td><td>42.2</td><td>+1.7</td></tr>
+<tr><td>数学六集平均 mean@k</td><td>DAPO</td><td>42.2</td><td>44.9</td><td>+2.7</td></tr>
+<tr><td>数学六集平均 pass@k</td><td>DAPO</td><td>66.9</td><td>69.0</td><td>+2.1</td></tr>
+<tr><td>SQL · Spider 域外评测，贪心解码</td><td>GRPO</td><td>74.7</td><td>78.0</td><td>+3.3</td></tr>
+</tbody></table>
+</div>
+<p><strong>mean@k</strong> 衡量多次采样的平均正确率，<strong>pass@k</strong> 衡量给定采样预算下至少答对一次的比例。不同数学评测集的预算有差别：AIME 取 256，Minerva、MATH500、OlympiadBench 取 16，College 取 8。DAPO 加 MERCI 的平均 mean@k 为 44.9，较强的 DAPO 加 iMentor 为 44.1；单看 Minerva，DAPO 加入 MERCI 后的 pass@16 从 66.9 降至 66.5。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=9">表 1</a></p>
+<p><strong>消融结果解释了为什么需要筛选和聚合。</strong>GRPO 数学实验中，去掉噪声过滤后，平均 mean@k 从完整 MERCI 的 42.2 降到 38.9；直接把探索信号注入逐 token 优势时为 39.3。两者均低于原始 GRPO 的 40.5。在这组实验里，发现罕见状态只是第一步，哪些状态参与奖励、奖励作用于哪一层，都会改变最终结果。上述数值来自论文，所摘主表未报告置信区间。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=26">表 9</a></p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="limits">
+<h2 id="limits" tabindex="-1">方法的适用边界 <a class="header-anchor" href="#limits" aria-label="链接到方法的适用边界">&#8203;</a></h2>
+<p><strong>访问频率的解释范围。</strong>CFN 接受的是随机标签监督。它给出的高分说明某段表示在当前训练历史中显得少见，无法单独判定推理是否正确，也无法直接读出该类题目在预训练语料中的占比。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=5">§3.2</a></p>
+<p><strong>探索激励依赖任务信号。</strong>稀有但错误的路线能获得多大增量，由原优势决定。特别是整组原优势都为零时，保护任务方向的限幅也消除了探索增量。这是式 (8) 的直接推论。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=7">式 (8)</a></p>
+<p><strong>环境假设决定理论能否迁移。</strong>生成下一个 token 时，前缀转移已知。若智能体执行工具调用并获得外部观测，同一动作可能产生不同的下一状态。迁移到这种任务时，需要重新分析环境转移带来的不确定性。<a href="https://openreview.net/pdf?id=9xIBbfItGP#page=4">§3.1</a></p>
+</section>
+
+<section class="document-section note-panel" aria-labelledby="references">
+<h2 id="references" tabindex="-1">原文与代码 <a class="header-anchor" href="#references" aria-label="链接到原文与代码">&#8203;</a></h2>
+<p>Xuan Zhang 等，<cite>Count Counts: Motivating Exploration in LLM Reasoning with Count-based Intrinsic Rewards</cite>，ICLR 2026。公式编号、页码和实验表格按 OpenReview 会议版。本文整理作者的实验，未独立复现。</p>
+<ul>
+<li><a href="https://openreview.net/pdf?id=9xIBbfItGP">OpenReview 会议版全文</a></li>
+<li><a href="https://arxiv.org/html/2510.16614v2">arXiv v2 HTML 全文</a></li>
+<li><a href="https://github.com/dd88s87/MERCI">作者的 MERCI 代码仓库</a></li>
+</ul>
+</section>
+</article>

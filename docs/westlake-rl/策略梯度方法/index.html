@@ -1,0 +1,515 @@
+<script setup lang="ts">
+import '../lecture-academic.css'
+import { defineAsyncComponent, shallowRef } from 'vue'
+import pdfUrl from './策略梯度方法.pdf?url'
+import outline from './目录.json'
+const PdfViewer = defineAsyncComponent(() => import('../../.vitepress/components/PdfViewer.vue'))
+const showOriginal = shallowRef(false)
+function toggleOriginal(event: Event) {
+  showOriginal.value = (event.target as HTMLDetailsElement).open
+}
+</script>
+
+<article class="native-document format-course academic-lecture" data-format="course" data-design="linux-notebook" aria-label="第 9 讲：策略梯度方法">
+<header class="document-intro note-hero">
+  <p class="note-kicker">西湖 RL 笔记<span>第 9 讲 · 课程讲义</span></p>
+  <h1 id="note-title" tabindex="-1">策略梯度方法 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
+  <p class="note-deck">从策略参数化与目标函数出发，推导策略梯度，并用 REINFORCE 从采样轨迹更新策略。</p>
+  <div class="note-chips"><span>策略参数化</span><span>策略梯度</span><span>REINFORCE</span></div>
+  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记</p>
+</header>
+<nav class="note-jump" aria-label="本篇阅读导航"><a href="#策略表示从表格到函数">9.1 策略表示：从表格到函数</a>
+<a href="#定义最优策略的指标">9.2 定义最优策略的指标</a>
+<a href="#指标的梯度">9.3 指标的梯度</a>
+<a href="#蒙特卡洛策略梯度reinforce">9.4 蒙特卡洛策略梯度（REINFORCE）</a>
+<a href="#本章小结">9.5 本章小结</a>
+<a href="#常见问题解答">9.6 常见问题解答</a></nav>
+<div id="reading-context" class="lecture-body">
+<p>函数近似的思想不仅可以用于表示状态/动作价值（如第8讲所述），还可以用于表示策略，这正是本章的核心主题。到目前为止，本书中的策略一直以表格形式表示：所有状态的动作概率都存储在一张表中。本章将展示，策略可以用参数化函数来表示，记作 <span class="math-inline" data-tex="\pi(a|s, \boldsymbol{\theta})"></span>，其中 <span class="math-inline" data-tex="\boldsymbol{\theta} \in \mathbb{R}^m"></span> 是参数向量。该形式也可以写作 <span class="math-inline" data-tex="\pi_{\boldsymbol{\theta}}(a|s)"></span>、<span class="math-inline" data-tex="\pi_{\boldsymbol{\theta}}(a,s)"></span> 或 <span class="math-inline" data-tex="\pi(a,s;\boldsymbol{\theta})"></span>。</p>
+<p>当策略以函数形式表示时，可以通过优化某个标量指标来获得最优策略。这种方法被称为<strong>策略梯度</strong>（policy gradient）。策略梯度方法是本书的一大进步，因为它是<strong>基于策略的（policy-based）</strong>方法，而此前各章讨论的都是<strong>基于价值的（value-based）</strong>方法。策略梯度方法的优势众多。例如，它在处理大状态/动作空间时效率更高；它具有更强的泛化能力，因此样本利用效率更高。</p>
+
+<section class="document-section note-panel" aria-labelledby="策略表示从表格到函数">
+<h2 class="unnumbered" tabindex="-1" id="策略表示从表格到函数">9.1 策略表示：从表格到函数 <a class="header-anchor" href="#策略表示从表格到函数" aria-label="章节链接">&#8203;</a></h2>
+<p>当策略的表示从表格切换到函数时，有必要澄清两种表示方法的区别。</p>
+<ul>
+<li><p><strong>第一，如何定义最优策略？</strong>当用表格表示时，若一个策略能最大化每个状态的价值，则该策略被定义为最优。当用函数表示时，若一个策略能最大化某个<strong>标量指标</strong>，则该策略被定义为最优。</p></li>
+<li><p><strong>第二，如何更新策略？</strong>当用表格表示时，可以通过直接修改表中条目来更新策略。当用参数化函数表示时，策略无法再通过这种方式更新，只能通过改变参数 <span class="math-inline" data-tex="\boldsymbol{\theta}"></span> 来更新。</p></li>
+<li><p><strong>第三，如何获取动作的概率？</strong>在表格情况下，可以直接查表获取动作的概率。在函数表示情况下，需要将 <span class="math-inline" data-tex="(s,a)"></span> 输入函数计算其概率。根据函数的结构不同，也可以输入状态然后输出所有动作的概率。</p></li>
+</ul>
+<p>策略梯度方法的基本思想总结如下。设 <span class="math-inline" data-tex="J(\boldsymbol{\theta})"></span> 是一个标量指标，可以通过基于梯度的算法优化该指标来获得最优策略：</p>
+<div class="lecture-equation" id="lecture-equation-1"><div class="math-block" data-tex="\boldsymbol{\theta}_{t+1} = \boldsymbol{\theta}_t + \alpha \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}_t);"></div></div>
+<p>其中 <span class="math-inline" data-tex="\nabla_{\boldsymbol{\theta}} J"></span> 是 <span class="math-inline" data-tex="J"></span> 对 <span class="math-inline" data-tex="\boldsymbol{\theta}"></span> 的梯度，<span class="math-inline" data-tex="t"></span> 是时间步，<span class="math-inline" data-tex="\alpha"></span> 是优化步长。</p>
+<p>基于这一基本思想，本章将回答以下三个问题：</p>
+<ul>
+<li><p>应该使用什么指标？（第9.2节）</p></li>
+<li><p>如何计算这些指标的梯度？（第9.3节）</p></li>
+<li><p>如何利用经验样本计算梯度？（第9.4节）</p></li>
+</ul>
+</section>
+<section class="document-section note-panel" aria-labelledby="定义最优策略的指标">
+<h2 class="unnumbered" tabindex="-1" id="定义最优策略的指标">9.2 定义最优策略的指标 <a class="header-anchor" href="#定义最优策略的指标" aria-label="章节链接">&#8203;</a></h2>
+<p>如果策略用函数表示，有两种类型的指标可用于定义最优策略。一种基于状态价值，另一种基于即时奖励。</p>
+<h3 class="unnumbered" tabindex="-1" id="指标1平均状态价值">指标1：平均状态价值 <a class="header-anchor" href="#指标1平均状态价值" aria-label="章节链接">&#8203;</a></h3>
+<p>第一个指标是<strong>平均状态价值</strong>（average state value），简称平均价值。其定义为：</p>
+<div class="lecture-equation" id="lecture-equation-2"><div class="math-block" data-tex="\bar{v}_\pi = \sum_{s \in \mathcal{S}} d(s) v_\pi(s);"></div></div>
+<p>其中 <span class="math-inline" data-tex="d(s)"></span> 是状态 <span class="math-inline" data-tex="s"></span> 的权重。它满足对任意 <span class="math-inline" data-tex="s \in \mathcal{S}"></span> 有 <span class="math-inline" data-tex="d(s) \geq 0"></span>，且 <span class="math-inline" data-tex="\sum_{s \in \mathcal{S}} d(s) = 1"></span>。因此，可以将 <span class="math-inline" data-tex="d(s)"></span> 解释为 <span class="math-inline" data-tex="s"></span> 的概率分布。那么该指标可以写作：</p>
+<div class="lecture-equation" id="lecture-equation-3"><div class="math-block" data-tex="\bar{v}_\pi = \mathbb{E}_{S \sim d}[v_\pi(S)]."></div></div>
+<p>如何选择分布 <span class="math-inline" data-tex="d"></span>？这是一个重要问题，有两种情形。</p>
+<ul>
+<li><p>第一种也是最简单的情形是 <span class="math-inline" data-tex="d"></span> 独立于策略 <span class="math-inline" data-tex="\pi"></span>。此时我们特别记 <span class="math-inline" data-tex="d"></span> 为 <span class="math-inline" data-tex="d_0"></span>，记 <span class="math-inline" data-tex="\bar{v}_\pi"></span> 为 <span class="math-inline" data-tex="\bar{v}_\pi^0"></span> 以表明该分布与策略无关。一种情况是将所有状态视为同等重要并取 <span class="math-inline" data-tex="d_0(s) = 1/|\mathcal{S}|"></span>。另一种情况是我们只关心某个特定状态 <span class="math-inline" data-tex="s_0"></span>（如智能体总是从 <span class="math-inline" data-tex="s_0"></span> 出发），此时可以设计 <span class="math-inline" data-tex="d_0(s_0) = 1"></span>，<span class="math-inline" data-tex="d_0(s \neq s_0) = 0"></span>。</p></li>
+<li><p>第二种情形是 <span class="math-inline" data-tex="d"></span> 依赖于策略 <span class="math-inline" data-tex="\pi"></span>。此时通常取 <span class="math-inline" data-tex="d"></span> 为 <span class="math-inline" data-tex="\pi"></span> 下的<strong>平稳分布</strong> <span class="math-inline" data-tex="d_\pi"></span>。<span class="math-inline" data-tex="d_\pi"></span> 的一个基本性质是它满足：</p>
+<div class="lecture-equation" id="lecture-equation-4"><div class="math-block" data-tex="d_\pi^T \boldsymbol{P}_\pi = d_\pi^T;"></div></div>
+<p>其中 <span class="math-inline" data-tex="\boldsymbol{P}_\pi"></span> 是状态转移概率矩阵。选取 <span class="math-inline" data-tex="d_\pi"></span> 的解释如下：平稳分布反映了马尔可夫决策过程在给定策略下的长期行为。如果一个状态在长期中被频繁访问，它就更重要，应该得到更高的权重；如果一个状态很少被访问，则其重要性较低，应该得到较低的权重。</p></li>
+</ul>
+<p>顾名思义，<span class="math-inline" data-tex="\bar{v}_\pi"></span> 是状态价值的加权平均。不同的 <span class="math-inline" data-tex="\boldsymbol{\theta}"></span> 值会导致不同的 <span class="math-inline" data-tex="\bar{v}_\pi"></span> 值。我们的最终目标是找到一个最优策略（等价于最优的 <span class="math-inline" data-tex="\boldsymbol{\theta}"></span>）来最大化 <span class="math-inline" data-tex="\bar{v}_\pi"></span>。</p>
+<p>下面介绍 <span class="math-inline" data-tex="\bar{v}_\pi"></span> 的另外两个重要等价表达式。</p>
+<ul>
+<li><p>假设智能体遵循给定策略 <span class="math-inline" data-tex="\pi(\boldsymbol{\theta})"></span> 收集奖励 <span class="math-inline" data-tex="\{R_{t+1}\}_{t=0}^{\infty}"></span>。在文献中常见的如下指标：</p>
+<div class="lecture-equation is-numbered" id="eq:J_discounted"><div class="math-block" data-tex="J(\boldsymbol{\theta}) = \lim_{n \to \infty} \mathbb{E}\left[ \sum_{t=0}^{n} \gamma^t R_{t+1} \right]
+    = \mathbb{E}\left[ \sum_{t=0}^{\infty} \gamma^t R_{t+1} \right]."></div><a class="lecture-equation-number" href="#eq:J_discounted" aria-label="公式 1">(1)</a></div>
+<p>该指标实际上等于 <span class="math-inline" data-tex="\bar{v}_\pi"></span>。为了说明这一点：</p>
+<div class="lecture-equation" id="lecture-equation-6"><div class="math-block" data-tex="\mathbb{E}\left[ \sum_{t=0}^{\infty} \gamma^t R_{t+1} \right]
+    = \sum_{s \in \mathcal{S}} d(s) \mathbb{E}\left[ \sum_{t=0}^{\infty} \gamma^t R_{t+1} \,\middle|\, S_0 = s \right]
+    = \sum_{s \in \mathcal{S}} d(s) v_\pi(s) = \bar{v}_\pi."></div></div>
+<p>上式第一个等号是全期望公式，第二个等号是状态价值的定义。</p></li>
+<li><p>指标 <span class="math-inline" data-tex="\bar{v}_\pi"></span> 还可以改写为两个向量的内积形式。令</p>
+<div class="lecture-equation" id="lecture-equation-7"><div class="math-block" data-tex="\boldsymbol{v}_\pi = [\dots, v_\pi(s), \dots]^T \in \mathbb{R}^{|\mathcal{S}|}, \quad
+    \boldsymbol{d} = [\dots, d(s), \dots]^T \in \mathbb{R}^{|\mathcal{S}|}."></div></div>
+<p>则有：</p>
+<div class="lecture-equation" id="lecture-equation-8"><div class="math-block" data-tex="\bar{v}_\pi = \boldsymbol{d}^T \boldsymbol{v}_\pi."></div></div>
+<p>该表达式在分析其梯度时将非常有用。</p></li>
+</ul>
+<h3 class="unnumbered" tabindex="-1" id="指标2平均奖励">指标2：平均奖励 <a class="header-anchor" href="#指标2平均奖励" aria-label="章节链接">&#8203;</a></h3>
+<p>第二个指标是<strong>平均单步奖励</strong>（average one-step reward），简称为平均奖励。其定义为：</p>
+<div class="lecture-equation is-numbered" id="eq:avg_reward"><div class="math-block" data-tex="\bar{r}_\pi := \sum_{s \in \mathcal{S}} d_\pi(s) r_\pi(s) = \mathbb{E}_{S \sim d_\pi}[r_\pi(S)];"></div><a class="lecture-equation-number" href="#eq:avg_reward" aria-label="公式 2">(2)</a></div>
+<p>其中 <span class="math-inline" data-tex="d_\pi"></span> 是平稳分布，且</p>
+<div class="lecture-equation is-numbered" id="eq:r_pi"><div class="math-block" data-tex="r_\pi(s) := \sum_{a \in \mathcal{A}} \pi(a|s, \boldsymbol{\theta}) r(s,a) = \mathbb{E}_{A \sim \pi(s,\boldsymbol{\theta})}[r(s,A) | s]"></div><a class="lecture-equation-number" href="#eq:r_pi" aria-label="公式 3">(3)</a></div>
+<p>是即时奖励的期望。这里 <span class="math-inline" data-tex="r(s,a) := \mathbb{E}[R|s,a] = \sum_{r} r \, p(r|s,a)"></span>。</p>
+<p>下面介绍 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 的另外两个重要等价表达式。</p>
+<ul>
+<li><p>假设智能体遵循给定策略 <span class="math-inline" data-tex="\pi(\boldsymbol{\theta})"></span> 收集奖励 <span class="math-inline" data-tex="\{R_{t+1}\}_{t=0}^{\infty}"></span>。文献中常见的另一个指标是：</p>
+<div class="lecture-equation is-numbered" id="eq:J_undiscounted"><div class="math-block" data-tex="J(\boldsymbol{\theta}) = \lim_{n \to \infty} \frac{1}{n} \mathbb{E}\left[ \sum_{t=0}^{n-1} R_{t+1} \right]."></div><a class="lecture-equation-number" href="#eq:J_undiscounted" aria-label="公式 4">(4)</a></div>
+<p>它实际上等于 <span class="math-inline" data-tex="\bar{r}_\pi"></span>：</p>
+<div class="lecture-equation is-numbered" id="eq:avg_reward_proof"><div class="math-block" data-tex="\lim_{n \to \infty} \frac{1}{n} \mathbb{E}\left[ \sum_{t=0}^{n-1} R_{t+1} \right]
+    = \sum_{s \in \mathcal{S}} d_\pi(s) r_\pi(s) = \bar{r}_\pi."></div><a class="lecture-equation-number" href="#eq:avg_reward_proof" aria-label="公式 5">(5)</a></div>
+<p><a href="#eq:avg_reward_proof" data-reference-type="eqref" data-reference="eq:avg_reward_proof">(5)</a> 的证明见下文。</p></li>
+<li><p>平均奖励 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 也可以写成两个向量的内积。令</p>
+<div class="lecture-equation" id="lecture-equation-13"><div class="math-block" data-tex="\boldsymbol{r}_\pi = [\dots, r_\pi(s), \dots]^T \in \mathbb{R}^{|\mathcal{S}|}, \quad
+    \boldsymbol{d}_\pi = [\dots, d_\pi(s), \dots]^T \in \mathbb{R}^{|\mathcal{S}|};"></div></div>
+<p>其中 <span class="math-inline" data-tex="r_\pi(s)"></span> 由 <a href="#eq:r_pi" data-reference-type="eqref" data-reference="eq:r_pi">(3)</a> 定义。则显然有：</p>
+<div class="lecture-equation" id="lecture-equation-14"><div class="math-block" data-tex="\bar{r}_\pi = \sum_{s \in \mathcal{S}} d_\pi(s) r_\pi(s) = \boldsymbol{d}_\pi^T \boldsymbol{r}_\pi."></div></div>
+<p>该表达式在推导其梯度时将非常有用。</p></li>
+</ul>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p><strong>证明 <a href="#eq:avg_reward_proof" data-reference-type="eqref" data-reference="eq:avg_reward_proof">(5)</a>：</strong></p>
+<p><strong>步骤 1：</strong>首先证明对任意起始状态 <span class="math-inline" data-tex="s_0 \in \mathcal{S}"></span>，以下等式成立：</p>
+<div class="lecture-equation" id="lecture-equation-15"><div class="math-block" data-tex="\bar{r}_\pi = \lim_{n \to \infty} \frac{1}{n} \mathbb{E}\left[ \sum_{t=0}^{n-1} R_{t+1} \;\middle|\; S_0 = s_0 \right]."></div></div>
+<p>为此，注意到：</p>
+<div class="lecture-equation" id="lecture-equation-16"><div class="math-block" data-tex="\lim_{n \to \infty} \frac{1}{n} \mathbb{E}\left[ \sum_{t=0}^{n-1} R_{t+1} \;\middle|\; S_0 = s_0 \right]
+= \lim_{n \to \infty} \frac{1}{n} \sum_{t=0}^{n-1} \mathbb{E}[R_{t+1} | S_0 = s_0]
+= \lim_{t \to \infty} \mathbb{E}[R_{t+1} | S_0 = s_0];"></div></div>
+<p>其中最后一个等号来自 Cesàro 均值的性质：若 <span class="math-inline" data-tex="\{a_k\}_{k=1}^{\infty}"></span> 是收敛序列且 <span class="math-inline" data-tex="\lim_{k\to\infty} a_k"></span> 存在，则 <span class="math-inline" data-tex="\{\frac{1}{n}\sum_{k=1}^{n} a_k\}_{n=1}^{\infty}"></span> 也是收敛序列且 <span class="math-inline" data-tex="\lim_{n\to\infty} \frac{1}{n} \sum_{k=1}^{n} a_k = \lim_{k\to\infty} a_k"></span>。</p>
+<p>进一步考察 <span class="math-inline" data-tex="\mathbb{E}[R_{t+1} | S_0 = s_0]"></span>。由全期望公式：</p>
+<div class="lecture-equation" id="lecture-equation-17"><div class="math-block" data-tex="\mathbb{E}[R_{t+1} | S_0 = s_0] = \sum_{s \in \mathcal{S}} \mathbb{E}[R_{t+1} | S_t = s, S_0 = s_0] \; p^{(t)}(s|s_0)
+= \sum_{s \in \mathcal{S}} \mathbb{E}[R_{t+1} | S_t = s] \; p^{(t)}(s|s_0)
+= \sum_{s \in \mathcal{S}} r_\pi(s) \, p^{(t)}(s|s_0);"></div></div>
+<p>其中 <span class="math-inline" data-tex="p^{(t)}(s|s_0)"></span> 表示从 <span class="math-inline" data-tex="s_0"></span> 出发恰好在 <span class="math-inline" data-tex="t"></span> 步后到达 <span class="math-inline" data-tex="s"></span> 的概率。第三个等号来自马尔可夫记忆无关性质。</p>
+<p>由平稳分布的定义，<span class="math-inline" data-tex="\lim_{t \to \infty} p^{(t)}(s|s_0) = d_\pi(s)"></span>，因此：</p>
+<div class="lecture-equation" id="lecture-equation-18"><div class="math-block" data-tex="\lim_{t \to \infty} \mathbb{E}[R_{t+1} | S_0 = s_0] = \lim_{t \to \infty} \sum_{s \in \mathcal{S}} r_\pi(s) \, p^{(t)}(s|s_0) = \sum_{s \in \mathcal{S}} r_\pi(s) d_\pi(s) = \bar{r}_\pi."></div></div>
+<p><strong>步骤 2：</strong>考虑任意状态分布 <span class="math-inline" data-tex="d"></span>。由全期望公式：</p>
+<div class="lecture-equation" id="lecture-equation-19"><div class="math-block" data-tex="\lim_{n \to \infty} \frac{1}{n} \mathbb{E}\left[ \sum_{t=0}^{n-1} R_{t+1} \right]
+= \lim_{n \to \infty} \frac{1}{n} \sum_{s \in \mathcal{S}} d(s) \, \mathbb{E}\left[ \sum_{t=0}^{n-1} R_{t+1} \;\middle|\; S_0 = s \right]
+= \sum_{s \in \mathcal{S}} d(s) \, \lim_{n \to \infty} \frac{1}{n} \mathbb{E}\left[ \sum_{t=0}^{n-1} R_{t+1} \;\middle|\; S_0 = s \right]."></div></div>
+<p>由于步骤1对任意起始状态成立，代入得：</p>
+<div class="lecture-equation" id="lecture-equation-20"><div class="math-block" data-tex="\lim_{n \to \infty} \frac{1}{n} \mathbb{E}\left[ \sum_{t=0}^{n-1} R_{t+1} \right]
+= \sum_{s \in \mathcal{S}} d(s) \bar{r}_\pi = \bar{r}_\pi."></div></div>
+<p>证明完毕。</p>
+</div>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>备注</p>
+</div>
+<p>到目前为止，我们介绍了两种类型的指标：<span class="math-inline" data-tex="\bar{v}_\pi"></span> 和 <span class="math-inline" data-tex="\bar{r}_\pi"></span>。每个指标都有几种不同但等价的表达式。有时我们用 <span class="math-inline" data-tex="\bar{v}_\pi"></span> 特指状态分布为平稳分布 <span class="math-inline" data-tex="d_\pi"></span> 的情形，用 <span class="math-inline" data-tex="\bar{v}_\pi^0"></span> 指 <span class="math-inline" data-tex="d_0"></span> 独立于 <span class="math-inline" data-tex="\pi"></span> 的情形。</p>
+<p>关于这些指标的一些说明：</p>
+<ul>
+<li><p>所有这些指标都是 <span class="math-inline" data-tex="\pi"></span> 的函数。由于 <span class="math-inline" data-tex="\pi"></span> 由 <span class="math-inline" data-tex="\boldsymbol{\theta}"></span> 参数化，这些指标也是 <span class="math-inline" data-tex="\boldsymbol{\theta}"></span> 的函数。换句话说，不同的 <span class="math-inline" data-tex="\boldsymbol{\theta}"></span> 值可以产生不同的指标值。因此，我们可以搜索 <span class="math-inline" data-tex="\boldsymbol{\theta}"></span> 的最优值来最大化这些指标。这就是策略梯度方法的基本思想。</p></li>
+<li><p>在折扣情形（<span class="math-inline" data-tex="\gamma &lt; 1"></span>）下，两种指标 <span class="math-inline" data-tex="\bar{v}_\pi"></span> 和 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 是等价的。具体而言，可以证明：</p>
+<div class="lecture-equation" id="lecture-equation-21"><div class="math-block" data-tex="\bar{r}_\pi = (1 - \gamma) \bar{v}_\pi."></div></div>
+<p>上式表明这两个指标可以同时最大化。该等式的证明将在引理 9.1 中给出。</p></li>
+</ul>
+</div>
+</section>
+<section class="document-section note-panel" aria-labelledby="指标的梯度">
+<h2 class="unnumbered" tabindex="-1" id="指标的梯度">9.3 指标的梯度 <a class="header-anchor" href="#指标的梯度" aria-label="章节链接">&#8203;</a></h2>
+<p>给定上一节引入的指标，可以使用基于梯度的方法来最大化它们。为此，需要首先计算这些指标的梯度。本章最重要的理论结果是以下定理。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 9.1 策略梯度定理</p>
+</div>
+<p>梯度 <span class="math-inline" data-tex="J(\boldsymbol{\theta})"></span>：</p>
+<div class="lecture-equation is-numbered" id="eq:pg_1"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \sum_{s \in \mathcal{S}} \eta(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s, a);"></div><a class="lecture-equation-number" href="#eq:pg_1" aria-label="公式 6">(6)</a></div>
+<p>其中 <span class="math-inline" data-tex="\eta"></span> 是一个状态分布，<span class="math-inline" data-tex="\nabla_{\boldsymbol{\theta}} \pi"></span> 是 <span class="math-inline" data-tex="\pi"></span> 对 <span class="math-inline" data-tex="\boldsymbol{\theta}"></span> 的梯度。此外，<a href="#eq:pg_1" data-reference-type="eqref" data-reference="eq:pg_1">(6)</a> 有一个用期望表示的紧凑形式：</p>
+<div class="lecture-equation is-numbered" id="eq:pg_2"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \mathbb{E}_{S \sim \eta, \, A \sim \pi(S,\boldsymbol{\theta})} \left[ \nabla_{\boldsymbol{\theta}} \ln \pi(A|S, \boldsymbol{\theta}) \, q_\pi(S, A) \right];"></div><a class="lecture-equation-number" href="#eq:pg_2" aria-label="公式 7">(7)</a></div>
+<p>其中 <span class="math-inline" data-tex="\ln"></span> 是自然对数。</p>
+</div>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>备注</p>
+</div>
+<p>关于定理 9.1 的一些重要说明：</p>
+<ul>
+<li><p>需要注意的是，定理 9.1 是定理 9.2、定理 9.3 和定理 9.5 的结果的总结。这三个定理针对不同指标和折扣/非折扣情形的不同场景。这些场景中的梯度都有类似的表达式，因此汇总在定理 9.1 中。<span class="math-inline" data-tex="J(\boldsymbol{\theta})"></span> 和 <span class="math-inline" data-tex="\eta"></span> 的具体表达式未在定理 9.1 中给出，可在定理 9.2、定理 9.3 和定理 9.5 中找到。具体来说，<span class="math-inline" data-tex="J(\boldsymbol{\theta})"></span> 可以是 <span class="math-inline" data-tex="\bar{v}_\pi^0"></span>、<span class="math-inline" data-tex="\bar{v}_\pi"></span> 或 <span class="math-inline" data-tex="\bar{r}_\pi"></span>。<a href="#eq:pg_1" data-reference-type="eqref" data-reference="eq:pg_1">(6)</a> 中的等号可能是精确等式或近似。分布 <span class="math-inline" data-tex="\eta"></span> 在不同场景中也不同。</p></li>
+<li><p>梯度的推导是策略梯度方法中最复杂的部分。对大多数读者来说，熟悉定理 9.1 的结果而不需要了解证明就足够了。本节后续内容中的推导细节在数学上较为密集，建议读者根据兴趣选择性学习。</p></li>
+<li><p><a href="#eq:pg_2" data-reference-type="eqref" data-reference="eq:pg_2">(7)</a> 中的表达式比 <a href="#eq:pg_1" data-reference-type="eqref" data-reference="eq:pg_1">(6)</a> 更受欢迎，因为它以期望的形式表达。我们将在第 9.4 节中展示，这个真实梯度可以用随机梯度来近似。</p></li>
+</ul>
+</div>
+<p>为什么 <a href="#eq:pg_1" data-reference-type="eqref" data-reference="eq:pg_1">(6)</a> 可以表示为 <a href="#eq:pg_2" data-reference-type="eqref" data-reference="eq:pg_2">(7)</a>？证明如下。由期望的定义，<a href="#eq:pg_1" data-reference-type="eqref" data-reference="eq:pg_1">(6)</a> 可以改写为：</p>
+<div class="lecture-equation" id="lecture-equation-24"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \sum_{s \in \mathcal{S}} \eta(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a)
+= \mathbb{E}_{S \sim \eta} \left[ \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|S, \boldsymbol{\theta}) \, q_\pi(S,a) \right]."></div></div>
+<p>进一步地，<span class="math-inline" data-tex="\ln \pi(a|s, \boldsymbol{\theta})"></span> 的梯度为：</p>
+<div class="lecture-equation" id="lecture-equation-25"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} \ln \pi(a|s, \boldsymbol{\theta}) = \frac{\nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta})}{\pi(a|s, \boldsymbol{\theta})}."></div></div>
+<p>由此可得：</p>
+<div class="lecture-equation" id="lecture-equation-26"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) = \pi(a|s, \boldsymbol{\theta}) \, \nabla_{\boldsymbol{\theta}} \ln \pi(a|s, \boldsymbol{\theta})."></div></div>
+<p>代入得：</p>
+<div class="lecture-equation" id="lecture-equation-27"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}) = \mathbb{E}\left[ \sum_{a \in \mathcal{A}} \pi(a|S, \boldsymbol{\theta}) \, \nabla_{\boldsymbol{\theta}} \ln \pi(a|S, \boldsymbol{\theta}) \, q_\pi(S, a) \right]
+= \mathbb{E}_{S \sim \eta, \, A \sim \pi(S,\boldsymbol{\theta})} \left[ \nabla_{\boldsymbol{\theta}} \ln \pi(A|S, \boldsymbol{\theta}) \, q_\pi(S, A) \right]."></div></div>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>备注</p>
+</div>
+<p>值得注意的是，<span class="math-inline" data-tex="\pi(a|s, \boldsymbol{\theta})"></span> 必须对所有 <span class="math-inline" data-tex="(s,a)"></span> 为正，以确保 <span class="math-inline" data-tex="\ln \pi(a|s, \boldsymbol{\theta})"></span> 有效。这可以通过使用<strong>softmax 函数</strong>来实现：</p>
+<div class="lecture-equation" id="lecture-equation-28"><div class="math-block" data-tex="\pi(a|s, \boldsymbol{\theta}) = \frac{e^{h(s,a,\boldsymbol{\theta})}}{\sum_{a&#x27; \in \mathcal{A}} e^{h(s,a&#x27;,\boldsymbol{\theta})}}, \quad a \in \mathcal{A};"></div></div>
+<p>其中 <span class="math-inline" data-tex="h(s, a, \boldsymbol{\theta})"></span> 是一个表示在状态 <span class="math-inline" data-tex="s"></span> 选择动作 <span class="math-inline" data-tex="a"></span> 的偏好函数。该策略满足对任意 <span class="math-inline" data-tex="s \in \mathcal{S}"></span> 有 <span class="math-inline" data-tex="\pi(a|s, \boldsymbol{\theta}) \in (0,1)"></span> 且 <span class="math-inline" data-tex="\sum_{a \in \mathcal{A}} \pi(a|s, \boldsymbol{\theta}) = 1"></span>。该策略可以用神经网络实现：网络的输入是 <span class="math-inline" data-tex="s"></span>，输出层是 softmax 层，因此网络输出所有 <span class="math-inline" data-tex="a"></span> 的 <span class="math-inline" data-tex="\pi(a|s, \boldsymbol{\theta})"></span> 且输出之和为 1。</p>
+<p>由于对所有 <span class="math-inline" data-tex="a"></span> 有 <span class="math-inline" data-tex="\pi(a|s, \boldsymbol{\theta}) &gt; 0"></span>，该策略是<strong>随机性的</strong>，因此具有<strong>探索性</strong>。策略不直接指示采取哪个动作，而是应该根据策略的概率分布来生成动作。</p>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="折扣情形下的梯度推导">9.3.1 折扣情形下的梯度推导 <a class="header-anchor" href="#折扣情形下的梯度推导" aria-label="章节链接">&#8203;</a></h3>
+<p>下面推导在折扣情形（<span class="math-inline" data-tex="\gamma \in (0,1)"></span>）下的指标梯度。折扣情形下的状态价值和动作价值定义为：</p>
+<div class="lecture-equation" id="lecture-equation-29"><div class="math-block" data-tex="\begin{align*}
+v_\pi(s) &amp;= \mathbb{E}[R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \dots \mid S_t = s], \\
+q_\pi(s,a) &amp;= \mathbb{E}[R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \dots \mid S_t = s, A_t = a].
+\end{align*}"></div></div>
+<p>有关系 <span class="math-inline" data-tex="v_\pi(s) = \sum_{a \in \mathcal{A}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a)"></span>，状态价值满足贝尔曼方程。</p>
+<p>首先，我们说明 <span class="math-inline" data-tex="\bar{v}_\pi(\boldsymbol{\theta})"></span> 和 <span class="math-inline" data-tex="\bar{r}_\pi(\boldsymbol{\theta})"></span> 是等价指标。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 9.1 <span class="math-inline" data-tex="\bar{v}_\pi(\boldsymbol{\theta})"></span> 与 <span class="math-inline" data-tex="\bar{r}_\pi(\boldsymbol{\theta})"></span> 的等价性</p>
+</div>
+<p>在折扣情形（<span class="math-inline" data-tex="\gamma \in (0,1)"></span>）下，有：</p>
+<div class="lecture-equation" id="lecture-equation-30"><div class="math-block" data-tex="\bar{r}_\pi = (1 - \gamma) \bar{v}_\pi."></div></div>
+</div>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p>注意 <span class="math-inline" data-tex="\bar{v}_\pi(\boldsymbol{\theta}) = \boldsymbol{d}_\pi^T \boldsymbol{v}_\pi"></span>，<span class="math-inline" data-tex="\bar{r}_\pi(\boldsymbol{\theta}) = \boldsymbol{d}_\pi^T \boldsymbol{r}_\pi"></span>，其中 <span class="math-inline" data-tex="\boldsymbol{v}_\pi"></span> 和 <span class="math-inline" data-tex="\boldsymbol{r}_\pi"></span> 满足贝尔曼方程 <span class="math-inline" data-tex="\boldsymbol{v}_\pi = \boldsymbol{r}_\pi + \gamma \boldsymbol{P}_\pi \boldsymbol{v}_\pi"></span>。在贝尔曼方程两边同时左乘 <span class="math-inline" data-tex="\boldsymbol{d}_\pi^T"></span> 得：</p>
+<div class="lecture-equation" id="lecture-equation-31"><div class="math-block" data-tex="\bar{v}_\pi = \bar{r}_\pi + \gamma \boldsymbol{d}_\pi^T \boldsymbol{P}_\pi \boldsymbol{v}_\pi = \bar{r}_\pi + \gamma \boldsymbol{d}_\pi^T \boldsymbol{v}_\pi = \bar{r}_\pi + \gamma \bar{v}_\pi;"></div></div>
+<p>由此即得 <span class="math-inline" data-tex="\bar{r}_\pi = (1 - \gamma) \bar{v}_\pi"></span>。</p>
+</div>
+<p>其次，以下引理给出了对任意 <span class="math-inline" data-tex="s"></span> 的 <span class="math-inline" data-tex="v_\pi(s)"></span> 的梯度。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 9.2 <span class="math-inline" data-tex="v_\pi(s)"></span> 的梯度</p>
+</div>
+<p>在折扣情形下，对任意 <span class="math-inline" data-tex="s \in \mathcal{S}"></span> 有：</p>
+<div class="lecture-equation is-numbered" id="eq:grad_v"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} v_\pi(s) = \sum_{s&#x27; \in \mathcal{S}} \Pr\nolimits_\pi(s&#x27;|s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s&#x27;, \boldsymbol{\theta}) \, q_\pi(s&#x27;, a);"></div><a class="lecture-equation-number" href="#eq:grad_v" aria-label="公式 8">(8)</a></div>
+<p>其中</p>
+<div class="lecture-equation" id="lecture-equation-33"><div class="math-block" data-tex="\Pr\nolimits_\pi(s&#x27;|s) := \sum_{k=0}^{\infty} \gamma^k [\boldsymbol{P}_\pi^k]_{ss&#x27;} = \bigl[ (\boldsymbol{I}_n - \gamma \boldsymbol{P}_\pi)^{-1} \bigr]_{ss&#x27;}"></div></div>
+<p>是在策略 <span class="math-inline" data-tex="\pi"></span> 下从 <span class="math-inline" data-tex="s"></span> 转移到 <span class="math-inline" data-tex="s&#x27;"></span> 的折扣总概率。这里 <span class="math-inline" data-tex="[\cdot]_{ss&#x27;}"></span> 表示第 <span class="math-inline" data-tex="s"></span> 行第 <span class="math-inline" data-tex="s&#x27;"></span> 列的条目，<span class="math-inline" data-tex="[\boldsymbol{P}_\pi^k]_{ss&#x27;}"></span> 是在 <span class="math-inline" data-tex="\pi"></span> 下从 <span class="math-inline" data-tex="s"></span> 出发恰好用 <span class="math-inline" data-tex="k"></span> 步转移到 <span class="math-inline" data-tex="s&#x27;"></span> 的概率。</p>
+</div>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p>首先，对任意 <span class="math-inline" data-tex="s \in \mathcal{S}"></span>：</p>
+<div class="lecture-equation" id="lecture-equation-34"><div class="math-block" data-tex="\begin{align*}
+\nabla_{\boldsymbol{\theta}} v_\pi(s) &amp;= \nabla_{\boldsymbol{\theta}} \left[ \sum_{a \in \mathcal{A}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a) \right] \\
+&amp;= \sum_{a \in \mathcal{A}} \bigl[ \nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a) + \pi(a|s, \boldsymbol{\theta}) \, \nabla_{\boldsymbol{\theta}} q_\pi(s,a) \bigr];
+\end{align*}"></div></div>
+<p>其中动作价值为：</p>
+<div class="lecture-equation" id="lecture-equation-35"><div class="math-block" data-tex="q_\pi(s,a) = r(s,a) + \gamma \sum_{s&#x27; \in \mathcal{S}} p(s&#x27;|s,a) \, v_\pi(s&#x27;)."></div></div>
+<p>由于 <span class="math-inline" data-tex="r(s,a) = \sum_{r} r \, p(r|s,a)"></span> 独立于 <span class="math-inline" data-tex="\boldsymbol{\theta}"></span>，有：</p>
+<div class="lecture-equation" id="lecture-equation-36"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} q_\pi(s,a) = 0 + \gamma \sum_{s&#x27; \in \mathcal{S}} p(s&#x27;|s,a) \, \nabla_{\boldsymbol{\theta}} v_\pi(s&#x27;)."></div></div>
+<p>代入得：</p>
+<div class="lecture-equation" id="lecture-equation-37"><div class="math-block" data-tex="\begin{align*}
+\nabla_{\boldsymbol{\theta}} v_\pi(s) &amp;= \sum_{a \in \mathcal{A}} \left[ \nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a) + \pi(a|s, \boldsymbol{\theta}) \, \gamma \sum_{s&#x27; \in \mathcal{S}} p(s&#x27;|s,a) \, \nabla_{\boldsymbol{\theta}} v_\pi(s&#x27;) \right] \\
+&amp;= \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a) + \gamma \sum_{a \in \mathcal{A}} \pi(a|s, \boldsymbol{\theta}) \sum_{s&#x27; \in \mathcal{S}} p(s&#x27;|s,a) \, \nabla_{\boldsymbol{\theta}} v_\pi(s&#x27;).
+\end{align*}"></div></div>
+<p>值得注意的是，<span class="math-inline" data-tex="\nabla_{\boldsymbol{\theta}} v_\pi"></span> 出现在上式的两边。下面使用矩阵-向量形式求解。令</p>
+<div class="lecture-equation" id="lecture-equation-38"><div class="math-block" data-tex="\boldsymbol{u}(s) := \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a)."></div></div>
+<p>由于</p>
+<div class="lecture-equation" id="lecture-equation-39"><div class="math-block" data-tex="\sum_{a \in \mathcal{A}} \pi(a|s, \boldsymbol{\theta}) \sum_{s&#x27; \in \mathcal{S}} p(s&#x27;|s,a) \, \nabla_{\boldsymbol{\theta}} v_\pi(s&#x27;) = \sum_{s&#x27; \in \mathcal{S}} p(s&#x27;|s) \, \nabla_{\boldsymbol{\theta}} v_\pi(s&#x27;) = \sum_{s&#x27; \in \mathcal{S}} [\boldsymbol{P}_\pi]_{ss&#x27;} \, \nabla_{\boldsymbol{\theta}} v_\pi(s&#x27;),"></div></div>
+<p>上式可以写成矩阵-向量形式：</p>
+<div class="lecture-equation" id="lecture-equation-40"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} \boldsymbol{v}_\pi = \boldsymbol{u} + \gamma (\boldsymbol{P}_\pi \otimes \boldsymbol{I}_m) \, \nabla_{\boldsymbol{\theta}} \boldsymbol{v}_\pi;"></div></div>
+<p>其中 <span class="math-inline" data-tex="n = |\mathcal{S}|"></span>，<span class="math-inline" data-tex="m"></span> 是参数向量 <span class="math-inline" data-tex="\boldsymbol{\theta}"></span> 的维数，<span class="math-inline" data-tex="\otimes"></span> 是 Kronecker 积。该方程是关于 <span class="math-inline" data-tex="\nabla_{\boldsymbol{\theta}} \boldsymbol{v}_\pi"></span> 的线性方程，可解为：</p>
+<div class="lecture-equation" id="lecture-equation-41"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} \boldsymbol{v}_\pi = (\boldsymbol{I}_{nm} - \gamma \boldsymbol{P}_\pi \otimes \boldsymbol{I}_m)^{-1} \boldsymbol{u} = \bigl[ (\boldsymbol{I}_n - \gamma \boldsymbol{P}_\pi)^{-1} \otimes \boldsymbol{I}_m \bigr] \boldsymbol{u}."></div></div>
+<p>对任意状态 <span class="math-inline" data-tex="s"></span>，有：</p>
+<div class="lecture-equation" id="lecture-equation-42"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} v_\pi(s) = \sum_{s&#x27; \in \mathcal{S}} \bigl[ (\boldsymbol{I}_n - \gamma \boldsymbol{P}_\pi)^{-1} \bigr]_{ss&#x27;} \, \boldsymbol{u}(s&#x27;)
+= \sum_{s&#x27; \in \mathcal{S}} \bigl[ (\boldsymbol{I}_n - \gamma \boldsymbol{P}_\pi)^{-1} \bigr]_{ss&#x27;} \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s&#x27;, \boldsymbol{\theta}) \, q_\pi(s&#x27;,a)."></div></div>
+<p>由于 <span class="math-inline" data-tex="(\boldsymbol{I}_n - \gamma \boldsymbol{P}_\pi)^{-1} = \boldsymbol{I} + \gamma \boldsymbol{P}_\pi + \gamma^2 \boldsymbol{P}_\pi^2 + \cdots"></span>，<span class="math-inline" data-tex="[(\boldsymbol{I}_n - \gamma \boldsymbol{P}_\pi)^{-1}]_{ss&#x27;}"></span> 表示从 <span class="math-inline" data-tex="s"></span> 转移到 <span class="math-inline" data-tex="s&#x27;"></span> 的折扣总概率。记 <span class="math-inline" data-tex="\Pr_\pi(s&#x27;|s) := [(\boldsymbol{I}_n - \gamma \boldsymbol{P}_\pi)^{-1}]_{ss&#x27;}"></span>，即得 <a href="#eq:grad_v" data-reference-type="eqref" data-reference="eq:grad_v">(8)</a>。</p>
+</div>
+<p>借助引理 9.2 的结果，我们可以推导 <span class="math-inline" data-tex="\bar{v}_\pi^0"></span> 的梯度。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 9.2 折扣情形下 <span class="math-inline" data-tex="\bar{v}_\pi^0"></span> 的梯度</p>
+</div>
+<p>在折扣情形（<span class="math-inline" data-tex="\gamma \in (0,1)"></span>）下，<span class="math-inline" data-tex="\bar{v}_\pi^0 = \boldsymbol{d}_0^T \boldsymbol{v}_\pi"></span> 的梯度为：</p>
+<div class="lecture-equation" id="lecture-equation-43"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} \bar{v}_\pi^0 = \mathbb{E}\bigl[ \nabla_{\boldsymbol{\theta}} \ln \pi(A|S, \boldsymbol{\theta}) \, q_\pi(S, A) \bigr];"></div></div>
+<p>其中 <span class="math-inline" data-tex="S \sim \eta_\pi"></span> 且 <span class="math-inline" data-tex="A \sim \pi(S, \boldsymbol{\theta})"></span>。这里状态分布 <span class="math-inline" data-tex="\eta_\pi"></span> 为：</p>
+<div class="lecture-equation" id="lecture-equation-44"><div class="math-block" data-tex="\eta_\pi(s) = \sum_{s&#x27; \in \mathcal{S}} d_0(s&#x27;) \, \Pr\nolimits_\pi(s|s&#x27;), \quad s \in \mathcal{S};"></div></div>
+<p>其中 <span class="math-inline" data-tex="\Pr_\pi(s|s&#x27;) = \sum_{k=0}^{\infty} \gamma^k [\boldsymbol{P}_\pi^k]_{s&#x27;s} = [(\boldsymbol{I} - \gamma \boldsymbol{P}_\pi)^{-1}]_{s&#x27;s}"></span> 是在策略 <span class="math-inline" data-tex="\pi"></span> 下从 <span class="math-inline" data-tex="s&#x27;"></span> 转移到 <span class="math-inline" data-tex="s"></span> 的折扣总概率。</p>
+</div>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p>由于 <span class="math-inline" data-tex="d_0(s)"></span> 独立于 <span class="math-inline" data-tex="\pi"></span>，有：</p>
+<div class="lecture-equation" id="lecture-equation-45"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} \bar{v}_\pi^0 = \nabla_{\boldsymbol{\theta}} \sum_{s \in \mathcal{S}} d_0(s) v_\pi(s) = \sum_{s \in \mathcal{S}} d_0(s) \nabla_{\boldsymbol{\theta}} v_\pi(s)."></div></div>
+<p>将引理 9.2 中 <span class="math-inline" data-tex="\nabla_{\boldsymbol{\theta}} v_\pi(s)"></span> 的表达式代入：</p>
+<div class="lecture-equation" id="lecture-equation-46"><div class="math-block" data-tex="\begin{align*}
+\nabla_{\boldsymbol{\theta}} \bar{v}_\pi^0 &amp;= \sum_{s \in \mathcal{S}} d_0(s) \nabla_{\boldsymbol{\theta}} v_\pi(s)
+= \sum_{s \in \mathcal{S}} d_0(s) \sum_{s&#x27; \in \mathcal{S}} \Pr\nolimits_\pi(s&#x27;|s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s&#x27;, \boldsymbol{\theta}) \, q_\pi(s&#x27;,a) \\
+&amp;= \sum_{s&#x27; \in \mathcal{S}} \left( \sum_{s \in \mathcal{S}} d_0(s) \Pr\nolimits_\pi(s&#x27;|s) \right) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s&#x27;, \boldsymbol{\theta}) \, q_\pi(s&#x27;,a) \\
+&amp;:= \sum_{s&#x27; \in \mathcal{S}} \eta_\pi(s&#x27;) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s&#x27;, \boldsymbol{\theta}) \, q_\pi(s&#x27;,a).
+\end{align*}"></div></div>
+<p>然后利用 <span class="math-inline" data-tex="\nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) = \pi(a|s, \boldsymbol{\theta}) \, \nabla_{\boldsymbol{\theta}} \ln \pi(a|s, \boldsymbol{\theta})"></span> 即得最终形式。</p>
+</div>
+<p>借助引理 9.1 和引理 9.2，可以推导 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 和 <span class="math-inline" data-tex="\bar{v}_\pi"></span> 的梯度。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 9.3 折扣情形下 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 和 <span class="math-inline" data-tex="\bar{v}_\pi"></span> 的梯度</p>
+</div>
+<p>在折扣情形（<span class="math-inline" data-tex="\gamma \in (0,1)"></span>）下，<span class="math-inline" data-tex="\bar{r}_\pi"></span> 和 <span class="math-inline" data-tex="\bar{v}_\pi"></span> 的梯度为：</p>
+<div class="lecture-equation" id="lecture-equation-47"><div class="math-block" data-tex="\begin{align*}
+    \nabla_{\boldsymbol{\theta}} \bar{r}_\pi &amp;= (1 - \gamma) \nabla_{\boldsymbol{\theta}} \bar{v}_\pi
+    \approx \sum_{s \in \mathcal{S}} d_\pi(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a) \\
+    &amp;= \mathbb{E}\bigl[ \nabla_{\boldsymbol{\theta}} \ln \pi(A|S, \boldsymbol{\theta}) \, q_\pi(S, A) \bigr];
+\end{align*}"></div></div>
+<p>其中 <span class="math-inline" data-tex="S \sim d_\pi"></span>，<span class="math-inline" data-tex="A \sim \pi(S, \boldsymbol{\theta})"></span>。该近似在 <span class="math-inline" data-tex="\gamma"></span> 越接近 1 时越精确。</p>
+</div>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p>由 <span class="math-inline" data-tex="\bar{v}_\pi"></span> 的定义：</p>
+<div class="lecture-equation" id="lecture-equation-48"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} \bar{v}_\pi = \nabla_{\boldsymbol{\theta}} \sum_{s \in \mathcal{S}} d_\pi(s) v_\pi(s)
+= \sum_{s \in \mathcal{S}} \nabla_{\boldsymbol{\theta}} d_\pi(s) \, v_\pi(s) + \sum_{s \in \mathcal{S}} d_\pi(s) \nabla_{\boldsymbol{\theta}} v_\pi(s)."></div></div>
+<p>该方程包含两项。一方面，代入 <span class="math-inline" data-tex="\nabla_{\boldsymbol{\theta}} \boldsymbol{v}_\pi"></span> 的矩阵-向量解到第二项：</p>
+<div class="lecture-equation" id="lecture-equation-49"><div class="math-block" data-tex="\sum_{s \in \mathcal{S}} d_\pi(s) \nabla_{\boldsymbol{\theta}} v_\pi(s) = (\boldsymbol{d}_\pi^T \otimes \boldsymbol{I}_m) \nabla_{\boldsymbol{\theta}} \boldsymbol{v}_\pi
+= \bigl[ \boldsymbol{d}_\pi^T (\boldsymbol{I}_n - \gamma \boldsymbol{P}_\pi)^{-1} \otimes \boldsymbol{I}_m \bigr] \boldsymbol{u}."></div></div>
+<p>注意到 <span class="math-inline" data-tex="\boldsymbol{d}_\pi^T (\boldsymbol{I}_n - \gamma \boldsymbol{P}_\pi)^{-1} = \frac{1}{1-\gamma} \boldsymbol{d}_\pi^T"></span>（可通过在方程两边右乘 <span class="math-inline" data-tex="(\boldsymbol{I}_n - \gamma \boldsymbol{P}_\pi)"></span> 验证）。因此：</p>
+<div class="lecture-equation" id="lecture-equation-50"><div class="math-block" data-tex="\sum_{s \in \mathcal{S}} d_\pi(s) \nabla_{\boldsymbol{\theta}} v_\pi(s) = \frac{1}{1-\gamma} (\boldsymbol{d}_\pi^T \otimes \boldsymbol{I}_m) \boldsymbol{u}
+= \frac{1}{1-\gamma} \sum_{s \in \mathcal{S}} d_\pi(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a)."></div></div>
+<p>另一方面，第一项涉及 <span class="math-inline" data-tex="\nabla_{\boldsymbol{\theta}} d_\pi"></span>。然而，由于第二项包含 <span class="math-inline" data-tex="\frac{1}{1-\gamma}"></span>，当 <span class="math-inline" data-tex="\gamma \to 1"></span> 时第二项占主导地位，第一项可以忽略。因此：</p>
+<div class="lecture-equation" id="lecture-equation-51"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} \bar{v}_\pi \approx \frac{1}{1-\gamma} \sum_{s \in \mathcal{S}} d_\pi(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a)."></div></div>
+<p>进而由 <span class="math-inline" data-tex="\bar{r}_\pi = (1 - \gamma) \bar{v}_\pi"></span> 得：</p>
+<div class="lecture-equation" id="lecture-equation-52"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} \bar{r}_\pi = (1 - \gamma) \nabla_{\boldsymbol{\theta}} \bar{v}_\pi
+\approx \sum_{s \in \mathcal{S}} d_\pi(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a)
+= \mathbb{E}\bigl[ \nabla_{\boldsymbol{\theta}} \ln \pi(A|S, \boldsymbol{\theta}) \, q_\pi(S, A) \bigr]."></div></div>
+<p>该近似要求当 <span class="math-inline" data-tex="\gamma \to 1"></span> 时第一项不趋于无穷。</p>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="无折扣情形下的梯度推导">9.3.2 无折扣情形下的梯度推导 <a class="header-anchor" href="#无折扣情形下的梯度推导" aria-label="章节链接">&#8203;</a></h3>
+<p>下面展示在无折扣情形（<span class="math-inline" data-tex="\gamma = 1"></span>）下如何计算指标的梯度。虽然本书此前一直只考虑折扣情形，但平均奖励 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 的定义对折扣和非折扣情形都有效。折扣情形下 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 的梯度是一个近似，而无折扣情形下的梯度则更为优美。</p>
+<h3 class="unnumbered" tabindex="-1" id="状态价值与-poisson-方程">状态价值与 Poisson 方程 <a class="header-anchor" href="#状态价值与-poisson-方程" aria-label="章节链接">&#8203;</a></h3>
+<p>在无折扣情形下，需要重新定义状态和动作价值。由于奖励的无折扣和 <span class="math-inline" data-tex="\mathbb{E}[R_{t+1} + R_{t+2} + R_{t+3} + \dots \mid S_t = s]"></span> 可能发散，状态和动作价值以一种特殊方式定义：</p>
+<div class="lecture-equation" id="lecture-equation-53"><div class="math-block" data-tex="\begin{align*}
+v_\pi(s) &amp;:= \mathbb{E}\bigl[ (R_{t+1} - \bar{r}_\pi) + (R_{t+2} - \bar{r}_\pi) + (R_{t+3} - \bar{r}_\pi) + \dots \mid S_t = s \bigr], \\
+q_\pi(s,a) &amp;:= \mathbb{E}\bigl[ (R_{t+1} - \bar{r}_\pi) + (R_{t+2} - \bar{r}_\pi) + (R_{t+3} - \bar{r}_\pi) + \dots \mid S_t = s, A_t = a \bigr];
+\end{align*}"></div></div>
+<p>其中 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 是平均奖励，在给定 <span class="math-inline" data-tex="\pi"></span> 时确定。文献中 <span class="math-inline" data-tex="v_\pi(s)"></span> 有不同的名称，如差分奖励（differential reward）或偏差（bias）。可以验证上述定义的状态价值满足以下类似贝尔曼方程的方程：</p>
+<div class="lecture-equation" id="lecture-equation-54"><div class="math-block" data-tex="v_\pi(s) = \sum_{a} \pi(a|s, \boldsymbol{\theta}) \left[ \sum_{r} p(r|s,a) (r - \bar{r}_\pi) + \sum_{s&#x27;} p(s&#x27;|s,a) \, v_\pi(s&#x27;) \right]."></div></div>
+<p>由于 <span class="math-inline" data-tex="v_\pi(s) = \sum_{a \in \mathcal{A}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a)"></span>，有 <span class="math-inline" data-tex="q_\pi(s,a) = \sum_{r} p(r|s,a) (r - \bar{r}_\pi) + \sum_{s&#x27;} p(s&#x27;|s,a) \, v_\pi(s&#x27;)"></span>。该方程的矩阵-向量形式为：</p>
+<div class="lecture-equation is-numbered" id="eq:poisson"><div class="math-block" data-tex="\boldsymbol{v}_\pi = \boldsymbol{r}_\pi - \bar{r}_\pi \boldsymbol{1}_n + \boldsymbol{P}_\pi \boldsymbol{v}_\pi;"></div><a class="lecture-equation-number" href="#eq:poisson" aria-label="公式 9">(9)</a></div>
+<p>其中 <span class="math-inline" data-tex="\boldsymbol{1}_n = [1, \dots, 1]^T \in \mathbb{R}^n"></span>。方程 <a href="#eq:poisson" data-reference-type="eqref" data-reference="eq:poisson">(9)</a> 类似贝尔曼方程，有一个特定的名称叫做<strong>Poisson 方程</strong>。</p>
+<p>如何从 Poisson 方程中解出 <span class="math-inline" data-tex="\boldsymbol{v}_\pi"></span>？答案在以下定理中给出。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 9.4 Poisson 方程的解</p>
+</div>
+<p>令</p>
+<div class="lecture-equation" id="lecture-equation-56"><div class="math-block" data-tex="\boldsymbol{v}_\pi^* = (\boldsymbol{I}_n - \boldsymbol{P}_\pi + \boldsymbol{1}_n \boldsymbol{d}_\pi^T)^{-1} \boldsymbol{r}_\pi."></div></div>
+<p>则 <span class="math-inline" data-tex="\boldsymbol{v}_\pi^*"></span> 是 Poisson 方程 <a href="#eq:poisson" data-reference-type="eqref" data-reference="eq:poisson">(9)</a> 的一个解。此外，Poisson 方程的任意解都具有以下形式：</p>
+<div class="lecture-equation" id="lecture-equation-57"><div class="math-block" data-tex="\boldsymbol{v}_\pi = \boldsymbol{v}_\pi^* + c \boldsymbol{1}_n;"></div></div>
+<p>其中 <span class="math-inline" data-tex="c \in \mathbb{R}"></span>。</p>
+</div>
+<p>该定理表明 Poisson 方程的解可能不唯一。</p>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p>我们分三步证明。</p>
+<p><strong>步骤 1：</strong>证明 <span class="math-inline" data-tex="\boldsymbol{v}_\pi^*"></span> 是 Poisson 方程的一个解。</p>
+<p>为简单起见，令 <span class="math-inline" data-tex="\boldsymbol{A} := \boldsymbol{I}_n - \boldsymbol{P}_\pi + \boldsymbol{1}_n \boldsymbol{d}_\pi^T"></span>。则 <span class="math-inline" data-tex="\boldsymbol{v}_\pi^* = \boldsymbol{A}^{-1} \boldsymbol{r}_\pi"></span>。<span class="math-inline" data-tex="\boldsymbol{A}"></span> 的可逆性将在步骤 3 中证明。将 <span class="math-inline" data-tex="\boldsymbol{v}_\pi^* = \boldsymbol{A}^{-1} \boldsymbol{r}_\pi"></span> 代入 <a href="#eq:poisson" data-reference-type="eqref" data-reference="eq:poisson">(9)</a> 得：</p>
+<div class="lecture-equation" id="lecture-equation-58"><div class="math-block" data-tex="\boldsymbol{A}^{-1} \boldsymbol{r}_\pi = \boldsymbol{r}_\pi - \boldsymbol{1}_n \boldsymbol{d}_\pi^T \boldsymbol{r}_\pi + \boldsymbol{P}_\pi \boldsymbol{A}^{-1} \boldsymbol{r}_\pi."></div></div>
+<p>整理得 <span class="math-inline" data-tex="(-\boldsymbol{A}^{-1} + \boldsymbol{I}_n - \boldsymbol{1}_n \boldsymbol{d}_\pi^T + \boldsymbol{P}_\pi \boldsymbol{A}^{-1}) \boldsymbol{r}_\pi = 0"></span>，即 <span class="math-inline" data-tex="(-\boldsymbol{I}_n + \boldsymbol{A}^{-1} \boldsymbol{1}_n \boldsymbol{d}_\pi^T \boldsymbol{A} + \boldsymbol{P}_\pi) \boldsymbol{A}^{-1} \boldsymbol{r}_\pi = 0"></span>。 由于 <span class="math-inline" data-tex="-\boldsymbol{I}_n + \boldsymbol{A}^{-1} \boldsymbol{1}_n \boldsymbol{d}_\pi^T (\boldsymbol{I}_n - \boldsymbol{P}_\pi + \boldsymbol{1}_n \boldsymbol{d}_\pi^T) + \boldsymbol{P}_\pi = \boldsymbol{0}"></span>，得证。</p>
+<p><strong>步骤 2：</strong>解的通用表达式。</p>
+<p>将 <span class="math-inline" data-tex="\bar{r}_\pi = \boldsymbol{d}_\pi^T \boldsymbol{r}_\pi"></span> 代入 <a href="#eq:poisson" data-reference-type="eqref" data-reference="eq:poisson">(9)</a> 得：</p>
+<div class="lecture-equation" id="lecture-equation-59"><div class="math-block" data-tex="\boldsymbol{v}_\pi = \boldsymbol{r}_\pi - \boldsymbol{1}_n \boldsymbol{d}_\pi^T \boldsymbol{r}_\pi + \boldsymbol{P}_\pi \boldsymbol{v}_\pi,"></div></div>
+<p>因此：</p>
+<div class="lecture-equation" id="lecture-equation-60"><div class="math-block" data-tex="(\boldsymbol{I}_n - \boldsymbol{P}_\pi) \boldsymbol{v}_\pi = (\boldsymbol{I}_n - \boldsymbol{1}_n \boldsymbol{d}_\pi^T) \boldsymbol{r}_\pi."></div></div>
+<p>注意到 <span class="math-inline" data-tex="\boldsymbol{I}_n - \boldsymbol{P}_\pi"></span> 是奇异的，因为 <span class="math-inline" data-tex="(\boldsymbol{I}_n - \boldsymbol{P}_\pi) \boldsymbol{1}_n = 0"></span>。因此解不唯一：若 <span class="math-inline" data-tex="\boldsymbol{v}_\pi^*"></span> 是一个解，则 <span class="math-inline" data-tex="\boldsymbol{v}_\pi^* + \boldsymbol{x}"></span> 对任意 <span class="math-inline" data-tex="\boldsymbol{x} \in \text{Null}(\boldsymbol{I}_n - \boldsymbol{P}_\pi)"></span> 也是一个解。当 <span class="math-inline" data-tex="\boldsymbol{P}_\pi"></span> 不可约时，<span class="math-inline" data-tex="\text{Null}(\boldsymbol{I}_n - \boldsymbol{P}_\pi) = \text{span}\{\boldsymbol{1}_n\}"></span>。因此 Poisson 方程的任意解具有 <span class="math-inline" data-tex="\boldsymbol{v}_\pi^* + c \boldsymbol{1}_n"></span> 的形式，其中 <span class="math-inline" data-tex="c \in \mathbb{R}"></span>。</p>
+<p><strong>步骤 3：</strong>证明 <span class="math-inline" data-tex="\boldsymbol{A} = \boldsymbol{I}_n - \boldsymbol{P}_\pi + \boldsymbol{1}_n \boldsymbol{d}_\pi^T"></span> 可逆。</p>
+<p>首先给出一些基本事实（不在此处证明）。设 <span class="math-inline" data-tex="\rho(\boldsymbol{M})"></span> 是矩阵 <span class="math-inline" data-tex="\boldsymbol{M}"></span> 的谱半径。则 <span class="math-inline" data-tex="\boldsymbol{I} - \boldsymbol{M}"></span> 可逆当且仅当 <span class="math-inline" data-tex="\rho(\boldsymbol{M}) &lt; 1"></span>。此外，<span class="math-inline" data-tex="\rho(\boldsymbol{M}) &lt; 1"></span> 当且仅当 <span class="math-inline" data-tex="\lim_{k \to \infty} \boldsymbol{M}^k = 0"></span>。</p>
+<p>基于以上事实，下面证明 <span class="math-inline" data-tex="\lim_{k \to \infty} (\boldsymbol{P}_\pi - \boldsymbol{1}_n \boldsymbol{d}_\pi^T)^k \to 0"></span>。注意到：</p>
+<div class="lecture-equation" id="lecture-equation-61"><div class="math-block" data-tex="(\boldsymbol{P}_\pi - \boldsymbol{1}_n \boldsymbol{d}_\pi^T)^k = \boldsymbol{P}_\pi^k - \boldsymbol{1}_n \boldsymbol{d}_\pi^T, \quad k \geq 1;"></div></div>
+<p>这可以通过归纳法证明。由于 <span class="math-inline" data-tex="d_\pi"></span> 是状态的平稳分布，有 <span class="math-inline" data-tex="\lim_{k \to \infty} \boldsymbol{P}_\pi^k = \boldsymbol{1}_n \boldsymbol{d}_\pi^T"></span>。因此：</p>
+<div class="lecture-equation" id="lecture-equation-62"><div class="math-block" data-tex="\lim_{k \to \infty} (\boldsymbol{P}_\pi - \boldsymbol{1}_n \boldsymbol{d}_\pi^T)^k = \lim_{k \to \infty} \boldsymbol{P}_\pi^k - \boldsymbol{1}_n \boldsymbol{d}_\pi^T = 0."></div></div>
+<p>因此 <span class="math-inline" data-tex="\rho(\boldsymbol{P}_\pi - \boldsymbol{1}_n \boldsymbol{d}_\pi^T) &lt; 1"></span>，<span class="math-inline" data-tex="\boldsymbol{I}_n - (\boldsymbol{P}_\pi - \boldsymbol{1}_n \boldsymbol{d}_\pi^T)"></span> 可逆，且其逆为：</p>
+<div class="lecture-equation" id="lecture-equation-63"><div class="math-block" data-tex="(\boldsymbol{I}_n - (\boldsymbol{P}_\pi - \boldsymbol{1}_n \boldsymbol{d}_\pi^T))^{-1} = \sum_{k=0}^{\infty} (\boldsymbol{P}_\pi - \boldsymbol{1}_n \boldsymbol{d}_\pi^T)^k
+= \boldsymbol{I}_n + \sum_{k=1}^{\infty} (\boldsymbol{P}_\pi^k - \boldsymbol{1}_n \boldsymbol{d}_\pi^T)."></div></div>
+</div>
+<h3 class="unnumbered" tabindex="-1" id="梯度的推导">梯度的推导 <a class="header-anchor" href="#梯度的推导" aria-label="章节链接">&#8203;</a></h3>
+<p>虽然如定理 9.4 所示 <span class="math-inline" data-tex="\boldsymbol{v}_\pi"></span> 在无折扣情形下不唯一，但 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 的值是唯一的。具体而言，由 Poisson 方程：</p>
+<div class="lecture-equation" id="lecture-equation-64"><div class="math-block" data-tex="\bar{r}_\pi \boldsymbol{1}_n = \boldsymbol{r}_\pi + (\boldsymbol{P}_\pi - \boldsymbol{I}_n) \boldsymbol{v}_\pi
+= \boldsymbol{r}_\pi + (\boldsymbol{P}_\pi - \boldsymbol{I}_n)(\boldsymbol{v}_\pi^* + c \boldsymbol{1}_n)
+= \boldsymbol{r}_\pi + (\boldsymbol{P}_\pi - \boldsymbol{I}_n) \boldsymbol{v}_\pi^*."></div></div>
+<p>值得注意的是，未定值 <span class="math-inline" data-tex="c"></span> 被消去了，因此 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 是唯一的。因此可以计算无折扣情形下 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 的梯度。</p>
+<div class="theorembox lecture-box">
+<div class="lecture-box-title">
+<p>定理 9.5 无折扣情形下 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 的梯度</p>
+</div>
+<p>在无折扣情形下，平均奖励 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 的梯度为：</p>
+<div class="lecture-equation" id="lecture-equation-65"><div class="math-block" data-tex="\begin{align*}
+    \nabla_{\boldsymbol{\theta}} \bar{r}_\pi &amp;= \sum_{s \in \mathcal{S}} d_\pi(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a) \\
+    &amp;= \mathbb{E}\bigl[ \nabla_{\boldsymbol{\theta}} \ln \pi(A|S, \boldsymbol{\theta}) \, q_\pi(S, A) \bigr];
+\end{align*}"></div></div>
+<p>其中 <span class="math-inline" data-tex="S \sim d_\pi"></span>，<span class="math-inline" data-tex="A \sim \pi(S, \boldsymbol{\theta})"></span>。</p>
+</div>
+<p>与定理 9.3 所示的折扣情形相比，无折扣情形下 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 的梯度更为优美，因为上式是严格成立的，且 <span class="math-inline" data-tex="S"></span> 服从平稳分布。</p>
+<div class="proofbox lecture-box">
+<div class="lecture-box-title">
+<p>证明</p>
+</div>
+<p>首先，由 <span class="math-inline" data-tex="v_\pi(s) = \sum_{a \in \mathcal{A}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a)"></span>：</p>
+<div class="lecture-equation" id="lecture-equation-66"><div class="math-block" data-tex="\begin{align*}
+\nabla_{\boldsymbol{\theta}} v_\pi(s) &amp;= \nabla_{\boldsymbol{\theta}} \left[ \sum_{a \in \mathcal{A}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a) \right] \\
+&amp;= \sum_{a \in \mathcal{A}} \bigl[ \nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a) + \pi(a|s, \boldsymbol{\theta}) \, \nabla_{\boldsymbol{\theta}} q_\pi(s,a) \bigr];
+\end{align*}"></div></div>
+<p>其中动作价值满足：</p>
+<div class="lecture-equation" id="lecture-equation-67"><div class="math-block" data-tex="q_\pi(s,a) = \sum_{r} p(r|s,a) (r - \bar{r}_\pi) + \sum_{s&#x27;} p(s&#x27;|s,a) \, v_\pi(s&#x27;)
+= r(s,a) - \bar{r}_\pi + \sum_{s&#x27;} p(s&#x27;|s,a) \, v_\pi(s&#x27;)."></div></div>
+<p>由于 <span class="math-inline" data-tex="r(s,a) = \sum_{r} r \, p(r|s,a)"></span> 独立于 <span class="math-inline" data-tex="\boldsymbol{\theta}"></span>，有：</p>
+<div class="lecture-equation" id="lecture-equation-68"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} q_\pi(s,a) = 0 - \nabla_{\boldsymbol{\theta}} \bar{r}_\pi + \sum_{s&#x27; \in \mathcal{S}} p(s&#x27;|s,a) \, \nabla_{\boldsymbol{\theta}} v_\pi(s&#x27;)."></div></div>
+<p>代入得：</p>
+<div class="lecture-equation" id="lecture-equation-69"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} v_\pi(s) = \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a) - \nabla_{\boldsymbol{\theta}} \bar{r}_\pi + \sum_{a \in \mathcal{A}} \pi(a|s, \boldsymbol{\theta}) \sum_{s&#x27; \in \mathcal{S}} p(s&#x27;|s,a) \, \nabla_{\boldsymbol{\theta}} v_\pi(s&#x27;)."></div></div>
+<p>令 <span class="math-inline" data-tex="\boldsymbol{u}(s) := \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a)"></span>。上式可以写成矩阵-向量形式：</p>
+<div class="lecture-equation" id="lecture-equation-70"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} \boldsymbol{v}_\pi = \boldsymbol{u} - \boldsymbol{1}_n \otimes \nabla_{\boldsymbol{\theta}} \bar{r}_\pi + (\boldsymbol{P}_\pi \otimes \boldsymbol{I}_m) \nabla_{\boldsymbol{\theta}} \boldsymbol{v}_\pi;"></div></div>
+<p>其中 <span class="math-inline" data-tex="n = |\mathcal{S}|"></span>，<span class="math-inline" data-tex="m"></span> 是 <span class="math-inline" data-tex="\boldsymbol{\theta}"></span> 的维数，<span class="math-inline" data-tex="\otimes"></span> 是 Kronecker 积。整理得：</p>
+<div class="lecture-equation" id="lecture-equation-71"><div class="math-block" data-tex="\boldsymbol{1}_n \otimes \nabla_{\boldsymbol{\theta}} \bar{r}_\pi = \boldsymbol{u} + (\boldsymbol{P}_\pi \otimes \boldsymbol{I}_m) \nabla_{\boldsymbol{\theta}} \boldsymbol{v}_\pi - \nabla_{\boldsymbol{\theta}} \boldsymbol{v}_\pi."></div></div>
+<p>两边左乘 <span class="math-inline" data-tex="\boldsymbol{d}_\pi^T \otimes \boldsymbol{I}_m"></span>：</p>
+<div class="lecture-equation" id="lecture-equation-72"><div class="math-block" data-tex="\begin{align*}
+(\boldsymbol{d}_\pi^T \boldsymbol{1}_n) \otimes \nabla_{\boldsymbol{\theta}} \bar{r}_\pi
+&amp;= (\boldsymbol{d}_\pi^T \otimes \boldsymbol{I}_m) \boldsymbol{u} + (\boldsymbol{d}_\pi^T \boldsymbol{P}_\pi \otimes \boldsymbol{I}_m) \nabla_{\boldsymbol{\theta}} \boldsymbol{v}_\pi - (\boldsymbol{d}_\pi^T \otimes \boldsymbol{I}_m) \nabla_{\boldsymbol{\theta}} \boldsymbol{v}_\pi \\
+&amp;= (\boldsymbol{d}_\pi^T \otimes \boldsymbol{I}_m) \boldsymbol{u}.
+\end{align*}"></div></div>
+<p>这推出：</p>
+<div class="lecture-equation" id="lecture-equation-73"><div class="math-block" data-tex="\nabla_{\boldsymbol{\theta}} \bar{r}_\pi = (\boldsymbol{d}_\pi^T \otimes \boldsymbol{I}_m) \boldsymbol{u}
+= \sum_{s \in \mathcal{S}} d_\pi(s) \boldsymbol{u}(s)
+= \sum_{s \in \mathcal{S}} d_\pi(s) \sum_{a \in \mathcal{A}} \nabla_{\boldsymbol{\theta}} \pi(a|s, \boldsymbol{\theta}) \, q_\pi(s,a)."></div></div>
+<p>证明完毕。</p>
+</div>
+</section>
+<section class="document-section note-panel" aria-labelledby="蒙特卡洛策略梯度reinforce">
+<h2 class="unnumbered" tabindex="-1" id="蒙特卡洛策略梯度reinforce">9.4 蒙特卡洛策略梯度（REINFORCE） <a class="header-anchor" href="#蒙特卡洛策略梯度reinforce" aria-label="章节链接">&#8203;</a></h2>
+<p>有了定理 9.1 给出的梯度，下面展示如何使用基于梯度的方法优化指标以获得最优策略。</p>
+<p>最大化 <span class="math-inline" data-tex="J(\boldsymbol{\theta})"></span> 的梯度上升算法为：</p>
+<div class="lecture-equation is-numbered" id="eq:grad_ascent"><div class="math-block" data-tex="\begin{aligned}\boldsymbol{\theta}_{t+1} &amp;= \boldsymbol{\theta}_t + \alpha \, \nabla_{\boldsymbol{\theta}} J(\boldsymbol{\theta}_t)\\&amp;= \boldsymbol{\theta}_t + \alpha \, \mathbb{E}\bigl[ \nabla_{\boldsymbol{\theta}} \ln \pi(A|S, \boldsymbol{\theta}_t) \, q_\pi(S, A) \bigr]; \end{aligned}"></div><a class="lecture-equation-number" href="#eq:grad_ascent" aria-label="公式 10">(10)</a></div>
+<p>其中 <span class="math-inline" data-tex="\alpha &gt; 0"></span> 是常学习率。由于 <a href="#eq:grad_ascent" data-reference-type="eqref" data-reference="eq:grad_ascent">(10)</a> 中的真实梯度未知，可以用随机梯度替代真实梯度，得到以下算法：</p>
+<div class="lecture-equation is-numbered" id="eq:reinforce"><div class="math-block" data-tex="\boldsymbol{\theta}_{t+1} = \boldsymbol{\theta}_t + \alpha \, \nabla_{\boldsymbol{\theta}} \ln \pi(a_t|s_t, \boldsymbol{\theta}_t) \, q_t(s_t, a_t);"></div><a class="lecture-equation-number" href="#eq:reinforce" aria-label="公式 11">(11)</a></div>
+<p>其中 <span class="math-inline" data-tex="q_t(s_t, a_t)"></span> 是 <span class="math-inline" data-tex="q_\pi(s_t, a_t)"></span> 的一个近似。若 <span class="math-inline" data-tex="q_t(s_t, a_t)"></span> 通过蒙特卡洛估计获得，则该算法称为<strong>REINFORCE</strong>或<strong>蒙特卡洛策略梯度</strong>，是最早也是最简单的策略梯度算法之一。</p>
+<p><a href="#eq:reinforce" data-reference-type="eqref" data-reference="eq:reinforce">(11)</a> 中的算法非常重要，因为许多其他策略梯度算法都可以通过扩展该算法得到。下面更仔细地考察 <a href="#eq:reinforce" data-reference-type="eqref" data-reference="eq:reinforce">(11)</a> 的解释。</p>
+<p>由于 <span class="math-inline" data-tex="\nabla_{\boldsymbol{\theta}} \ln \pi(a_t|s_t, \boldsymbol{\theta}_t) = \frac{\nabla_{\boldsymbol{\theta}} \pi(a_t|s_t, \boldsymbol{\theta}_t)}{\pi(a_t|s_t, \boldsymbol{\theta}_t)}"></span>，可以将 <a href="#eq:reinforce" data-reference-type="eqref" data-reference="eq:reinforce">(11)</a> 改写为：</p>
+<div class="lecture-equation" id="lecture-equation-76"><div class="math-block" data-tex="\boldsymbol{\theta}_{t+1} = \boldsymbol{\theta}_t + \alpha \; \underbrace{\left( \frac{q_t(s_t, a_t)}{\pi(a_t|s_t, \boldsymbol{\theta}_t)} \right)}_{\beta_t} \nabla_{\boldsymbol{\theta}} \pi(a_t|s_t, \boldsymbol{\theta}_t);"></div></div>
+<p>可进一步简写为：</p>
+<div class="lecture-equation is-numbered" id="eq:reinforce_compact"><div class="math-block" data-tex="\boldsymbol{\theta}_{t+1} = \boldsymbol{\theta}_t + \alpha \, \beta_t \, \nabla_{\boldsymbol{\theta}} \pi(a_t|s_t, \boldsymbol{\theta}_t)."></div><a class="lecture-equation-number" href="#eq:reinforce_compact" aria-label="公式 12">(12)</a></div>
+<p>从该方程可以看出两个重要的解释。</p>
+<ul>
+<li><p><strong>第一，</strong>由于 <a href="#eq:reinforce_compact" data-reference-type="eqref" data-reference="eq:reinforce_compact">(12)</a> 是一个简单的梯度上升算法，可以得到以下观察：</p>
+<ul>
+<li><p>若 <span class="math-inline" data-tex="\beta_t \geq 0"></span>，则选择 <span class="math-inline" data-tex="(s_t, a_t)"></span> 的概率被增强。即：</p>
+<div class="lecture-equation" id="lecture-equation-78"><div class="math-block" data-tex="\pi(a_t|s_t, \boldsymbol{\theta}_{t+1}) \geq \pi(a_t|s_t, \boldsymbol{\theta}_t)."></div></div>
+<p><span class="math-inline" data-tex="\beta_t"></span> 越大，增强效果越强。</p></li>
+<li><p>若 <span class="math-inline" data-tex="\beta_t &lt; 0"></span>，则选择 <span class="math-inline" data-tex="(s_t, a_t)"></span> 的概率减小。即：</p>
+<div class="lecture-equation" id="lecture-equation-79"><div class="math-block" data-tex="\pi(a_t|s_t, \boldsymbol{\theta}_{t+1}) &lt; \pi(a_t|s_t, \boldsymbol{\theta}_t)."></div></div></li>
+</ul>
+<p>上述观察的证明如下。当 <span class="math-inline" data-tex="\boldsymbol{\theta}_{t+1} - \boldsymbol{\theta}_t"></span> 足够小时，由 Taylor 展开：</p>
+<div class="lecture-equation" id="lecture-equation-80"><div class="math-block" data-tex="\begin{align*}
+    \pi(a_t|s_t, \boldsymbol{\theta}_{t+1})
+    &amp;\approx \pi(a_t|s_t, \boldsymbol{\theta}_t) + (\nabla_{\boldsymbol{\theta}} \pi(a_t|s_t, \boldsymbol{\theta}_t))^T (\boldsymbol{\theta}_{t+1} - \boldsymbol{\theta}_t) \\
+    &amp;= \pi(a_t|s_t, \boldsymbol{\theta}_t) + \alpha \beta_t \, (\nabla_{\boldsymbol{\theta}} \pi(a_t|s_t, \boldsymbol{\theta}_t))^T (\nabla_{\boldsymbol{\theta}} \pi(a_t|s_t, \boldsymbol{\theta}_t)) \\
+    &amp;= \pi(a_t|s_t, \boldsymbol{\theta}_t) + \alpha \beta_t \, \| \nabla_{\boldsymbol{\theta}} \pi(a_t|s_t, \boldsymbol{\theta}_t) \|_2^2.
+\end{align*}"></div></div>
+<p>显然，当 <span class="math-inline" data-tex="\beta_t \geq 0"></span> 时 <span class="math-inline" data-tex="\pi(a_t|s_t, \boldsymbol{\theta}_{t+1}) \geq \pi(a_t|s_t, \boldsymbol{\theta}_t)"></span>，当 <span class="math-inline" data-tex="\beta_t &lt; 0"></span> 时 <span class="math-inline" data-tex="\pi(a_t|s_t, \boldsymbol{\theta}_{t+1}) &lt; \pi(a_t|s_t, \boldsymbol{\theta}_t)"></span>。</p></li>
+<li><p><strong>第二，</strong>由于 <span class="math-inline" data-tex="\beta_t = \frac{q_t(s_t, a_t)}{\pi(a_t|s_t, \boldsymbol{\theta}_t)}"></span> 的表达式，该算法可以在一定程度上平衡探索与利用：</p>
+<ul>
+<li><p><span class="math-inline" data-tex="\beta_t"></span> 与 <span class="math-inline" data-tex="q_t(s_t, a_t)"></span> 成正比。因此，若 <span class="math-inline" data-tex="(s_t, a_t)"></span> 的动作价值大，则 <span class="math-inline" data-tex="\pi(a_t|s_t, \boldsymbol{\theta}_t)"></span> 被增强，使得选择 <span class="math-inline" data-tex="a_t"></span> 的概率增加。因此，该算法试图<strong>利用</strong>价值更大的动作。</p></li>
+<li><p>当 <span class="math-inline" data-tex="q_t(s_t, a_t) &gt; 0"></span> 时，<span class="math-inline" data-tex="\beta_t"></span> 与 <span class="math-inline" data-tex="\pi(a_t|s_t, \boldsymbol{\theta}_t)"></span> 成反比。因此，若选择 <span class="math-inline" data-tex="a_t"></span> 的概率小，则 <span class="math-inline" data-tex="\pi(a_t|s_t, \boldsymbol{\theta}_t)"></span> 被增强，使得选择 <span class="math-inline" data-tex="a_t"></span> 的概率增加。因此，该算法试图<strong>探索</strong>概率较低的动作。</p></li>
+</ul></li>
+</ul>
+<p>此外，由于 <a href="#eq:reinforce" data-reference-type="eqref" data-reference="eq:reinforce">(11)</a> 使用样本来近似 <a href="#eq:grad_ascent" data-reference-type="eqref" data-reference="eq:grad_ascent">(10)</a> 中的真实梯度，理解应如何获取样本非常重要。</p>
+<ul>
+<li><p><strong>如何采样 <span class="math-inline" data-tex="S"></span>？</strong>在真实梯度 <span class="math-inline" data-tex="\mathbb{E}[\nabla_{\boldsymbol{\theta}} \ln \pi(A|S, \boldsymbol{\theta}_t) \, q_\pi(S, A)]"></span> 中的 <span class="math-inline" data-tex="S"></span> 应服从分布 <span class="math-inline" data-tex="\eta"></span>，该分布要么是平稳分布 <span class="math-inline" data-tex="d_\pi"></span>，要么是 <a href="#eq:pg_2" data-reference-type="eqref" data-reference="eq:pg_2">(7)</a> 中的折扣总概率分布 <span class="math-inline" data-tex="\eta_\pi"></span>。<span class="math-inline" data-tex="d_\pi"></span> 和 <span class="math-inline" data-tex="\eta_\pi"></span> 都代表了在 <span class="math-inline" data-tex="\pi"></span> 下表现出的长期行为。</p></li>
+<li><p><strong>如何采样 <span class="math-inline" data-tex="A"></span>？</strong>在 <span class="math-inline" data-tex="\mathbb{E}[\nabla_{\boldsymbol{\theta}} \ln \pi(A|S, \boldsymbol{\theta}_t) \, q_\pi(S, A)]"></span> 中的 <span class="math-inline" data-tex="A"></span> 应服从 <span class="math-inline" data-tex="\pi(A|S, \boldsymbol{\theta})"></span> 的分布。理想的采样 <span class="math-inline" data-tex="A"></span> 的方法是按照 <span class="math-inline" data-tex="\pi(a_t|s_t, \boldsymbol{\theta}_t)"></span> 选择 <span class="math-inline" data-tex="a_t"></span>。因此，策略梯度算法是<strong>同策略（on-policy）</strong>的。</p></li>
+</ul>
+<p>不幸的是，由于样本利用效率低，在实践中并未严格遵循 <span class="math-inline" data-tex="S"></span> 和 <span class="math-inline" data-tex="A"></span> 采样的理想方式。一个样本效率更高的 <a href="#eq:reinforce" data-reference-type="eqref" data-reference="eq:reinforce">(11)</a> 实现如算法 9.1 所示。在该实现中，首先生成一个遵循 <span class="math-inline" data-tex="\pi(\boldsymbol{\theta})"></span> 的回合，然后利用该回合中的每个经验样本多次更新 <span class="math-inline" data-tex="\boldsymbol{\theta}"></span>。</p>
+<div class="definitionbox lecture-box">
+<div class="lecture-box-title">
+<p>定义</p>
+</div>
+<p><strong>算法 9.1：蒙特卡洛策略梯度（REINFORCE）</strong></p>
+<p><strong>初始化：</strong>初始参数 <span class="math-inline" data-tex="\boldsymbol{\theta}"></span>；<span class="math-inline" data-tex="\gamma \in (0,1)"></span>；<span class="math-inline" data-tex="\alpha &gt; 0"></span>。</p>
+<p><strong>目标：</strong>学习最优策略以最大化 <span class="math-inline" data-tex="J(\boldsymbol{\theta})"></span>。</p>
+<p>对每个回合，执行：</p>
+<p>生成一个回合 <span class="math-inline" data-tex="\{s_0, a_0, r_1, \dots, s_{T-1}, a_{T-1}, r_T\}"></span> 遵循 <span class="math-inline" data-tex="\pi(\boldsymbol{\theta})"></span>。</p>
+<p>对 <span class="math-inline" data-tex="t = 0, 1, \dots, T-1"></span>：</p>
+<p>价值更新：<span class="math-inline" data-tex="q_t(s_t, a_t) = \sum_{k=t+1}^{T} \gamma^{k-t-1} r_k"></span></p>
+<p>策略更新：<span class="math-inline" data-tex="\boldsymbol{\theta} \gets \boldsymbol{\theta} + \alpha \, \nabla_{\boldsymbol{\theta}} \ln \pi(a_t|s_t, \boldsymbol{\theta}) \, q_t(s_t, a_t)"></span></p>
+</div>
+</section>
+<section class="document-section note-panel" aria-labelledby="本章小结">
+<h2 class="unnumbered" tabindex="-1" id="本章小结">9.5 本章小结 <a class="header-anchor" href="#本章小结" aria-label="章节链接">&#8203;</a></h2>
+<p>本章介绍了策略梯度方法，它是许多现代强化学习算法的基础。策略梯度方法是<strong>基于策略的（policy-based）</strong>方法。这是本书的一大进步，因为此前所有章节的方法都是<strong>基于价值的（value-based）</strong>方法。策略梯度方法的基本思想很简单：选择一个合适的标量指标，然后通过梯度上升算法优化它。</p>
+<p>策略梯度方法最复杂的部分是指标梯度的推导。这是因为我们必须区分各种不同指标和折扣/非折扣情形下的不同场景。幸运的是，不同场景下的梯度表达式是相似的。因此，我们将这些表达式总结在<strong>定理 9.1（策略梯度定理）</strong>中，这是本章最重要的理论结果。对大多数读者来说，了解该定理就足够了。其证明较为复杂，并非要求所有读者都学习。</p>
+<div class="remarkbox lecture-box">
+<div class="lecture-box-title">
+<p>备注</p>
+</div>
+<p><a href="#eq:reinforce" data-reference-type="eqref" data-reference="eq:reinforce">(11)</a> 中的策略梯度算法必须被正确理解，因为它是许多高级策略梯度算法的基础。在下一章中，该算法将被扩展为另一种重要的策略梯度方法——<strong>Actor-Critic</strong>。</p>
+</div>
+</section>
+<section class="document-section note-panel" aria-labelledby="常见问题解答">
+<h2 class="unnumbered" tabindex="-1" id="常见问题解答">9.6 常见问题解答 <a class="header-anchor" href="#常见问题解答" aria-label="章节链接">&#8203;</a></h2>
+<ul>
+<li><p><strong>Q：策略梯度方法的基本思想是什么？</strong></p>
+<p>A：基本思想很简单。即定义一个合适的标量指标，推导其梯度，然后使用梯度上升方法优化该指标。关于该方法最重要的理论结果是定理 9.1 中给出的策略梯度。</p></li>
+<li><p><strong>Q：策略梯度方法最复杂的部分是什么？</strong></p>
+<p>A：策略梯度方法的基本思想很简单，但梯度的推导过程相当复杂。这是因为我们必须区分许多不同的场景。每个场景下的数学推导过程都不简单。对大多数读者来说，熟悉定理 9.1 的结果就足够了，无需了解其证明。</p></li>
+<li><p><strong>Q：策略梯度方法中应该使用什么指标？</strong></p>
+<p>A：本章介绍了三种常见指标：<span class="math-inline" data-tex="\bar{v}_\pi"></span>、<span class="math-inline" data-tex="\bar{v}_\pi^0"></span> 和 <span class="math-inline" data-tex="\bar{r}_\pi"></span>。由于它们都导致相似的策略梯度，因此都可以在策略梯度方法中采用。更重要的是，<a href="#eq:J_discounted" data-reference-type="eqref" data-reference="eq:J_discounted">(1)</a> 和 <a href="#eq:J_undiscounted" data-reference-type="eqref" data-reference="eq:J_undiscounted">(4)</a> 中的表达式在文献中经常出现。</p></li>
+<li><p><strong>Q：为什么策略梯度中包含自然对数函数？</strong></p>
+<p>A：引入自然对数函数是为了将梯度表示为期望值的形式。这样，我们可以用随机梯度来近似真实梯度。</p></li>
+<li><p><strong>Q：为什么在推导策略梯度时需要研究无折扣情形？</strong></p>
+<p>A：平均奖励 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 的定义对折扣和无折扣情形都有效。折扣情形下 <span class="math-inline" data-tex="\bar{r}_\pi"></span> 的梯度是一个近似，而无折扣情形下的梯度更为优美——它是严格成立的，且状态服从平稳分布。</p></li>
+<li><p><strong>Q：<a href="#eq:reinforce" data-reference-type="eqref" data-reference="eq:reinforce">(11)</a> 中的策略梯度算法在数学上做了什么？</strong></p>
+<p>A：为了更好地理解该算法，建议读者考察其紧凑形式 <a href="#eq:reinforce_compact" data-reference-type="eqref" data-reference="eq:reinforce_compact">(12)</a>。该式清楚地表明它是一个用于更新 <span class="math-inline" data-tex="\pi(a_t|s_t, \boldsymbol{\theta}_t)"></span> 值的梯度上升算法。即当有一个样本 <span class="math-inline" data-tex="(s_t, a_t)"></span> 时，策略可以被更新，使得 <span class="math-inline" data-tex="\pi(a_t|s_t, \boldsymbol{\theta}_{t+1}) \geq \pi(a_t|s_t, \boldsymbol{\theta}_t)"></span> 或 <span class="math-inline" data-tex="\pi(a_t|s_t, \boldsymbol{\theta}_{t+1}) &lt; \pi(a_t|s_t, \boldsymbol{\theta}_t)"></span>，具体取决于系数 <span class="math-inline" data-tex="\beta_t"></span> 的符号。</p></li>
+<li><p><strong>Q：策略梯度方法与基于价值的方法相比有什么优势？</strong></p>
+<p>A：策略梯度方法在以下方面具有优势：(1) 它可以直接处理连续动作空间；(2) 它可以学习随机策略，这在某些博弈场景中至关重要；(3) 它在处理大状态/动作空间时效率更高，具有更强的泛化能力和样本利用效率；(4) 策略的参数化使得先验知识的融入更加自然。</p></li>
+<li><p><strong>Q：什么是 REINFORCE 算法？</strong></p>
+<p>A：REINFORCE 是最早也是最简单的策略梯度算法之一。它使用蒙特卡洛方法来估计 <span class="math-inline" data-tex="q_t(s_t, a_t)"></span>，即用完整的回报 <span class="math-inline" data-tex="G_t = \sum_{k=t+1}^{T} \gamma^{k-t-1} r_k"></span> 来近似动作价值，然后沿着 <span class="math-inline" data-tex="\nabla_{\boldsymbol{\theta}} \ln \pi(a_t|s_t, \boldsymbol{\theta}_t) \, G_t"></span> 的方向更新策略参数。</p></li>
+<li><p><strong>Q：为什么策略梯度算法是在策略的？</strong></p>
+<p>A：因为在计算梯度时，动作 <span class="math-inline" data-tex="A"></span> 必须服从策略 <span class="math-inline" data-tex="\pi(\cdot|S, \boldsymbol{\theta})"></span> 的分布进行采样，即智能体只能使用自己当前策略产生的数据来更新策略，这就是在策略学习的本质。</p></li>
+</ul>
+
+</section>
+</div>
+<details class="lecture-original note-details" @toggle="toggleOriginal">
+  <summary>对照原版 PDF<span>保留原页码与讲义目录</span></summary>
+  <div class="lecture-original-content">
+    <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
+    <p><a :href="pdfUrl" target="_blank" rel="noopener">在新窗口打开原版 PDF</a></p>
+    <ClientOnly><PdfViewer v-if="showOriginal" :src="pdfUrl" title="策略梯度方法" :outline="outline" /></ClientOnly>
+  </div>
+</details>
+</article>
