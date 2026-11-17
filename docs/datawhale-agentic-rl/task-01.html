@@ -26,6 +26,29 @@
 <h2 id="task00-gettingstarted" tabindex="-1">Task00-GettingStarted <a class="header-anchor" href="#task00-gettingstarted" aria-label="Permalink to &quot;Task00-GettingStarted&quot;">&ZeroWidthSpace;</a></h2>
 <p><strong>DataWhale</strong> Agentic RL项目，主要内容是复现一系列RL算法（主要是GRPO与在线策略蒸馏）。</p>
 <p>特点是采用Pytrio进行远程训练，从而避免对配置的需求，也能专注算法本身，用Swanlab进行训练监控。</p>
+<p><strong>感谢DataWhale与Pytrio的支持。</strong></p>
+<p>以下是预实验：</p>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre v-pre><code>uv run python experiments/grpo/01-demo-sync.py --steps 10 --batch-size 4 --group-size 8 --max-tokens 512 --swanlab-mode online</code></pre></div>
+<figure class="note-figure">
+<img src="/datawhale-agentic-rl/figures/datums.png" alt="datums 随训练步数变化的曲线" width="4970" height="2240" loading="lazy" decoding="async">
+<figcaption>datums：当前训练步用于更新模型的样本数。</figcaption>
+</figure>
+<figure class="note-figure">
+<img src="/datawhale-agentic-rl/figures/frac_degenerate.png" alt="frac_degenerate 随训练步数变化的曲线" width="4970" height="2240" loading="lazy" decoding="async">
+<figcaption>frac_degenerate：退化组占比，即同一道题的所有回答奖励相同、优势值全为零的组所占比例。</figcaption>
+</figure>
+<figure class="note-figure">
+<img src="/datawhale-agentic-rl/figures/loss.png" alt="loss 随训练步数变化的曲线" width="4970" height="2240" loading="lazy" decoding="async">
+<figcaption>loss：训练损失。</figcaption>
+</figure>
+<figure class="note-figure">
+<img src="/datawhale-agentic-rl/figures/reward.png" alt="reward 随训练步数变化的曲线" width="4970" height="2240" loading="lazy" decoding="async">
+<figcaption>reward：当前训练步生成回答的平均奖励。</figcaption>
+</figure>
+<figure class="note-figure">
+<img src="/datawhale-agentic-rl/figures/train_tokens.png" alt="train_tokens 随训练步数变化的曲线" width="4970" height="2240" loading="lazy" decoding="async">
+<figcaption>train_tokens：当前训练步中优势值非零、实际参与训练的回答 token 数。</figcaption>
+</figure>
 </section>
 <section class="document-section note-panel" aria-labelledby="task01-loss-function">
 <h2 id="task01-loss-function" tabindex="-1">Task01-Loss Function <a class="header-anchor" href="#task01-loss-function" aria-label="Permalink to &quot;Task01-Loss Function&quot;">&ZeroWidthSpace;</a></h2>
