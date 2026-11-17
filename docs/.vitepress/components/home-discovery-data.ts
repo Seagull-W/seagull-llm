@@ -55,7 +55,7 @@ export function getHomeTopics(pages: readonly ContentEntry[]) {
 }
 
 export const discoveryGroups = [
-  { name: '课程与训练', art: 'westlake-rl', sectionIds: ['cs336', 'rl-book', 'westlake-rl'] },
+  { name: '课程与训练', art: 'westlake-rl', sectionIds: ['cs336', 'rl-book', 'datawhale-agentic-rl', 'westlake-rl'] },
   { name: '系统与推理', art: 'linux-notes', sectionIds: ['cuda-notes', 'vllm-notes', 'linux-notes', 'rust-notes'] },
   { name: '研究与影像', art: 'research', sectionIds: ['papers', 'research', 'videos'] },
 ]

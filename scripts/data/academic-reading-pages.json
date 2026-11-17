@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1766,
+  "character_count": 1773,
   "pages": [
     {
       "path": "/cs336/a1-bpe.md",
@@ -64,6 +64,10 @@
       "title": "2.2 · CUDA SIMT 内核编写"
     },
     {
+      "path": "/datawhale-agentic-rl/task-01.md",
+      "title": "Task 01 · Loss Function"
+    },
+    {
       "path": "/linux-notes/linux-isolation.md",
       "title": "Linux 隔离机制：Namespace、cgroups 与 seccomp"
     },
@@ -74,10 +78,6 @@
     {
       "path": "/research/2026-10-14-llm-post-training-agentic-rl.md",
       "title": "2026-10-14 后训练与 agentic RL：从轨迹奖励走向步骤反馈"
-    },
-    {
-      "path": "/research/2026-10-15-llm-post-training-agentic-rl.md",
-      "title": "2026-10-15 大模型强化学习、后训练与 agentic RL"
     },
     {
       "path": "/research/2026-10-16-post-training-rl-benchmarks.md",
@@ -145,15 +145,19 @@
     },
     {
       "path": "/research/2026-11-08-agent-harness-cost.md",
-      "title": "agent 的账不该记在模型头上：固定模型后，harness 与环境各能改动什么"
+      "title": "固定模型后，harness 与环境仍会改变表现和成本：评估须记录这些条件"
     },
     {
       "path": "/research/2026-11-09-dong-bin-ai4math.md",
-      "title": "解读董彬及合作者的形式化数学工作：陈述翻译、前提检索与证明搜索"
+      "title": "董彬及合作者的形式化数学工作：从陈述形式化到证明搜索与轨迹训练"
     },
     {
       "path": "/research/2026-11-11-agent-memory-components.md",
-      "title": "解读 Anthropic 的 agent 记忆：经验怎样留到下次会话"
+      "title": "Anthropic 的 agent 记忆：经验如何经整理进入下次会话"
+    },
+    {
+      "path": "/research/2026-11-13-agentic-rl-vs-post-training-rl.md",
+      "title": "Agentic RL 与一般后训练 RL：从回答评分到交互轨迹"
     },
     {
       "path": "/rl-book/cha4对话模板与监督微调.md",

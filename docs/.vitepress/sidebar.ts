@@ -268,6 +268,15 @@ export const vllmNotesSidebar = [
 
 // VitePress 多侧边栏：按路径前缀匹配
 export const sidebar = {
+  '/datawhale-agentic-rl/': [
+    {
+      text: 'DataWhale Agentic RL', collapsed: false,
+      items: [
+        { text: '学习项目介绍', link: '/datawhale-agentic-rl/' },
+        { text: 'Task 01 · Loss Function', link: '/datawhale-agentic-rl/task-01' }
+      ]
+    }
+  ],
   '/cs336/': [
     {
       text: '课程讲义', collapsed: false,
