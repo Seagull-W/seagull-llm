@@ -44,6 +44,10 @@ export const papersSidebar = [
     "collapsed": false,
     "items": [
       {
+        "text": "大语言模型智能体强化学习全景：综述（中文 PDF）",
+        "link": "/papers/agentic-rl-survey/"
+      },
+      {
         "text": "DeepSeek-R1 技术报告阅读笔记",
         "link": "/papers/deepseek-r1/"
       },
