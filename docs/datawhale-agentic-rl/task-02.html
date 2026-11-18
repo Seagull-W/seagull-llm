@@ -1,0 +1,103 @@
+<style scoped>
+.grpo-architecture { 
+*{box-sizing:border-box}&{margin:0;background:#f6f4ee;color:#182f32;font:16px/1.55 "Microsoft YaHei",sans-serif}.diagram-main{max-width:1240px;margin:auto;padding:38px 48px}header,footer,.cap,.strip,.grid{display:flex;gap:18px}header,footer,.cap{align-items:center;justify-content:space-between}header{border-bottom:2px solid #183638;padding-bottom:20px}.diagram-heading-1,.diagram-heading-2,.diagram-heading-3,p{margin:0}.diagram-heading-1{font-size:40px;letter-spacing:-1.5px}.diagram-heading-1 b{color:#08796c}code,small,.ref{font:14px/1.5 Consolas,"Microsoft YaHei",monospace}small,.ref{color:#4f6868}.scope{font:600 13px Consolas,monospace;letter-spacing:1.5px;color:#24685e}.strip{background:#e6ebe3;border-radius:8px;padding:17px 22px;align-items:center}.strip section{flex:1}.strip strong{display:block}.arrow{color:#538277;font-size:22px}.link{height:31px;margin-left:32px;border-left:2px solid #7e9a90;position:relative}.link:after{content:"";position:absolute;bottom:0;left:-5px;border:4px solid transparent;border-top-color:#678b7d;border-bottom:0}article{border:2px solid #17665e;border-radius:12px;overflow:hidden;background:#fffefa}.cap{padding:12px 20px;background:#145950;color:white}.cap code{color:#d6efe4}.diagram-heading-2{font-size:21px}.inner{padding:17px 20px}.setup{display:flex;align-items:center;gap:14px;font-size:15px;margin-bottom:14px}.group{background:#eff5ef;border:1px solid #b6d1c2;border-radius:8px;padding:14px 16px}.group .diagram-heading-3,.loss .diagram-heading-3{font-size:18px;margin-bottom:10px}.grid{gap:12px}.node{background:#fffefa;padding:11px 14px;border:1px solid #cbd9cf;border-radius:5px;flex:1;min-width:0}.node strong,.node code{display:block}.node code{color:#086c60;margin:4px 0}.node p,.branch p{font-size:14px;color:#455954}.gate{border-top:1px dashed #a8c0b1;margin-top:12px;padding-top:10px;font-size:15px}.gate b{color:#8f512b}.loss{border-left:4px solid #b27343;padding-left:15px}.branch{background:#f6efe6;border-radius:5px;padding:9px 14px;flex:1}.branch strong{color:#754a2d}.branch code{display:block}.update{margin-top:9px;font-size:15px}.logs{margin-top:14px;border-top:1px solid #d6e0d6;padding-top:10px;font-size:14px;color:#405a56}footer{margin-top:12px;font-size:13px;color:#5f726e}.ref{white-space:nowrap} @media(max-width:820px){.diagram-main{padding:20px}.grid,.strip,.setup,header,footer{flex-direction:column;align-items:stretch}.strip .arrow{display:none}.cap{align-items:flex-start;flex-wrap:wrap}.diagram-heading-1{font-size:32px}.ref{white-space:normal}}
+ }
+</style>
+
+<article class="native-document format-lab" data-format="lab" data-design="linux-notebook">
+<header class="document-intro note-hero"><p class="note-kicker">DataWhale Agentic RL</p>
+<h1 id="sync-grpo" tabindex="-1">Task 02 · 同步 GRPO 训练实验 <a class="header-anchor" href="#sync-grpo" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">在 GSM8K 上比较 IS、PPO 与 CISPO 的训练奖励、回答长度和组内退化，结合代码解释三种策略损失的差异。</p></header>
+<nav class="note-jump" aria-label="页内导航"><details><summary>本页目录</summary><a href="#architecture">同步训练架构</a><a href="#comparison">三组对比</a><a href="#is">IS</a><a href="#ppo">PPO</a><a href="#cispo">CISPO</a></details></nav>
+<section class="document-section note-panel" aria-labelledby="background">
+<h2 id="background" tabindex="-1">实验背景 <a class="header-anchor" href="#background" aria-label="章节链接">&#8203;</a></h2>
+<p>关于GRPO的内容，可以参考我的个人网页，包括<a href="/rl-book/cha6%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0#grpo-group-relative-policy-optimization">强化学习笔记</a>、<a href="/papers/deepseek-r1/">deepseek-r1论文解读</a></p>
+<p><strong>GRPO(组相对策略优化算法)</strong> 的核心是：对于同一个 prompt 一次采样多个回答，让这些回答在组内相互比较，用“相对于组内其他回答好多少”来构造优势，而不再像 PPO 那样额外训练一个 Critic / Value Model 来估计价值函数。</p>
+<p>相较于PPO，最大的优势是极大地降低了训练过程的显存占用，提高了训练的效率。</p>
+<p>RLVR，可验证奖励的特点是根据规则来确定奖励分数，常用于数学/代码等验证性强的场景。</p>
+<p>GSM8k是由8500道数学问题组成（<strong>需要注意，基本是一些考察最基本数学运算模式的题目</strong>，因此4B模型正确率可能本来就不低）的benchmark数据集。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="architecture">
+<h2 id="architecture" tabindex="-1">同步训练架构 <a class="header-anchor" href="#architecture" aria-label="章节链接">&#8203;</a></h2>
+<figure class="note-diagram"><div class="grpo-architecture"><div class="diagram-main"><header><div><div class="scope">PYTRIO / GSM8K</div><div class="diagram-heading-1">同步 <b>GRPO</b> 训练架构</div></div><div class="ref">experiments/grpo/01-demo-sync.py<br>__main__ → parse_args() → main(config)</div></header>
+<div class="link"></div><div class="strip"><section><strong>初始化数据与配置</strong><code>GRPOConfig · load_gsm8k_train()</code></section><span class="arrow">→</span><section><strong>建立 LoRA 训练客户端</strong><code>ServiceClient → training_client</code></section><span class="arrow">→</span><section><strong>准备采样与优化参数</strong><code>tokenizer · SamplingParams · AdamParams</code></section></div>
+<div class="link"></div><article><div class="cap"><div class="diagram-heading-2">每个 step　处理一批题</div><code>for step in range(effective_steps)　 L586</code></div><div class="inner">
+<div class="setup"><b>取本批题目</b><code>pick_batch()</code><span>→</span><b>用当前 LoRA 权重创建本步采样器</b><code>save_weights_and_get_sampling_client()</code></div>
+<section class="group"><div class="diagram-heading-3">每道题　生成并比较一组回答 <small>　for row in batch_rows · L602</small></div><div class="grid">
+<div class="node"><strong>① 准备题目</strong><code>build_prompt()<br>extract_gsm8k_answer()</code><p>题目与示例构成 prompt。标准答案取自 #### 之后，单独用于评分。</p></div>
+<div class="node"><strong>② 同步采样</strong><code>run_rollout_group()<br>sample(...).result()</code><p>一次请求生成 G 个回答，保留每个生成 token 的采样 logprob。</p></div>
+<div class="node"><strong>③ 计算相对优势</strong><code>grade_answer()<br>Aᵢ = rᵢ − mean(r)</code><p>最后一个 boxed 答案命中得 1 分。每个回答减去同题平均奖励。</p></div></div>
+<div class="gate"><b>整组同分</b> → 跳过该题　　<strong>组内有分差</strong> → 每个 RolloutSample 经 <code>build_grpo_datum()</code> 转为 Datum，累积到本批。</div></section>
+<div class="link"></div><section class="loss"><div class="diagram-heading-3">整批题目处理完毕　有有效样本时更新一次 <small>　if datums · L627</small></div><div class="grid"><div class="branch"><strong>内置损失　IS / PPO</strong><code>forward_backward(datums, loss_fn)</code><p>使用对齐的目标 token、采样 logprob 和优势。</p></div><div class="branch"><strong>自定义损失　CISPO</strong><code>forward_backward_custom(..., make_cispo_loss_fn(...))</code><p>裁剪概率比并 detach，以固定权重计算策略损失。</p></div></div>
+<div class="update">两条路径汇合 → <b>optim_step(adam_params)</b> → 等待前向／反向与优化器更新完成。</div></section>
+<div class="logs"><b>每步记录</b>　奖励均值 · 退化组占比 · 生成长度 · 有效 token 数 · loss　｜　整批跳过更新时仍记录采样指标。</div>
+</div></article><div class="link"></div><div class="strip"><section><strong>循环结束，保存最终 LoRA 采样权重</strong><code>save_weights_for_sampler(name=run_name).result()</code></section><div class="ref">L704–711<br>finally → SwanLab 收尾</div></div>
+<footer><span>G = group_size，即每道题的回答数</span><span>Datum 中，回答优势复制到各生成 token，prompt 内部预测位置的优势为 0。</span></footer></div></div><figcaption><a href="/datawhale-agentic-rl/task-02/grpo-demo-architecture.html" target="_blank" rel="noopener">单独打开完整架构图</a></figcaption></figure>
+</section>
+<section class="document-section note-panel" aria-labelledby="results">
+<h2 id="results" tabindex="-1">运行结果 <a class="header-anchor" href="#results" aria-label="章节链接">&#8203;</a></h2>
+<h3 id="comparison" tabindex="-1">2.1 三种损失函数的对比 <a class="header-anchor" href="#comparison" aria-label="章节链接">&#8203;</a></h3>
+<p>浅色点保留逐步观测值，实线从第 9 步开始，表示含当前步在内的最近 10 步均值。loss 的均值只计入窗口内实际更新的步骤。</p>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-compare-reward.png" alt="平均奖励：IS、PPO、CISPO" loading="lazy"><figcaption>平均奖励：IS、PPO、CISPO</figcaption></figure>
+<p>100 步的平均训练奖励分别为 IS 0.872、PPO 0.871、CISPO 0.873，最高与最低只差 0.002。三组在第 57 步附近都短暂下探，又很快回升。每步只采样 4 道题，单步均值容易受这一批题目和回答影响。</p>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-compare-avg_gen_len.png" alt="平均生成长度（token）：IS、PPO、CISPO" loading="lazy"><figcaption>平均生成长度（token）：IS、PPO、CISPO</figcaption></figure>
+<p>生成长度拉开了更明显的差距。最后 20 步，IS、PPO、CISPO 的平均生成长度分别为 266.7、140.6、247.1 个 token。PPO 这次用更短的回答取得了相近的训练奖励。三种损失都没有显式的长度惩罚；要把缩短归因于 PPO 裁剪，还需要按回答长度比较优势和实际触发裁剪的 token 比例。</p>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-compare-frac_degenerate.png" alt="退化组比例：IS、PPO、CISPO" loading="lazy"><figcaption>退化组比例：IS、PPO、CISPO</figcaption></figure>
+<p>三组都出现过整批退化：同一道题的 8 个回答得分相同，组内优势全部为零。100 步中，IS 和 PPO 各有 29 步整批退化，CISPO 有 39 步。因此，即使平均奖励接近，三组实际执行更新的次数也有差异。</p>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-compare-datums.png" alt="训练样本数：IS、PPO、CISPO" loading="lazy"><figcaption>训练样本数：IS、PPO、CISPO</figcaption></figure>
+<p>训练样本数与上一张图逐步对应。若退化组比例为 <span class="math-inline" data-tex="f"></span>，每步保留的回答数就是 <span class="math-inline" data-tex="4 \times 8 \times (1-f)"></span>。例如，退化比例为 0.75 时，只有一道题的 8 个回答进入训练。CISPO 多出的 10 个整批退化步骤在这张图上都对应零样本。</p>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-compare-train_tokens.png" alt="训练 token 数：IS、PPO、CISPO" loading="lazy"><figcaption>训练 token 数：IS、PPO、CISPO</figcaption></figure>
+<p>训练 token 数同时取决于保留了多少条回答，以及这些回答有多长。读 PPO 后期的低值时，可以对照前两项指标：样本数相同的两步，也可能因为有效回答长度不同而有不同的训练量。生成长度图统计全部回答，训练 token 图只统计参与更新的部分。</p>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-compare-loss.png" alt="训练损失：IS、PPO、CISPO" loading="lazy"><figcaption>训练损失：IS、PPO、CISPO</figcaption></figure>
+<p>设 <span class="math-inline" data-tex="r"></span> 为某个 token 在当前策略与采样策略下的概率比，<span class="math-inline" data-tex="A"></span> 为其组内优势。IS 用 <span class="math-inline" data-tex="rA"></span> 构造目标，更新权重随 <span class="math-inline" data-tex="r"></span> 变化。PPO 在正优势 token 的概率比超过上界、或负优势 token 的概率比低于下界时，裁剪分支会使该项梯度归零。CISPO 把裁剪后的 <span class="math-inline" data-tex="r"></span> 当作固定权重，乘以 <span class="math-inline" data-tex="A"></span> 和当前策略的对数概率；即使权重达到上界，对数概率仍能传递梯度。</p>
+<p>这也解释了为何三条 loss 曲线的高低不能直接给方法排名：CISPO 记录的目标值显式含有对数概率。各更新步的平均概率比在 0.99885～1.00104 之间，裁剪前后的均值曲线重合。此次 CISPO 的裁剪区间为 <span class="math-inline" data-tex="[0,4]"></span>，61 个更新步记录的 <code>cispo/clip_fraction</code> 全为 0，说明参与更新的 token 都没有触发裁剪。在这个条件下，CISPO 与 IS 对单个 token 的策略梯度都与 <span class="math-inline" data-tex="rA\,\nabla\log\pi"></span> 成正比。两组的生成长度走势相近，与这一性质相容；PPO 这次的裁剪比例没有记录，长度差异的成因仍待验证。</p>
+<h3 id="is" tabindex="-1">2.2 IS <a class="header-anchor" href="#is" aria-label="章节链接">&#8203;</a></h3>
+<pre><code>uv run python experiments/grpo/01-demo-sync.py \
+    --steps 100 \
+    --batch-size 4 \
+    --group-size 8 \
+    --max-tokens 512 \
+    --loss-fn importance_sampling \
+    --swanlab-mode online</code></pre>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-is-reward.png" alt="GRPO demo IS · reward" loading="lazy"><figcaption>GRPO demo IS · reward</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-is-frac_degenerate.png" alt="GRPO demo IS · frac_degenerate" loading="lazy"><figcaption>GRPO demo IS · frac_degenerate</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-is-datums.png" alt="GRPO demo IS · datums" loading="lazy"><figcaption>GRPO demo IS · datums</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-is-train_tokens.png" alt="GRPO demo IS · train_tokens" loading="lazy"><figcaption>GRPO demo IS · train_tokens</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-is-loss.png" alt="GRPO demo IS · loss" loading="lazy"><figcaption>GRPO demo IS · loss</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-is-avg_gen_len.png" alt="GRPO demo IS · avg_gen_len" loading="lazy"><figcaption>GRPO demo IS · avg_gen_len</figcaption></figure>
+<h3 id="ppo" tabindex="-1">2.3 PPO <a class="header-anchor" href="#ppo" aria-label="章节链接">&#8203;</a></h3>
+<pre><code>uv run python experiments/grpo/01-demo-sync.py \
+    --steps 100 \
+    --batch-size 4 \
+    --group-size 8 \
+    --max-tokens 512 \
+    --loss-fn ppo \
+    --swanlab-mode online</code></pre>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-ppo-reward.png" alt="GRPO demo PPO · reward" loading="lazy"><figcaption>GRPO demo PPO · reward</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-ppo-frac_degenerate.png" alt="GRPO demo PPO · frac_degenerate" loading="lazy"><figcaption>GRPO demo PPO · frac_degenerate</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-ppo-datums.png" alt="GRPO demo PPO · datums" loading="lazy"><figcaption>GRPO demo PPO · datums</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-ppo-train_tokens.png" alt="GRPO demo PPO · train_tokens" loading="lazy"><figcaption>GRPO demo PPO · train_tokens</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-ppo-loss.png" alt="GRPO demo PPO · loss" loading="lazy"><figcaption>GRPO demo PPO · loss</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-ppo-avg_gen_len.png" alt="GRPO demo PPO · avg_gen_len" loading="lazy"><figcaption>GRPO demo PPO · avg_gen_len</figcaption></figure>
+<h3 id="cispo" tabindex="-1">2.4 CISPO <a class="header-anchor" href="#cispo" aria-label="章节链接">&#8203;</a></h3>
+<pre><code>uv run python experiments/grpo/01-demo-sync.py \
+    --steps 100 \
+    --batch-size 4 \
+    --group-size 8 \
+    --max-tokens 512 \
+    --loss-fn cispo \
+    --swanlab-mode online</code></pre>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-cispo-reward.png" alt="GRPO demo CISPO · reward" loading="lazy"><figcaption>GRPO demo CISPO · reward</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-cispo-frac_degenerate.png" alt="GRPO demo CISPO · frac_degenerate" loading="lazy"><figcaption>GRPO demo CISPO · frac_degenerate</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-cispo-datums.png" alt="GRPO demo CISPO · datums" loading="lazy"><figcaption>GRPO demo CISPO · datums</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-cispo-train_tokens.png" alt="GRPO demo CISPO · train_tokens" loading="lazy"><figcaption>GRPO demo CISPO · train_tokens</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-cispo-loss.png" alt="GRPO demo CISPO · loss" loading="lazy"><figcaption>GRPO demo CISPO · loss</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-cispo-avg_gen_len.png" alt="GRPO demo CISPO · avg_gen_len" loading="lazy"><figcaption>GRPO demo CISPO · avg_gen_len</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-cispo-update-train_tokens.png" alt="GRPO demo · cispo/train_tokens" loading="lazy"><figcaption>GRPO demo · cispo/train_tokens</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-cispo-clip_low_threshold.png" alt="GRPO demo · cispo/clip_low_threshold" loading="lazy"><figcaption>GRPO demo · cispo/clip_low_threshold</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-cispo-clip_high_threshold.png" alt="GRPO demo · cispo/clip_high_threshold" loading="lazy"><figcaption>GRPO demo · cispo/clip_high_threshold</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-cispo-ratio_mean.png" alt="GRPO demo · cispo/ratio_mean" loading="lazy"><figcaption>GRPO demo · cispo/ratio_mean</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-cispo-clipped_ratio_mean.png" alt="GRPO demo · cispo/clipped_ratio_mean" loading="lazy"><figcaption>GRPO demo · cispo/clipped_ratio_mean</figcaption></figure>
+<figure class="note-figure"><img src="/datawhale-agentic-rl/task-02/grpo-demo-cispo-clip_fraction.png" alt="GRPO demo · cispo/clip_fraction" loading="lazy"><figcaption>GRPO demo · cispo/clip_fraction</figcaption></figure>
+</section>
+</article>

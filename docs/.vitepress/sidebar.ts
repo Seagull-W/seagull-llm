@@ -277,7 +277,8 @@ export const sidebar = {
       text: 'DataWhale Agentic RL', collapsed: false,
       items: [
         { text: '学习项目介绍', link: '/datawhale-agentic-rl/' },
-        { text: 'Task 01 · Loss Function', link: '/datawhale-agentic-rl/task-01' }
+        { text: 'Task 01 · Loss Function', link: '/datawhale-agentic-rl/task-01' },
+        { text: 'Task 02 · 同步 GRPO 训练实验', link: '/datawhale-agentic-rl/task-02' }
       ]
     }
   ],
