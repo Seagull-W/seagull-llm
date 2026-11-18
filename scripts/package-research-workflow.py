@@ -18,7 +18,7 @@ SOURCES = {
     'research/README.md': '完整操作手册与已知限制',
     '.agents/skills/seagull-research/references/task-pipeline.md': '通用任务、时间策略、发现与证据审阅契约',
     '.agents/skills/seagull-research/references/delivery-contract.md': '提示词优先的对象介绍、具体样本与成稿验收流程',
-    '.agents/skills/seagull-research/SKILL.md': '按交付目的检索、归纳与试读的统一 skill',
+    '.agents/skills/seagull-research/SKILL.md': '围绕研究问题检索、核对与交接证据的 skill',
     'research/DELIVERY_VALIDATION.md': '最新 benchmark 文章失败案例与交付回归范围',
     'research/TASK_VALIDATION.md': '通用调研的回归与真实资料验证范围',
     '.agents/skills/seagull-research/references/daily.md': '固定日报来源与补充阅读规范',
