@@ -206,7 +206,10 @@ defineExpose({toggleBox,pageRendered})
     </Teleport>
     <Teleport v-for="m in marks" :key="m.id+'-'+m.part" :to="m.parent">
       <span class="annotation-mark" :data-mark-id="m.id" :data-part="m.part" :class="{'is-filled':m.filled,'is-region':m.area,'is-current':open && section==='annotation' && active===m.id}" :style="m.style">
-        <button v-if="m.part===0" class="annotation-number" :aria-label="'查看原文批注 '+m.number" @click.stop="openMark(m.id,m.part)">{{m.number}}</button>
+        <button v-if="m.part===0 && !m.marginTop" class="annotation-number" :aria-label="'查看原文批注 '+m.number" @click.stop="openMark(m.id,m.part)">{{m.number}}</button>
+      </span>
+      <span v-if="m.marginTop" class="annotation-mark margin-marker" :class="{'is-current':open && section==='annotation' && active===m.id}" :style="{top:m.marginTop}">
+        <button class="annotation-number" :aria-label="'查看原文批注 '+m.number" @click.stop="openMark(m.id,m.part)">{{m.number}}</button>
       </span>
     </Teleport>
   </div>

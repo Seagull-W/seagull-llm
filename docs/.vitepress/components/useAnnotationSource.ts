@@ -3,7 +3,7 @@ import { isVisualPart, locateQuote, type Anchor, type Annotation, type Box, type
 import { cropPdfBox, imageAt, pageBounds, pdfSelection } from './pdf-selection'
 import { captureHtmlRegion, cropHtmlRegion, locateHtmlRegion, regionBounds as boundsFor, revealHtmlRegion, visibleRegionBounds } from './html-selection'
 
-type Mark = { id: string; part: number; number: number; filled: boolean; area?: boolean; parent: HTMLElement; style: Record<string, string> }
+type Mark = { id: string; part: number; number: number; filled: boolean; area?: boolean; marginTop?: string; parent: HTMLElement; style: Record<string, string> }
 type Point = { x: number; y: number }
 const bound = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 const frame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
@@ -86,6 +86,7 @@ export function useAnnotationSource(options: {
       if (!root) return
       ranges.clear()
       const parents = new Map<number, HTMLElement>()
+      const nextBadgeY = new Map<number, number>()
       const nodes = kind === 'html' ? textNodes(root) : [], text = nodes.map(n => n.data).join('')
       for (const [i, n] of options.annotations.value.entries()) {
         const base = { id: n.id, number: i + 1, filled: n.highlighted }
@@ -99,7 +100,15 @@ export function useAnnotationSource(options: {
               if (!parent) { parent = document.createElement('div'); parent.className = 'notebook-marks'; page.append(parent) }
               parents.set(b.page,parent)
             }
-            result.push({ ...base, part, parent, style: { left: b.x*100+'%', top: b.y*100+'%', width: b.w*100+'%', height: b.h*100+'%' } })
+            const area = isVisualPart(n.anchor,b)
+            let marginTop: string | undefined
+            if (part === 0 && !area && parent.clientHeight) {
+              // Annotations are in reading order. Leave space for notes on the same line.
+              const y = Math.max(b.y, nextBadgeY.get(b.page) ?? 0)
+              marginTop = y*100+'%'
+              nextBadgeY.set(b.page,y+18/parent.clientHeight)
+            }
+            result.push({ ...base, part, parent, area, marginTop, style: { left: b.x*100+'%', top: b.y*100+'%', width: b.w*100+'%', height: b.h*100+'%' } })
           })
           if (options.showing()) updateImages(n)
         } else if (n.anchor.region) {
@@ -237,9 +246,13 @@ export function useAnnotationSource(options: {
       if (card) { cardResize = new ResizeObserver(layout); cardResize.observe(card) }
     }
     if (!n || !card) return
-    const rectList = rects(n.anchor), r = visible(rectList[partIndex]) ? rectList[partIndex] : rectList.find(visible)
+    const rectList = rects(n.anchor)
+    const index = visible(rectList[partIndex]) ? partIndex : rectList.findIndex(visible)
+    const r = rectList[index]
     if (!r) return
     if (kind === 'pdf') updateImages(n)
+    // A connector from a text run crosses the rest of the printed line.
+    if (n.anchor.quote && !n.anchor.boxes[index]?.content) return
     const list = card.closest('.notebook-list')!.getBoundingClientRect(), edge = card.getBoundingClientRect()
     const label = card.querySelector('.note-location')!.getBoundingClientRect()
     const x1 = bound(r.right,view.left,view.right-2), y1 = (Math.max(view.top,r.top)+Math.min(view.bottom,r.bottom))/2

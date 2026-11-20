@@ -74,10 +74,12 @@ body.notebook-resizing,body.notebook-resizing * { cursor:col-resize!important; u
 .notebook-marks { position:absolute; inset:0; pointer-events:none; z-index:4; }
 .annotation-mark { position:absolute; display:block; pointer-events:none; }
 .annotation-mark.is-filled { background:var(--nw-highlight,rgb(39 155 177 / 21%)); mix-blend-mode:multiply; }
-.annotation-mark.is-region.is-filled { outline:1px solid var(--nw-paper-ink,#297e91); outline-offset:-1px; }
-.annotation-mark.is-current { outline:1px solid var(--nw-paper-ink,#297e91); outline-offset:-1px; }
+body > .annotation-mark.is-region.is-filled,
+.annotation-mark.is-region.is-current { outline:1px solid var(--nw-paper-ink,#297e91); outline-offset:-1px; }
 .annotation-mark .annotation-number { position:absolute; right:-10px; top:-9px; min-width:15px; height:15px; padding:0 3px; border-radius:8px; border:0; background:var(--nw-number-bg,#216e7e); color:var(--nw-number-text,#fff); font:10px/15px system-ui,sans-serif; pointer-events:auto; cursor:pointer; }
 .annotation-mark:not(.is-current) .annotation-number { opacity:.84; }
+.annotation-mark.margin-marker { right:3px; }
+.margin-marker .annotation-number { top:0; right:0; }
 .annotation-drag { position:absolute; z-index:7; pointer-events:none; background:var(--nw-highlight,#2695ad29); border:1px solid var(--nw-paper-ink,#297e91); }
 .annotation-direct-selection { position:fixed; z-index:1090; pointer-events:none; background:var(--nw-highlight,#2695ad24); outline:1px solid var(--nw-paper-ink,#297e91); outline-offset:-1px; }
 .pdf-scroll .textLayerImagePlaceholder { cursor:pointer; }
