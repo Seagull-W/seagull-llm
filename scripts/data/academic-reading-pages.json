@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1773,
+  "character_count": 1774,
   "pages": [
     {
       "path": "/cs336/a1-bpe.md",
@@ -66,6 +66,10 @@
     {
       "path": "/datawhale-agentic-rl/task-01.md",
       "title": "Task 01 · Loss Function"
+    },
+    {
+      "path": "/datawhale-agentic-rl/task-02.md",
+      "title": "Task 02 · 同步 GRPO 训练实验"
     },
     {
       "path": "/linux-notes/linux-isolation.md",
@@ -156,8 +160,8 @@
       "title": "Anthropic 的 agent 记忆：经验如何经整理进入下次会话"
     },
     {
-      "path": "/research/2026-11-13-agentic-rl-vs-post-training-rl.md",
-      "title": "Agentic RL 与一般后训练 RL：从回答评分到交互轨迹"
+      "path": "/research/2026-11-20-agentic-rl-core-differences.md",
+      "title": "Agentic RL 相对于一般大模型 RL，核心差异在哪里？"
     },
     {
       "path": "/rl-book/cha4对话模板与监督微调.md",
@@ -206,6 +210,10 @@
     {
       "path": "/vllm-notes/offline-inference.md",
       "title": "离线推理：LLM 类与调用链"
+    },
+    {
+      "path": "/papers/agentic-rl-survey/index.md",
+      "title": "大语言模型智能体强化学习全景：综述（中文 PDF）"
     },
     {
       "path": "/papers/count-counts/index.md",

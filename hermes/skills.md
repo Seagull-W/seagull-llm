@@ -6,7 +6,7 @@
 
 | 技能 | 适用阶段与作用 | 当前可用性 | 使用边界 |
 | --- | --- | --- | --- |
-| [seagull-research](../.agents/skills/seagull-research/SKILL.md) | 主题调研：识别阅读任务，检索、阅读并综合证据，检查解释是否完成 | 项目共用 | 按问题选方法；普通改写与给定材料核对无需扩大为主题调研 |
+| [seagull-research](../.agents/skills/seagull-research/SKILL.md) | 主题调研：识别证据缺口，检索、阅读、核对并综合材料 | 项目共用 | 按问题选方法；普通改写与给定材料核对无需扩大为主题调研 |
 | [scholar-deep-research](../.agents/skills/scholar-deep-research/SKILL.md) | 多文献发现、去重、引文追踪、批量证据整理 | 项目已安装，0.5.0 | 可恢复的批量检索需要时使用状态流水线；来源数量和引用排名不证明质量 |
 | [scientific-writing](../.agents/skills/scientific-writing/SKILL.md) | 已有证据基础上的学术报告、论文论证与正式投稿材料 | 项目已安装，元数据 2.1 | 按稿件用途选报告规范；一般技术调研不套正式投稿结构与审批流程 |
 | [unslop-academic-writing](../.agents/skills/unslop-academic-writing/SKILL.md) | 学术初稿的空泛措辞、重复、过度强调与论断精度修订 | 项目已安装，元数据 1.0，含本地补丁 | 英文词表与 linter 只作编辑线索，不能给中文稿评分验收；结构和推理缺失先回正文解决 |

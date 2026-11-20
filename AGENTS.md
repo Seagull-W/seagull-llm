@@ -2,7 +2,7 @@
 
 ## 仓库与工作目录
 
-当前目录 `/home/ubuntu/seagull-llm` 是完整 Git 仓库，命令在此执行。
+命令在当前 checkout 根目录执行；`/home/ubuntu/seagull-llm` 是既有部署路径，不是所有执行器的固定目录。
 `archive/` 保存历史快照与迁移素材，当前任务从下表进入。
 
 写作先识别本次问题、读者已有知识和交付目的，再选体例与技能。建立理解、查阅、证据综合与行动判断都可以成为主要目的；栏目名称和既有模板提供默认路径。规则强度、适用范围与成稿质量以 [写作总则](writing/README.md) 为主维护位置。
@@ -12,7 +12,7 @@
 | 任务 | 入口 |
 | --- | --- |
 | 明确布置以某个主题为交付对象的调研 | [seagull-research](.agents/skills/seagull-research/SKILL.md) |
-| 正文撰写、改写与审阅 | [写作总则与类型路由](writing/README.md) |
+| 正文撰写、改写与审阅 | [写作入口](writing/README.md) |
 | 正文文件、公式、图注与组件 | [正文格式](HTML_FORMATS.md) |
 | 视觉、配色与动效 | [视觉规范](VISUAL_STYLES.md) |
 | 新增、导入或发布网站内容 | [发布流程](writing/publishing.md) |

@@ -550,29 +550,20 @@
     "origin": "manual"
   },
   {
-    "date": "2026-11-13",
-    "slug": "agentic-rl-vs-post-training-rl",
-    "title": "Agentic RL 与一般后训练 RL：从回答评分到交互轨迹",
-    "description": "从单轮训练的边界出发，解释工具调用为何改变下一次输入、一个终局分数怎样落到每个 token、多轮轨迹如何拆分训练，以及环境与评测预算带来的代价。",
-    "route": "/research/2026-11-13-agentic-rl-vs-post-training-rl",
+    "date": "2026-11-20",
+    "slug": "agentic-rl-core-differences",
+    "title": "Agentic RL 相对于一般大模型 RL，核心差异在哪里？",
+    "description": "用同一个多跳问答对照固定输入和交互式训练，解释环境观察如何改变后续行动，以及奖励、信用分配和采样系统各自承担什么。",
+    "route": "/research/2026-11-20-agentic-rl-core-differences",
     "source_urls": [
-      "https://arxiv.org/abs/2509.02547",
-      "https://arxiv.org/abs/2510.01132",
-      "https://arxiv.org/abs/2604.09459",
-      "https://arxiv.org/abs/2512.22560",
-      "https://arxiv.org/abs/2511.09586",
-      "https://arxiv.org/abs/2203.02155",
-      "https://arxiv.org/abs/2501.12948",
-      "https://arxiv.org/abs/2305.18290",
-      "https://arxiv.org/abs/2402.14740",
-      "https://arxiv.org/abs/2503.09516",
-      "https://arxiv.org/abs/2508.03680",
-      "https://arxiv.org/abs/2412.21139",
-      "https://arxiv.org/abs/2406.12045",
-      "https://arxiv.org/abs/2404.07972",
-      "https://verl.readthedocs.io/en/latest/advance/fully_async.html"
+      "https://arxiv.org/html/2509.02547v5",
+      "https://arxiv.org/html/2503.09516v5",
+      "https://arxiv.org/html/2402.03300v3",
+      "https://aclanthology.org/2026.findings-eacl.328.pdf",
+      "https://arxiv.org/html/2508.03680v1",
+      "https://arxiv.org/html/2507.14897v1",
+      "https://arxiv.org/html/2505.24298v5"
     ],
-    "window_end": "2026-11-13T23:59:00+08:00",
     "origin": "manual"
   }
 ]
