@@ -51,7 +51,6 @@ SOURCES = {
     'writing/publishing.md': '当前内容接入与发布规范',
     'HTML_FORMATS.md': '正文文件、公式、图注与组件格式',
     'VISUAL_STYLES.md': '页面外观、配色与动效',
-    '.agents/skills/affirmative-first-writing/SKILL.md': '跨类成稿表达检查',
     '.agents/skills/seagull-research/references/readable-survey.md': '调研可读性检查',
     '.agents/skills/seagull-research/references/paper-survey.md': '按问题选用的文献速览方法',
     '.agents/skills/seagull-research/scripts/prose-scan.py': '可选的正文结构与句式定位工具，不作质量评分',

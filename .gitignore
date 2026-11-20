@@ -43,7 +43,6 @@ __pycache__/
 !/.agents/skills/
 /.agents/skills/*
 !/.agents/skills/seagull-research/
-!/.agents/skills/affirmative-first-writing/
 /.codex/
 /.hermes/
 /.aws/

@@ -8,4 +8,4 @@
 
 修订先定位具体理解缺口，再决定补证据、重排、展开或删减。目录可以用卡片，争议可以在正文展开，限制可以单独成段；这些选择由任务决定。必要回指、连接与局部回顾可保留，不作词表审查。
 
-可选工具 `python3 .agents/skills/seagull-research/scripts/prose-scan.py <文章路径>` 只定位标题、字符数和候选表达；不判断语义正确、关系完整或文风质量。零命中不等于通过。需要表达修订时可参考 [affirmative-first-writing](../../affirmative-first-writing/SKILL.md)，不必在每篇文章运行。
+可选工具 `python3 .agents/skills/seagull-research/scripts/prose-scan.py <文章路径>` 只定位标题、字符数和候选表达；不判断语义正确、关系完整或文风质量。零命中不等于通过。
