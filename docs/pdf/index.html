@@ -1,0 +1,42 @@
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { withBase } from 'vitepress'
+import PdfViewer from '../.vitepress/components/PdfViewer.vue'
+import { isSitePath, readPdfLocation } from '../.vitepress/pdf-links.mjs'
+
+const lectures = import.meta.glob<string>('/westlake-rl/*/*.pdf', { eager: true, import: 'default', query: '?url' })
+const outlines = import.meta.glob<{ title: string; page: number }[]>('/westlake-rl/*/目录.json', { eager: true, import: 'default' })
+const entry = ref<ReturnType<typeof readPdfLocation>>()
+const initialized = ref(false)
+const file = computed(() => {
+  const path = entry.value?.src
+  if (!path) return { src: '', outline: [] }
+  if (!isSitePath(path)) return { src: path, outline: [] }
+  const [pathname] = path.split('?')
+  let key = pathname
+  try { key = decodeURI(pathname) } catch {}
+  const outline = outlines[key.slice(0, key.lastIndexOf('/') + 1) + '目录.json'] ?? []
+  return { src: lectures[key] ?? withBase(path), outline }
+})
+function update() {
+  entry.value = readPdfLocation(location.hash)
+  initialized.value = true
+  if (entry.value) document.title = entry.value.title + ' · PDF 阅读'
+}
+onMounted(() => {
+  update()
+  window.addEventListener('hashchange', update)
+})
+onBeforeUnmount(() => window.removeEventListener('hashchange', update))
+</script>
+
+<PdfViewer v-if="entry || !initialized" :key="file.src" :src="file.src" :outline="file.outline"
+  :title="entry?.title || 'PDF 阅读工作台'" :initial-page="entry?.page"
+  :back-href="withBase(entry?.from ?? '/papers/')" back-label="返回来源页"
+  :source-href="entry && !isSitePath(entry.original) ? entry.original : undefined" source-label="原始来源" />
+<main v-else class="pdf-empty"><h1>PDF 阅读工作台</h1><p>从论文或讲义中的 PDF 链接进入，即可阅读和批注。</p><a :href="withBase('/papers/')">返回论文列表</a></main>
+
+<style scoped>
+.pdf-empty { max-width:38rem; margin:16vh auto; padding:0 1.5rem; }
+.pdf-empty h1 { font-size:1.5rem; }.pdf-empty p { margin:1rem 0; }.pdf-empty a { color:var(--vp-c-brand-1); }
+</style>

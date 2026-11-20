@@ -1,0 +1,1150 @@
+<script setup>
+import './reading.css'
+</script>
+
+<article class="native-document format-paper survey-web" data-design="linux-notebook" aria-labelledby="sec:task">
+  <header class="document-intro note-hero">
+    <p class="note-kicker">中文译本<span>arXiv:2509.02547v5</span></p>
+    <h1 id="sec:task">4 Agentic RL：任务视角</h1>
+    <p class="survey-links"><a href="/papers/agentic-rl-survey/web/">摘要与目录</a> <a href="/papers/agentic-rl-survey/?view=pdf">PDF 阅读工作台</a></p>
+  </header>
+  <details class="note-details survey-toc"><summary>全文目录</summary><nav class="survey-sections" aria-label="全文目录"><a href="/papers/agentic-rl-survey/web/introduction">1 引言</a><a href="/papers/agentic-rl-survey/web/foundations">2 预备知识：从 LLM RL 到 Agentic RL</a><a href="/papers/agentic-rl-survey/web/capabilities">3 Agentic RL：模型能力视角</a><a href="/papers/agentic-rl-survey/web/tasks">4 Agentic RL：任务视角</a><a href="/papers/agentic-rl-survey/web/resources">5 环境与框架</a><a href="/papers/agentic-rl-survey/web/future">6 开放挑战与未来方向</a><a href="/papers/agentic-rl-survey/web/conclusion">7 结论</a><a href="/papers/agentic-rl-survey/web/references">参考文献</a></nav></details>
+  <nav class="note-jump" aria-label="本章小节"><a href="#subsec:search">4.1 搜索与研究智能体</a>
+<a href="#subsec:code">4.2 代码智能体</a>
+<a href="#subsec:math">4.3 数学智能体</a>
+<a href="#subsec:gui">4.4 GUI 智能体</a>
+<a href="#subsec:vision-understand">4.5 视觉智能体</a>
+<a href="#subsec:embodied">4.6 具身智能体</a>
+<a href="#subsec:mas">4.7 多智能体系统</a>
+<a href="#subsec:other">4.8 其他任务</a></nav>
+  <section class="document-section note-panel" aria-labelledby="sec:task">
+<p>Agentic RL 通过广泛的具体任务体现出来，这些任务检验并塑造其不断发展的能力。本节综述展现其显著潜力与独特挑战的代表性应用领域：首先讨论<em>搜索与信息检索</em>（第 <a href="#subsec:search" data-reference-type="ref" data-reference="subsec:search">4.1</a> 节），随后是<em>代码生成与软件工程</em>（第 <a href="#subsec:code" data-reference-type="ref" data-reference="subsec:code">4.2</a> 节）和<em>数学推理</em>（第 <a href="#subsec:math" data-reference-type="ref" data-reference="subsec:math">4.3</a> 节）；接着讨论<em>GUI 导航</em>（第 <a href="#subsec:gui" data-reference-type="ref" data-reference="subsec:gui">4.4</a> 节）、<em>视觉理解任务</em>（第 <a href="#subsec:vision-understand" data-reference-type="ref" data-reference="subsec:vision-understand">4.5</a> 节）和<em>VLM 具身交互</em>（第 <a href="#subsec:embodied" data-reference-type="ref" data-reference="subsec:embodied">4.6</a> 节）；再从单智能体扩展到<em>多智能体系统</em>（第 <a href="#subsec:mas" data-reference-type="ref" data-reference="subsec:mas">4.7</a> 节），最后介绍其他新兴领域（第 <a href="#subsec:other" data-reference-type="ref" data-reference="subsec:other">4.8</a> 节）。这些应用共同展示了 Agentic RL 如何从抽象范式转向解决现实问题的可执行方法，如图 <a href="#fig:tree-domain" data-reference-type="ref" data-reference="fig:tree-domain">6</a>所示。</p>
+<figure id="fig:tree-domain" class="note-figure" data-latex-placement="t">
+<a href="/papers/agentic-rl-survey/web-assets/agent-domain-tree.webp" target="_blank" rel="noopener" aria-label="打开原尺寸图片"><img src="/papers/agentic-rl-survey/web-assets/agent-domain-tree.webp" loading="lazy" width="2306" height="1440" /></a>
+<figcaption>图 6 · 面向特定领域智能体的 RL 演化树，按时间顺序展示代表性领域与方法的发展。</figcaption>
+</figure>
+<h2 id="subsec:search">4.1 搜索与研究智能体</h2>
+<p>搜索一直是利用外部知识扩展 LLM 的核心手段，检索增强生成（RAG）是其中广泛使用的方法 <span class="citation" data-cites="gao2024retrievalaugmentedgenerationlargelanguage fan2024surveyragmeetingllms">(<a href="/papers/agentic-rl-survey/web/references#ref-gao2024retrievalaugmentedgenerationlargelanguage">Gao et al. 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-fan2024surveyragmeetingllms">Fan et al. 2024</a>)</span>。这一范式正从简单信息检索发展为能够开展<em>深度研究</em>的自主智能体：在复杂多步过程中，不仅查找信息，还进行深入分析、综合多源见解并撰写全面报告 <span class="citation" data-cites="kimideepresearch perplexitydeepresearch">(<a href="/papers/agentic-rl-survey/web/references#ref-kimideepresearch">Kimi 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-perplexitydeepresearch">Perplexity 2025</a>)</span>，目标由回答查询提升为解决复杂研究任务。</p>
+<p>早期提示驱动方法依赖脆弱的查询策略和人工工程。Search-o1 <span class="citation" data-cites="search-o1">(<a href="/papers/agentic-rl-survey/web/references#ref-search-o1">Xiaoxi Li, Dong, et al. 2025</a>)</span>等较新工作利用大型推理模型进行智能体式推理时检索，DeepResearch <span class="citation" data-cites="zhang2025agentorchestrahierarchicalmultiagentframework">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025agentorchestrahierarchicalmultiagentframework">Wentao Zhang et al. 2025</a>)</span>等多智能体系统协调查询和摘要子智能体，但仍缺少学习信号。这些基于提示的方法没有微调信号，因而在需要紧密结合搜索、推理和综合的多轮场景中，泛化和效果均受限制。因此，研究转向强化学习，直接优化查询生成与搜索—推理协调的端到端过程，以支持更高级的研究目标。表 <a href="#tab:rl_search_methods" data-reference-type="ref" data-reference="tab:rl_search_methods">4</a>列出本节讨论的大部分工作，下面具体说明 RL 如何赋能这些智能体。</p>
+<div id="tab:rl_search_methods">
+<div class="survey-table" role="region" aria-label="表格，可水平滑动" tabindex="0"><table>
+<caption>表 4 · 基于 RL 的搜索与研究智能体方法汇总。</caption>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>方法</strong></th>
+<th style="text-align: left;"><strong>类别</strong></th>
+<th style="text-align: left;"><strong>基础 LLM</strong></th>
+<th style="text-align: left;"><strong>资源链接</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>方法</strong></td>
+<td style="text-align: left;"><strong>类别</strong></td>
+<td style="text-align: left;"><strong>基础 LLM</strong></td>
+<td style="text-align: left;"><strong>资源链接</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">DeepRetrieval <span class="citation" data-cites="jiang2025deepretrievalhackingrealsearch">(<a href="/papers/agentic-rl-survey/web/references#ref-jiang2025deepretrievalhackingrealsearch">P. Jiang et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Qwen2.5-3B-Instruct, Llama-3.2-3B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/pat-jj/DeepRetrieval">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Search-R1 <span class="citation" data-cites="jin2025searchr1trainingllmsreason">(<a href="/papers/agentic-rl-survey/web/references#ref-jin2025searchr1trainingllmsreason">B. Jin et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Qwen2.5-3B/7B-Base/Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/PeterGriffinJin/Search-R1">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">R1-Searcher <span class="citation" data-cites="song2025r1searcherincentivizingsearchcapability">(<a href="/papers/agentic-rl-survey/web/references#ref-song2025r1searcherincentivizingsearchcapability">H. Song, Jiang, Min, et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Qwen2.5-7B, Llama3.1-8B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/RUCAIBox/R1-Searcher">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">R1-Searcher++ <span class="citation" data-cites="song2025r1searcherincentivizingdynamicknowledge">(<a href="/papers/agentic-rl-survey/web/references#ref-song2025r1searcherincentivizingdynamicknowledge">H. Song, Jiang, Tian, et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Qwen2.5-7B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/RUCAIBox/R1-Searcher-plus">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ReSearch <span class="citation" data-cites="chen2025researchlearningreasonsearch">(<a href="/papers/agentic-rl-survey/web/references#ref-chen2025researchlearningreasonsearch">M. Chen et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Qwen2.5-7B/32B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/Agent-RL/ReCall/tree/re-search">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">StepSearch <span class="citation" data-cites="wang2025stepsearchignitingllmssearch">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025stepsearchignitingllmssearch">Ziliang Wang et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Qwen2.5-3B/7B-Base/Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/Zillwang/StepSearch">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">DeepResearcher <span class="citation" data-cites="zheng2025deepresearcherscalingdeepresearch">(<a href="/papers/agentic-rl-survey/web/references#ref-zheng2025deepresearcherscalingdeepresearch">Yuxiang Zheng et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Qwen2.5-7B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/GAIR-NLP/DeepResearcher">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">WebDancer <span class="citation" data-cites="wu2025webdancerautonomousinformationseeking">(<a href="/papers/agentic-rl-survey/web/references#ref-wu2025webdancerautonomousinformationseeking">Jialong Wu, Li, et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Qwen2.5-7B/32B, QWQ-32B</td>
+<td style="text-align: left;"><a href="https://github.com/Alibaba-NLP/WebAgent/tree/main/WebDancer">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">WebThinker <span class="citation" data-cites="li2025webthinkerempoweringlargereasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025webthinkerempoweringlargereasoning">Xiaoxi Li, Jin, et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">QwQ-32B, DeepSeek-R1-Distilled-Qwen, Qwen2.5-32B</td>
+<td style="text-align: left;"><a href="https://github.com/sunnynexus/WebThinker">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">WebSailor <span class="citation" data-cites="li2025websailornavigatingsuperhumanreasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025websailornavigatingsuperhumanreasoning">K. Li et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Qwen2.5-3B/7B/32B/72B</td>
+<td style="text-align: left;"><a href="https://github.com/Alibaba-NLP/WebAgent/tree/main/WebSailor">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">WebWatcher <span class="citation" data-cites="geng2025webwatcherbreakingnewfrontiers">(<a href="/papers/agentic-rl-survey/web/references#ref-geng2025webwatcherbreakingnewfrontiers">Geng et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Qwen2.5-VL-7B/32B</td>
+<td style="text-align: left;"><a href="https://github.com/Alibaba-NLP/WebAgent/tree/main/WebWatcher">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">WebShaper <span class="citation" data-cites="tao2025webshaperagenticallydatasynthesizing">(<a href="/papers/agentic-rl-survey/web/references#ref-tao2025webshaperagenticallydatasynthesizing">Tao et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Qwen-2.5-32B/72B, QwQ-32B</td>
+<td style="text-align: left;"><a href="https://github.com/Alibaba-NLP/DeepResearch">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ASearcher <span class="citation" data-cites="gao2025turnsunlockinglonghorizonagentic">(<a href="/papers/agentic-rl-survey/web/references#ref-gao2025turnsunlockinglonghorizonagentic">J. Gao et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Qwen2.5-7B/14B, QwQ-32B</td>
+<td style="text-align: left;"><a href="https://github.com/inclusionAI/ASearcher">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Atom-Searcher <span class="citation" data-cites="deng2025atomsearcherenhancingagenticdeep">(<a href="/papers/agentic-rl-survey/web/references#ref-deng2025atomsearcherenhancingagenticdeep">Y. Deng et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Qwen2.5-7B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/antgroup/Research-Venus">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">MiroMind Open Deep Research <span class="citation" data-cites="MiroMind_ODR_2025">(<a href="/papers/agentic-rl-survey/web/references#ref-MiroMind_ODR_2025">MiroMind Team 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;"><a href="https://miromind.ai/blog/miromind-open-deep-research">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">SimpleDeepResearcher <span class="citation" data-cites="sun2025simpledeepsearcherdeepinformationseeking">(<a href="/papers/agentic-rl-survey/web/references#ref-sun2025simpledeepsearcherdeepinformationseeking">S. Sun et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">QwQ-32B</td>
+<td style="text-align: left;"><a href="https://github.com/RUCAIBox/SimpleDeepSearcher">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">AWorld <span class="citation" data-cites="yu2025aworldorchestratingtrainingrecipe">(<a href="/papers/agentic-rl-survey/web/references#ref-yu2025aworldorchestratingtrainingrecipe">C. Yu et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Qwen3-32B</td>
+<td style="text-align: left;"><a href="https://github.com/inclusionAI/AWorld/tree/main/train">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">SFR-DeepResearch <span class="citation" data-cites="nguyen2025sfrdeepresearcheffectivereinforcementlearning">(<a href="/papers/agentic-rl-survey/web/references#ref-nguyen2025sfrdeepresearcheffectivereinforcementlearning">X.-P. Nguyen et al. 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">QwQ-32B, Qwen3-8B, GPT-oss-20b</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">ZeroSearch <span class="citation" data-cites="sun2025zerosearchincentivizesearchcapability">(<a href="/papers/agentic-rl-survey/web/references#ref-sun2025zerosearchincentivizesearchcapability">H. Sun et al. 2025</a>)</span></td>
+<td style="text-align: left;">内部</td>
+<td style="text-align: left;">Qwen2.5-3B/7B-Base/Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/Alibaba-NLP/ZeroSearch">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">SSRL <span class="citation" data-cites="fan2025ssrlselfsearchreinforcementlearning">(<a href="/papers/agentic-rl-survey/web/references#ref-fan2025ssrlselfsearchreinforcementlearning">Yuchen Fan et al. 2025</a>)</span></td>
+<td style="text-align: left;">内部</td>
+<td style="text-align: left;">Qwen2.5, Llama-3.2/Llama-3.1, Qwen3</td>
+<td style="text-align: left;"><a href="https://github.com/TsinghuaC3I/SSRL">GitHub</a></td>
+</tr>
+<tr>
+<td colspan="4" style="text-align: center;"><em>闭源方法</em></td>
+</tr>
+<tr>
+<td style="text-align: left;">OpenAI Deep Research <span class="citation" data-cites="openaideepresearch">(<a href="/papers/agentic-rl-survey/web/references#ref-openaideepresearch">OpenAI 2025a</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">OpenAI 模型</td>
+<td style="text-align: left;"><a href="https://openai.com/index/introducing-deep-research/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Perplexity’s DeepResearch <span class="citation" data-cites="perplexitydeepresearch">(<a href="/papers/agentic-rl-survey/web/references#ref-perplexitydeepresearch">Perplexity 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;"><a href="https://www.perplexity.ai/hub/blog/introducing-perplexity-deep-research">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Google Gemini’s DeepResearch <span class="citation" data-cites="googledeepresearch">(<a href="/papers/agentic-rl-survey/web/references#ref-googledeepresearch">Google 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Gemini</td>
+<td style="text-align: left;"><a href="https://gemini.google/overview/deep-research/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Kimi-Researcher <span class="citation" data-cites="kimideepresearch">(<a href="/papers/agentic-rl-survey/web/references#ref-kimideepresearch">Kimi 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Kimi K2</td>
+<td style="text-align: left;"><a href="https://moonshotai.github.io/Kimi-Researcher/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Grok AI DeepSearch <span class="citation" data-cites="grok">(<a href="/papers/agentic-rl-survey/web/references#ref-grok"><span class="nocase">x.ai</span> 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Grok3</td>
+<td style="text-align: left;"><a href="https://grokaimodel.com/deepsearch/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Doubao with Deep Think <span class="citation" data-cites="doubao">(<a href="/papers/agentic-rl-survey/web/references#ref-doubao">Doubao 2025</a>)</span></td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">Doubao</td>
+<td style="text-align: left;"><a href="https://www.doubao.com/chat/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Manus WideResearch</td>
+<td style="text-align: left;">外部</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;"><a href="https://manus.im/blog/introducing-wide-research">网站</a></td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<h3 id="subsub:search_open">4.1.1 开源 RL 方法</h3>
+<h4 id="从外部互联网搜索">从外部互联网搜索。</h4>
+<p>一条主要研究路线以 RAG 为基础，将<em>实时网页搜索 API</em>作为外部环境，通过强化学习优化查询生成和多步推理。DeepRetrieval <span class="citation" data-cites="jiang2025deepretrievalhackingrealsearch">(<a href="/papers/agentic-rl-survey/web/references#ref-jiang2025deepretrievalhackingrealsearch">P. Jiang et al. 2025</a>)</span>率先推进这一方向，将单次查询生成建模为由 GRPO 训练的策略，直接根据实时搜索结果的召回率与相关性给予奖励。受其效果推动，后续方法将这一范式扩展到多轮、推理集成和多模态搜索。Search-R1 <span class="citation" data-cites="jin2025searchr1trainingllmsreason">(<a href="/papers/agentic-rl-survey/web/references#ref-jin2025searchr1trainingllmsreason">B. Jin et al. 2025</a>)</span>和 DeepResearcher <span class="citation" data-cites="zheng2025deepresearcherscalingdeepresearch">(<a href="/papers/agentic-rl-survey/web/references#ref-zheng2025deepresearcherscalingdeepresearch">Yuxiang Zheng et al. 2025</a>)</span>结合检索词元掩码与结果奖励，使查询构造和答案生成交替进行。AutoRefine <span class="citation" data-cites="shi2025searchrefinethinkfacilitating">(<a href="/papers/agentic-rl-survey/web/references#ref-shi2025searchrefinethinkfacilitating">Yaorui Shi et al. 2025</a>)</span>进一步在连续搜索调用之间插入精炼阶段，用 GRPO 同时奖励答案正确性与检索质量，使智能体在长时程推理中迭代过滤并组织含噪证据。</p>
+<p>R1-Searcher <span class="citation" data-cites="song2025r1searcherincentivizingsearchcapability">(<a href="/papers/agentic-rl-survey/web/references#ref-song2025r1searcherincentivizingsearchcapability">H. Song, Jiang, Min, et al. 2025</a>)</span>采用两阶段冷启动 PPO 策略，先学习何时调用搜索，再学习如何利用搜索；后续的 R1-Searcher++ <span class="citation" data-cites="song2025r1searcherincentivizingdynamicknowledge">(<a href="/papers/agentic-rl-survey/web/references#ref-song2025r1searcherincentivizingdynamicknowledge">H. Song, Jiang, Tian, et al. 2025</a>)</span>增加监督微调、避免冗余的内部知识奖励，以及支持持续吸收信息的动态记忆。ReSearch <span class="citation" data-cites="chen2025researchlearningreasonsearch">(<a href="/papers/agentic-rl-survey/web/references#ref-chen2025researchlearningreasonsearch">M. Chen et al. 2025</a>)</span>探索无需监督工具轨迹的完全端到端 PPO；StepSearch <span class="citation" data-cites="wang2025stepsearchignitingllmssearch">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025stepsearchignitingllmssearch">Ziliang Wang et al. 2025</a>)</span>通过中间步骤奖励加速多跳问答收敛。Atom-Searcher <span class="citation" data-cites="deng2025atomsearcherenhancingagenticdeep">(<a href="/papers/agentic-rl-survey/web/references#ref-deng2025atomsearcherenhancingagenticdeep">Y. Deng et al. 2025</a>)</span>通过改进推理过程本身，而不仅关注最终结果，显著提高 LLM 的问题求解能力。</p>
+<p>WebDancer <span class="citation" data-cites="wu2025webdancerautonomousinformationseeking">(<a href="/papers/agentic-rl-survey/web/references#ref-wu2025webdancerautonomousinformationseeking">Jialong Wu, Li, et al. 2025</a>)</span>结合人工浏览轨迹监督与 RL 微调，构建自主 ReAct 风格智能体，在 GAIA <span class="citation" data-cites="mialon2023gaiabenchmarkgeneralai">(<a href="/papers/agentic-rl-survey/web/references#ref-mialon2023gaiabenchmarkgeneralai">Mialon et al. 2024</a>)</span>和 WebWalkerQA <span class="citation" data-cites="wu2025webwalkerbenchmarkingllmsweb">(<a href="/papers/agentic-rl-survey/web/references#ref-wu2025webwalkerbenchmarkingllmsweb">Jialong Wu, Yin, et al. 2025</a>)</span>上表现突出。WebThinker <span class="citation" data-cites="li2025webthinkerempoweringlargereasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025webthinkerempoweringlargereasoning">Xiaoxi Li, Jin, et al. 2025</a>)</span>在思考—搜索—起草循环中嵌入 Deep Web Explorer，通过带人类反馈的 DPO 对齐来处理复杂报告生成。WebSailor <span class="citation" data-cites="li2025websailornavigatingsuperhumanreasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025websailornavigatingsuperhumanreasoning">K. Li et al. 2025</a>)</span>是一套完整后训练方法，教会 LLM 智能体在复杂网页导航和信息搜寻任务中进行精细推理。WebWatcher <span class="citation" data-cites="geng2025webwatcherbreakingnewfrontiers">(<a href="/papers/agentic-rl-survey/web/references#ref-geng2025webwatcherbreakingnewfrontiers">Geng et al. 2025</a>)</span>进一步扩展至多模态搜索，结合视觉语言推理、工具使用与 RL，在 BrowseComp-VL 和 VQA 基准上超过纯文本及多模态基线。ASearcher <span class="citation" data-cites="gao2025turnsunlockinglonghorizonagentic">(<a href="/papers/agentic-rl-survey/web/references#ref-gao2025turnsunlockinglonghorizonagentic">J. Gao et al. 2025</a>)</span>利用合成问答数据开展大规模异步强化学习，支持长时程搜索（40 次以上工具调用），超过此前开源方法。MiroMind Open Deep Research（MiroMind ODR） <span class="citation" data-cites="MiroMind_ODR_2025">(<a href="/papers/agentic-rl-survey/web/references#ref-MiroMind_ODR_2025">MiroMind Team 2025</a>)</span>旨在构建高性能、完全开源、开放协作的深度研究生态，全面开放智能体框架、模型、数据与训练基础设施。</p>
+<h4 id="从-llm-内部知识搜索">从 LLM 内部知识搜索。</h4>
+<p>依赖外部 API 的训练面临两大挑战：（1）实时互联网检索的文档质量不可控，噪声信息导致训练不稳定；（2）API 成本过高，严重限制可扩展性。为增强训练效率、可控性和稳定性，近期研究开始利用 LLM 内部知识等可控的模拟搜索引擎。例如，ZeroSearch <span class="citation" data-cites="sun2025zerosearchincentivizesearchcapability">(<a href="/papers/agentic-rl-survey/web/references#ref-sun2025zerosearchincentivizesearchcapability">H. Sun et al. 2025</a>)</span>用从 LLM 自身蒸馏的伪搜索引擎替代实时检索，结合课程 RL，在不发送真实查询的情况下逐步逼近真实引擎性能。SSRL <span class="citation" data-cites="fan2025ssrlselfsearchreinforcementlearning">(<a href="/papers/agentic-rl-survey/web/references#ref-fan2025ssrlselfsearchreinforcementlearning">Yuchen Fan et al. 2025</a>)</span>进一步使智能体训练时完全离线“自搜索”，无需显式搜索引擎，却能无缝迁移到在线推理，真实 API 此时仍可提升性能。虽然尚处早期，离线自搜索增强了稳定性，并突破 API 限制提升可扩展性，指向更能自给自足的研究智能体。</p>
+<h3 id="subsub:search_close">4.1.2 闭源 RL 方法</h3>
+<h4 id="产业研究智能体">产业研究智能体。</h4>
+<p>尽管 RAG 与 RL 的结合已有进展，大多数开源模型仍难以完成 OpenAI BrowseComp <span class="citation" data-cites="wei2025browsecompsimplechallengingbenchmark">(<a href="/papers/agentic-rl-survey/web/references#ref-wei2025browsecompsimplechallengingbenchmark">J. Wei et al. 2025</a>)</span>。这一挑战性基准衡量 AI 智能体定位难以查找信息的能力，暴露了长时程规划、基于页面的工具使用和跨源验证方面的不足。近期闭源系统明显更强，已从查询优化转向完全自主的研究智能体，能够浏览开放网络、综合多源信息并起草全面报告。这可能得益于产业界更强的基础模型及更多高质量数据。OpenAI Deep Research <span class="citation" data-cites="openaideepresearch">(<a href="/papers/agentic-rl-survey/web/references#ref-openaideepresearch">OpenAI 2025a</a>)</span>在 BrowseComp 上达到 51.5% pass@1。Perplexity DeepResearch <span class="citation" data-cites="perplexitydeepresearch">(<a href="/papers/agentic-rl-survey/web/references#ref-perplexitydeepresearch">Perplexity 2025</a>)</span>、Google Gemini DeepResearch <span class="citation" data-cites="googledeepresearch">(<a href="/papers/agentic-rl-survey/web/references#ref-googledeepresearch">Google 2025</a>)</span>、Kimi-Researcher <span class="citation" data-cites="kimideepresearch">(<a href="/papers/agentic-rl-survey/web/references#ref-kimideepresearch">Kimi 2025</a>)</span>、Grok AI DeepSearch <span class="citation" data-cites="grok">(<a href="/papers/agentic-rl-survey/web/references#ref-grok"><span class="nocase">x.ai</span> 2025</a>)</span>和豆包深度思考 <span class="citation" data-cites="doubao">(<a href="/papers/agentic-rl-survey/web/references#ref-doubao">Doubao 2025</a>)</span>等其他系统，将 RL 式微调与高级工具集成和记忆模块结合，开启交互式、迭代式研究助手的新阶段。</p>
+<h4 id="案例openai-deep-research">案例：OpenAI Deep Research。</h4>
+<p>Deep Research 具体展示了第 <a href="/papers/agentic-rl-survey/web/capabilities#sec:capability" data-reference-type="ref" data-reference="sec:capability">3</a> 节的能力如何与 RL 塑造的搜索策略结合。智能体首先进行长时程多步推理与规划，将用户请求分解为子目标；然后执行由 RL 塑造的网页搜索：发出查询、选择打开的页面并改进搜索轨迹。这些策略在训练中通过 BrowseComp <span class="citation" data-cites="wei2025browsecompsimplechallengingbenchmark">(<a href="/papers/agentic-rl-survey/web/references#ref-wei2025browsecompsimplechallengingbenchmark">J. Wei et al. 2025</a>)</span>等研究导向基准塑造。整个过程中，智能体以草稿笔记形式维护持久记忆，并在综合之前进行跨源验证。推理、规划、工具使用、记忆和验证能力，与 RL 塑造的搜索深度、分支选择和证据整合控制决策结合，形成统一的研究智能体。</p>
+<h2 id="subsec:code">4.2 代码智能体</h2>
+<p>代码生成，或更广义的软件工程，为基于 LLM 的 Agentic RL 提供了理想试验场：执行语义明确且可验证，编译、单元测试和运行轨迹等自动化信号也容易获得 <span class="citation" data-cites="dong2025surveycodegenerationllmbased">(<a href="/papers/agentic-rl-survey/web/references#ref-dong2025surveycodegenerationllmbased">Yihong Dong, Jiang, Qian, et al. 2025</a>)</span>。早期多智能体框架，如 MetaGPT、AutoGPT、AgentVerse，通过提示协调角色而不更新参数，展示了模块化角色分配的潜力 <span class="citation" data-cites="hong2023metagpt AutoGPT chen2023agentversefacilitatingmultiagentcollaboration">(<a href="/papers/agentic-rl-survey/web/references#ref-hong2023metagpt">S. Hong et al. 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-AutoGPT">Gravitas 2023</a>; <a href="/papers/agentic-rl-survey/web/references#ref-chen2023agentversefacilitatingmultiagentcollaboration">W. Chen et al. 2024</a>)</span>。CodeRL 等早期代码 RL 方法引入基于执行的奖励建模和 actor–critic 训练 <span class="citation" data-cites="NEURIPS2022_8636419d">(<a href="/papers/agentic-rl-survey/web/references#ref-NEURIPS2022_8636419d">Le et al. 2022</a>)</span>，推动了一批利用执行反馈指导策略更新的研究。表 <a href="#tab:rl_code_methods" data-reference-type="ref" data-reference="tab:rl_code_methods">5</a>汇总本节大部分工作。下面按<em>任务复杂度</em>递增组织文献，从<em>代码生成</em>（第 <a href="#subsubsec:singleturncode" data-reference-type="ref" data-reference="subsubsec:singleturncode">4.2.1</a> 节）到<em>代码改进</em>（第 <a href="#subsubsec:multiturncode" data-reference-type="ref" data-reference="subsubsec:multiturncode">4.2.2</a> 节），再到<em>软件工程</em>（第 <a href="#subsubsec:autoswe" data-reference-type="ref" data-reference="subsubsec:autoswe">4.2.3</a> 节）。</p>
+<h3 id="subsubsec:singleturncode">4.2.1 用于代码生成的 RL</h3>
+<p>早期研究重点关注相对简单的单轮代码生成，例如一次完成函数或解决编程题，为后续大规模软件工程奠定基础。</p>
+<h4 id="结果奖励-rl">结果奖励 RL。</h4>
+<p>这类方法直接优化最终正确性，通常用 pass@k 或单元测试成功率衡量。AceCoder <span class="citation" data-cites="zeng2025acecoderacingcoderrl">(<a href="/papers/agentic-rl-survey/web/references#ref-zeng2025acecoderacingcoderrl">H. Zeng et al. 2025</a>)</span>提出数据高效的代码生成 RLHF 流程，从已有代码片段构建大规模偏好对，以 Bradley–Terry 损失训练奖励模型，再用它指导合成数据集上的 RFT。继早期 actor–critic 形式之后，近期开源工作在大型预训练代码模型上扩展结果奖励 RL。DeepCoder-14B <span class="citation" data-cites="deepcoder2025">(<a href="/papers/agentic-rl-survey/web/references#ref-deepcoder2025">M. Luo, Tan, et al. 2025</a>)</span>通过迭代增加上下文长度和受 DAPO 启发的过滤来稳定 GRPO 训练，并在整理后的代码数据上使用稀疏结果奖励模型（ORM）防止奖励投机。RLTF <span class="citation" data-cites="liu2023rltf">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2023rltf">J. Liu et al. 2023</a>)</span>采用在线 RL 循环，将单元测试结果作为多粒度奖励，从粗粒度通过或失败，到细粒度故障定位，直接指导代码改进。CURE <span class="citation" data-cites="wang2025coevolvingllmcoderunit">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025coevolvingllmcoderunit">Yinjie Wang et al. 2025</a>)</span>将编码者—测试者协同演化形式化：测试者生成或演化单元测试，编码者迭代修补代码，奖励精确性目标缓解联合训练中低质量测试的影响。</p>
+<p>Absolute Zero <span class="citation" data-cites="zhao2025absolutezeroreinforcedselfplay">(<a href="/papers/agentic-rl-survey/web/references#ref-zhao2025absolutezeroreinforcedselfplay">A. Zhao et al. 2025</a>)</span>无需人类数据，通过自博弈 RL 自行生成编程任务，并以执行结果作为可验证奖励，自举推理能力。Re:Form <span class="citation" data-cites="yan2025re">(<a href="/papers/agentic-rl-survey/web/references#ref-yan2025re"><span class="nocase">C. Yan et al.</span> 2025</a>)</span>结合形式语言推理、RL 和自动验证，减少人类先验，实现可靠的程序合成，并在形式验证任务上超越强基线。<span class="citation" data-cites="feng2025bettercorrectnessefficiencycode">(<a href="/papers/agentic-rl-survey/web/references#ref-feng2025bettercorrectnessefficiencycode">Y. Feng et al. 2025</a>)</span>提出两阶段训练流程：先微调得到高正确率基线，再进行效率驱动的在线 RL 优化。</p>
+<h4 id="过程奖励-rl">过程奖励 RL。</h4>
+<p>为缓解奖励稀疏和信用分配问题，多项工作整合编译与执行反馈，设计过程监督。StepCoder <span class="citation" data-cites="dou-etal-2024-stepcoder">(<a href="/papers/agentic-rl-survey/web/references#ref-dou-etal-2024-stepcoder">Dou et al. 2024</a>)</span>将编译和执行分解为步骤级塑形信号；过程监督引导的策略优化（PSGPO） <span class="citation" data-cites="dai2025processsupervisionguidedpolicyoptimization">(<a href="/papers/agentic-rl-survey/web/references#ref-dai2025processsupervisionguidedpolicyoptimization">Dai et al. 2025</a>)</span>利用中间错误轨迹和过程标注提供稠密奖励；CodeBoost <span class="citation" data-cites="wang2025codeboostboostingcodellms">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025codeboostboostingcodellms">Sijie Wang et al. 2025</a>)</span>挖掘原始代码仓库，在统一 PPO 框架中整合从输出正确性到错误消息质量等异构执行信号。PRLCoder <span class="citation" data-cites="ye2025processsupervisedreinforcementlearningcode">(<a href="/papers/agentic-rl-survey/web/references#ref-ye2025processsupervisedreinforcementlearningcode">Y. Ye et al. 2025</a>)</span>进一步构建对每个局部代码片段评分的奖励模型：教师模型修改参考解答中的代码行，依据编译器与测试反馈赋予正负信号。这种细粒度监督使收敛更快，相对基础模型的通过率提高 10.5%，表明行级稠密塑形比仅有结果信号更有效地指导代码合成。o1-Coder <span class="citation" data-cites="zhang2024o1coder">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2024o1coder">Yuxiang Zhang et al. 2024</a>)</span>将 RL 与 MCTS 结合，策略从测试用例奖励引导的探索中学习，逐渐从伪代码进步到可执行代码。</p>
+<p>Posterior-GRPO <span class="citation" data-cites="fan2025posteriorgrporewardingreasoningprocesses">(<a href="/papers/agentic-rl-survey/web/references#ref-fan2025posteriorgrporewardingreasoningprocesses">L. Fan et al. 2025</a>)</span>奖励中间推理，但以最终测试成功为信用分配的门控条件，防止投机利用奖励；Policy Filtration for RLHF <span class="citation" data-cites="zhang2025policyfiltrationrlhfmitigate">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025policyfiltrationrlhfmitigate">Chuheng Zhang et al. 2025</a>)</span>在策略更新前过滤低置信度样本对，改进奖励与正确性的对齐。将偏好监督扩展到昂贵人工标注之外也已证明有效。CodeFavor <span class="citation" data-cites="liu2024learningcodepreferencesynthetic">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2024learningcodepreferencesynthetic">J. Liu et al. 2024</a>)</span>从代码演化历史构建 CodePrefBench，涵盖正确性、效率、安全性和风格，以改进偏好建模与对齐。Focused-DPO <span class="citation" data-cites="zhang2025focuseddpo">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025focuseddpo">Kechi Zhang et al. 2025</a>)</span>对代码易错区域的偏好优化加权，使反馈更有针对性，并提高多个基准上的稳健性。<span class="citation" data-cites="yang2025reinforcementlearningmachinelearning">(<a href="/papers/agentic-rl-survey/web/references#ref-yang2025reinforcementlearningmachinelearning">S. Yang et al. 2025</a>)</span>研究在分布式异步 RL 中采用时长感知梯度更新，如何使经 RL 训练的小规模智能体在机器学习工程环境中超过基于提示的大模型。</p>
+<h3 id="subsubsec:multiturncode">4.2.2 用于迭代代码改进的 RL</h3>
+<p>第二条路线面向需要调试和迭代改进的复杂编程任务。在这些更接近现实的场景中，智能体可能需要根据用户需求或测试失败反馈，多次尝试改进解答。</p>
+<h4 id="结果奖励-rl-1">结果奖励 RL。</h4>
+<p>一类代表性方法将整个改进循环视为一条轨迹，优化最终任务成功率。RLEF（来自执行反馈的强化学习） <span class="citation" data-cites="gehring2025rlefgroundingcodellms">(<a href="/papers/agentic-rl-survey/web/references#ref-gehring2025rlefgroundingcodellms">Gehring et al. 2025</a>)</span>将真实错误消息作为纠错循环的上下文，以最终通过率为优化目标；与单次生成基线相比，它减少所需尝试次数，提升竞赛编程表现。<span class="math-inline" data-tex="\mu"></span>Code <span class="citation" data-cites="jain2025multiturncodegenerationsinglestep">(<a href="/papers/agentic-rl-survey/web/references#ref-jain2025multiturncodegenerationsinglestep">A. K. Jain et al. 2025</a>)</span>在单步奖励反馈下联合训练生成器和学习得到的验证器，表明验证器引导的结果奖励可超过仅依赖执行反馈的基线。R1-Code-Interpreter <span class="citation" data-cites="chen2025r1codeinterpreter">(<a href="/papers/agentic-rl-survey/web/references#ref-chen2025r1codeinterpreter">Yongchao Chen et al. 2025</a>)</span>结合多轮 SFT 和 RL，训练 LLM 在逐步推理中决定何时、如何调用代码解释器。</p>
+<figure id="fig:code_benchmarks" class="note-figure" data-latex-placement="t">
+<a href="/papers/agentic-rl-survey/web-assets/code_benchmarks.webp" target="_blank" rel="noopener" aria-label="打开原尺寸图片"><img src="/papers/agentic-rl-survey/web-assets/code_benchmarks.webp" loading="lazy" width="2400" height="1200" /></a>
+<figcaption>图 7 · RL 增强的代码与软件工程方法的基准表现。除特别说明外，分数均为 pass@1。</figcaption>
+</figure>
+<div id="tab:rl_code_methods">
+<div class="survey-table" role="region" aria-label="表格，可水平滑动" tabindex="0"><table>
+<caption>表 5 · 代码与软件工程智能体的 RL 方法汇总。</caption>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>方法</strong></th>
+<th style="text-align: left;"><strong>奖励</strong></th>
+<th style="text-align: left;"><strong>基础 LLM</strong></th>
+<th style="text-align: left;"><strong>资源</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>方法</strong></td>
+<td style="text-align: left;"><strong>奖励</strong></td>
+<td style="text-align: left;"><strong>基础 LLM</strong></td>
+<td style="text-align: left;"><strong>资源</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">AceCoder <span class="citation" data-cites="zeng2025acecoderacingcoderrl">(<a href="/papers/agentic-rl-survey/web/references#ref-zeng2025acecoderacingcoderrl">H. Zeng et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">Qwen2.5-Coder-7B-Base/Instruct, Qwen2.5-7B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/TIGER-AI-Lab/AceCoder">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">DeepCoder-14B <span class="citation" data-cites="deepcoder2025">(<a href="/papers/agentic-rl-survey/web/references#ref-deepcoder2025">M. Luo, Tan, et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">DeepSeek-R1-Distilled-Qwen-14B</td>
+<td style="text-align: left;"><a href="https://github.com/agentica-project/rllm">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">RLTF <span class="citation" data-cites="liu2023rltf">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2023rltf">J. Liu et al. 2023</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">CodeGen-NL 2.7B, CodeT5-770M</td>
+<td style="text-align: left;"><a href="https://github.com/Zyq-scut/RLTF">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">CURE <span class="citation" data-cites="wang2025coevolvingllmcoderunit">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025coevolvingllmcoderunit">Yinjie Wang et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">Qwen2.5-7B/14B-Instruct, Qwen3-4B</td>
+<td style="text-align: left;"><a href="https://github.com/Gen-Verse/CURE">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Absolute Zero <span class="citation" data-cites="zhao2025absolutezeroreinforcedselfplay">(<a href="/papers/agentic-rl-survey/web/references#ref-zhao2025absolutezeroreinforcedselfplay">A. Zhao et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">Qwen2.5-7B/14B, Qwen2.5-Coder-3B/7B/14B, Llama-3.1-8B</td>
+<td style="text-align: left;"><a href="https://github.com/LeapLabTHU/Absolute-Zero-Reasoner">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">StepCoder <span class="citation" data-cites="dou-etal-2024-stepcoder">(<a href="/papers/agentic-rl-survey/web/references#ref-dou-etal-2024-stepcoder">Dou et al. 2024</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">DeepSeek-Coder-Instruct-6.7B</td>
+<td style="text-align: left;"><a href="https://github.com/Ablustrund/APPS_Plus">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">PSGPO <span class="citation" data-cites="dai2025processsupervisionguidedpolicyoptimization">(<a href="/papers/agentic-rl-survey/web/references#ref-dai2025processsupervisionguidedpolicyoptimization">Dai et al. 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">Qwen2.5-Coder-7B-Instruct</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">CodeBoost <span class="citation" data-cites="wang2025codeboostboostingcodellms">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025codeboostboostingcodellms">Sijie Wang et al. 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">Qwen2.5-Coder-7B-Instruct, Llama-3.1-8B-Instruct, Seed-Coder-8B-Instruct, Yi-Coder-9B-Chat</td>
+<td style="text-align: left;"><a href="https://github.com/sijieaaa/CodeBoost">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">PRLCoder <span class="citation" data-cites="ye2025processsupervisedreinforcementlearningcode">(<a href="/papers/agentic-rl-survey/web/references#ref-ye2025processsupervisedreinforcementlearningcode">Y. Ye et al. 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">CodeT5+, Unixcoder, T5-base</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">o1-Coder <span class="citation" data-cites="zhang2024o1coder">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2024o1coder">Yuxiang Zhang et al. 2024</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">DeepSeek-1.3B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/ADaM-BJTU/O1-CODER">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Posterior-GRPO <span class="citation" data-cites="fan2025posteriorgrporewardingreasoningprocesses">(<a href="/papers/agentic-rl-survey/web/references#ref-fan2025posteriorgrporewardingreasoningprocesses">L. Fan et al. 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">Qwen2.5-Coder-3B-Base, Qwen2.5-Coder-7B-Instruct, Qwen2.5-Math-7B</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">Policy Filtration for RLHF <span class="citation" data-cites="zhang2025policyfiltrationrlhfmitigate">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025policyfiltrationrlhfmitigate">Chuheng Zhang et al. 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">DeepSeek-Coder-6.7B, Qwen1.5-7B</td>
+<td style="text-align: left;"><a href="https://github.com/swtheing/PF-PPO-RLHF">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">CodeFavor <span class="citation" data-cites="liu2024learningcodepreferencesynthetic">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2024learningcodepreferencesynthetic">J. Liu et al. 2024</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">Mistral-NeMo-12B-Instruct, Gemma-2-9B-Instruct, Llama-3-8B-Instruct, Mistral-7B-Instruct-v0.3</td>
+<td style="text-align: left;"><a href="https://llm-code-preference.github.io/">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Focused-DPO <span class="citation" data-cites="zhang2025focuseddpo">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025focuseddpo">Kechi Zhang et al. 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">DeepSeek-Coder-6.7B-Base/Instruct, Magicoder-S-DS-6.7B, Qwen2.5-Coder-7B-Instruct</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">Re:Form <span class="citation" data-cites="yan2025re">(<a href="/papers/agentic-rl-survey/web/references#ref-yan2025re"><span class="nocase">C. Yan et al.</span> 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">Qwen2.5 (0.5B–14B)</td>
+<td style="text-align: left;"><a href="https://github.com/Veri-Code/ReForm">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Qwen Team <span class="citation" data-cites="feng2025bettercorrectnessefficiencycode">(<a href="/papers/agentic-rl-survey/web/references#ref-feng2025bettercorrectnessefficiencycode">Y. Feng et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">Qwen2.5-Coder-7B/32B-Instruct</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td colspan="4" style="text-align: center;"><em>迭代代码改进的 RL</em></td>
+</tr>
+<tr>
+<td style="text-align: left;">RLEF <span class="citation" data-cites="gehring2025rlefgroundingcodellms">(<a href="/papers/agentic-rl-survey/web/references#ref-gehring2025rlefgroundingcodellms">Gehring et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">Llama-3.0-8B-Instruct, Llama-3.1-8B/70B-Instruct</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math-inline" data-tex="\mu"></span>Code <span class="citation" data-cites="jain2025multiturncodegenerationsinglestep">(<a href="/papers/agentic-rl-survey/web/references#ref-jain2025multiturncodegenerationsinglestep">A. K. Jain et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">Llama-3.1-8B-Instruct, Llama-3.2-1B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/portal-cornell/muCode">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">R1-Code-Interpreter <span class="citation" data-cites="chen2025r1codeinterpreter">(<a href="/papers/agentic-rl-survey/web/references#ref-chen2025r1codeinterpreter">Yongchao Chen et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">Qwen2.5-7B/14B-Instruct-1M, Qwen2.5-3B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/yongchao98/R1-Code-Interpreter">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">IterPref <span class="citation" data-cites="wu2025iterpreffocalpreferencelearning">(<a href="/papers/agentic-rl-survey/web/references#ref-wu2025iterpreffocalpreferencelearning">Jie Wu et al. 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">Deepseek-Coder-7B-Instruct, Qwen2.5-Coder-7B, CodeQwen1.5-7B-Chat, StarCoder2-15B</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">LeDex <span class="citation" data-cites="jiang2025ledextrainingllmsbetter">(<a href="/papers/agentic-rl-survey/web/references#ref-jiang2025ledextrainingllmsbetter">Jiang et al. 2024</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">StarCoder-15B, CodeLlama-7B/13B</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">CTRL <span class="citation" data-cites="xie2025teachinglanguagemodelscritique">(<a href="/papers/agentic-rl-survey/web/references#ref-xie2025teachinglanguagemodelscritique"><span class="nocase">Xie et al.</span> 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">Qwen2.5-Coder-7B/14B/32B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/HKUNLP/critic-rl">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ReVeal <span class="citation" data-cites="jin2025revealselfevolvingcodeagents">(<a href="/papers/agentic-rl-survey/web/references#ref-jin2025revealselfevolvingcodeagents">Y. Jin et al. 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">DAPO-Qwen-32B</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td colspan="4" style="text-align: center;"><em>自动化软件工程（SWE）的 RL</em></td>
+</tr>
+<tr>
+<td style="text-align: left;">DeepSWE <span class="citation" data-cites="deepswe2025">(<a href="/papers/agentic-rl-survey/web/references#ref-deepswe2025">M. Luo, Jain, et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">Qwen3-32B</td>
+<td style="text-align: left;"><a href="https://github.com/agentica-project/rllm">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">SWE-RL <span class="citation" data-cites="wei2025swerladvancingllmreasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-wei2025swerladvancingllmreasoning">Yuxiang Wei et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">Llama-3.3-70B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/facebookresearch/swe-rl">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Satori-SWE <span class="citation" data-cites="zeng2025satoriswe">(<a href="/papers/agentic-rl-survey/web/references#ref-zeng2025satoriswe">G. Zeng et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">Qwen2.5-Coder-32B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/satori-reasoning/Satori-SWE">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">RLCoder <span class="citation" data-cites="wang2024rlcoder">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2024rlcoder">Yanlin Wang et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">CodeLlama-7B, StarCoder-7B, StarCoder2-7B, DeepSeekCoder-1B/7B</td>
+<td style="text-align: left;"><a href="https://github.com/DeepSoftwareAnalytics/RLCoder">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Qwen3-Coder <span class="citation" data-cites="qwen3coder">(<a href="/papers/agentic-rl-survey/web/references#ref-qwen3coder">Q. Team 2025a</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">Qwen3-Coder-480B-A35B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/QwenLM/Qwen3">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ML-Agent <span class="citation" data-cites="liu2025mlagentreinforcingllmagents">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025mlagentreinforcingllmagents">Zexi Liu et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">Qwen2.5-7B-Base/Instruct, DeepSeek-R1-Distill-Qwen-7B</td>
+<td style="text-align: left;"><a href="https://github.com/MASWorks/ML-Agent">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">OS-R1 <span class="citation" data-cites="lin2025r1">(<a href="/papers/agentic-rl-survey/web/references#ref-lin2025r1">Hongyu Lin et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">Qwen2.5-3B/7B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/LHY-24/OS-R1">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="citation" data-cites="golubev2025traininglongcontextmultiturnsoftware">(<a href="/papers/agentic-rl-survey/web/references#ref-golubev2025traininglongcontextmultiturnsoftware">Golubev et al. 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">Qwen2.5-72B-Instruct</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">SWEET-RL <span class="citation" data-cites="zhou2025sweetrltrainingmultiturnllm">(<a href="/papers/agentic-rl-survey/web/references#ref-zhou2025sweetrltrainingmultiturnllm">Y. Zhou et al. 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">Llama-3.1-8B/70B-Instruct</td>
+<td style="text-align: left;"><a href="https://github.com/facebookresearch/sweet_rl">GitHub</a></td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<h4 id="过程奖励-rl-1">过程奖励 RL。</h4>
+<p>过程监督方法显式指导模型<em>如何</em>调试。IterPref <span class="citation" data-cites="wu2025iterpreffocalpreferencelearning">(<a href="/papers/agentic-rl-survey/web/references#ref-wu2025iterpreffocalpreferencelearning">Jie Wu et al. 2025</a>)</span>从迭代调试轨迹构建局部偏好对，通过针对性偏好优化惩罚错误区域，以尽量少的附带更新提高纠错准确性。LeDex <span class="citation" data-cites="jiang2025ledextrainingllmsbetter">(<a href="/papers/agentic-rl-survey/web/references#ref-jiang2025ledextrainingllmsbetter">Jiang et al. 2024</a>)</span>结合解释驱动诊断和自我修复，自动整理解释—改进轨迹，通过 PPO 用稠密连续奖励联合优化解释质量与代码正确性，相比仅 SFT 的代码模型持续取得 pass@1 提升。除解释驱动塑形外，CTRL <span class="citation" data-cites="xie2025teachinglanguagemodelscritique">(<a href="/papers/agentic-rl-survey/web/references#ref-xie2025teachinglanguagemodelscritique"><span class="nocase">Xie et al.</span> 2025</a>)</span>等工作显式训练独立评论家，评估每次改进尝试并向策略提供梯度信号，代价是增加推理开销。ReVeal <span class="citation" data-cites="jin2025revealselfevolvingcodeagents">(<a href="/papers/agentic-rl-survey/web/references#ref-jin2025revealselfevolvingcodeagents">Y. Jin et al. 2025</a>)</span>将过程级改进扩展为自我演化智能体，自主生成测试，并从逐轮奖励中学习，增强推理和错误恢复。</p>
+<h3 id="subsubsec:autoswe">4.2.3 用于自动化软件工程的 RL</h3>
+<h4 id="结果奖励-rl-2">结果奖励 RL。</h4>
+<p>真实环境中的端到端训练表明，稀疏但经过验证的成功信号可以扩展到大规模训练。DeepSWE <span class="citation" data-cites="deepswe2025">(<a href="/papers/agentic-rl-survey/web/references#ref-deepswe2025">M. Luo, Jain, et al. 2025</a>)</span>在软件工程任务上进行大规模 RL，以经过验证的任务完成为唯一奖励，在 SWE-bench 类评测中取得领先的开源成绩。SWE-RL <span class="citation" data-cites="wei2025swerladvancingllmreasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-wei2025swerladvancingllmreasoning">Yuxiang Wei et al. 2025</a>)</span>从 GitHub 提交历史提取基于规则的结果信号，利用真实改进模式训练，并泛化至未见过的错误修复任务。Satori-SWE <span class="citation" data-cites="zeng2025satoriswe">(<a href="/papers/agentic-rl-survey/web/references#ref-zeng2025satoriswe">G. Zeng et al. 2025</a>)</span>提出由演化式 RL 支持的测试时扩展方法 EvoScale，训练模型跨迭代自我改进生成结果，以高样本效率完成软件工程任务。OS-R1 <span class="citation" data-cites="lin2025r1">(<a href="/papers/agentic-rl-survey/web/references#ref-lin2025r1">Hongyu Lin et al. 2025</a>)</span>为 Linux 内核调优提供规则式 RL 框架，实现高效探索、准确配置，并取得优于启发式方法的性能。RLCoder <span class="citation" data-cites="wang2024rlcoder">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2024rlcoder">Yanlin Wang et al. 2025</a>)</span>将检索增强的仓库级代码补全建模为 RL 问题，以困惑度反馈训练检索器，无需标注数据即可检索有用上下文。Qwen3-Coder <span class="citation" data-cites="qwen3coder">(<a href="/papers/agentic-rl-survey/web/references#ref-qwen3coder">Q. Team 2025a</a>)</span>在 20,000 个并行环境中，针对长时程多轮交互开展大规模执行驱动 RL，在 SWE-Bench Verified 等基准上取得当时最优表现。在机器学习领域，ML-Agent <span class="citation" data-cites="liu2025mlagentreinforcingllmagents">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025mlagentreinforcingllmagents">Zexi Liu et al. 2025</a>)</span>执行自动机器学习等多步流水线，优化基于性能的终局奖励。</p>
+<h4 id="过程奖励-rl-2">过程奖励 RL。</h4>
+<p>智能体轨迹上的稠密监督能改善跨多步信用分配。从优化角度看，长上下文多轮软件智能体受益于更稳定的策略梯度变体。例如，解耦裁剪与动态采样策略优化（DAPO）利用长上下文反馈，通过多轮代码生成与调试交互，改善 SWE-bench Verified 上的训练稳定性和性能 <span class="citation" data-cites="golubev2025traininglongcontextmultiturnsoftware">(<a href="/papers/agentic-rl-survey/web/references#ref-golubev2025traininglongcontextmultiturnsoftware">Golubev et al. 2025</a>)</span>。SWEET-RL <span class="citation" data-cites="zhou2025sweetrltrainingmultiturnllm">(<a href="/papers/agentic-rl-survey/web/references#ref-zhou2025sweetrltrainingmultiturnllm">Y. Zhou et al. 2025</a>)</span>在包含后端和前端任务的 ColBench 上训练多轮智能体，利用 RL 期间的特权信息减少探索噪声，改进长时程泛化。</p>
+<h4 id="关于闭源系统">关于闭源系统。</h4>
+<p>OpenAI Codex 和 Anthropic Claude Code 等商业系统强调通过偏好对齐微调和强化学习，改善代码生成与编辑流程的实用性和安全性 <span class="citation" data-cites="openai2025introducingcodex anthropic2025claudecode">(<a href="/papers/agentic-rl-survey/web/references#ref-openai2025introducingcodex">OpenAI 2025b</a>; <a href="/papers/agentic-rl-survey/web/references#ref-anthropic2025claudecode">Anthropic 2025</a>)</span>。尽管公开的具体训练细节有限，这些系统凸显了 RL 在真实 IDE 与终端环境中，将智能体行为与开发者目标对齐的日益重要作用。</p>
+<h3 id="subsubsec:codeother">4.2.4 新兴范式</h3>
+<h4 id="代码世界模型">代码世界模型。</h4>
+<p>近期的一种范式转变将世界模型本身表述为可执行代码，超越传统神经近似。在代码世界模型（CWM）中，智能体合成程序来显式定义转移与奖励动力学，通过可验证的符号模拟实现基于模型的规划。</p>
+<p>GIF-MCTS <span class="citation" data-cites="gif-mcts">(<a href="/papers/agentic-rl-survey/web/references#ref-gif-mcts">Dainese et al. 2024</a>)</span>将世界模型构建表述为程序归纳：LLM 编辑“Environment”类，搜索过程选择最能解释离线状态转移的版本，得到适合下游规划的可执行模型。WorldCoder <span class="citation" data-cites="WorldCoder">(<a href="/papers/agentic-rl-survey/web/references#ref-WorldCoder">Tang et al. 2024</a>)</span>用显式 Python 函数表示动力学和奖励，在转移一致性与乐观性约束引导下，通过迭代合成—修复过程改进模型。Meta 的 32B CWM <span class="citation" data-cites="faircodegenteam2025cwmopenweightsllmresearch">(<a href="/papers/agentic-rl-survey/web/references#ref-faircodegenteam2025cwmopenweightsllmresearch"><span class="nocase">team et al.</span> 2025</a>)</span>提供基于解释器轨迹和智能体轨迹训练的开放权重模型，提升程序合成与执行保真度，进一步强化这一范式。近期工作还将 CWM 用于通用游戏环境 <span class="citation" data-cites="lehrach2025codeworldmodelsgeneral">(<a href="/papers/agentic-rl-survey/web/references#ref-lehrach2025codeworldmodelsgeneral">Lehrach et al. 2025</a>)</span>，由 LLM 归纳完整的规则模拟器，并直接在可执行模型上规划。</p>
+<p>这些程序化世界模型范式通常需要较高推理成本，因为智能体会反复合成、改进和查询可执行模拟器。实践中常用低比特量化，使大型代码模型易于部署，例如工作站 GPU（如 RTX 4500 Ada）使用 8 位量化，消费级硬件使用 4 位量化。总体上，CWM 将基于 LLM 的程序合成与结构化、可验证模拟结合，为代码智能体的基于模型推理确立了一条连贯方向。</p>
+<h2 id="subsec:math">4.3 数学智能体</h2>
+<p>数学推理具有符号抽象、逻辑一致性以及长时程演绎要求，因此被广泛视为评估 LLM 智能体推理能力的黄金标准。我们围绕两种互补范式组织研究：<em>非形式化推理</em>（第 <a href="#subsubsec:mathinformal" data-reference-type="ref" data-reference="subsubsec:mathinformal">4.3.1</a> 节），不依赖形式验证支持，包括自然语言推理和编程语言工具使用；以及<em>形式化推理</em>（第 <a href="#subsubsec:mathformal" data-reference-type="ref" data-reference="subsubsec:mathformal">4.3.2</a> 节），依赖严格规定的形式语言与证明助手。</p>
+<p>DAPO <span class="citation" data-cites="yu2025dapo">(<a href="/papers/agentic-rl-survey/web/references#ref-yu2025dapo"><span class="nocase">Q. Yu et al.</span> 2025</a>)</span>、GRPO <span class="citation" data-cites="ren2025deepseekproverv2advancingformalmathematical">(<a href="/papers/agentic-rl-survey/web/references#ref-ren2025deepseekproverv2advancingformalmathematical">Ren et al. 2025</a>)</span>和 GRESO <span class="citation" data-cites="zheng2025actpaysefficientreinforcement">(<a href="/papers/agentic-rl-survey/web/references#ref-zheng2025actpaysefficientreinforcement">H. Zheng et al. 2025</a>)</span>等可验证奖励强化学习（RLVR）方法，在近期 LLM 数学推理能力提升中一直发挥重要作用。鉴于它们也广泛适用于其他推理任务，我们在第 <a href="/papers/agentic-rl-survey/web/foundations#subsec:algo" data-reference-type="ref" data-reference="subsec:algo">2.7</a> 节讨论，此处不再展开。</p>
+<h3 id="subsubsec:mathinformal">4.3.1 用于非形式化数学推理的 RL</h3>
+<p>非形式化数学本质上指以自然语言开展的推理与表达。它可以包含符号或函数名，但没有有限且显式的逻辑规则集合定义其句法有效性，也没有形式语义精确确定其解释与含义 <span class="citation" data-cites="yang2024formalmathematicalreasoningnew asperti2025thinkingmachinesmathematicalreasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-yang2024formalmathematicalreasoningnew">K. Yang et al. 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-asperti2025thinkingmachinesmathematicalreasoning">Asperti et al. 2025</a>)</span>。</p>
+<p>非形式化数学推理在细节层面放宽严格性，但表达更灵活，也更能捕捉论证的高层结构，因而特别适合数学应用题、方程变换与符号计算等任务 <span class="citation" data-cites="singh2025agenticreasoningtoolintegration ZeroTIR">(<a href="/papers/agentic-rl-survey/web/references#ref-singh2025agenticreasoningtoolintegration">Singh et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-ZeroTIR">Mai et al. 2025</a>)</span>。通用编程语言虽具有符号性，却缺乏证明助手语言的严谨性和形式语义，因此用于数学推理时通常仍被视为非形式化方法 <span class="citation" data-cites="yang2024formalmathematicalreasoningnew">(<a href="/papers/agentic-rl-survey/web/references#ref-yang2024formalmathematicalreasoningnew">K. Yang et al. 2024</a>)</span>，常见方式是调用带有数值或符号库的 Python 等执行工具。</p>
+<h4 id="结果奖励-rl-3">结果奖励 RL。</h4>
+<p>仅使用结果的方法在 RL 中完全根据最终数值或符号正确性（如代数方程）定义奖励。实验发现，这种训练往往会涌现智能体行为，包括与自然语言推理交织的自适应工具使用。</p>
+<p>ARTIST <span class="citation" data-cites="singh2025agenticreasoningtoolintegration">(<a href="/papers/agentic-rl-survey/web/references#ref-singh2025agenticreasoningtoolintegration">Singh et al. 2025</a>)</span>提出工具集成智能体推理框架，将代码执行等工具调用直接插入推理链。仅以结果奖励训练便取得较强性能，并观察到自我反思、上下文感知 CoT 等智能体行为。这进一步表明，动态工具使用与 RL 的结合，可使智能体工具集成推理学会与环境交互的最优策略，体现了 RL 将工具集成推理策略内化到 LLM 的潜力。类似地，ToRL <span class="citation" data-cites="li2025torlscalingtoolintegratedrl">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025torlscalingtoolintegratedrl">Xuefeng Li et al. 2025</a>)</span>通过扩展工具集成推理 RL 并鼓励代码执行提升性能，实验中涌现出自适应工具使用、依据工具反馈自我纠错和自适应计算推理等认知行为。ZeroTIR <span class="citation" data-cites="ZeroTIR">(<a href="/papers/agentic-rl-survey/web/references#ref-ZeroTIR">Mai et al. 2025</a>)</span>研究 Python 执行环境中结果奖励 RL 的 TIR 扩展规律，发现训练计算投入与自发代码执行频率、平均回复长度及最终准确率高度相关，为工具集成推理策略的经验性涌现提供佐证。</p>
+<p>TTRL <span class="citation" data-cites="zuo2025ttrltesttimereinforcementlearning">(<a href="/papers/agentic-rl-survey/web/references#ref-zuo2025ttrltesttimereinforcementlearning">Zuo et al. 2025</a>)</span>用多数投票估计奖励，使模型可在无标签数据上训练。用这些奖励微调后，模型不仅超过基础模型的 maj@n 准确率，在 MATH-500 上的经验性能曲线和上限也出人意料地接近直接使用有标签测试答案训练的 RL，体现其实际价值与潜力。然而，RENT <span class="citation" data-cites="prabhudesai2025maximizingconfidenceimprovesreasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-prabhudesai2025maximizingconfidenceimprovesreasoning">Prabhudesai et al. 2025</a>)</span>指出多数投票泛化有限，仅适用于答案确定的问题，无法处理自由形式回复。因此，它将熵最小化思想 <span class="citation" data-cites="wang2021tentfullytesttimeadaptation">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2021tentfullytesttimeadaptation">Wang et al. 2021</a>)</span>扩展至 RL，用词元级平均负熵作为奖励指导学习，在包括数学解题的广泛基准上取得提升，说明基于置信度的奖励塑形可以成为持续改进的途径。</p>
+<p>Satori <span class="citation" data-cites="zeng2025satori">(<a href="/papers/agentic-rl-survey/web/references#ref-zeng2025satori">M. Shen et al. 2025</a>)</span>提出动作思维链（COAT），将动作选择显式融入 CoT，把推理模块化为继续、反思和探索替代方案三种元动作，再通过仅有结果奖励的 RL 内化这些行为。1-shot RLVR <span class="citation" data-cites="wang2025reinforcementlearningreasoninglarge">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025reinforcementlearningreasoninglarge">Yiping Wang et al. 2025</a>)</span>特别研究验证器信号下结果奖励 RL 的数据效率：仅用 1 个样本的 RL 表现就接近使用 1.2k 样本的数据集，2 个样本则接近使用含 7.5k 样本的 MATH 训练集。研究还指出“饱和后泛化”现象：即使单个样本的训练准确率已接近 100%，测试准确率仍持续提高。</p>
+<p>除正确性外，幻觉仍是非形式化数学推理的重要挑战，推动研究显式提升可信度。例如，<span class="citation" data-cites="kirchner2024proververifiergamesimprovelegibility">(<a href="/papers/agentic-rl-survey/web/references#ref-kirchner2024proververifiergamesimprovelegibility">Kirchner et al. 2024</a>)</span>提出同时优化正确性与可读可核查性的博弈论训练算法。受证明者—验证者博弈 <span class="citation" data-cites="anil2021learningcheckableanswersproververifier">(<a href="/papers/agentic-rl-survey/web/references#ref-anil2021learningcheckableanswersproververifier">Anil et al. 2021</a>)</span>启发，它交替训练预测解答正确性的小型验证者、生成可被验证者接受解答的“有益”证明者，以及试图欺骗验证者的“狡猾”证明者。实验中，有益证明者的准确率、验证者稳健性和可读可核查性均提高；后者用限时验证任务中人类的准确率衡量。这说明验证器引导的可读可核查性优化，可增强 LLM 非形式化推理的可解释性与可信度。近期 rStar2-Agent <span class="citation" data-cites="shang2025rstar2agentagenticreasoningtechnical">(<a href="/papers/agentic-rl-survey/web/references#ref-shang2025rstar2agentagenticreasoningtechnical">N. Shang et al. 2025</a>)</span>是一个 14B 参数数学推理模型，利用高吞吐 Python 执行环境、新的 GRPO-RoC 算法（在工具噪声下重采样正确轨迹）及多阶段训练配方进行 Agentic RL，仅 510 个 RL 步骤便达到当时最优结果，在 AIME24 和 AIME25 上平均 pass@1 分别为 80.6% 和 69.8%。</p>
+<h4 id="过程奖励-rl-3">过程奖励 RL。</h4>
+<p>过程感知方法利用中间评估器（如单元测试、断言和子任务检查）提供更稠密反馈，塑造信用分配并改善 TIR。START <span class="citation" data-cites="li2025startselftaughtreasonertools">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025startselftaughtreasonertools">Chengpeng Li et al. 2025</a>)</span>在长 CoT 轨迹中注入人工提示文本，通常位于连接词之后或 CoT 停止词元之前，以鼓励推理时调用代码执行器。这支持提高推理准确率的测试时扩展；随后收集轨迹微调模型，将工具调用行为内化。</p>
+<p>LADDER <span class="citation" data-cites="simonds2025ladderselfimprovingllmsrecursive">(<a href="/papers/agentic-rl-survey/web/references#ref-simonds2025ladderselfimprovingllmsrecursive">Simonds and Yoshiyama 2025</a>)</span>提出训练时框架，由 LLM 递归生成并解决复杂问题的逐渐简化版本，用可验证奖励指导难度课程，显著提升数学推理。额外的测试时 RL（TTRL）步骤进一步改善性能。作者认为，这种结合自生成课程与可验证反馈的方法，可以从非形式化数学推广到任何具有可靠自动验证的领域。SWiRL <span class="citation" data-cites="goldie2025syntheticdatageneration">(<a href="/papers/agentic-rl-survey/web/references#ref-goldie2025syntheticdatageneration">Goldie et al. 2025</a>)</span>为提高复杂问题表现，通过迭代分解解答合成逐步工具推理数据，再采用基于偏好的逐步 RL，在多步轨迹上微调基础模型。许多方法依赖推理时干预及人工逻辑结构，因而泛化受限。RLoT <span class="citation" data-cites="hao2025rlthoughtsnavigatingllm">(<a href="/papers/agentic-rl-survey/web/references#ref-hao2025rlthoughtsnavigatingllm">Q. Hao et al. 2025</a>)</span>改为通过 RL 训练轻量导航智能体，自适应增强推理，在不同任务上展示更好的泛化。</p>
+<p>非形式化方法擅长应用题与符号计算，但难以有效扩展到自动定理证明等高级数学任务。原因主要有二：评估困难，需要非形式化方法无法提供的机器可验证反馈；以及高质量形式证明数据稀缺 <span class="citation" data-cites="yang2024formalmathematicalreasoningnew asperti2025thinkingmachinesmathematicalreasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-yang2024formalmathematicalreasoningnew">K. Yang et al. 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-asperti2025thinkingmachinesmathematicalreasoning">Asperti et al. 2025</a>)</span>。</p>
+<h3 id="subsubsec:mathformal">4.3.2 用于形式化数学推理的 RL</h3>
+<p>形式化数学推理在具有精确定义句法和语义的形式语言中进行，生成可由验证器机械检查的证明对象。它特别适合自动定理证明（ATP） <span class="citation" data-cites="xin2024deepseekproverv15harnessingproofassistant">(<a href="/papers/agentic-rl-survey/web/references#ref-xin2024deepseekproverv15harnessingproofassistant">Xin et al. 2025</a>)</span>等高级任务：给定一个陈述（定理、引理或命题），智能体必须构造验证器接受的证明对象，确保机器可验证的正确性。从 RL 视角，形式定理证明通常建模为 MDP：证明状态通过应用证明策略（tactic）<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>发生转移，每个 tactic 被视为基于 RL 的证明搜索中的离散动作 <span class="citation" data-cites="wu2021tacticzero">(<a href="/papers/agentic-rl-survey/web/references#ref-wu2021tacticzero">Wu et al. 2021</a>)</span>。因此，形式定理证明可表述为庞大、离散且参数化动作空间上的搜索问题。</p>
+<p>形式证明由 Lean、Isabelle、Coq 和 HOL Light 等证明助手验证。这些通常称为交互定理证明器（ITP）的系统，会确定性地接受或拒绝证明对象，产生通过或失败的二元信号作为 RL 的主要奖励；部分工作也探索把错误消息用作辅助信号 <span class="citation" data-cites="ambati2025proofnetneurosymbolicformalproof ji2025leanabellproverv2verifierintegratedreasoningformal">(<a href="/papers/agentic-rl-survey/web/references#ref-ambati2025proofnetneurosymbolicformalproof">Ambati 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-ji2025leanabellproverv2verifierintegratedreasoningformal">Ji et al. 2025</a>)</span>。</p>
+<h4 id="结果奖励-rl-4">结果奖励 RL。</h4>
+<p>2024 年，DeepSeek-Prover-v1.5 <span class="citation" data-cites="xin2024deepseekproverv15harnessingproofassistant">(<a href="/papers/agentic-rl-survey/web/references#ref-xin2024deepseekproverv15harnessingproofassistant">Xin et al. 2025</a>)</span>大规模展示了仅结果奖励的范式：发布仅依赖二元验证器反馈的 Lean 端到端 RL 流程，显著提高 miniF2F <span class="citation" data-cites="zheng2022minif2fcrosssystembenchmarkformal">(<a href="/papers/agentic-rl-survey/web/references#ref-zheng2022minif2fcrosssystembenchmarkformal">Zheng et al. 2022</a>)</span>和 ProofNet <span class="citation" data-cites="azerbayev2023proofnetautoformalizingformallyproving">(<a href="/papers/agentic-rl-survey/web/references#ref-azerbayev2023proofnetautoformalizingformallyproving">Azerbayev et al. 2023</a>)</span>等基准上的证明成功率。作者提出 MCTS 变体 RMaxTS，对发现新 tactic 状态赋予内在奖励，鼓励推理时证明搜索的多样性，缓解稀疏奖励问题。</p>
+<p>Leanabell-Prover <span class="citation" data-cites="zhang2025leanabellproverposttrainingscalingformal">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025leanabellproverposttrainingscalingformal">Jingyuan Zhang et al. 2025</a>)</span>沿这一方向扩展 DeepSeek-Prover-v1.5，汇集 Mathlib4 <span class="citation" data-cites="mathlib4">(<a href="/papers/agentic-rl-survey/web/references#ref-mathlib4">The mathlib Community 2020--2025</a>)</span>、LeanWorkbook <span class="citation" data-cites="ying2025leanworkbooklargescalelean">(<a href="/papers/agentic-rl-survey/web/references#ref-ying2025leanworkbooklargescalelean">Ying et al. 2025</a>)</span>、NuminaMath <span class="citation" data-cites="li2024numinamath">(<a href="/papers/agentic-rl-survey/web/references#ref-li2024numinamath">J. Li et al. 2024</a>)</span>和 STP <span class="citation" data-cites="dong2025stpselfplayllmtheorem">(<a href="/papers/agentic-rl-survey/web/references#ref-dong2025stpselfplayllmtheorem">Dong and Ma 2025</a>)</span>等多源流程中的陈述—证明对及非形式化推理草图，构建覆盖二十余个数学领域的大型混合数据集。这缓解了对齐的自然语言到 Lean4 训练样本稀缺问题，而这些样本对连接自然语言推理与形式证明生成至关重要。</p>
+<p>Kimina-Prover Preview <span class="citation" data-cites="wang2025kiminaproverpreviewlargeformal">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025kiminaproverpreviewlargeformal">Haiming Wang et al. 2025</a>)</span>进一步强调非形式化与形式化推理的对齐，采用结构化“形式推理模式”，在思考块内交替放置自然语言推理和 Lean 4 代码片段。为强化对齐，输出必须包含至少一个 tactic 块，并在最终证明中复用不少于 60% 的 Lean 4 片段，确保内部推理与形式输出紧密对应。近期 Seed-Prover <span class="citation" data-cites="chen2025seedproverdeepbroadreasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-chen2025seedproverdeepbroadreasoning">Luoxin Chen et al. 2025</a>)</span>整合多种技术：首先采用以引理为中心的证明范式，支持系统分解问题、跨轨迹复用引理及显式跟踪进展；随后采用多样化提示策略，随机加入非形式化或形式化证明、成功或失败引理及 Lean 编译器反馈，丰富 RL 训练并增强对不同输入的适应性；推理时采用猜想—证明者流水线，交替证明猜想形成引理，并从演化中的引理池生成新猜想，大幅增强解决难题的能力。配套的 Seed-Geometry 将形式推理扩展到几何，在奥林匹克竞赛基准上取得当时最优性能。总体而言，这些工作表明，稀疏但明确的奖励，尤其在有效探索策略配合下，可以带来实质提升。</p>
+<h4 id="过程奖励-rl-4">过程奖励 RL。</h4>
+<p>为改善信用分配并减少无效探索，多项工作加入更稠密的步骤级信号。DeepSeek-Prover-v2 <span class="citation" data-cites="deepseekai2024deepseekv2strongeconomicalefficient">(<a href="/papers/agentic-rl-survey/web/references#ref-deepseekai2024deepseekv2strongeconomicalefficient">DeepSeek-AI et al. 2024</a>)</span>设计双模型流水线，统一自然语言非形式化推理和 Lean4 形式化推理，以增强形式推理能力。它引入子目标分解：证明者解决递归分解后的子目标，在子目标级接收 Lean 二元反馈，从而获得更稠密监督，提高准确性与可解释性。ProofNet++ <span class="citation" data-cites="ambati2025proofnetneurosymbolicformalproof">(<a href="/papers/agentic-rl-survey/web/references#ref-ambati2025proofnetneurosymbolicformalproof">Ambati 2025</a>)</span>沿双角色协作思路，构建神经符号 RL 框架：符号推理接口将 LLM 推理映射为形式证明树，形式验证引擎用 Lean 或 HOL Light 验证，并将错误反馈回 LLM 进行自我纠正。Leanabell-Prover-v2 <span class="citation" data-cites="ji2025leanabellproverv2verifierintegratedreasoningformal">(<a href="/papers/agentic-rl-survey/web/references#ref-ji2025leanabellproverv2verifierintegratedreasoningformal">Ji et al. 2025</a>)</span>在长 CoT 框架中把验证器消息融入强化更新，实现显式的验证器感知自我监控，稳定 tactic 生成，减少重复失败模式。</p>
+<h4 id="混合奖励-rl">混合奖励 RL。</h4>
+<p>结果奖励与过程感知范式均取得了进展，但高质量定理证明数据稀缺，加剧了稀疏奖励下的 RL 难题，也增加了步骤级偏好信号设计的困难 <span class="citation" data-cites="zeng2024skyworkmathdatascalinglaws wang2024theoremllamatransforminggeneralpurposellms dong2025stpselfplayllmtheorem">(<a href="/papers/agentic-rl-survey/web/references#ref-zeng2024skyworkmathdatascalinglaws">Zeng and Zhong 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-wang2024theoremllamatransforminggeneralpurposellms">R. Wang et al. 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-dong2025stpselfplayllmtheorem">Dong and Ma 2025</a>)</span>。一条重要路线采用专家迭代（ExIt） <span class="citation" data-cites="NIPS2017_d8e1344e">(<a href="/papers/agentic-rl-survey/web/references#ref-NIPS2017_d8e1344e">Anthony et al. 2017</a>)</span>，将搜索与策略学习结合，通过产生高质量监督轨迹缓解数据稀缺。ExIt 执行<em>搜索引导的数据增强</em>：将搜索发现并经验证器检查的有效证明轨迹，作为专家示范用于模仿学习。通常包含两个角色：<em>专家</em>在仅有结果验证反馈的条件下通过 MCTS 收集有效且有进展的轨迹；<em>学徒</em>在这些过程轨迹上训练策略，再将改进后的策略共享给专家，自举后续搜索并加速收敛。早期工作 <span class="citation" data-cites="polu2020generativelanguagemodelingautomated">(<a href="/papers/agentic-rl-survey/web/references#ref-polu2020generativelanguagemodelingautomated">Polu and Sutskever 2020</a>)</span>将 ExIt 引入形式定理证明，表明搜索生成的专家数据能帮助模型逐步解决复杂多步证明问题；后续研究将其适配到 Lean 和其他 ITP。</p>
+<p>在庞大的参数化 tactic 空间中，朴素树搜索常遭遇严重搜索空间爆炸。InternLM2.5-StepProver <span class="citation" data-cites="wu2024internlm25stepproveradvancingautomatedtheorem">(<a href="/papers/agentic-rl-survey/web/references#ref-wu2024internlm25stepproveradvancingautomatedtheorem">Z. Wu et al. 2025</a>)</span>用 RLHF 式优化训练基于偏好的评论家来引导专家搜索，形成将探索引向合适难度问题的课程。Lean-STaR <span class="citation" data-cites="lin2025leanstarlearninginterleavethinking">(<a href="/papers/agentic-rl-survey/web/references#ref-lin2025leanstarlearninginterleavethinking">Haohan Lin et al. 2025</a>)</span>将自学推理器（STaR） <span class="citation" data-cites="zelikman2022starbootstrappingreasoningreasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-zelikman2022starbootstrappingreasoningreasoning">Zelikman et al. 2022</a>)</span>融入 ExIt：先用合成的<em>（证明状态、生成的思考、真实 tactic）</em>三元组训练思考增强的 tactic 预测器；再在专家迭代中生成思考与 tactic 交替的轨迹，保留经 Lean 成功验证的轨迹用于模仿学习。实验表明，加入思考提高了基于采样的证明搜索的探索多样性。</p>
+<p>近期 STP <span class="citation" data-cites="dong2025stpselfplayllmtheorem">(<a href="/papers/agentic-rl-survey/web/references#ref-dong2025stpselfplayllmtheorem">Dong and Ma 2025</a>)</span>指出，仅依靠专家迭代会因正奖励稀疏而迅速进入平台期。它将 Minimo <span class="citation" data-cites="poesia2024learningformalmathematicsintrinsic">(<a href="/papers/agentic-rl-survey/web/references#ref-poesia2024learningformalmathematicsintrinsic">Poesia et al. 2024</a>)</span>的猜想者—证明者自博弈思想扩展到具有开放动作空间的实用形式语言 Lean/Isabelle，并从预训练模型出发。其双角色循环中，猜想者提出当前证明者勉强能证明的陈述，证明者则接受标准专家迭代训练，形成自适应课程，缓解训练信号稀疏。STP 报告在 LeanWorkbook <span class="citation" data-cites="ying2025leanworkbooklargescalelean">(<a href="/papers/agentic-rl-survey/web/references#ref-ying2025leanworkbooklargescalelean">Ying et al. 2025</a>)</span>上显著提升，并在 miniF2F <span class="citation" data-cites="zheng2022minif2fcrosssystembenchmarkformal">(<a href="/papers/agentic-rl-survey/web/references#ref-zheng2022minif2fcrosssystembenchmarkformal">Zheng et al. 2022</a>)</span>和 ProofNet <span class="citation" data-cites="azerbayev2023proofnetautoformalizingformallyproving">(<a href="/papers/agentic-rl-survey/web/references#ref-azerbayev2023proofnetautoformalizingformallyproving">Azerbayev et al. 2023</a>)</span>的完整证明生成方法中取得有竞争力的结果。</p>
+<figure id="fig:math_benchmarks" class="note-figure" data-latex-placement="htbp">
+<a href="/papers/agentic-rl-survey/web-assets/math_benchmarks.webp" target="_blank" rel="noopener" aria-label="打开原尺寸图片"><img src="/papers/agentic-rl-survey/web-assets/math_benchmarks.webp" loading="lazy" width="2400" height="1200" /></a>
+<figcaption>图 8 · RL 增强数学方法的基准表现。除特别说明外，分数均为 pass@1。</figcaption>
+</figure>
+<div id="tab:rl_math_methods">
+<div class="survey-table" role="region" aria-label="表格，可水平滑动" tabindex="0"><table>
+<caption>表 6 · 数学推理智能体的 RL 方法汇总。</caption>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>方法</strong></th>
+<th style="text-align: left;"><strong>奖励</strong></th>
+<th style="text-align: left;"><strong>资源</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>方法</strong></td>
+<td style="text-align: left;"><strong>奖励</strong></td>
+<td style="text-align: left;"><strong>资源</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">ARTIST <span class="citation" data-cites="singh2025agenticreasoningtoolintegration">(<a href="/papers/agentic-rl-survey/web/references#ref-singh2025agenticreasoningtoolintegration">Singh et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">ToRL <span class="citation" data-cites="li2025torlscalingtoolintegratedrl">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025torlscalingtoolintegratedrl">Xuefeng Li et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;"><a href="https://github.com/GAIR-NLP/ToRL">GitHub</a> <a href="https://huggingface.co/GAIR/ToRL-7B">HuggingFace</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ZeroTIR <span class="citation" data-cites="ZeroTIR">(<a href="/papers/agentic-rl-survey/web/references#ref-ZeroTIR">Mai et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;"><a href="https://github.com/yyht/openrlhf_async_pipline">GitHub</a> <a href="https://huggingface.co/htxu91/zero-tir-7b-550step">HuggingFace</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">TTRL <span class="citation" data-cites="zuo2025ttrltesttimereinforcementlearning">(<a href="/papers/agentic-rl-survey/web/references#ref-zuo2025ttrltesttimereinforcementlearning">Zuo et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;"><a href="https://github.com/PRIME-RL/TTRL">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">RENT <span class="citation" data-cites="prabhudesai2025maximizingconfidenceimprovesreasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-prabhudesai2025maximizingconfidenceimprovesreasoning">Prabhudesai et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;"><a href="https://github.com/satrams/rent-rl">GitHub</a> <a href="https://rent-rl.github.io/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Satori <span class="citation" data-cites="zeng2025satori">(<a href="/papers/agentic-rl-survey/web/references#ref-zeng2025satori">M. Shen et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;"><a href="https://github.com/satori-reasoning/Satori">GitHub</a> <a href="https://huggingface.co/Satori-reasoning">HuggingFace</a> <a href="https://satori-reasoning.github.io/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">1-shot RLVR <span class="citation" data-cites="wang2025reinforcementlearningreasoninglarge">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025reinforcementlearningreasoninglarge">Yiping Wang et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;"><a href="https://github.com/ypwang61/One-Shot-RLVR">GitHub</a> <a href="https://huggingface.co/collections/ypwang61/one-shot-rlvr-6827f72c3359b2ffe75fc1a8">HuggingFace</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Prover-Verifier Games  <span class="citation" data-cites="kirchner2024proververifiergamesimprovelegibility">(<a href="/papers/agentic-rl-survey/web/references#ref-kirchner2024proververifiergamesimprovelegibility">Kirchner et al. 2024</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">rStar2-Agent <span class="citation" data-cites="shang2025rstar2agentagenticreasoningtechnical">(<a href="/papers/agentic-rl-survey/web/references#ref-shang2025rstar2agentagenticreasoningtechnical">N. Shang et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;"><a href="https://github.com/microsoft/rStar">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">START <span class="citation" data-cites="li2025startselftaughtreasonertools">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025startselftaughtreasonertools">Chengpeng Li et al. 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">LADDER <span class="citation" data-cites="simonds2025ladderselfimprovingllmsrecursive">(<a href="/papers/agentic-rl-survey/web/references#ref-simonds2025ladderselfimprovingllmsrecursive">Simonds and Yoshiyama 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">SWiRL <span class="citation" data-cites="goldie2025syntheticdatageneration">(<a href="/papers/agentic-rl-survey/web/references#ref-goldie2025syntheticdatageneration">Goldie et al. 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">RLoT <span class="citation" data-cites="hao2025rlthoughtsnavigatingllm">(<a href="/papers/agentic-rl-survey/web/references#ref-hao2025rlthoughtsnavigatingllm">Q. Hao et al. 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;"><a href="https://anonymous.4open.science/r/RL-LLM-Reasoning-1A30">GitHub</a></td>
+</tr>
+<tr>
+<td colspan="3" style="text-align: center;"><em>形式化数学推理的 RL</em></td>
+</tr>
+<tr>
+<td style="text-align: left;">DeepSeek-Prover-v1.5 <span class="citation" data-cites="xin2024deepseekproverv15harnessingproofassistant">(<a href="/papers/agentic-rl-survey/web/references#ref-xin2024deepseekproverv15harnessingproofassistant">Xin et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;"><a href="https://github.com/deepseek-ai/DeepSeek-Prover-V1.5">GitHub</a> <a href="https://huggingface.co/deepseek-ai">HuggingFace</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Leanabell-Prover <span class="citation" data-cites="zhang2025leanabellproverposttrainingscalingformal">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025leanabellproverposttrainingscalingformal">Jingyuan Zhang et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;"><a href="https://github.com/Leanabell-LM/Leanabell-Prover">GitHub</a> <a href="https://huggingface.co/collections/stoney0062/leanabell-prover-67fe4fae1dcf1d7221e309e9">HuggingFace</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Kimina-Prover  <span class="citation" data-cites="wang2025kiminaproverpreviewlargeformal">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025kiminaproverpreviewlargeformal">Haiming Wang et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;"><a href="https://github.com/MoonshotAI/Kimina-Prover-Preview">GitHub</a> <a href="https://huggingface.co/collections/AI-MO/kimina-prover-preview-67fb536b883d60e7ca25d7f9">HuggingFace</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Seed-Prover <span class="citation" data-cites="chen2025seedproverdeepbroadreasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-chen2025seedproverdeepbroadreasoning">Luoxin Chen et al. 2025</a>)</span></td>
+<td style="text-align: left;">结果</td>
+<td style="text-align: left;"><a href="https://github.com/ByteDance-Seed/Seed-Prover">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">DeepSeek-Prover-v2 <span class="citation" data-cites="deepseekai2024deepseekv2strongeconomicalefficient">(<a href="/papers/agentic-rl-survey/web/references#ref-deepseekai2024deepseekv2strongeconomicalefficient">DeepSeek-AI et al. 2024</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;"><a href="https://github.com/deepseek-ai/DeepSeek-V2">GitHub</a> <a href="https://huggingface.co/deepseek-ai">HuggingFace</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ProofNet++ <span class="citation" data-cites="ambati2025proofnetneurosymbolicformalproof">(<a href="/papers/agentic-rl-survey/web/references#ref-ambati2025proofnetneurosymbolicformalproof">Ambati 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">Leanabell-Prover-v2 <span class="citation" data-cites="ji2025leanabellproverv2verifierintegratedreasoningformal">(<a href="/papers/agentic-rl-survey/web/references#ref-ji2025leanabellproverv2verifierintegratedreasoningformal">Ji et al. 2025</a>)</span></td>
+<td style="text-align: left;">过程</td>
+<td style="text-align: left;"><a href="https://github.com/Leanabell-LM/Leanabell-Prover-V2">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">InternLM2.5-StepProver <span class="citation" data-cites="wu2024internlm25stepproveradvancingautomatedtheorem">(<a href="/papers/agentic-rl-survey/web/references#ref-wu2024internlm25stepproveradvancingautomatedtheorem">Z. Wu et al. 2025</a>)</span></td>
+<td style="text-align: left;">混合</td>
+<td style="text-align: left;"><a href="https://github.com/InternLM/InternLM-Math">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Lean-STaR <span class="citation" data-cites="lin2025leanstarlearninginterleavethinking">(<a href="/papers/agentic-rl-survey/web/references#ref-lin2025leanstarlearninginterleavethinking">Haohan Lin et al. 2025</a>)</span></td>
+<td style="text-align: left;">混合</td>
+<td style="text-align: left;"><a href="https://github.com/Lagooon/LeanSTaR">GitHub</a> <a href="https://huggingface.co/ScalableMath/Lean-STaR-plus">HuggingFace</a> <a href="https://leanstar.github.io/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">STP <span class="citation" data-cites="dong2025stpselfplayllmtheorem">(<a href="/papers/agentic-rl-survey/web/references#ref-dong2025stpselfplayllmtheorem">Dong and Ma 2025</a>)</span></td>
+<td style="text-align: left;">混合</td>
+<td style="text-align: left;"><a href="https://github.com/kfdong/STP">GitHub</a> <a href="https://huggingface.co/kfdong/STP_model_Lean_0320">HuggingFace</a></td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<h2 id="subsec:gui">4.4 GUI 智能体</h2>
+<p>图形用户界面（GUI）智能体经历了不同训练范式。早期系统以纯零样本方式使用预训练视觉语言模型（VLM），将截图与提示直接映射为单步动作。随后，在静态（屏幕、动作）轨迹上进行 SFT 改进了定位与推理，但受限于人工操作轨迹稀缺。强化微调（RFT）将 GUI 交互重新表述为序贯决策，使智能体通过稀疏或塑形奖励进行试错学习，并从简单单任务设定发展到复杂、真实、长时程场景。表 <a href="#tab:gui_agents_methods" data-reference-type="ref" data-reference="tab:gui_agents_methods">7</a>列出本节的大部分工作。</p>
+<h3 id="subsubsec:prerlgui">4.4.1 不使用 RL 的方法</h3>
+<h4 id="基于原始-vlm-的-gui-智能体">基于原始 VLM 的 GUI 智能体。</h4>
+<p>早期 GUI 智能体无需任务专用微调，以纯零样本方式直接使用预训练 VLM，将截图和提示映射为单步动作。代表性系统包括 MM-Navigator <span class="citation" data-cites="mmnavigator2025gpt4v">(<a href="/papers/agentic-rl-survey/web/references#ref-mmnavigator2025gpt4v">Yan et al. 2023</a>)</span>、SeeAct <span class="citation" data-cites="seeact2025generalist">(<a href="/papers/agentic-rl-survey/web/references#ref-seeact2025generalist">Zheng et al. 2024</a>)</span>和 TRISHUL <span class="citation" data-cites="trishul2025trainingfree">(<a href="/papers/agentic-rl-survey/web/references#ref-trishul2025trainingfree">Kunal Singh 2025</a>)</span>。它们的界面领域或解析策略不同，但均依赖现成 VLM。这些方法展示了基础模型的通用性，却受到定位准确性和可靠性不足的影响，限制了复杂任务应用 <span class="citation" data-cites="zhang2025largelanguagemodelbrainedgui nguyen2024guiagentssurvey">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025largelanguagemodelbrainedgui">Chaoyun Zhang et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-nguyen2024guiagentssurvey">D. Nguyen et al. 2025</a>)</span>。</p>
+<h4 id="基于静态轨迹数据的监督微调sft">基于静态轨迹数据的监督微调（SFT）。</h4>
+<p>SFT 通过最小化离线（屏幕、动作）样本对的交叉熵损失，将预训练 VLM 适配到 GUI 任务，不进行在线交互。InfiGUIAgent <span class="citation" data-cites="liu2025infiguiagent">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025infiguiagent">Yuhang Liu, Li, Wei, et al. 2025</a>)</span>采用两阶段流程，先改进定位，再引入分层与反思推理。UI-AGILE <span class="citation" data-cites="lian2025ui-agile">(<a href="/papers/agentic-rl-survey/web/references#ref-lian2025ui-agile">Lian et al. 2025</a>)</span>通过连续奖励、简化推理和基于裁剪的重采样增强 SFT，并提出分解式定位机制处理高分辨率显示。TongUI <span class="citation" data-cites="zhang2025tongui">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025tongui">B. Zhang et al. 2025</a>)</span>更强调数据规模，从多模态网页教程构建含 143K 条轨迹的 GUI-Net，以提升泛化。尽管重点不同，这些方法均受人工操作轨迹不足的限制。</p>
+<h3 id="subsubsec:rlincontrol">4.4.2 静态 GUI 环境中的 RL</h3>
+<p>静态设定在预先收集、具有确定性执行轨迹的数据集上应用 RL，缺乏实时环境交互时，用规则标准评估结果。GUI-R1 <span class="citation" data-cites="luo2025guir1generalistr1style">(<a href="/papers/agentic-rl-survey/web/references#ref-luo2025guir1generalistr1style">R. Luo et al. 2025</a>)</span>在统一动作模式上采用 R1 风格强化微调，用简单格式与正确性奖励，以少量数据改善步骤级动作预测。UI-R1 <span class="citation" data-cites="lu2025uir1enhancingefficientaction">(<a href="/papers/agentic-rl-survey/web/references#ref-lu2025uir1enhancingefficientaction">Z. Lu et al. 2025</a>)</span>采用组相对策略优化稳定更新，通过紧凑动作接口及动作类型、参数准确性的奖励塑形，改进精确参数匹配。InFiGUI-R1 <span class="citation" data-cites="liu2025infigui">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025infigui">Yuhang Liu, Li, Xie, et al. 2025</a>)</span>先蒸馏空间推理增强定位，再用子目标监督和恢复机制开展 RL，改善长时程推理。AgentCPM-GUI <span class="citation" data-cites="zhang2025agentcpmguibuildingmobileuseagents">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025agentcpmguibuildingmobileuseagents">Zhong Zhang et al. 2025</a>)</span>结合定位感知预训练、监督模仿和基于 GRPO 的强化微调，使用简洁 JSON 动作空间，在减少解码开销的同时提升长时程序列的稳健性。UI-Venus <span class="citation" data-cites="gu2025uivenustechnicalreportbuilding">(<a href="/papers/agentic-rl-survey/web/references#ref-gu2025uivenustechnicalreportbuilding">Gu et al. 2025</a>)</span>是基于截图的多模态 UI 智能体，通过定制奖励与自演化轨迹框架进行 RFT，在 UI 定位与导航上取得新的最优表现。</p>
+<h3 id="subsubsec:rlinrealworld">4.4.3 交互式 GUI 环境中的 RL</h3>
+<p>交互式设定通过动态环境中的在线轨迹采样优化智能体，要求其能够应对随机转移与长时程依赖。WebAgent-R1 <span class="citation" data-cites="wei2025webagentr1trainingwebagents">(<a href="/papers/agentic-rl-survey/web/references#ref-wei2025webagentr1trainingwebagents">Z. Wei et al. 2025</a>)</span>使用异步轨迹生成和组式优势，开展端到端多轮 RL，提高多样网页任务的成功率。<span class="citation" data-cites="vattikonda2025trainllmwebagent">Vattikonda et al. (<a href="/papers/agentic-rl-survey/web/references#ref-vattikonda2025trainllmwebagent">2025</a>)</span>研究真实页面动态与巨大动作空间下的网页智能体 RL，突出信用分配和安全探索的挑战。UI-TARS <span class="citation" data-cites="qin2025ui">(<a href="/papers/agentic-rl-survey/web/references#ref-qin2025ui">Qin et al. 2025</a>)</span>将 GUI 理解预训练与原生桌面控制 RL 结合，用里程碑跟踪和反思增强长时程执行。DiGiRL <span class="citation" data-cites="bai2024digirl">(<a href="/papers/agentic-rl-survey/web/references#ref-bai2024digirl">Bai et al. 2024</a>)</span>在真实 Android 设备上构建从离线到在线的 RL 流程，结合优势加权更新、双重稳健优势估计和指令级课程应对非平稳性。</p>
+<p>ZeroGUI <span class="citation" data-cites="yang2025zeroguiautomatingonlinegui">(<a href="/papers/agentic-rl-survey/web/references#ref-yang2025zeroguiautomatingonlinegui">C. Yang et al. 2025</a>)</span>利用视觉语言评估器自动生成任务并估计奖励，再开展两阶段在线 RL：先在生成任务上训练，再进行测试时适应，以减少人工监督。MobileGUI-RL <span class="citation" data-cites="shi2025mobilegui">(<a href="/papers/agentic-rl-survey/web/references#ref-shi2025mobilegui">Yucheng Shi et al. 2025</a>)</span>在 Android 虚拟设备上扩展训练，采用轨迹感知 GRPO、衰减效率奖励和课程过滤，提高执行效率与泛化，同时保持大规模轨迹采样的实用性。ComputerRL <span class="citation" data-cites="lai2025computerrlscalingendtoendonline">(<a href="/papers/agentic-rl-survey/web/references#ref-lai2025computerrlscalingendtoendonline">Lai et al. 2025</a>)</span>提出 API-GUI 混合交互范式，配合大规模并行、全异步 RL 基础设施及交替执行 RL 与 SFT 的 Entropulse 训练策略，使 GUI 智能体在桌面环境中高效、可扩展地运行。</p>
+<div id="tab:gui_agents_methods">
+<div class="survey-table" role="region" aria-label="表格，可水平滑动" tabindex="0"><table>
+<caption>表 7 · 按训练范式与环境复杂度分类的 GUI 智能体方法汇总。</caption>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>方法</strong></th>
+<th style="text-align: left;"><strong>范式</strong></th>
+<th style="text-align: left;"><strong>环境</strong></th>
+<th style="text-align: left;"><strong>资源链接</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>方法</strong></td>
+<td style="text-align: left;"><strong>范式</strong></td>
+<td style="text-align: left;"><strong>环境</strong></td>
+<td style="text-align: left;"><strong>资源链接</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">MM-Navigator <span class="citation" data-cites="mmnavigator2025gpt4v">(<a href="/papers/agentic-rl-survey/web/references#ref-mmnavigator2025gpt4v">Yan et al. 2023</a>)</span></td>
+<td style="text-align: left;">原始 VLM</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;"><a href="https://github.com/zzxslp/MM-Navigator">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">SeeAct <span class="citation" data-cites="seeact2025generalist">(<a href="/papers/agentic-rl-survey/web/references#ref-seeact2025generalist">Zheng et al. 2024</a>)</span></td>
+<td style="text-align: left;">原始 VLM</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;"><a href="https://github.com/OSU-NLP-Group/SeeAct">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">TRISHUL <span class="citation" data-cites="trishul2025trainingfree">(<a href="/papers/agentic-rl-survey/web/references#ref-trishul2025trainingfree">Kunal Singh 2025</a>)</span></td>
+<td style="text-align: left;">原始 VLM</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">InfiGUIAgent <span class="citation" data-cites="liu2025infiguiagent">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025infiguiagent">Yuhang Liu, Li, Wei, et al. 2025</a>)</span></td>
+<td style="text-align: left;">SFT</td>
+<td style="text-align: left;">静态</td>
+<td style="text-align: left;"><a href="https://github.com/InfiXAI/InfiGUIAgent">GitHub</a> <a href="https://huggingface.co/datasets/rootsautomation/ScreenSpot">HuggingFace</a> <a href="https://b7277.github.io/InfiGUIAgent.github.io/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">UI-AGILE <span class="citation" data-cites="lian2025ui-agile">(<a href="/papers/agentic-rl-survey/web/references#ref-lian2025ui-agile">Lian et al. 2025</a>)</span></td>
+<td style="text-align: left;">SFT</td>
+<td style="text-align: left;">交互式</td>
+<td style="text-align: left;"><a href="https://github.com/KDEGroup/UI-AGILE">GitHub</a> <a href="https://huggingface.co/KDEGroup/UI-AGILE">HuggingFace</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">TongUI <span class="citation" data-cites="zhang2025tongui">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025tongui">B. Zhang et al. 2025</a>)</span></td>
+<td style="text-align: left;">SFT</td>
+<td style="text-align: left;">静态</td>
+<td style="text-align: left;"><a href="https://github.com/TongUI-agent/TongUI-agent">GitHub</a> <a href="https://huggingface.co/collections/Bofeee5675/tongui-67f611e2d48b2b6e0d2ba3ee">HuggingFace</a> <a href="https://tongui-agent.github.io/">网站</a></td>
+</tr>
+<tr>
+<td colspan="4" style="text-align: center;"><em>基于 RL 的 GUI 智能体</em></td>
+</tr>
+<tr>
+<td style="text-align: left;">GUI-R1 <span class="citation" data-cites="luo2025guir1generalistr1style">(<a href="/papers/agentic-rl-survey/web/references#ref-luo2025guir1generalistr1style">R. Luo et al. 2025</a>)</span></td>
+<td style="text-align: left;">RL</td>
+<td style="text-align: left;">静态</td>
+<td style="text-align: left;"><a href="https://github.com/ritzz-ai/GUI-R1">GitHub</a> <a href="https://huggingface.co/ritzzai/GUI-R1">HuggingFace</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">UI-R1 <span class="citation" data-cites="lu2025uir1enhancingefficientaction">(<a href="/papers/agentic-rl-survey/web/references#ref-lu2025uir1enhancingefficientaction">Z. Lu et al. 2025</a>)</span></td>
+<td style="text-align: left;">RL</td>
+<td style="text-align: left;">静态</td>
+<td style="text-align: left;"><a href="https://github.com/lll6gg/UI-R1">GitHub</a> <a href="https://huggingface.co/LZXzju/Qwen2.5-VL-3B-UI-R1-E">HuggingFace</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">InFiGUI-R1 <span class="citation" data-cites="liu2025infigui">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025infigui">Yuhang Liu, Li, Xie, et al. 2025</a>)</span></td>
+<td style="text-align: left;">RL</td>
+<td style="text-align: left;">静态</td>
+<td style="text-align: left;"><a href="https://github.com/InfiXAI/InfiGUI-R1">GitHub</a> <a href="https://huggingface.co/InfiX-ai/InfiGUI-R1-3B">HuggingFace</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">AgentCPM <span class="citation" data-cites="zhang2025agentcpmguibuildingmobileuseagents">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025agentcpmguibuildingmobileuseagents">Zhong Zhang et al. 2025</a>)</span></td>
+<td style="text-align: left;">RL</td>
+<td style="text-align: left;">静态</td>
+<td style="text-align: left;"><a href="https://github.com/OpenBMB/AgentCPM-GUI">GitHub</a> <a href="https://huggingface.co/openbmb/AgentCPM-GUI">HuggingFace</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">UI-Venus <span class="citation" data-cites="gu2025uivenustechnicalreportbuilding">(<a href="/papers/agentic-rl-survey/web/references#ref-gu2025uivenustechnicalreportbuilding">Gu et al. 2025</a>)</span></td>
+<td style="text-align: left;">RL</td>
+<td style="text-align: left;">静态</td>
+<td style="text-align: left;"><a href="https://github.com/inclusionAI/UI-Venus">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">WebAgent-R1 <span class="citation" data-cites="wei2025webagentr1trainingwebagents">(<a href="/papers/agentic-rl-survey/web/references#ref-wei2025webagentr1trainingwebagents">Z. Wei et al. 2025</a>)</span></td>
+<td style="text-align: left;">RL</td>
+<td style="text-align: left;">交互式</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="citation" data-cites="vattikonda2025trainllmwebagent">(<a href="/papers/agentic-rl-survey/web/references#ref-vattikonda2025trainllmwebagent">Vattikonda et al. 2025</a>)</span></td>
+<td style="text-align: left;">RL</td>
+<td style="text-align: left;">交互式</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">UI-TARS <span class="citation" data-cites="qin2025ui">(<a href="/papers/agentic-rl-survey/web/references#ref-qin2025ui">Qin et al. 2025</a>)</span></td>
+<td style="text-align: left;">RL</td>
+<td style="text-align: left;">交互式</td>
+<td style="text-align: left;"><a href="https://github.com/bytedance/UI-TARS">GitHub</a> <a href="https://huggingface.co/ByteDance-Seed/UI-TARS-1.5-7B">HuggingFace</a> <a href="https://seed-tars.com/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">UI-TARS-2 <span class="citation" data-cites="wang2025uitars2technicalreportadvancing">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025uitars2technicalreportadvancing">Haoming Wang et al. 2025</a>)</span></td>
+<td style="text-align: left;">RL</td>
+<td style="text-align: left;">交互式</td>
+<td style="text-align: left;"><a href="https://github.com/bytedance/ui-tars">GitHub</a> <a href="https://seed-tars.com/showcase/ui-tars-2/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">DiGiRL <span class="citation" data-cites="bai2024digirl">(<a href="/papers/agentic-rl-survey/web/references#ref-bai2024digirl">Bai et al. 2024</a>)</span></td>
+<td style="text-align: left;">RL</td>
+<td style="text-align: left;">交互式</td>
+<td style="text-align: left;"><a href="https://github.com/DigiRL-agent/digirl">GitHub</a> <a href="https://huggingface.co/collections/JackBAI/digirl-6682ea42bdfb5af9bfc5f29f">HuggingFace</a> <a href="https://digirl-agent.github.io/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ZeroGUI <span class="citation" data-cites="yang2025zeroguiautomatingonlinegui">(<a href="/papers/agentic-rl-survey/web/references#ref-yang2025zeroguiautomatingonlinegui">C. Yang et al. 2025</a>)</span></td>
+<td style="text-align: left;">RL</td>
+<td style="text-align: left;">交互式</td>
+<td style="text-align: left;"><a href="https://github.com/OpenGVLab/ZeroGUI">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">MobileGUI-RL <span class="citation" data-cites="shi2025mobilegui">(<a href="/papers/agentic-rl-survey/web/references#ref-shi2025mobilegui">Yucheng Shi et al. 2025</a>)</span></td>
+<td style="text-align: left;">RL</td>
+<td style="text-align: left;">交互式</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">ComputerRL <span class="citation" data-cites="lai2025computerrlscalingendtoendonline">(<a href="/papers/agentic-rl-survey/web/references#ref-lai2025computerrlscalingendtoendonline">Lai et al. 2025</a>)</span></td>
+<td style="text-align: left;">RL</td>
+<td style="text-align: left;">交互式</td>
+<td style="text-align: left;">-</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<h2 id="subsec:vision-understand">4.5 视觉智能体</h2>
+<p>RL 已应用于广泛视觉任务，包括图像、视频、三维感知和生成等。鉴于相关论文众多，本节不作穷尽综述；更全面的视觉任务 RL 综述见 <span class="citation" data-cites="wu2025reinforcementlearningvisionsurvey zhou2025reinforced">(<a href="/papers/agentic-rl-survey/web/references#ref-wu2025reinforcementlearningvisionsurvey">W. Wu et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-zhou2025reinforced">G. Zhou et al. 2025</a>)</span>。</p>
+<h4 id="图像任务">图像任务。</h4>
+<p>DeepSeek-R1 <span class="citation" data-cites="deepseekai2025deepseekr1incentivizingreasoningcapability">(<a href="/papers/agentic-rl-survey/web/references#ref-deepseekai2025deepseekr1incentivizingreasoningcapability">DeepSeek-AI et al. 2025</a>)</span>的成功，引发了利用 RL 激励长篇推理行为的广泛兴趣，鼓励 LVLM 生成延展 CoT 以提高视觉感知与理解 <span class="citation" data-cites="shao2024visual">(<a href="/papers/agentic-rl-survey/web/references#ref-shao2024visual">H. Shao et al. 2024</a>)</span>。这条路线从早期将 R1 风格目标直接适配到视觉领域、主要增强被动感知的工作 <span class="citation" data-cites="tan2025reason li2025star huang2025vision shen2025vlm peng2025lmm xia2025visionaryr1mitigatingshortcutsvisual yang2025wethinkgeneralpurposevisionlanguagereasoning gao2025octonavgeneralistembodiednavigation">(<a href="/papers/agentic-rl-survey/web/references#ref-tan2025reason">H. Tan et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-li2025star">Zongzhao Li et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-huang2025vision">W. Huang et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-shen2025vlm"><span class="nocase">H. Shen et al.</span> 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-peng2025lmm">Peng et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-xia2025visionaryr1mitigatingshortcutsvisual">J. Xia et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-yang2025wethinkgeneralpurposevisionlanguagereasoning">J. Yang et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-gao2025octonavgeneralistembodiednavigation">C. Gao et al. 2025</a>)</span>，发展为如今流行的主动感知或“用图像思考”范式 <span class="citation" data-cites="su2025thinking">(<a href="/papers/agentic-rl-survey/web/references#ref-su2025thinking"><span class="nocase">Z. Su, Xia, et al.</span> 2025</a>)</span>。关键转变是从只引用一次图像的纯文本 CoT，转向有视觉依据的交互推理，具体通过（i）视觉定位 <span class="citation" data-cites="li2025dyfo nagaraja2016modeling mao2016generation fan2025grit chung2025don cao2025ground">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025dyfo">Geng Li et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-nagaraja2016modeling">Nagaraja et al. 2016</a>; <a href="/papers/agentic-rl-survey/web/references#ref-mao2016generation">Mao et al. 2016</a>; <a href="/papers/agentic-rl-survey/web/references#ref-fan2025grit">Yue Fan et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-chung2025don">Chung et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-cao2025ground">M. Cao et al. 2025</a>)</span>，（ii）智能体工具使用 <span class="citation" data-cites="zhao2025pyvision huang2025visualtoolagent wu2025vtoolr1vlmslearnthink su2025openthinkimg liu2025visual su2025pixelreasonerincentivizingpixelspace">(<a href="/papers/agentic-rl-survey/web/references#ref-zhao2025pyvision">S. Zhao et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-huang2025visualtoolagent">Z. Huang et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-wu2025vtoolr1vlmslearnthink">Mingyuan Wu et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-su2025openthinkimg"><span class="nocase">Z. Su, Li, et al.</span> 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-liu2025visual">Ziyu Liu et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-su2025pixelreasonerincentivizingpixelspace">A. Su et al. 2025</a>)</span>，以及（iii）通过草图或生成实现视觉想象 <span class="citation" data-cites="xu2025visual duan2025gotr1unleashingreasoningcapability jiang2025t2i">(<a href="/papers/agentic-rl-survey/web/references#ref-xu2025visual">Y. Xu et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-duan2025gotr1unleashingreasoningcapability">Duan et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-jiang2025t2i">Dongzhi Jiang et al. 2025</a>)</span>来完成。</p>
+<p>除文本输出之外，场景理解等许多视觉任务需要边界框、掩码和分割图等结构化预测。Visual-RFT <span class="citation" data-cites="liu2025visual">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025visual">Ziyu Liu et al. 2025</a>)</span>将带置信度的 IoU 用作边界框输出的可验证奖励；Vision-R1 <span class="citation" data-cites="huang2025vision">(<a href="/papers/agentic-rl-survey/web/references#ref-huang2025vision">W. Huang et al. 2025</a>)</span>将精确率与召回率作为定位奖励。<span class="citation" data-cites="liu2025seg">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025seg">Yuqi Liu et al. 2025</a>)</span>进一步将 GRPO 用于分割，结合软奖励、严格奖励、边界框 IoU 与 L1 损失，以及逐点 L1 距离。VLM-R1 <span class="citation" data-cites="shen2025vlm">(<a href="/papers/agentic-rl-survey/web/references#ref-shen2025vlm"><span class="nocase">H. Shen et al.</span> 2025</a>)</span>采用平均精度均值（mAP）作为奖励，显式激励 LVLM 检测与定位能力。R1-SGG <span class="citation" data-cites="chen2025compile">(<a href="/papers/agentic-rl-survey/web/references#ref-chen2025compile">Zuyao Chen et al. 2025</a>)</span>提出三种场景图匹配 GRPO 奖励，从文本匹配和 IoU 的硬奖励，到文本嵌入点积计算的较软奖励。</p>
+<p>RL 也广泛应用于图像生成，尤其与扩散模型和流模型结合，例如 RePrompt <span class="citation" data-cites="wu2025repromptreasoningaugmentedrepromptingtexttoimage">(<a href="/papers/agentic-rl-survey/web/references#ref-wu2025repromptreasoningaugmentedrepromptingtexttoimage">Mingrui Wu et al. 2025</a>)</span>、Diffusion-KTO <span class="citation" data-cites="li2024aligningdiffusionmodelsoptimizing">(<a href="/papers/agentic-rl-survey/web/references#ref-li2024aligningdiffusionmodelsoptimizing">S. Li et al. 2024</a>)</span>、Flow-GRPO <span class="citation" data-cites="liu2025flowgrpotrainingflowmatching">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025flowgrpotrainingflowmatching">Jie Liu, Liu, Liang, Li, et al. 2025</a>)</span>和 GoT-R1 <span class="citation" data-cites="duan2025gotr1unleashingreasoningcapability">(<a href="/papers/agentic-rl-survey/web/references#ref-duan2025gotr1unleashingreasoningcapability">Duan et al. 2025</a>)</span>。此外，RL 也用于自回归图像生成，直接优化任务或用户特定奖励，提升连贯性、保真度和可控性 <span class="citation" data-cites="wang2025simplear jiang2025t2i yuan2025ar">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025simplear">Junke Wang et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-jiang2025t2i">Dongzhi Jiang et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-yuan2025ar">S. Yuan et al. 2025</a>)</span>。</p>
+<h4 id="视频任务">视频任务。</h4>
+<p>许多工作沿相同思路将 GRPO 变体扩展到视频领域 <span class="citation" data-cites="cheng2024videollama feng2024videoorion maaz2023video">(<a href="/papers/agentic-rl-survey/web/references#ref-cheng2024videollama"><span class="nocase">Cheng et al.</span> 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-feng2024videoorion">Y. Feng et al. 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-maaz2023video">Maaz et al. 2023</a>)</span>，以增强时间推理 <span class="citation" data-cites="park2025deepvideor1videoreinforcementfinetuning li2025videochat zhu2025vaur1advancingvideoanomaly liao2025improved ouyang2025spatial">(<a href="/papers/agentic-rl-survey/web/references#ref-park2025deepvideor1videoreinforcementfinetuning">J. Park et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-li2025videochat">Xinhao Li et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-zhu2025vaur1advancingvideoanomaly">Liyun Zhu et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-liao2025improved">Z. Liao et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-ouyang2025spatial">Ouyang 2025</a>)</span>。TW-GRPO <span class="citation" data-cites="dang2025reinforcingvideoreasoningfocused">(<a href="/papers/agentic-rl-survey/web/references#ref-dang2025reinforcingvideoreasoningfocused">Dang et al. 2025</a>)</span>提出词元加权 GRPO，强调高信息量词元以生成更聚焦的推理链，并采用软的多选奖励降低优化方差。EgoVLM <span class="citation" data-cites="vinod2025egovlmpolicyoptimizationegocentric">(<a href="/papers/agentic-rl-survey/web/references#ref-vinod2025egovlmpolicyoptimizationegocentric">Vinod et al. 2025</a>)</span>将关键帧奖励与直接 GRPO 训练结合，生成适合第一视角视频的可解释推理轨迹。DeepVideo-R1 <span class="citation" data-cites="park2025deepvideor1videoreinforcementfinetuning">(<a href="/papers/agentic-rl-survey/web/references#ref-park2025deepvideor1videoreinforcementfinetuning">J. Park et al. 2025</a>)</span>将 GRPO 目标重新表述为回归任务；VideoChat-R1 <span class="citation" data-cites="li2025videochat">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025videochat">Xinhao Li et al. 2025</a>)</span>表明 RFT 在提升特定视频任务推理能力时具有较高数据效率。TinyLLaVA-Video-R1 <span class="citation" data-cites="zhang2025tinyllava">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025tinyllava">Xingjian Zhang et al. 2025</a>)</span>探索将 RL 扩展到较小视频 LLM；<span class="citation" data-cites="chen2025scaling">(<a href="/papers/agentic-rl-survey/web/references#ref-chen2025scaling"><span class="nocase">Yukang Chen et al.</span> 2025</a>)</span>提供基础设施和 CoT-SFT 加 RL 的两阶段流程，支持长视频的大规模 RL。其他工作还将 RL 扩展到具身视频推理 <span class="citation" data-cites="zhao2025embodied">(<a href="/papers/agentic-rl-survey/web/references#ref-zhao2025embodied">B. Zhao et al. 2025</a>)</span>。</p>
+<p>视频生成中也有类似趋势，RL 用于改善时间连贯性、可控性和语义对齐。主要实例包括 DanceGRPO <span class="citation" data-cites="xue2025dancegrpounleashinggrpovisual">(<a href="/papers/agentic-rl-survey/web/references#ref-xue2025dancegrpounleashinggrpovisual">Xue et al. 2025</a>)</span>、GAPO <span class="citation" data-cites="zhu2025aligninganimevideogeneration">(<a href="/papers/agentic-rl-survey/web/references#ref-zhu2025aligninganimevideogeneration">B. Zhu et al. 2025</a>)</span>、GRADEO <span class="citation" data-cites="mou2025gradeohumanlikeevaluationtexttovideo">(<a href="/papers/agentic-rl-survey/web/references#ref-mou2025gradeohumanlikeevaluationtexttovideo">Mou et al. 2025</a>)</span>、InfLVG <span class="citation" data-cites="fang2025inflvg">(<a href="/papers/agentic-rl-survey/web/references#ref-fang2025inflvg">X. Fang et al. 2025</a>)</span>、Phys-AR <span class="citation" data-cites="lin2025reasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-lin2025reasoning">W. Lin et al. 2025</a>)</span>、VideoReward <span class="citation" data-cites="liu2025improving">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025improving"><span class="nocase">Jie Liu, Liu, Liang, Yuan, et al.</span> 2025</a>)</span>、TeViR <span class="citation" data-cites="chen2025tevir">(<a href="/papers/agentic-rl-survey/web/references#ref-chen2025tevir">Yuhui Chen et al. 2025</a>)</span>和 InstructVideo <span class="citation" data-cites="yuan2024instructvideo">(<a href="/papers/agentic-rl-survey/web/references#ref-yuan2024instructvideo">Yuan et al. 2024</a>)</span>。</p>
+<h4 id="三维视觉任务">三维视觉任务。</h4>
+<p>RL 也广泛用于推进三维理解 <span class="citation" data-cites="hong20233d xu2024pointllm deng2024can chen2024spatialvlm zhou2023uni3d chen2024ll3da">(<a href="/papers/agentic-rl-survey/web/references#ref-hong20233d">Hong et al. 2023</a>; <a href="/papers/agentic-rl-survey/web/references#ref-xu2024pointllm">R. Xu et al. 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-deng2024can">W. Deng et al. 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-chen2024spatialvlm">B. Chen et al. 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-zhou2023uni3d">Zhou et al. 2023</a>; <a href="/papers/agentic-rl-survey/web/references#ref-chen2024ll3da">S. Chen et al. 2024</a>)</span>和生成 <span class="citation" data-cites="wang2024llama yin2025shapegpt siddiqui2024meshgpt">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2024llama">Zhengyi Wang et al. 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-yin2025shapegpt">Yin et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-siddiqui2024meshgpt">Siddiqui et al. 2024</a>)</span>。MetaSpatial <span class="citation" data-cites="pan2025metaspatial">(<a href="/papers/agentic-rl-survey/web/references#ref-pan2025metaspatial">Pan and Liu 2025</a>)</span>提出首个基于 RL 的三维空间推理框架，以物理感知约束和渲染图像评估作为训练奖励。Scene-R1 <span class="citation" data-cites="yuan2025scene">(<a href="/papers/agentic-rl-survey/web/references#ref-yuan2025scene">Z. Yuan et al. 2025</a>)</span>无需逐点三维监督即可学习场景推理；SpatialReasoner <span class="citation" data-cites="ma2025spatialreasoner">(<a href="/papers/agentic-rl-survey/web/references#ref-ma2025spatialreasoner">Wufei Ma et al. 2025</a>)</span>引入共享三维表示，统一感知、计算与推理阶段。在三维生成中，RL 改善文本到三维的对齐和可控性。代表包括以人类偏好对齐生成的 DreamCS <span class="citation" data-cites="zou2025dreamcs">(<a href="/papers/agentic-rl-survey/web/references#ref-zou2025dreamcs">Zou et al. 2025</a>)</span>，利用二维奖励优化三维生成的 DreamDPO <span class="citation" data-cites="zhou2025dreamdpo">(<a href="/papers/agentic-rl-survey/web/references#ref-zhou2025dreamdpo">Zhenglin Zhou et al. 2025</a>)</span>和 DreamReward <span class="citation" data-cites="ye2024dreamreward">(<a href="/papers/agentic-rl-survey/web/references#ref-ye2024dreamreward">Ye et al. 2024</a>)</span>，以及用强化目标进一步完善三维输出的 Nabla-R2D3 <span class="citation" data-cites="liu2025nabla">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025nabla">Q. Liu et al. 2025</a>)</span>。</p>
+<h2 id="subsec:embodied">4.6 具身智能体</h2>
+<p>具身智能体涵盖感知结构化环境并在其中行动的广泛系统，从视觉—语言—动作（VLA）模型到语言驱动的开放式智能体。许多近期系统关注需要基于现实视觉观测的 VLA 设定，但所有具身智能体都必须融合感知、推理和动作，才能在复杂物理或模拟环境中有效运行，并根据高层指令执行目标导向行为。这些能力构成智能体式 LLM 和 MLLM 在具身场景中的基础。</p>
+<p>在指令驱动的具身场景中，RL 常被用作后训练策略。常见流程从采用教师强制监督、经模仿学习得到的预训练 VLA 模型出发 <span class="citation" data-cites="kim2024openvla black2024pi_0 team2025gemini liao2025genie">(<a href="/papers/agentic-rl-survey/web/references#ref-kim2024openvla"><span class="nocase">Kim et al.</span> 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-black2024pi_0"><span class="nocase">Black et al.</span> 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-team2025gemini"><span class="nocase">G. R. Team et al.</span> 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-liao2025genie">Y. Liao et al. 2025</a>)</span>，将其嵌入与环境交互、收集奖励信号的智能体。奖励指导策略迭代改进，支持有效探索、提高样本效率，并增强跨现实条件的泛化。VLA 框架中的 RL <span class="citation" data-cites="li2025simplevlarl lu2025vlarlmasterfulgeneralrobotic qi2025vln song2025maniplvm">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025simplevlarl">SimpleVLA-RL Team 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-lu2025vlarlmasterfulgeneralrobotic">G. Lu et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-qi2025vln">Qi et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-song2025maniplvm"><span class="nocase">Zirui Song et al.</span> 2025</a>)</span>大致分为导航智能体和操作智能体：前者强调复杂环境中的空间推理与移动，后者侧重在多样动态约束下精确控制物体。</p>
+<h4 id="vla-导航智能体中的-rl">VLA 导航智能体中的 RL。</h4>
+<p>规划是导航智能体的核心能力。RL 用于增强 VLA 模型预测和优化未来动作序列的能力。常见策略 <span class="citation" data-cites="zhao2025more">(<a href="/papers/agentic-rl-survey/web/references#ref-zhao2025more">H. Zhao et al. 2025</a>)</span>将使用逐步方向奖励的传统机器人 RL 直接融入 VLA 导航框架。另一些方法在轨迹级运作。VLN-R1 <span class="citation" data-cites="qi2025vln">(<a href="/papers/agentic-rl-survey/web/references#ref-qi2025vln">Qi et al. 2025</a>)</span>通过对齐预测路径与真实路径定义轨迹奖励，沿用 DeepSeek-R1 的 GRPO 改善预测式规划。OctoNav-R1 <span class="citation" data-cites="gao2025octonavgeneralistembodiednavigation">(<a href="/papers/agentic-rl-survey/web/references#ref-gao2025octonavgeneralistembodiednavigation">C. Gao et al. 2025</a>)</span>也采用 GRPO，但侧重强化 VLA 内部审慎思考，倡导先思后行，增强导航的前瞻性与稳健性。S2E <span class="citation" data-cites="he2025seeing">(<a href="/papers/agentic-rl-survey/web/references#ref-he2025seeing">He et al. 2025</a>)</span>结合视频预训练与 RL，为导航基础模型增加交互性和安全性，在 NavBench-GS 上取得更好泛化与性能。</p>
+<h4 id="vla-操作智能体中的-rl">VLA 操作智能体中的 RL。</h4>
+<p>操作智能体通常涉及机械臂，需要精细控制来在不同条件下完成结构化任务。RL 增强 VLA 的指令遵循与轨迹预测，特别是跨任务、跨环境泛化。RLVLA <span class="citation" data-cites="liu2025can">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025can">Jijia Liu et al. 2025</a>)</span>和 VLA-RL <span class="citation" data-cites="lu2025vlarlmasterfulgeneralrobotic">(<a href="/papers/agentic-rl-survey/web/references#ref-lu2025vlarlmasterfulgeneralrobotic">G. Lu et al. 2025</a>)</span>用预训练 VLM 作为评估器，根据其反馈赋予轨迹奖励，改进 VLA 策略。这些在线 RL 框架有效提升操作表现，并展示良好扩展特性。TGRPO <span class="citation" data-cites="chen2025tgrpo">(<a href="/papers/agentic-rl-survey/web/references#ref-chen2025tgrpo">Zengjue Chen et al. 2025</a>)</span>在预测轨迹上定义规则奖励，将 GRPO 引入操作任务，使 VLA 能泛化到未见场景，并改善真实部署稳健性。VIKI-R <span class="citation" data-cites="kang2025viki">(<a href="/papers/agentic-rl-survey/web/references#ref-kang2025viki">L. Kang et al. 2025</a>)</span>提供多智能体具身协作的统一基准和两阶段框架，结合 CoT 微调与多层级 RL，在不同具身形态间实现组合式协调。</p>
+<p>VLA 具身 RL 的核心挑战之一是将训练扩展到真实环境。模拟平台虽支持高效大规模实验，但仿真到现实的差距仍很大，精细操作尤其如此。物理机器人实验成本高、过程复杂，当前直接在现实中开展 RL 并不切实可行。多数 RL 算法需要数百万次交互，消耗大量时间、资源与维护。因此，开发可扩展、能跨越仿真与真实部署差距的具身 RL 流程，仍是开放且迫切的问题。</p>
+<h4 id="案例voyager">案例：Voyager。</h4>
+<p>语言驱动的开放式具身智能体 Voyager <span class="citation" data-cites="wang2023voyageropenendedembodiedagent">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2023voyageropenendedembodiedagent">G. Wang et al. 2024</a>)</span>展示了如何在实践中整合规划、技能获取和基于 RL 的课程学习。它通过迭代循环探索 Minecraft：生成计划、与环境交互、从成功轨迹提取可复用技能，再存入不断增长的技能库。课程调度器依据当前技能集选择新任务，RL 目标指导哪些行为应保存为技能，以及何时改进或丢弃。由此形成规划、环境交互、记忆与 RL 驱动课程优化紧密结合的自我改进循环。</p>
+<h2 id="subsec:mas">4.7 多智能体系统</h2>
+<p>基于 LLM 的多智能体系统（MAS）由多个自主智能体组成，通过结构化交互、协调和记忆管理协作解决复杂任务。CAMEL、MetaGPT <span class="citation" data-cites="li2023camel hong2023metagpt">(<a href="/papers/agentic-rl-survey/web/references#ref-li2023camel">G. Li et al. 2023</a>; <a href="/papers/agentic-rl-survey/web/references#ref-hong2023metagpt">S. Hong et al. 2024</a>)</span>等早期静态人工设计系统探索角色专门化与任务分解；MAD、MoA <span class="citation" data-cites="wang2024mixture liang2023encouraging">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2024mixture">Junlin Wang et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-liang2023encouraging">Liang et al. 2024</a>)</span>等辩论框架通过协同改进增强推理。后续研究转向可优化的协作系统，使 MAS 既能动态调整协调模式，也能直接增强智能体级推理与决策策略。表 <a href="#tab:mas_methods" data-reference-type="ref" data-reference="tab:mas_methods">8</a>汇总本节主要工作。</p>
+<h4 id="不使用-rl-的多智能体演化">不使用 RL 的多智能体演化。</h4>
+<p>在不使用 RL 的自演化设定中，基础模型无法直接优化，系统演化由符号学习 <span class="citation" data-cites="zhou2024symbolic">(<a href="/papers/agentic-rl-survey/web/references#ref-zhou2024symbolic">W. Zhou et al. 2024</a>)</span>、动态图优化 <span class="citation" data-cites="zhuge2024gptswarm ma2025agenticneuralnetworks zhou2025reso">(<a href="/papers/agentic-rl-survey/web/references#ref-zhuge2024gptswarm">Zhuge et al. 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-ma2025agenticneuralnetworks">X. Ma et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-zhou2025reso">Heng Zhou, Geng, et al. 2025</a>)</span>和工作流重写 <span class="citation" data-cites="hu2024automated zhang2024aflow zhang2025darwin">(<a href="/papers/agentic-rl-survey/web/references#ref-hu2024automated">S. Hu et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-zhang2024aflow">Jiayi Zhang et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-zhang2025darwin">Jenny Zhang et al. 2025</a>)</span>等机制驱动。这些方法改善 MAS 内部协调与适应性，但不能直接更新基础模型参数。</p>
+<div id="tab:mas_methods">
+<div class="survey-table" role="region" aria-label="表格，可水平滑动" tabindex="0"><table>
+<caption>表 8 · 基于 LLM 的多智能体系统中的强化学习与演化范式。“动态”表示系统是否针对不同任务采用不同配置，如智能体数量、拓扑、推理深度和提示等；“训练”表示是否训练智能体的 LLM 主干。</caption>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>方法</strong></th>
+<th style="text-align: left;"><strong>动态</strong></th>
+<th style="text-align: left;"><strong>训练</strong></th>
+<th style="text-align: left;"><strong>RL 算法</strong></th>
+<th style="text-align: left;"><strong>资源链接</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>方法</strong></td>
+<td style="text-align: left;"><strong>动态</strong></td>
+<td style="text-align: left;"><strong>训练</strong></td>
+<td style="text-align: left;"><strong>RL 算法</strong></td>
+<td style="text-align: left;"><strong>资源链接</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">CAMEL <span class="citation" data-cites="li2023camel">(<a href="/papers/agentic-rl-survey/web/references#ref-li2023camel">G. Li et al. 2023</a>)</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;"><a href="https://github.com/camel-ai/camel">GitHub</a> <a href="https://huggingface.co/camel-ai">HuggingFace</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">MetaGPT <span class="citation" data-cites="hong2023metagpt">(<a href="/papers/agentic-rl-survey/web/references#ref-hong2023metagpt">S. Hong et al. 2024</a>)</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;"><a href="https://github.com/FoundationAgents/MetaGPT">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">MAD <span class="citation" data-cites="liang2023encouraging">(<a href="/papers/agentic-rl-survey/web/references#ref-liang2023encouraging">Liang et al. 2024</a>)</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;"><a href="https://github.com/Skytliang/Multi-Agents-Debate">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">MoA <span class="citation" data-cites="wang2024mixture">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2024mixture">Junlin Wang et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;"><a href="https://github.com/togethercomputer/moa">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">AFlow <span class="citation" data-cites="zhang2024aflow">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2024aflow">Jiayi Zhang et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;"><a href="https://github.com/FoundationAgents/AFlow">GitHub</a></td>
+</tr>
+<tr>
+<td colspan="5" style="text-align: center;"><em>基于 RL 的多智能体训练</em></td>
+</tr>
+<tr>
+<td style="text-align: left;">GPTSwarm <span class="citation" data-cites="zhuge2024gptswarm">(<a href="/papers/agentic-rl-survey/web/references#ref-zhuge2024gptswarm">Zhuge et al. 2024</a>)</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;">策略梯度</td>
+<td style="text-align: left;"><a href="https://github.com/metauto-ai/gptswarm">GitHub</a> <a href="https://gptswarm.org/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">MaAS <span class="citation" data-cites="zhang2025multiagentarchitecturesearchagentic">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025multiagentarchitecturesearchagentic">G. Zhang, Niu, et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;">策略梯度</td>
+<td style="text-align: left;"><a href="https://github.com/bingreeky/MaAS">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">G-Designer <span class="citation" data-cites="zhang2025gdesignerarchitectingmultiagentcommunication">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025gdesignerarchitectingmultiagentcommunication">G. Zhang, Yue, et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;">策略梯度</td>
+<td style="text-align: left;"><a href="https://github.com/yanweiyue/GDesigner">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Optima <span class="citation" data-cites="chen2025optimaoptimizingeffectivenessefficiency">(<a href="/papers/agentic-rl-survey/web/references#ref-chen2025optimaoptimizingeffectivenessefficiency">W. Chen et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;">DPO</td>
+<td style="text-align: left;"><a href="https://github.com/thunlp/Optima">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">DITS <span class="citation" data-cites="shi2025efficientmultiagenttrainingdata">(<a href="/papers/agentic-rl-survey/web/references#ref-shi2025efficientmultiagenttrainingdata">W. Shi et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;">DPO</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">MALT <span class="citation" data-cites="motwani2025maltimprovingreasoningmultiagent">(<a href="/papers/agentic-rl-survey/web/references#ref-motwani2025maltimprovingreasoningmultiagent">Motwani et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;">DPO</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">MARFT <span class="citation" data-cites="liao2025marft">(<a href="/papers/agentic-rl-survey/web/references#ref-liao2025marft">J. Liao et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;">MARFT</td>
+<td style="text-align: left;"><a href="https://github.com/jwliao-ai/MARFT">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ACC-Collab <span class="citation" data-cites="estornell2025acccollabactorcriticapproachmultiagent">(<a href="/papers/agentic-rl-survey/web/references#ref-estornell2025acccollabactorcriticapproachmultiagent">Estornell, Ton, Yao, et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;">DPO</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">MAPoRL <span class="citation" data-cites="park2025maporlmultiagentpostcotrainingcollaborative">(<a href="/papers/agentic-rl-survey/web/references#ref-park2025maporlmultiagentpostcotrainingcollaborative">C. Park et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;">PPO</td>
+<td style="text-align: left;"><a href="https://github.com/
+chanwoo-park-official/MAPoRL">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">MLPO <span class="citation" data-cites="estornell2025howtotrainaleader">(<a href="/papers/agentic-rl-survey/web/references#ref-estornell2025howtotrainaleader">Estornell, Ton, Taufiq, et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;">MLPO</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">ReMA <span class="citation" data-cites="wan2025remalearningmetathinkllms">(<a href="/papers/agentic-rl-survey/web/references#ref-wan2025remalearningmetathinkllms">Z. Wan et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;">MAMRP</td>
+<td style="text-align: left;"><a href="https://github.com/ziyuwan/ReMA-public">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">FlowReasoner <span class="citation" data-cites="gao2025flowreasonerreinforcingquerylevelmetaagents">(<a href="/papers/agentic-rl-survey/web/references#ref-gao2025flowreasonerreinforcingquerylevelmetaagents">Hongcheng Gao et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;">GRPO</td>
+<td style="text-align: left;"><a href="https://github.com/sail-sg/FlowReasoner">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">CURE <span class="citation" data-cites="wang2025coevolvingllmcoderunit">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025coevolvingllmcoderunit">Yinjie Wang et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;">规则式 RL</td>
+<td style="text-align: left;"><a href="https://github.com/Gen-Verse/CURE">GitHub</a> <a href="https://huggingface.co/collections/Gen-Verse/reasonflux-coder-6833109ed9300c62deb32c6b">HuggingFace</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">MMedAgent-RL <span class="citation" data-cites="xia2025mmedagent">(<a href="/papers/agentic-rl-survey/web/references#ref-xia2025mmedagent"><span class="nocase">P. Xia et al.</span> 2025</a>)</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;">GRPO</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">Chain-of-Agents <span class="citation" data-cites="li2025chainofagentsendtoendagentfoundation">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025chainofagentsendtoendagentfoundation">W. Li et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;">DAPO</td>
+<td style="text-align: left;"><a href="https://github.com/OPPO-PersonalAI/Agent_Foundation_Models">GitHub</a>  <a href="https://huggingface.co/collections/PersonalAILab/afm-models-689200e11d0b21a67c015ba8">HuggingFace</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">RLCCF <span class="citation" data-cites="yuan2025wisdomcrowdreinforcementlearning">(<a href="/papers/agentic-rl-survey/web/references#ref-yuan2025wisdomcrowdreinforcementlearning">W. Yuan et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;">GRPO</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">MAGRPO <span class="citation" data-cites="liu2025llmcollaborationmultiagentreinforcement">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025llmcollaborationmultiagentreinforcement">Shuo Liu et al. 2025</a>)</span></td>
+<td style="text-align: left;"><span>✗</span></td>
+<td style="text-align: left;"><span>✓</span></td>
+<td style="text-align: left;">MAGRPO</td>
+<td style="text-align: left;">-</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<h3 id="rl-驱动的非参数协调模块优化">4.7.1 RL 驱动的非参数协调模块优化</h3>
+<p>这些方法冻结智能体参数，用 RL 优化通信拓扑、路由策略或工作流图等外部协调结构。GPTSwarm、MaAS 和 G-Designer <span class="citation" data-cites="zhuge2024gptswarm zhang2025multiagentarchitecturesearchagentic zhang2025gdesignerarchitectingmultiagentcommunication">(<a href="/papers/agentic-rl-survey/web/references#ref-zhuge2024gptswarm">Zhuge et al. 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-zhang2025multiagentarchitecturesearchagentic">G. Zhang, Niu, et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-zhang2025gdesignerarchitectingmultiagentcommunication">G. Zhang, Yue, et al. 2025</a>)</span>将 MAS 协调视为通过策略梯度更新的图级策略。由于没有智能体级梯度，信用分配必须在拓扑或消息路由层面进行。奖励通常延迟且稀疏，例如只有最终任务准确率，因此需要从全局到局部的信用分解或结构先验来避免坍塌。</p>
+<p>这里的重要比较是<em>固定通信协议</em>（预先规定消息格式）与<em>可学习协议</em>。在低数据量或高度专门化、尤其重视稳定性的领域，固定协议表现较好；可学习协议则让 RL 发现高效的涌现通信方式，但样本复杂度明显更高，并需要谨慎正则化以避免过拟合或退化的通信约定。</p>
+<h3 id="rl-驱动的部分智能体策略优化">4.7.2 RL 驱动的部分智能体策略优化</h3>
+<p>第二类系统仅更新部分智能体，通常是领导者、协调者或专门专家，其余保持冻结以确保稳定。代表包括 Optima、DITS、MALT 和 ACC-Collab <span class="citation" data-cites="chen2025optimaoptimizingeffectivenessefficiency shi2025efficientmultiagenttrainingdata motwani2025maltimprovingreasoningmultiagent estornell2025acccollabactorcriticapproachmultiagent">(<a href="/papers/agentic-rl-survey/web/references#ref-chen2025optimaoptimizingeffectivenessefficiency">W. Chen et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-shi2025efficientmultiagenttrainingdata">W. Shi et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-motwani2025maltimprovingreasoningmultiagent">Motwani et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-estornell2025acccollabactorcriticapproachmultiagent">Estornell, Ton, Yao, et al. 2025</a>)</span>。仅训练少数智能体，兼顾灵活性与可扩展性，降低样本复杂度，并避免完全解耦信用分配带来的不稳定。MALT <span class="citation" data-cites="motwani2025maltimprovingreasoningmultiagent">(<a href="/papers/agentic-rl-survey/web/references#ref-motwani2025maltimprovingreasoningmultiagent">Motwani et al. 2025</a>)</span>通过异构多智能体搜索树生成大规模标注轨迹，结合 SFT 与 DPO，从成功和失败推理路径中微调智能体。</p>
+<p>这种设定中的信用分配本质上是<em>半局部的</em>：奖励来自集体轨迹，但梯度只作用于被优化的智能体。因此需要角色条件 DPO <span class="citation" data-cites="motwani2025maltimprovingreasoningmultiagent">(<a href="/papers/agentic-rl-survey/web/references#ref-motwani2025maltimprovingreasoningmultiagent">Motwani et al. 2025</a>)</span>、局部优势估计或反事实基线等机制，防止未更新智能体劫持奖励。实验中，这种部分优化比完全联合多智能体训练更具样本效率，同时仍能形成专门化角色。</p>
+<h3 id="端到端多智能体强化学习">4.7.3 端到端多智能体强化学习</h3>
+<p>完整多智能体 RL 在共享或去中心化目标下联合训练所有智能体，通常形式化为去中心化 POMDP（Dec-POMDP）。MAGRPO、MAPoRL、MLPO、ReMA、FlowReasoner、Chain-of-Agents 和 SPIRAL <span class="citation" data-cites="liu2025llmcollaborationmultiagentreinforcement park2025maporlmultiagentpostcotrainingcollaborative estornell2025howtotrainaleader wan2025remalearningmetathinkllms gao2025flowreasonerreinforcingquerylevelmetaagents li2025chainofagentsendtoendagentfoundation liu2025spiralselfplayzerosumgames">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025llmcollaborationmultiagentreinforcement">Shuo Liu et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-park2025maporlmultiagentpostcotrainingcollaborative">C. Park et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-estornell2025howtotrainaleader">Estornell, Ton, Taufiq, et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-wan2025remalearningmetathinkllms">Z. Wan et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-gao2025flowreasonerreinforcingquerylevelmetaagents">Hongcheng Gao et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-li2025chainofagentsendtoendagentfoundation">W. Li et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-liu2025spiralselfplayzerosumgames">Bo Liu et al. 2025</a>)</span>等方法联合优化协作与推理行为，促成分工和通信约定的涌现。MAGRPO <span class="citation" data-cites="liu2025llmcollaborationmultiagentreinforcement">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025llmcollaborationmultiagentreinforcement">Shuo Liu et al. 2025</a>)</span>将多 LLM 协作形式化为 Dec-POMDP，提出多智能体 GRPO 变体，在保持去中心化执行的同时联合训练 MAS 中的 LLM 智能体。MAPoRL <span class="citation" data-cites="park2025maporlmultiagentpostcotrainingcollaborative">(<a href="/papers/agentic-rl-survey/web/references#ref-park2025maporlmultiagentpostcotrainingcollaborative">C. Park et al. 2025</a>)</span>扩展 MAD，验证辩论回复，并以验证结果作为 RL 奖励提升协作推理。RLCCF <span class="citation" data-cites="yuan2025wisdomcrowdreinforcementlearning">(<a href="/papers/agentic-rl-survey/web/references#ref-yuan2025wisdomcrowdreinforcementlearning">W. Yuan et al. 2025</a>)</span>是自监督多智能体 RL 框架，通过自一致性加权集成投票生成伪标签，用 GRPO 协作优化单模型策略，同时提高个体与集体推理准确率。</p>
+<p>ReMA <span class="citation" data-cites="wan2025remalearningmetathinkllms">(<a href="/papers/agentic-rl-survey/web/references#ref-wan2025remalearningmetathinkllms">Z. Wan et al. 2025</a>)</span>将推理分为元思考智能体和执行智能体，通过参数共享，在对齐的 RL 目标下联合训练。LERO <span class="citation" data-cites="wei2025lerollmdrivenevolutionaryframework">(<a href="/papers/agentic-rl-survey/web/references#ref-wei2025lerollmdrivenevolutionaryframework">Yuan Wei et al. 2025</a>)</span>结合 MARL、LLM 生成的混合奖励和演化搜索，改善协作任务的信用分配和部分可观测性处理。CURE <span class="citation" data-cites="wang2025coevolvingllmcoderunit">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025coevolvingllmcoderunit">Yinjie Wang et al. 2025</a>)</span>聚焦代码生成，用 RL 联合训练代码生成器和单元测试器，提供更丰富奖励，在多种代码基准上表现出较强泛化。MMedAgent-RL <span class="citation" data-cites="xia2025mmedagent">(<a href="/papers/agentic-rl-survey/web/references#ref-xia2025mmedagent"><span class="nocase">P. Xia et al.</span> 2025</a>)</span>为医学视觉问答提出多智能体 RL 框架，由动态协调的全科医生与专科医生通过课程引导学习协作推理，显著超过已有 Med-LVLM，并产生更接近人类的诊断行为。</p>
+<p>Chain-of-Agents（COA） <span class="citation" data-cites="li2025chainofagentsendtoendagentfoundation">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025chainofagentsendtoendagentfoundation">W. Li et al. 2025</a>)</span>是一种端到端范式，由单个 LLM 动态编排角色扮演与工具使用智能体，模拟多智能体协作。它通过多智能体蒸馏（将先进多智能体系统的轨迹转成训练数据）和精心设计奖励函数的 Agentic RL，得到智能体基础模型（AFM）。SPIRAL <span class="citation" data-cites="liu2025spiralselfplayzerosumgames">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025spiralselfplayzerosumgames">Bo Liu et al. 2025</a>)</span>面向零和博弈，提出完全在线、多轮、多智能体自博弈 RL 框架，用共享策略和角色条件优势估计（RAE）稳定学习，表明游戏可培养可迁移推理技能，显著提升数学及通用推理基准表现。</p>
+<p>然而，端到端多 LLM 训练加剧了<em>时间与结构信用分配</em>问题，因为奖励可能依赖长串多轮交互。解决方案包括 RAE、分层控制者—工作者架构（MLPO、ReMA）和通过不断增加交互难度来稠密化奖励的自博弈课程（SPIRAL）。这些分层模式与监督智能体协调多个工作者的企业部署相呼应；RL 尤其善于在稀疏奖励下学习稳定的委派与仲裁策略。尽管表达力强，联合 MARL 仍面临扩展限制：样本复杂度大致随智能体数量线性增长、随交互深度平方增长。MAGRPO 和基于 PPO 的 MAPoRL 等算法采用集中式评论家或价值共享基线加以缓解，但可扩展信用分解仍是核心开放挑战。</p>
+<h2 id="subsec:other">4.8 其他任务</h2>
+<h4 id="文本游戏">文本游戏。</h4>
+<p>ARIA <span class="citation" data-cites="yang2025ariatraininglanguageagents">(<a href="/papers/agentic-rl-survey/web/references#ref-yang2025ariatraininglanguageagents">R. Yang et al. 2025</a>)</span>通过意图驱动的奖励聚合压缩庞大动作空间，降低稀疏性与方差。GiGPO <span class="citation" data-cites="feng2025groupingrouppolicyoptimizationllm">(<a href="/papers/agentic-rl-survey/web/references#ref-feng2025groupingrouppolicyoptimizationllm">L. Feng et al. 2025</a>)</span>通过分层分组增强时间信用分配，不增加计算负担。RAGEN <span class="citation" data-cites="wang2025ragenunderstandingselfevolutionllm">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025ragenunderstandingselfevolutionllm">Zihan Wang et al. 2025</a>)</span>通过轨迹过滤和梯度稳定化确保多轮学习稳定，并倡导推理感知奖励。SPA-RL <span class="citation" data-cites="wang2025sparlreinforcingllmagents">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025sparlreinforcingllmagents">Hanlin Wang et al. 2025</a>)</span>将延迟奖励分解为逐步信号，改善性能和定位准确率。Trinity-RFT <span class="citation" data-cites="pan2025trinityrftgeneralpurposeunifiedframework">(<a href="/papers/agentic-rl-survey/web/references#ref-pan2025trinityrftgeneralpurposeunifiedframework">Pan et al. 2025</a>)</span>为包括文本游戏在内的跨任务强化微调提供统一模块化框架，支持多种 RL 模式与数据流水线，实现灵活、高效、可扩展的实验。</p>
+<h4 id="表格">表格。</h4>
+<p>SkyRL-SQL <span class="citation" data-cites="liu2025skyrlsql">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025skyrlsql">Shu Liu et al. 2025</a>)</span>提出数据高效的多轮 Text-to-SQL RL 流程，使 LLM 智能体交互探查数据库、改进并验证 SQL 查询。仅用 653 个训练样本，SkyRL-SQL-7B 就在 SQL 生成基准上超过 GPT-4o 和 o4-mini。MSRL <span class="citation" data-cites="chen2025breaking">(<a href="/papers/agentic-rl-survey/web/references#ref-chen2025breaking">Lei Chen et al. 2025</a>)</span>提出多模态结构化 RL，通过多粒度奖励突破图表转代码任务中的 SFT 平台期，在图表理解基准上取得当时最优表现。</p>
+<h4 id="时间序列">时间序列。</h4>
+<p>Time-R1 <span class="citation" data-cites="liu2025timer1comprehensivetemporalreasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025timer1comprehensivetemporalreasoning">Zijia Liu et al. 2025</a>)</span>通过渐进式 RL 课程和动态规则奖励系统，赋予中等规模 LLM 全面的时间推理能力。TimeMaster <span class="citation" data-cites="zhang2025timemastertrainingtimeseriesmultimodal">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025timemastertrainingtimeseriesmultimodal">Junru Zhang et al. 2025</a>)</span>结合 SFT 与 GRPO 训练时间序列 MLLM，对可视化时间序列输入进行结构化、可解释的时间推理。</p>
+<h4 id="通用问答">通用问答。</h4>
+<p>Agent models <span class="citation" data-cites="zhang2025agentmodelsinternalizingchainofaction">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025agentmodelsinternalizingchainofaction">Yuxiang Zhang, Yang, et al. 2025</a>)</span>结合 SFT 和 RL，将动作链生成内化，实现自主、高效决策。L-Zero <span class="citation" data-cites="zhang2025l0reinforcementlearninggeneral">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025l0reinforcementlearninggeneral">Junjie Zhang et al. 2025</a>)</span>通过低成本、可扩展、沙箱化的并发智能体工作池，构建可扩展端到端 RL 流程，使 LLM 成为通用智能体。</p>
+<h4 id="社会交互">社会交互。</h4>
+<p>Sotopia-RL <span class="citation" data-cites="yu2025sotopiarlrewarddesignsocial">(<a href="/papers/agentic-rl-survey/web/references#ref-yu2025sotopiarlrewarddesignsocial">Haofei Yu, Qi, et al. 2025</a>)</span>将粗粒度回合奖励细化为话语级多维信号，在部分可观测和多目标条件下，高效稳定地训练具有社会智能的 LLM。<span class="citation" data-cites="wang2025adaptivethinkingmodepolicy">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025adaptivethinkingmodepolicy">M. Wang et al. 2025</a>)</span>提出自适应模式学习（AML）框架及自适应模式策略优化（AMPO）算法，通过 RL 在社会智能任务中动态切换多粒度推理模式，与 GRPO 等固定深度方法相比，准确率更高、推理链更短。</p>
+<div id="tab:capability-application-matrix">
+<div class="survey-table" role="region" aria-label="表格，可水平滑动" tabindex="0"><table>
+<caption>表 9 ·  <span>应用—能力依赖矩阵。符号表示定性的依赖程度： <strong><span class="math-inline" data-tex="\bullet"></span></strong> 核心, <strong><span class="math-inline" data-tex="\circ"></span></strong> 辅助, – 很少. 此矩阵将能力分类（第 <a href="/papers/agentic-rl-survey/web/capabilities#sec:capability" data-reference-type="ref" data-reference="sec:capability">3</a> 节）与应用领域（第 <a href="#sec:task" data-reference-type="ref" data-reference="sec:task">4</a> 节）联系起来，便于查阅。 </span></caption>
+<thead>
+<tr>
+<th style="text-align: left;"></th>
+<th colspan="6" style="text-align: center;"><strong>智能体能力</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><span>2-7</span> <strong>应用</strong></td>
+<td style="text-align: center;"><strong>规划</strong></td>
+<td style="text-align: center;"><strong>工具使用</strong></td>
+<td style="text-align: center;"><strong>记忆</strong></td>
+<td style="text-align: center;"><strong>自我改进</strong></td>
+<td style="text-align: center;"><strong>推理</strong></td>
+<td style="text-align: center;"><strong>感知</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">搜索</td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+<td style="text-align: center;">–</td>
+</tr>
+<tr>
+<td style="text-align: left;">代码</td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+<td style="text-align: center;">–</td>
+</tr>
+<tr>
+<td style="text-align: left;">数学</td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+<td style="text-align: center;">–</td>
+</tr>
+<tr>
+<td style="text-align: left;">GUI</td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">视觉</td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: center;">–</td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">具身</td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">MAS</td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\bullet"></span></strong></td>
+<td style="text-align: center;"><strong><span class="math-inline" data-tex="\circ"></span></strong></td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1"><p>在 Lean 式交互定理证明器（ITP）中，tactic 是指令或短脚本，指示系统细化当前证明目标；生成的证明项由 ITP 内核检查正确性。<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
+  </section>
+
+  <nav class="survey-pager" aria-label="章节导航"><a href="/papers/agentic-rl-survey/web/capabilities">上一章</a><a href="/papers/agentic-rl-survey/web/">摘要与目录</a><a href="/papers/agentic-rl-survey/web/resources">下一章</a></nav>
+</article>

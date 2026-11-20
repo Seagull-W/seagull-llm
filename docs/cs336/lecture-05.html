@@ -152,5 +152,5 @@ import { withBase } from 'vitepress'
 <p><strong>GPU 上几乎所有优化都在做同一件事：把数据搬到离计算更近的地方，然后多用几次。</strong>低精度减少每次搬运的字节，合并让事务里的数据更有用，融合与重算减少中间值往返，分块让输入在片上服务更多输出。它们的收益都要与精度、资源占用、边缘块和调度长尾一起算。</p>
 <p>遇到一个慢算子，你现在可以先数运算与字节，算出强度，再检查线程同一时刻访问什么地址。矩阵乘继续数块内复用次数和总块数，注意力则检查是否把 T×T 中间结果写回。等这些口径清楚后，再到<a href="./lecture-06#timing">第 6 讲的计时方法</a>验证推导；模型告诉你该测哪里，实际计时告诉你瓶颈是否真的移走了。</p>
 </section>
-<details class="note-details"><summary>本篇原始文件（下载）</summary><ul><li><a download :href="withBase('/cs336/sources/lectures/lecture_05.pdf')">lecture_05.pdf：55 页幻灯片，本文图示与页码的来源</a></li></ul></details>
+<details class="note-details"><summary>本篇原始文件（下载）</summary><ul><li><a href="/cs336/sources/lectures/lecture_05.pdf">lecture_05.pdf：55 页幻灯片，本文图示与页码的来源</a> · <a download :href="withBase('/cs336/sources/lectures/lecture_05.pdf')">下载 PDF</a></li></ul></details>
 </article>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import DefaultTheme from 'vitepress/theme'
-import { computed, nextTick, onMounted, onUnmounted, provide, watch } from 'vue'
+import { defineAsyncComponent, computed, nextTick, onMounted, onUnmounted, provide, ref, useId, watch } from 'vue'
 import { useData, withBase } from 'vitepress'
 import ReaderNavigation from '../components/ReaderNavigation.vue'
 import HomeHero from '../components/HomeHero.vue'
@@ -12,11 +12,13 @@ import RelatedReading from '../components/RelatedReading.vue'
 import ReadingMedia from '../components/ReadingMedia.vue'
 import GraceReadingPortrait from '../components/GraceReadingPortrait.vue'
 import PixelThemeFilter from '../components/PixelThemeFilter.vue'
-import { usesAcademicReading } from './reading-design'
+import ReaderIcon from '../components/ReaderIcon.vue'
+import { usesAcademicReading, usesPaperNotebook } from './reading-design'
 import { sectionFor } from '../content-catalog'
 import { createVisualStyleControls, gracePortraitMedia, heroImageFor, heroMobileMedia, visualStyles, visualStyleKey, visualStyleControlsKey } from './visual-styles'
 import './styles/route-arrival.css'
 import { showPageArrival } from './page-arrival'
+const HtmlNotebook = defineAsyncComponent(() => import('../components/HtmlNotebook.vue'))
 const styleControls = createVisualStyleControls()
 const visualStyle = computed(() => visualStyles[styleControls.selected.value])
 provide(visualStyleKey, visualStyle)
@@ -47,13 +49,21 @@ onMounted(() => {
 })
 onUnmounted(() => stopHomeOpening?.())
 const academicReading = computed(() => usesAcademicReading('/' + page.value.relativePath, frontmatter.value))
+const htmlNotes = computed(() => !frontmatter.value.pdf &&
+  (academicReading.value || frontmatter.value.readingNotes === true))
+const paperNotebook = computed(() => usesPaperNotebook('/' + page.value.relativePath, frontmatter.value))
+const paperNotesOpen = ref(false)
+const paperAuthor=ref(false)
+const paperBoxMode = ref(false)
+const paperNotesId = useId()
+watch(() => page.value.relativePath, () => { paperBoxMode.value=false; paperAuthor.value=false }, { flush:'sync' })
 const sectionClass = computed(() => {
   const section = sectionFor('/' + page.value.relativePath)
   return section ? 'section-' + section.id : ''
 })
 </script>
 <template>
-  <Layout :data-visual-style="visualStyle.id" :class="[sectionClass, { 'academic-reading': academicReading, 'pixel-mountain-home': pixelHome }]">
+  <Layout :data-visual-style="visualStyle.id" :class="[sectionClass, { 'academic-reading': academicReading, 'pixel-mountain-home': pixelHome, 'paper-notebook-layout': paperNotebook }]">
     <template #layout-top>
       <picture v-if="pixelHome" class="pixel-mountain-world" aria-hidden="true">
         <source :media="heroMobileMedia" :srcset="withBase(heroImageFor(visualStyle, isDark, true))" />
@@ -70,8 +80,29 @@ const sectionClass = computed(() => {
     <template #nav-bar-title-before><img class="logo visual-logo" :src="withBase(visualStyle.assets.logo)" alt="seagull 首页" width="36" height="36" /></template>
     <template #nav-bar-content-after><NavActions /></template>
     <template #home-hero-info><HomeHero /></template>
-    <template #doc-top><ReaderNavigation /></template>
-    <template #doc-before><ArticleContext v-if="academicReading" /><div v-if="frontmatter.status === 'draft'" class="draft-notice">本文仍在写作中，内容尚未完成。</div></template>
+    <template #doc-top>
+      <ReaderNavigation :outline-in-drawer="paperNotebook">
+        <template v-if="paperNotebook" #actions>
+          <button v-if="paperAuthor" aria-label="框选批注" title="框选批注" :aria-pressed="paperBoxMode" @click="paperBoxMode=!paperBoxMode">
+            <ReaderIcon name="box" /><span class="paper-tool-label">框选</span>
+          </button>
+          <button aria-label="阅读笔记" title="阅读笔记" :aria-expanded="paperNotesOpen" :aria-controls="paperNotesId" @click="paperNotesOpen=!paperNotesOpen">
+            <ReaderIcon name="notes" /><span class="paper-tool-label">阅读笔记</span>
+          </button>
+        </template>
+      </ReaderNavigation>
+      <ClientOnly>
+        <HtmlNotebook v-if="paperNotebook" :key="page.relativePath" :id="paperNotesId" v-model:open="paperNotesOpen" v-model:box-mode="paperBoxMode"
+          :document="'html:'+page.relativePath" :title="page.title" @author="paperAuthor=$event" docked />
+      </ClientOnly>
+    </template>
+    <template #doc-before>
+      <ArticleContext v-if="academicReading" />
+      <ClientOnly>
+        <HtmlNotebook v-if="htmlNotes && !paperNotebook" :key="page.relativePath" :document="'html:'+page.relativePath" :title="page.title" />
+      </ClientOnly>
+      <div v-if="frontmatter.status === 'draft'" class="draft-notice">本文仍在写作中，内容尚未完成。</div>
+    </template>
     <template #doc-after><RelatedReading v-if="academicReading" /></template>
     <template #layout-bottom><ClientOnly><ReadingMedia /></ClientOnly></template>
   </Layout>

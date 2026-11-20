@@ -122,5 +122,5 @@ import { withBase } from 'vitepress'
 <h2 id="summary" tabindex="-1">本篇要点 <a class="header-anchor" href="#summary" aria-label="章节链接">&#8203;</a></h2>
 <p><strong>注意力的方向是少看一些位置，或压缩历史状态；MoE 的方向是每个词元只走一部分参数。</strong>前者需要权衡访问历史的精度、状态大小与访存量，后者需要权衡总容量、激活计算、通信与专家负载。两条线能放进同一个模型，也必须各算各的账：固定状态不等于完整 KV 历史，激活参数少不等于全部权重占用少。读下一种架构时，先找出它减少了哪一项成本，再检查它为此改变了什么计算和信息通路。</p>
 </section>
-<details class="note-details"><summary>本篇原始文件（下载）</summary><ul><li><a download :href="withBase('/cs336/sources/lectures/lecture_04.pdf')">lecture_04.pdf（60 页；本文全部模型配置与图示的来源）</a></li></ul></details>
+<details class="note-details"><summary>本篇原始文件（下载）</summary><ul><li><a href="/cs336/sources/lectures/lecture_04.pdf">lecture_04.pdf（60 页；本文全部模型配置与图示的来源）</a> · <a download :href="withBase('/cs336/sources/lectures/lecture_04.pdf')">下载 PDF</a></li></ul></details>
 </article>

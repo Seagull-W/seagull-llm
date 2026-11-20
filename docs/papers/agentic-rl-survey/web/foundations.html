@@ -1,0 +1,355 @@
+<script setup>
+import './reading.css'
+</script>
+
+<article class="native-document format-paper survey-web" data-design="linux-notebook" aria-labelledby="sec:position">
+  <header class="document-intro note-hero">
+    <p class="note-kicker">中文译本<span>arXiv:2509.02547v5</span></p>
+    <h1 id="sec:position">2 预备知识：从 LLM RL 到 Agentic RL</h1>
+    <p class="survey-links"><a href="/papers/agentic-rl-survey/web/">摘要与目录</a> <a href="/papers/agentic-rl-survey/?view=pdf">PDF 阅读工作台</a></p>
+  </header>
+  <details class="note-details survey-toc"><summary>全文目录</summary><nav class="survey-sections" aria-label="全文目录"><a href="/papers/agentic-rl-survey/web/introduction">1 引言</a><a href="/papers/agentic-rl-survey/web/foundations">2 预备知识：从 LLM RL 到 Agentic RL</a><a href="/papers/agentic-rl-survey/web/capabilities">3 Agentic RL：模型能力视角</a><a href="/papers/agentic-rl-survey/web/tasks">4 Agentic RL：任务视角</a><a href="/papers/agentic-rl-survey/web/resources">5 环境与框架</a><a href="/papers/agentic-rl-survey/web/future">6 开放挑战与未来方向</a><a href="/papers/agentic-rl-survey/web/conclusion">7 结论</a><a href="/papers/agentic-rl-survey/web/references">参考文献</a></nav></details>
+  <nav class="note-jump" aria-label="本章小节"><a href="#subsec:mdp">2.1 马尔可夫决策过程</a>
+<a href="#subsec:env">2.2 环境状态</a>
+<a href="#subsec:action">2.3 动作空间</a>
+<a href="#subsec:trans">2.4 转移动力学</a>
+<a href="#subsec:reward">2.5 奖励函数</a>
+<a href="#subsec:obj">2.6 学习目标</a>
+<a href="#subsec:algo">2.7 强化学习算法</a></nav>
+  <section class="document-section note-panel" aria-labelledby="sec:position">
+<p>LLM 最初通过行为克隆进行预训练，即在网页抓取文本等静态数据集上应用最大似然估计（MLE）。随后的后训练方法增强其能力，并使输出符合人类偏好，从而让模型超越对一般网页数据的复现。监督微调（SFT）是一种常见技术，它利用人工生成的（提示，回复）示范来改进模型。然而，获取足够多的高质量 SFT 数据仍具挑战 <span class="citation" data-cites="maosongcao-etal-2025-condor szep2025finetuninglargelanguagemodels han2025alignmentcentricparadigmsurveyinstruction">(<a href="/papers/agentic-rl-survey/web/references#ref-maosongcao-etal-2025-condor">Maosongcao et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-szep2025finetuninglargelanguagemodels">Szep et al. 2025</a>; <a href="/papers/agentic-rl-survey/web/references#ref-han2025alignmentcentricparadigmsurveyinstruction">Han et al. 2025</a>)</span>。强化微调（RFT）提供了另一条路径：通过奖励函数优化模型，绕开对行为示范的依赖。</p>
+<p>早期 RFT 研究的核心目标是通过人类反馈 <span class="citation" data-cites="deeprlfromhumanpreferences2017 ouyang2022training">(<a href="/papers/agentic-rl-survey/web/references#ref-deeprlfromhumanpreferences2017">Christiano et al. 2017</a>; <a href="/papers/agentic-rl-survey/web/references#ref-ouyang2022training">Ouyang et al. 2022</a>)</span>或数据偏好 <span class="citation" data-cites="rafailov2024directpreferenceoptimizationlanguage">(<a href="/papers/agentic-rl-survey/web/references#ref-rafailov2024directpreferenceoptimizationlanguage">Rafailov et al. 2023</a>)</span>优化 LLM，使其与人类偏好（RLHF）对齐，或直接与数据偏好对齐（如 DPO）。<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>这种<strong>基于偏好的强化微调（PBRFT）</strong>主要在固定偏好数据集上学习奖励模型以优化 LLM，或直接利用数据偏好实现优化。随着具备推理能力的 OpenAI o1 <span class="citation" data-cites="openai2024openaio1card">(<a href="/papers/agentic-rl-survey/web/references#ref-openai2024openaio1card">OpenAI et al. 2024</a>)</span>和 DeepSeek-R1 <span class="citation" data-cites="deepseekai2025deepseekr1incentivizingreasoningcapability">(<a href="/papers/agentic-rl-survey/web/references#ref-deepseekai2025deepseekr1incentivizingreasoningcapability">DeepSeek-AI et al. 2025</a>)</span>等模型发布，其性能提升及跨领域泛化引起了广泛关注。OpenAI o3 <span class="citation" data-cites="OpenAI2025o3">(<a href="/papers/agentic-rl-survey/web/references#ref-OpenAI2025o3">OpenAI Team 2025</a>)</span>等同时具备自我演化推理能力和工具使用支持的模型，使研究者开始思考如何通过强化学习把 LLM 与下游任务深度结合。此后，研究重点逐渐从面向固定偏好数据集的 PBRFT 转向适用于具体任务和动态环境的智能体强化学习。</p>
+<p>本节将从 PBRFT 到新兴<strong>智能体强化学习（Agentic RL）</strong>框架的范式转变形式化。两者都利用 RL 提高 LLM 性能，但在基本假设、任务结构和决策粒度上存在根本差异。图 <a href="#fig:shift" data-reference-type="ref" data-reference="fig:shift">2</a>展示了从 LLM RL 到 Agentic RL 的转变。</p>
+<figure id="fig:shift" class="note-figure" data-latex-placement="ht">
+<a href="/papers/agentic-rl-survey/web-assets/biu2.webp" target="_blank" rel="noopener" aria-label="打开原尺寸图片"><img src="/papers/agentic-rl-survey/web-assets/biu2.webp" loading="lazy" width="2400" height="1310" /></a>
+<figcaption>图 2 · 从 LLM RL 到 Agentic RL 的范式转变。设计受到 <span class="citation" data-cites="kumar2025llmposttrainingdeepdive">(<a href="/papers/agentic-rl-survey/web/references#ref-kumar2025llmposttrainingdeepdive">Kumar et al. 2025</a>)</span>启发。扇形结构体现 RL 形式化框架的向外扩展：从内层的传统 RL，到 LLM RL，再到外层完整的 Agentic RL。红色表示 LLM RL 特有的特征，青色表示 Agentic RL 所需的特征，紫色表示已有 Agentic RL 实现。向外的箭头表示随着智能体特征增强，交互范围不断扩大，涵盖工具使用、网页浏览和动态环境。</figcaption>
+</figure>
+<h2 id="subsec:mdp">2.1 马尔可夫决策过程</h2>
+<p>RL 微调过程中的马尔可夫决策过程（MDP）可以形式化为七元组 <span class="math-inline" data-tex="\langle\mathcal{S},\mathcal{O},\mathcal{A},\mathcal{P},\mathcal{R},T,\gamma\rangle"></span>，其中 <span class="math-inline" data-tex="\mathcal{S}"></span> 表示状态空间，<span class="math-inline" data-tex="\mathcal{O}"></span> 为智能体的观测空间，<span class="math-inline" data-tex="\mathcal{A}"></span> 为动作空间，<span class="math-inline" data-tex="\mathcal{R}"></span> 为奖励函数，<span class="math-inline" data-tex="\mathcal{P}"></span> 为状态转移概率，<span class="math-inline" data-tex="T"></span> 为任务时域，<span class="math-inline" data-tex="\gamma"></span> 为折扣因子。将基于偏好的 RFT 和 Agentic RL 都表述为 MDP 或 POMDP，有助于澄清两种建模方式的理论含义：将 LLM 视为静态序列生成器，或视为嵌入动态环境、具有交互与决策能力的智能体。</p>
+<h4 id="pbrft">PBRFT。</h4>
+<p>PBRFT 的 RL 训练过程被形式化为由以下元组定义的退化 MDP： </p>
+<div class="survey-equation" id="equation-1" tabindex="0" aria-label="公式 1"><div class="math-block" data-tex="\langle\mathcal{S}_{\text{trad}},\mathcal{A}_{\text{trad}},\mathcal{P}_{\text{trad}},\mathcal{R}_{\text{trad}},T=1,\gamma=1\rangle."></div><span class="survey-equation-number">(1)</span></div>
+<h4 id="agentic-rl">Agentic RL。</h4>
+<p>Agentic RL 的训练过程建模为 POMDP： </p>
+<div class="survey-equation" id="equation-2" tabindex="0" aria-label="公式 2"><div class="math-block" data-tex="\langle\mathcal{S}_{\text{agent}},\mathcal{A}_{\text{agent}},\mathcal{P}_{\text{agent}},\mathcal{R}_{\text{agent}},\gamma,\mathcal{O}\rangle."></div><span class="survey-equation-number">(2)</span></div>
+<p> 智能体根据状态 <span class="math-inline" data-tex="s_t\in\mathcal{S}_{\text{agent}}"></span> 接收观测 <span class="math-inline" data-tex="o_t=O(s_t)"></span>。两者的主要区别见表 <a href="#tab:llm_vs_agentic" data-reference-type="ref" data-reference="tab:llm_vs_agentic">1</a>。概括而言，PBRFT 在完全可观测的固定数据集上优化输出语句序列，而 Agentic RL 在部分可观测的变化环境中优化语义层面的行为。</p>
+<div id="tab:llm_vs_agentic">
+<div class="survey-table" role="region" aria-label="表格，可水平滑动" tabindex="0"><table>
+<caption>表 1 · 传统 PBRFT 与 Agentic RL 的形式化比较。</caption>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>概念</strong></th>
+<th style="text-align: left;"><strong>传统 PBRFT</strong></th>
+<th style="text-align: left;"><strong>Agentic RL</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><span class="math-inline" data-tex="\mathcal S"></span>：状态空间</td>
+<td style="text-align: left;"><span class="math-inline" data-tex="\{s_0\}"></span>（单个提示）；回合立即结束。</td>
+<td style="text-align: left;"><span class="math-inline" data-tex="s_t\in\mathcal S_{\text{agent}}"></span>；<span class="math-inline" data-tex="o_t=O(s_t)"></span>；时域 <span class="math-inline" data-tex="T&gt;1"></span>。</td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math-inline" data-tex="\mathcal A"></span>：动作空间</td>
+<td style="text-align: left;">纯文本序列。</td>
+<td style="text-align: left;"><span class="math-inline" data-tex="\mathcal A_{\text{text}}\cup\mathcal A_{\text{action}}"></span>。</td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math-inline" data-tex="\mathcal P"></span>：转移</td>
+<td style="text-align: left;">确定性转移至终止状态。</td>
+<td style="text-align: left;">动态转移函数 <span class="math-inline" data-tex="P(s_{t+1}\mid s_t,a_t)"></span>。</td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math-inline" data-tex="\mathcal R"></span>：奖励</td>
+<td style="text-align: left;">单个标量 <span class="math-inline" data-tex="r(a)"></span>。</td>
+<td style="text-align: left;">逐步奖励 <span class="math-inline" data-tex="R(s_t,a_t)"></span>；结合稀疏任务奖励和稠密子奖励。</td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math-inline" data-tex="J(\theta)"></span>：目标</td>
+<td style="text-align: left;"><span class="math-inline" data-tex="\mathbb E_{a\sim\pi_\theta}[r(a)]"></span>。</td>
+<td style="text-align: left;"><span class="math-inline" data-tex="\mathbb E_{\tau\sim\pi_\theta}[\sum_t\gamma^tR(s_t,a_t)]"></span>。</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<h2 id="subsec:env">2.2 环境状态</h2>
+<h4 id="pbrft-1">PBRFT。</h4>
+<p>训练时，每个回合从单个提示状态 <span class="math-inline" data-tex="s_0"></span> 开始，模型生成一次回复后，回合立即终止。形式上，底层 MDP 退化为时域 <span class="math-inline" data-tex="T=1"></span> 的<em>单步</em>决策问题。状态空间缩减为单个静态提示输入： </p>
+<div class="survey-equation" id="equation-3" tabindex="0" aria-label="公式 3"><div class="math-block" data-tex="\mathcal S_{\text{trad}}=\{\text{prompt}\}."></div><span class="survey-equation-number">(3)</span></div>
+<h4 id="agentic-rl-1">Agentic RL。</h4>
+<p>LLM 智能体在 POMDP 中跨多个时间步行动。令 <span class="math-inline" data-tex="s_t\in\mathcal S_{\text{agent}}"></span> 表示完整世界状态，智能体依据当前状态获得观测 <span class="math-inline" data-tex="O_t"></span>，即 <span class="math-inline" data-tex="o_t=\mathcal O(s_t)"></span>。智能体基于当前观测 <span class="math-inline" data-tex="o_t"></span> 选择动作 <span class="math-inline" data-tex="a_t"></span>，状态随时间演化： </p>
+<div class="survey-equation" id="equation-4" tabindex="0" aria-label="公式 4"><div class="math-block" data-tex="s_{t+1}\sim P(s_{t+1}\mid s_t,a_t)."></div><span class="survey-equation-number">(4)</span></div>
+<p> 这一过程中，智能体不断积累检索到的工具结果、用户消息或环境反馈等中间信号。因此，交互在本质上是动态且跨越多个时间步的。</p>
+<h2 id="subsec:action">2.3 动作空间</h2>
+<p>在 Agentic RL 设定中，LLM 的动作空间由两个不同的子空间组成： </p>
+<div class="survey-equation" id="equation-5" tabindex="0" aria-label="公式 5"><div class="math-block" data-tex="\mathcal A_{\text{agent}}=\mathcal A_{\text{text}}\cup\mathcal A_{\text{action}}."></div><span class="survey-equation-number">(5)</span></div>
+<p> 其中，<span class="math-inline" data-tex="\mathcal A_{\text{text}}"></span> 表示通过自回归解码生成的自由形式自然语言词元空间；<span class="math-inline" data-tex="\mathcal A_{\text{action}}"></span> 表示抽象的非语言动作空间，通常在输出流中用特殊词元 <code>&lt;action_start&gt;</code> 和 <code>&lt;action_end&gt;</code> 分隔。这些动作可根据任务要求调用外部工具（例如 <code>call("search", "Einstein")</code>），或与环境交互（例如 <code>move("north")</code>）。</p>
+<p>值得注意的是，<span class="math-inline" data-tex="\mathcal A_{\text{action}}"></span> 采用递归构造，因此其中的元素 <span class="math-inline" data-tex="a"></span> 本身也可以表示原子动作序列 <span class="math-inline" data-tex="(a_1,\dots,a_k)"></span>，从而在同一空间中统一原子动作与复合动作。</p>
+<p>形式上，这两个子空间在语义和功能角色上有所不同：<span class="math-inline" data-tex="\mathcal A_{\text{text}}"></span> 定义供人或机器理解、但不直接改变外部状态的输出空间；<span class="math-inline" data-tex="\mathcal A_{\text{action}}"></span> 定义与环境交互的行为空间，这些行为或者（i）通过工具调用获取新信息，或者（ii）修改物理或模拟环境的状态。这一区分使统一策略可以在同一 RL 框架下联合建模语言生成和环境交互。</p>
+<h2 id="subsec:trans">2.4 转移动力学</h2>
+<h4 id="pbrft-2">PBRFT。</h4>
+<p>传统 PBRFT 的转移动力学是确定性的：执行动作后，下一个状态即被确定，表示为： </p>
+<div class="survey-equation" id="equation-6" tabindex="0" aria-label="公式 6"><div class="math-block" data-tex="\mathcal P(s_1\mid s_0,a)=1,\quad\text{不存在不确定性。}"></div><span class="survey-equation-number">(6)</span></div>
+<h4 id="agentic-rl-2">Agentic RL。</h4>
+<p>在 Agentic RL 中，环境在不确定性下按如下方式演化： </p>
+<div class="survey-equation" id="equation-7" tabindex="0" aria-label="公式 7"><div class="math-block" data-tex="s_{t+1}\sim\mathcal P(s_{t+1}\mid s_t,a_t),\quad a_t\in\mathcal A_{\text{text}}\cup\mathcal A_{\text{action}}."></div><span class="survey-equation-number">(7)</span></div>
+<p> 文本动作（<span class="math-inline" data-tex="\mathcal A_{\text{text}}"></span>）生成自然语言输出而不改变环境状态。由 <code>&lt;action_start&gt;</code> 和 <code>&lt;action_end&gt;</code> 分隔的结构化动作（<span class="math-inline" data-tex="\mathcal A_{\text{action}}"></span>）可以查询外部工具，也可以直接修改环境。与 PBRFT 的一次性映射相比，这种序贯表述使策略能够迭代地结合交流、信息获取和环境操控。</p>
+<h2 id="subsec:reward">2.5 奖励函数</h2>
+<h4 id="pbrft-3">PBRFT。</h4>
+<p>PBRFT 通常使用能够验证回复正确性的奖励函数，可由基于规则的验证器 <span class="citation" data-cites="deepseekai2025deepseekr1incentivizingreasoningcapability">(<a href="/papers/agentic-rl-survey/web/references#ref-deepseekai2025deepseekr1incentivizingreasoningcapability">DeepSeek-AI et al. 2025</a>)</span>或神经网络参数化的奖励模型 <span class="citation" data-cites="zhong2025comprehensivesurveyrewardmodels">(<a href="/papers/agentic-rl-survey/web/references#ref-zhong2025comprehensivesurveyrewardmodels">Zhong et al. 2025</a>)</span>实现。无论采用哪种实现，其核心均为： </p>
+<div class="survey-equation" id="equation-8" tabindex="0" aria-label="公式 8"><div class="math-block" data-tex="\mathcal R_{\text{trad}}(s_0,a)=r(a)."></div><span class="survey-equation-number">(8)</span></div>
+<p> 其中 <span class="math-inline" data-tex="r:\mathcal A\!\to\!\mathbb R"></span> 是人类或 AI 偏好模型给出的标量分数，不提供中间反馈。</p>
+<h4 id="agentic-rl-3">Agentic RL。</h4>
+<p>LLM 智能体的奖励函数由下游任务决定： </p>
+<div class="survey-equation" id="equation-9" tabindex="0" aria-label="公式 9"><div class="math-block" data-tex="\mathcal R_{\text{agent}}(s_t,a_t)=\begin{cases}
+r_{\text{task}}&amp;\text{任务完成时},\\[2pt]
+r_{\text{sub}}(s_t,a_t)&amp;\text{步骤级取得进展时},\\[2pt]
+0&amp;\text{其他情况}.
+\end{cases}"></div><span class="survey-equation-number">(9)</span></div>
+<p> 这一形式允许使用稠密、稀疏或学习得到的奖励，例如通过单元测试或符号验证器验证成功。</p>
+<h2 id="subsec:obj">2.6 学习目标</h2>
+<h4 id="pbrft-4">PBRFT。</h4>
+<p>PBRFT 的优化目标是最大化策略 <span class="math-inline" data-tex="\pi_\theta"></span> 下的回复奖励： </p>
+<div class="survey-equation" id="equation-10" tabindex="0" aria-label="公式 10"><div class="math-block" data-tex="J_{\text{trad}}(\theta)=\mathbb E_{a\sim\pi_\theta}\bigl[r(a)\bigr]."></div><span class="survey-equation-number">(10)</span></div>
+<p> 这里不需要折扣因子；优化类似于最大化期望奖励的序列建模。</p>
+<h4 id="agentic-rl-4">Agentic RL。</h4>
+<p>Agentic RL 的优化目标是最大化折扣奖励： </p>
+<div class="survey-equation" id="equation-11" tabindex="0" aria-label="公式 11"><div class="math-block" data-tex="J_{\text{agent}}(\theta)=\mathbb E_{\tau\sim\pi_\theta}\left[\sum_{t=0}^{T-1}\gamma^tR_{\text{agent}}(s_t,a_t)\right],\qquad0&lt;\gamma&lt;1."></div><span class="survey-equation-number">(11)</span></div>
+<p> 该目标通过策略梯度或基于价值的方法进行优化，涉及探索和长期信用分配。</p>
+<p>PBRFT 聚焦单轮文本质量对齐，不显式涉及规划、工具使用或环境反馈；Agentic RL 则包含多轮规划、自适应工具调用、有状态记忆和长时程信用分配，使 LLM 能够作为自主决策智能体发挥作用。</p>
+<h2 id="subsec:algo">2.7 强化学习算法</h2>
+<p>在当前研究中，RL 算法是 PBRFT 与 Agentic RL 框架的重要组成部分。不同算法在样本效率和性能上各有特点，为使模型输出符合复杂且往往带有主观性的人类目标这一核心挑战提供了不同方法。REINFORCE、PPO <span class="citation" data-cites="schulman2017proximalpolicyoptimizationalgorithms">(<a href="/papers/agentic-rl-survey/web/references#ref-schulman2017proximalpolicyoptimizationalgorithms">Schulman et al. 2017</a>)</span>、GRPO <span class="citation" data-cites="deepseekai2025deepseekr1incentivizingreasoningcapability">(<a href="/papers/agentic-rl-survey/web/references#ref-deepseekai2025deepseekr1incentivizingreasoningcapability">DeepSeek-AI et al. 2025</a>)</span>和 DPO <span class="citation" data-cites="rafailov2024directpreferenceoptimizationlanguage">(<a href="/papers/agentic-rl-survey/web/references#ref-rafailov2024directpreferenceoptimizationlanguage">Rafailov et al. 2023</a>)</span>等典型方法构成了从一般策略梯度到专门偏好学习的算法谱系。下面介绍这四种经典算法，并在表 <a href="#tab:RL-algo" data-reference-type="ref" data-reference="tab:RL-algo">2</a>中比较各算法族的常见变体。</p>
+<h4 id="reinforce策略梯度的基础">REINFORCE：策略梯度的基础。</h4>
+<p>作为最早的策略梯度算法之一，REINFORCE <span class="citation" data-cites="Williams1992">(<a href="/papers/agentic-rl-survey/web/references#ref-Williams1992">Williams 1992</a>)</span>为随机策略训练提供了理论基础。它提高带来高累积奖励的动作概率，并降低带来低奖励的动作概率。其目标函数的梯度为： </p>
+<div class="survey-equation" id="eq:REINFORCE" tabindex="0" aria-label="公式 12"><div class="math-block" data-tex="\nabla_{\theta} J(\theta) = \mathbb{E}_{s_0} \left[\frac{1}{N} \sum_{i=1}^N  \left(\mathcal{R}(s_0, a^{(i)}) - b(s_0)\right) \nabla_\theta \log \pi_\theta(a^{(i)} | s_0)  \right]."></div><span class="survey-equation-number">(12)</span></div>
+<p> 其中，<span class="math-inline" data-tex="a^{(i)}\sim\pi_\theta(a|s_0)"></span> 为第 <span class="math-inline" data-tex="i"></span> 个采样回复，<span class="math-inline" data-tex="\mathcal R(s_0,a)"></span> 为任务完成时获得的最终奖励，<span class="math-inline" data-tex="b(s)"></span> 是降低策略梯度估计方差的基线函数。一般而言，<span class="math-inline" data-tex="b(s)"></span> 可以是任意函数，也可以包含随机变量；实践中常将其实现为价值函数 <span class="math-inline" data-tex="V(s)"></span>。REINFORCE 的公式简洁、易于实现，但存在梯度估计方差高、样本效率低、对学习率敏感以及缺少评论家（价值估计器）等缺点。</p>
+<h4 id="近端策略优化ppo">近端策略优化（PPO）。</h4>
+<p>PPO <span class="citation" data-cites="schulman2017proximalpolicyoptimizationalgorithms">(<a href="/papers/agentic-rl-survey/web/references#ref-schulman2017proximalpolicyoptimizationalgorithms">Schulman et al. 2017</a>)</span>凭借稳定性与可靠性成为 LLM 对齐中的主要 RL 算法。它通过限制更新步幅来改进普通策略梯度，避免过大的策略变化破坏训练。其主要裁剪目标为： </p>
+<div class="survey-equation" id="eq:PPO" tabindex="0" aria-label="公式 13"><div class="math-block" data-tex="\begin{aligned}
+L_{PPO}(\theta) &amp;=  \frac{1}{N} \sum_{i=1}^N   \min\Bigl( \frac{\pi_\theta(a_t^{(i)} | s_t)}{\pi_{\theta_{old}}(a_t^{(i)} | s_t)} A(s_t, a_t^{(i)}),\\ &amp;\qquad \mathrm{clip} \left( \frac{\pi_\theta(a_t^{(i)} | s_t)}{\pi_{\theta_{old}}(a_t^{(i)} | s_t)}, 1 - \epsilon, 1+ \epsilon \right) A(s_t, a_t^{(i)}) \Bigr).
+\end{aligned}"></div><span class="survey-equation-number">(13)</span></div>
+<p> 其中，<span class="math-inline" data-tex="a_t^{(i)}\sim\pi_{\theta_{old}}(a|s_t)"></span> 是从更新存在延迟的旧策略 <span class="math-inline" data-tex="\pi_{\theta_{old}}"></span> 采样的第 <span class="math-inline" data-tex="i"></span> 个回复。优势估计 <span class="math-inline" data-tex="A_t"></span> 为： </p>
+<div class="survey-equation" id="eq:advantage" tabindex="0" aria-label="公式 14"><div class="math-block" data-tex="A(s_t,a_t) = \mathcal{R}(s_t, a_t) - V(s_t)."></div><span class="survey-equation-number">(14)</span></div>
+<p> 其中，<span class="math-inline" data-tex="V_\theta(s)"></span> 是学习得到的价值函数，即 <span class="math-inline" data-tex="\mathbb E_{a\sim\pi_\theta(a|s)}[\mathcal R(s,a)]"></span>；它通常（但并非必须）由与策略网络同等规模的评论家网络给出。裁剪项防止概率比偏离 1 过远，从而确保更新稳定。优势函数的估计对 PPO 性能具有主导作用。近期变体重点降低优势估计的偏差 <span class="citation" data-cites="kazemnejad2024vineppo">(<a href="/papers/agentic-rl-survey/web/references#ref-kazemnejad2024vineppo">Kazemnejad et al. 2024</a>)</span>或方差 <span class="citation" data-cites="yue2025vapo">(<a href="/papers/agentic-rl-survey/web/references#ref-yue2025vapo"><span class="nocase">Yu Yue et al.</span> 2025</a>)</span>；另一些变体则改进策略更新的稳定机制 <span class="citation" data-cites="liu2025itrickstrapsdeep">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025itrickstrapsdeep">Zihe Liu et al. 2025</a>)</span>，或缓解奖励稀疏问题 <span class="citation" data-cites="dai2025processsupervisionguidedpolicyoptimization">(<a href="/papers/agentic-rl-survey/web/references#ref-dai2025processsupervisionguidedpolicyoptimization">Dai et al. 2025</a>)</span>。尽管已有这些改进，PPO 仍依赖独立的评论家网络估计优势，显著增加了训练中的参数量。</p>
+<h4 id="直接偏好优化dpo">直接偏好优化（DPO）。</h4>
+<p>DPO 完全绕过了独立显式奖励模型的需求，带来了重要转变。它将 KL 约束下的奖励最大化问题转化为人类偏好数据上的似然目标。给定偏好数据集 <span class="math-inline" data-tex="D=\{(y_w,y_l)\}"></span>，其中 <span class="math-inline" data-tex="y_w"></span> 为偏好的回复，<span class="math-inline" data-tex="y_l"></span> 为不偏好的回复，DPO 损失为： </p>
+<div class="survey-equation" id="eq:DPO" tabindex="0" aria-label="公式 15"><div class="math-block" data-tex="L_{DPO}(\pi_\theta; \pi_{ref}) = - \mathbb{E}_{(x,y_w, y_l)\sim D}\left[ \log \sigma\left( \beta \log \frac{\pi_\theta(y_w|x)}{\pi_{ref}(y_w |x)} - \beta \log  \frac{\pi_\theta(y_l|x)}{\pi_{ref}(y_l |x)} \right) \right]."></div><span class="survey-equation-number">(15)</span></div>
+<p> 其中，<span class="math-inline" data-tex="\pi_{ref}"></span> 为参考策略（通常是初始 SFT 模型），<span class="math-inline" data-tex="\beta"></span> 为超参数。DPO 虽然去掉了评论家，但性能仍内在地依赖静态偏好数据集的质量和覆盖范围。为克服这些局限，一些变体引入外部或在线数据 <span class="citation" data-cites="ethayarajh2024kto hong2024orpo">(<a href="/papers/agentic-rl-survey/web/references#ref-ethayarajh2024kto">Ethayarajh et al. 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-hong2024orpo">J. Hong et al. 2024</a>)</span>；另一些研究则引入更一般的优化目标 <span class="citation" data-cites="pmlr-v238-gheshlaghi-azar24a">(<a href="/papers/agentic-rl-survey/web/references#ref-pmlr-v238-gheshlaghi-azar24a">Gheshlaghi Azar et al. 2024</a>)</span>或更精细的隐式奖励机制 <span class="citation" data-cites="meng2024simpo lai2024step hong2025pruning">(<a href="/papers/agentic-rl-survey/web/references#ref-meng2024simpo">Meng et al. 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-lai2024step">Lai et al. 2024</a>; <a href="/papers/agentic-rl-survey/web/references#ref-hong2025pruning">B. Hong et al. 2025</a>)</span>。</p>
+<h4 id="组相对策略优化grpo">组相对策略优化（GRPO）。</h4>
+<p>DeepSeek <span class="citation" data-cites="guo2025deepseek">(<a href="/papers/agentic-rl-survey/web/references#ref-guo2025deepseek"><span class="nocase">D. Guo et al.</span> 2025</a>)</span>的显著成功推动了对 GRPO 的广泛研究。GRPO 针对 PPO 大型评论家的低效率问题，提出一种轻量的评估范式：以一组回复为单位，使用组内相对奖励计算优势，从而无需估计绝对价值的评论家。其核心目标可表述为： </p>
+<div class="survey-equation" id="eq:GRPO" tabindex="0" aria-label="公式 16"><div class="math-block" data-tex="\begin{aligned}
+L_{GRPO} &amp;=  \frac{1}{G} \sum_{g=1}^G \min\Bigl( \frac{\pi_\theta(a_t^{(g)} | s_t^{(g)})}{\pi_{\theta_{old}}(a_t^{(g)} | s_t^{(g)})} \hat{A}(s_t^{(g)}, a_t^{(g)}),\\ &amp;\qquad \mathrm{clip} \left( \frac{\pi_\theta(a_t^{(g)} | s_t^{(g)})}{\pi_{\theta_{old}}(a_t^{(g)} | s_t^{(g)})}, 1 - \epsilon, 1+ \epsilon \right) \hat{A}(s_t^{(g)}, a_t^{(g)}) \Bigr).
+\end{aligned}"></div><span class="survey-equation-number">(16)</span></div>
+<p> 其中，从旧策略 <span class="math-inline" data-tex="\pi_{\theta_{old}}"></span> 采样一组输出 <span class="math-inline" data-tex="\{(s_0^{(g)},a_0^{(g)},\ldots,s_{T-1}^{(g)},a_{T-1}^{(g)})\}_{g=1}^G"></span>。优势函数估计为： </p>
+<div class="survey-equation" id="eq:GRPO-Adv" tabindex="0" aria-label="公式 17"><div class="math-block" data-tex="\hat{A}(s_t, a_t) = \frac{\mathcal{R}(s_t, a_t) - \mathrm{mean}(\mathcal{R}(s_t^{(1)}, a_t^{(1)}), \ldots, \mathcal{R}(s_t^{(G)}, a_t^{(G)}))}{\mathrm{std}(\mathcal{R}(s_t^{(1)}, a_t^{(1)}), \ldots, \mathcal{R}(s_t^{(G)}, a_t^{(G)}))}."></div><span class="survey-equation-number">(17)</span></div>
+<p> 这种组相对方法具有较高的样本效率，并降低计算开销。然而，基于组的优势估计容易出现高方差和低准确度。因此，后续提出了一系列源于 GRPO 框架的新算法（见表 <a href="#tab:RL-algo" data-reference-type="ref" data-reference="tab:RL-algo">2</a>），旨在显著改进优势估计。</p>
+<div id="tab:RL-algo">
+<div class="survey-table" role="region" aria-label="表格，可水平滑动" tabindex="0"><table>
+<caption>表 2 · PPO、DPO 和 GRPO 算法族常见变体的比较。裁剪限制策略概率比偏离 1 的程度，以确保更新稳定；KL 惩罚对学习策略与参考策略之间的 KL 散度施加惩罚，以确保对齐。</caption>
+<thead>
+<tr>
+<th style="text-align: left;"><span><strong>方法</strong></span></th>
+<th style="text-align: left;"><span><strong>目标类型</strong></span></th>
+<th style="text-align: left;"><span><strong>关键机制</strong></span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><span><strong>方法</strong></span></td>
+<td style="text-align: left;"><span><strong>目标类型</strong></span></td>
+<td style="text-align: left;"><span><strong>关键机制</strong></span></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">PPO <span class="citation" data-cites="schulman2017proximalpolicyoptimizationalgorithms">(<a href="/papers/agentic-rl-survey/web/references#ref-schulman2017proximalpolicyoptimizationalgorithms">Schulman et al. 2017</a>)</span></td>
+<td style="text-align: left;">策略梯度</td>
+<td style="text-align: left;">策略概率比裁剪</td>
+</tr>
+<tr>
+<td style="text-align: left;">VAPO <span class="citation" data-cites="yue2025vapo">(<a href="/papers/agentic-rl-survey/web/references#ref-yue2025vapo"><span class="nocase">Yu Yue et al.</span> 2025</a>)</span></td>
+<td style="text-align: left;">策略梯度</td>
+<td style="text-align: left;">自适应 KL 惩罚与方差控制</td>
+</tr>
+<tr>
+<td style="text-align: left;">LitePPO <span class="citation" data-cites="liu2025itrickstrapsdeep">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025itrickstrapsdeep">Zihe Liu et al. 2025</a>)</span></td>
+<td style="text-align: left;">策略梯度</td>
+<td style="text-align: left;">稳定的优势更新</td>
+</tr>
+<tr>
+<td style="text-align: left;">PF-PPO <span class="citation" data-cites="zhang2025policyfiltrationrlhfmitigate">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025policyfiltrationrlhfmitigate">Chuheng Zhang et al. 2025</a>)</span></td>
+<td style="text-align: left;">策略梯度</td>
+<td style="text-align: left;">策略过滤</td>
+</tr>
+<tr>
+<td style="text-align: left;">VinePPO <span class="citation" data-cites="kazemnejad2024vineppo">(<a href="/papers/agentic-rl-survey/web/references#ref-kazemnejad2024vineppo">Kazemnejad et al. 2024</a>)</span></td>
+<td style="text-align: left;">策略梯度</td>
+<td style="text-align: left;">无偏价值估计</td>
+</tr>
+<tr>
+<td style="text-align: left;">PSGPO <span class="citation" data-cites="dai2025processsupervisionguidedpolicyoptimization">(<a href="/papers/agentic-rl-survey/web/references#ref-dai2025processsupervisionguidedpolicyoptimization">Dai et al. 2025</a>)</span></td>
+<td style="text-align: left;">策略梯度</td>
+<td style="text-align: left;">过程监督</td>
+</tr>
+<tr>
+<td colspan="3" style="text-align: center;"><em>DPO 算法族</em></td>
+</tr>
+<tr>
+<td style="text-align: left;">DPO <span class="citation" data-cites="rafailov2024directpreferenceoptimizationlanguage">(<a href="/papers/agentic-rl-survey/web/references#ref-rafailov2024directpreferenceoptimizationlanguage">Rafailov et al. 2023</a>)</span></td>
+<td style="text-align: left;">偏好优化</td>
+<td style="text-align: left;">与策略相关的隐式奖励</td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math-inline" data-tex="\beta"></span>-DPO <span class="citation" data-cites="wu2024beta">(<a href="/papers/agentic-rl-survey/web/references#ref-wu2024beta">Wu et al. 2024</a>)</span></td>
+<td style="text-align: left;">偏好优化</td>
+<td style="text-align: left;">动态 KL 系数</td>
+</tr>
+<tr>
+<td style="text-align: left;">SimPO <span class="citation" data-cites="meng2024simpo">(<a href="/papers/agentic-rl-survey/web/references#ref-meng2024simpo">Meng et al. 2024</a>)</span></td>
+<td style="text-align: left;">偏好优化</td>
+<td style="text-align: left;">以序列平均对数概率作为隐式奖励</td>
+</tr>
+<tr>
+<td style="text-align: left;">IPO <span class="citation" data-cites="pmlr-v238-gheshlaghi-azar24a">(<a href="/papers/agentic-rl-survey/web/references#ref-pmlr-v238-gheshlaghi-azar24a">Gheshlaghi Azar et al. 2024</a>)</span></td>
+<td style="text-align: left;"><span>仅用成对偏好表示的更一般目标的特例</span></td>
+<td style="text-align: left;"><span>通过控制对数似然比的差距，始终将解正则化到偏好策略附近，避免对偏好数据集过拟合。</span></td>
+</tr>
+<tr>
+<td style="text-align: left;">KTO <span class="citation" data-cites="ethayarajh2024kto">(<a href="/papers/agentic-rl-survey/web/references#ref-ethayarajh2024kto">Ethayarajh et al. 2024</a>)</span></td>
+<td style="text-align: left;">知识迁移优化</td>
+<td style="text-align: left;">教师稳定化</td>
+</tr>
+<tr>
+<td style="text-align: left;">ORPO <span class="citation" data-cites="hong2024orpo">(<a href="/papers/agentic-rl-survey/web/references#ref-hong2024orpo">J. Hong et al. 2024</a>)</span></td>
+<td style="text-align: left;">在线正则化偏好优化</td>
+<td style="text-align: left;">在线稳定化</td>
+</tr>
+<tr>
+<td style="text-align: left;">Step-DPO <span class="citation" data-cites="lai2024step">(<a href="/papers/agentic-rl-survey/web/references#ref-lai2024step">Lai et al. 2024</a>)</span></td>
+<td style="text-align: left;">偏好优化</td>
+<td style="text-align: left;">逐步监督</td>
+</tr>
+<tr>
+<td style="text-align: left;">LCPO <span class="citation" data-cites="hong2025pruning">(<a href="/papers/agentic-rl-survey/web/references#ref-hong2025pruning">B. Hong et al. 2025</a>)</span></td>
+<td style="text-align: left;">偏好优化</td>
+<td style="text-align: left;">有限数据和训练条件下的长度偏好</td>
+</tr>
+<tr>
+<td colspan="3" style="text-align: center;"><em>GRPO 算法族</em></td>
+</tr>
+<tr>
+<td style="text-align: left;">GRPO <span class="citation" data-cites="deepseekai2025deepseekr1incentivizingreasoningcapability">(<a href="/papers/agentic-rl-survey/web/references#ref-deepseekai2025deepseekr1incentivizingreasoningcapability">DeepSeek-AI et al. 2025</a>)</span></td>
+<td style="text-align: left;">基于组奖励的策略梯度</td>
+<td style="text-align: left;">用基于组的相对奖励消除价值估计</td>
+</tr>
+<tr>
+<td style="text-align: left;">DAPO <span class="citation" data-cites="yu2025dapo">(<a href="/papers/agentic-rl-survey/web/references#ref-yu2025dapo"><span class="nocase">Q. Yu et al.</span> 2025</a>)</span></td>
+<td style="text-align: left;">GRPO 的替代目标</td>
+<td style="text-align: left;">解耦裁剪与动态采样</td>
+</tr>
+<tr>
+<td style="text-align: left;">GSPO <span class="citation" data-cites="zheng2025group">(<a href="/papers/agentic-rl-survey/web/references#ref-zheng2025group"><span class="nocase">C. Zheng et al.</span> 2025</a>)</span></td>
+<td style="text-align: left;">GRPO 的替代目标</td>
+<td style="text-align: left;">根据序列似然定义重要性比，在序列级裁剪、赋予奖励并优化</td>
+</tr>
+<tr>
+<td style="text-align: left;">GMPO <span class="citation" data-cites="zhao2025geometric">(<a href="/papers/agentic-rl-survey/web/references#ref-zhao2025geometric"><span class="nocase">Y. Zhao et al.</span> 2025</a>)</span></td>
+<td style="text-align: left;">GRPO 的替代目标</td>
+<td style="text-align: left;">词元级奖励的几何平均</td>
+</tr>
+<tr>
+<td style="text-align: left;">ProRL <span class="citation" data-cites="liu2025prorlprolongedreinforcementlearning">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025prorlprolongedreinforcementlearning">M. Liu et al. 2025</a>)</span></td>
+<td style="text-align: left;">与 GRPO 相同</td>
+<td style="text-align: left;">重置参考策略</td>
+</tr>
+<tr>
+<td style="text-align: left;">Posterior-GRPO <span class="citation" data-cites="fan2025posteriorgrporewardingreasoningprocesses">(<a href="/papers/agentic-rl-survey/web/references#ref-fan2025posteriorgrporewardingreasoningprocesses">L. Fan et al. 2025</a>)</span></td>
+<td style="text-align: left;">与 GRPO 相同</td>
+<td style="text-align: left;">仅奖励成功过程</td>
+</tr>
+<tr>
+<td style="text-align: left;">Dr.GRPO <span class="citation" data-cites="liu2025understanding">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025understanding">Zichen Liu et al. 2025</a>)</span></td>
+<td style="text-align: left;">无偏 GRPO 目标</td>
+<td style="text-align: left;">消除 GRPO 优化中的偏差</td>
+</tr>
+<tr>
+<td style="text-align: left;">Step-GRPO <span class="citation" data-cites="zhang2025r1">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025r1">Jingyi Zhang et al. 2025</a>)</span></td>
+<td style="text-align: left;">与 GRPO 相同</td>
+<td style="text-align: left;">基于规则的推理奖励</td>
+</tr>
+<tr>
+<td style="text-align: left;">SRPO <span class="citation" data-cites="zhang2025srpo">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025srpo"><span class="nocase">Xiaojiang Zhang et al.</span> 2025</a>)</span></td>
+<td style="text-align: left;">与 GRPO 相同</td>
+<td style="text-align: left;">两阶段历史重采样</td>
+</tr>
+<tr>
+<td style="text-align: left;">GRESO <span class="citation" data-cites="zheng2025actpaysefficientreinforcement">(<a href="/papers/agentic-rl-survey/web/references#ref-zheng2025actpaysefficientreinforcement">H. Zheng et al. 2025</a>)</span></td>
+<td style="text-align: left;">与 GRPO 相同</td>
+<td style="text-align: left;">轨迹采样前过滤</td>
+</tr>
+<tr>
+<td style="text-align: left;">StarPO <span class="citation" data-cites="wang2025ragenunderstandingselfevolutionllm">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025ragenunderstandingselfevolutionllm">Zihan Wang et al. 2025</a>)</span></td>
+<td style="text-align: left;">与 GRPO 相同</td>
+<td style="text-align: left;">面向多轮交互的推理引导动作</td>
+</tr>
+<tr>
+<td style="text-align: left;">GHPO <span class="citation" data-cites="liu2025ghpo">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025ghpo">Ziru Liu et al. 2025</a>)</span></td>
+<td style="text-align: left;">策略梯度</td>
+<td style="text-align: left;">自适应提示改进</td>
+</tr>
+<tr>
+<td style="text-align: left;">Skywork R1V2 <span class="citation" data-cites="wang2025skywork">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025skywork"><span class="nocase">P. Wang et al.</span> 2025</a>)</span></td>
+<td style="text-align: left;">带混合奖励信号的 GRPO</td>
+<td style="text-align: left;">选择性样本缓冲区</td>
+</tr>
+<tr>
+<td style="text-align: left;">ASPO <span class="citation" data-cites="lin2025understandingtoolintegratedreasoning">(<a href="/papers/agentic-rl-survey/web/references#ref-lin2025understandingtoolintegratedreasoning">Lin and Xu 2025</a>)</span></td>
+<td style="text-align: left;">对优势函数塑形的 GRPO</td>
+<td style="text-align: left;">将裁剪后的偏置直接施加于优势函数</td>
+</tr>
+<tr>
+<td style="text-align: left;">TreePo <span class="citation" data-cites="li2025treepo">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025treepo"><span class="nocase">Yizhi Li et al.</span> 2025</a>)</span></td>
+<td style="text-align: left;">与 GRPO 相同</td>
+<td style="text-align: left;">通过自引导策略采样降低计算负担</td>
+</tr>
+<tr>
+<td style="text-align: left;">EDGE-GRPO <span class="citation" data-cites="zhang2025edge">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025edge">Zhang et al. 2025c</a>)</span></td>
+<td style="text-align: left;">与 GRPO 相同</td>
+<td style="text-align: left;">熵驱动优势与引导式纠错，缓解优势坍塌</td>
+</tr>
+<tr>
+<td style="text-align: left;">DARS <span class="citation" data-cites="yang2025depth">(<a href="/papers/agentic-rl-survey/web/references#ref-yang2025depth">Z. Yang et al. 2025</a>)</span></td>
+<td style="text-align: left;">与 GRPO 相同</td>
+<td style="text-align: left;">通过多阶段轨迹采样，将计算量从中等难度问题重新分配至最难问题</td>
+</tr>
+<tr>
+<td style="text-align: left;">CHORD <span class="citation" data-cites="zhang2025policy">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025policy">Wenhao Zhang et al. 2025</a>)</span></td>
+<td style="text-align: left;">GRPO 与监督微调损失的加权和</td>
+<td style="text-align: left;">将监督微调重构为同策略 RL 过程中的动态加权辅助目标</td>
+</tr>
+<tr>
+<td style="text-align: left;">PAPO <span class="citation" data-cites="wang2025perception">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025perception"><span class="nocase">Zhenhailong Wang et al.</span> 2025</a>)</span></td>
+<td style="text-align: left;">GRPO 的替代目标</td>
+<td style="text-align: left;">利用隐式感知损失，鼓励模型在学习推理的同时学习感知</td>
+</tr>
+<tr>
+<td style="text-align: left;">Pass@k Training <span class="citation" data-cites="chen2025passktrainingadaptivelybalancing">(<a href="/papers/agentic-rl-survey/web/references#ref-chen2025passktrainingadaptivelybalancing">Zhipeng Chen et al. 2025</a>)</span></td>
+<td style="text-align: left;">与 GRPO 相同</td>
+<td style="text-align: left;">以 Pass@k 指标作为奖励持续训练模型</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1"><p>虽然 DPO 是 RLHF 中的另一种优化目标形式，但它从训练过程的角度优化了复杂度，因此有必要区分纯粹的 RLHF 与 DPO。<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
+  </section>
+
+  <nav class="survey-pager" aria-label="章节导航"><a href="/papers/agentic-rl-survey/web/introduction">上一章</a><a href="/papers/agentic-rl-survey/web/">摘要与目录</a><a href="/papers/agentic-rl-survey/web/capabilities">下一章</a></nav>
+</article>

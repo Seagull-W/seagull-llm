@@ -1,21 +1,28 @@
 <script setup>
-import { defineAsyncComponent } from 'vue'
+import { onMounted, ref } from 'vue'
 import { withBase } from 'vitepress'
+import PdfViewer from '../../.vitepress/components/PdfViewer.vue'
 import outline from './outline.json'
-const PdfViewer = defineAsyncComponent(() => import('../../.vitepress/components/PdfViewer.vue'))
+
 const pdfUrl = withBase('/papers/agentic-rl-survey/arxiv-2509.02547v5-zh.pdf')
+const webUrl = withBase('/papers/agentic-rl-survey/web/')
+const pdfSource = ref('')
+const preferWeb = ref(false)
+
+onMounted(() => {
+  preferWeb.value = matchMedia('(max-width: 679px), (max-width: 960px) and (pointer: coarse)').matches
+  const { searchParams, hash } = new URL(location.href)
+  const explicitPdf = searchParams.get('view') === 'pdf' || hash === '#pdf-reading' ||
+    new URLSearchParams(hash.slice(1)).has('page')
+  if (preferWeb.value && !explicitPdf) {
+    location.replace(webUrl + hash)
+    return
+  }
+  pdfSource.value = pdfUrl
+})
 </script>
 
-<article class="native-document format-paper" data-format="paper" data-design="linux-notebook" aria-label="大语言模型智能体强化学习全景：综述（中文 PDF）">
-  <header class="document-intro note-hero">
-    <p class="note-kicker">论文精读<span>全文中文译本 · arXiv v5</span></p>
-    <h1 id="paper-title" tabindex="-1">大语言模型智能体强化学习全景：综述 <a class="header-anchor" href="#paper-title" aria-label="文章链接">&#8203;</a></h1>
-    <p class="note-deck">The Landscape of Agentic Reinforcement Learning for LLMs: A Survey · Guibin Zhang 等。译自用户提供的 arXiv:2509.02547v5 源码。</p>
-    <p>全文以 PDF 提供，含中文正文、图注和表格，保留原公式、图内标注及参考文献。可使用阅读器目录、页码和缩放功能，也可下载后阅读。</p>
-    <p><a :href="pdfUrl" download>下载中文 PDF</a> · <a :href="pdfUrl" target="_blank" rel="noopener">独立窗口阅读</a> · <a href="https://arxiv.org/abs/2509.02547v5" target="_blank" rel="noopener">原论文 v5</a></p>
-  </header>
-  <section class="document-section note-panel" aria-labelledby="pdf-reading">
-    <h2 id="pdf-reading" tabindex="-1">中文 PDF 阅读 <a class="header-anchor" href="#pdf-reading" aria-label="阅读器链接">&#8203;</a></h2>
-    <ClientOnly><PdfViewer :src="pdfUrl" title="智能体强化学习全景（中文译本）" :outline="outline" /></ClientOnly>
-  </section>
-</article>
+<PdfViewer :src="pdfSource" title="大语言模型智能体强化学习全景：综述（中文译本）" :outline="outline"
+  :back-href="preferWeb ? webUrl : withBase('/papers/')" :back-label="preferWeb ? '返回网页版' : '返回论文列表'"
+  :web-href="webUrl"
+  source-href="https://arxiv.org/abs/2509.02547v5" source-label="原论文 v5" />

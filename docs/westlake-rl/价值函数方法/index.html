@@ -1,13 +1,5 @@
 <script setup lang="ts">
 import '../lecture-academic.css'
-import { defineAsyncComponent, shallowRef } from 'vue'
-import pdfUrl from './价值函数方法.pdf?url'
-import outline from './目录.json'
-const PdfViewer = defineAsyncComponent(() => import('../../.vitepress/components/PdfViewer.vue'))
-const showOriginal = shallowRef(false)
-function toggleOriginal(event: Event) {
-  showOriginal.value = (event.target as HTMLDetailsElement).open
-}
 </script>
 
 <article class="native-document format-course academic-lecture" data-format="course" data-design="linux-notebook" aria-label="第 8 讲：价值函数方法">
@@ -16,7 +8,7 @@ function toggleOriginal(event: Event) {
   <h1 id="note-title" tabindex="-1">价值函数方法 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
   <p class="note-deck">用函数近似表示价值，推导状态价值与动作价值的 TD 更新，再看 DQN 如何训练。</p>
   <div class="note-chips"><span>函数近似</span><span>时序差分</span><span>DQN</span></div>
-  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记</p>
+  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记 · <a href="/westlake-rl/价值函数方法/价值函数方法.pdf">阅读原版 PDF</a></p>
 </header>
 <nav class="note-jump" aria-label="本篇阅读导航"><a href="#价值表示从表格到函数">8.1 价值表示：从表格到函数</a>
 <a href="#基于函数近似的状态价值td学习">8.2 基于函数近似的状态价值TD学习</a>
@@ -537,12 +529,8 @@ function toggleOriginal(event: Event) {
 
 </section>
 </div>
-<details class="lecture-original note-details" @toggle="toggleOriginal">
-  <summary>对照原版 PDF<span>保留原页码与讲义目录</span></summary>
-  <div class="lecture-original-content">
-    <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
-    <p><a :href="pdfUrl" target="_blank" rel="noopener">在新窗口打开原版 PDF</a></p>
-    <ClientOnly><PdfViewer v-if="showOriginal" :src="pdfUrl" title="价值函数方法" :outline="outline" /></ClientOnly>
-  </div>
-</details>
+<footer class="lecture-original lecture-original-content">
+  <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
+  <p><a href="/westlake-rl/价值函数方法/价值函数方法.pdf">阅读原版 PDF</a></p>
+</footer>
 </article>

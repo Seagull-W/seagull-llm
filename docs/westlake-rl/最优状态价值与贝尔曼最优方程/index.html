@@ -1,13 +1,5 @@
 <script setup lang="ts">
 import '../lecture-academic.css'
-import { defineAsyncComponent, shallowRef } from 'vue'
-import pdfUrl from './最优状态价值与贝尔曼最优方程.pdf?url'
-import outline from './目录.json'
-const PdfViewer = defineAsyncComponent(() => import('../../.vitepress/components/PdfViewer.vue'))
-const showOriginal = shallowRef(false)
-function toggleOriginal(event: Event) {
-  showOriginal.value = (event.target as HTMLDetailsElement).open
-}
 </script>
 
 <article class="native-document format-course academic-lecture" data-format="course" data-design="linux-notebook" aria-label="第 3 讲：最优状态价值与贝尔曼最优方程">
@@ -16,7 +8,7 @@ function toggleOriginal(event: Event) {
   <h1 id="note-title" tabindex="-1">最优状态价值与贝尔曼最优方程 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
   <p class="note-deck">从策略改进进入最优状态价值，通过压缩映射理解贝尔曼最优方程的唯一解与贪心最优策略。</p>
   <div class="note-chips"><span>最优策略</span><span>压缩映射</span><span>贝尔曼最优方程</span></div>
-  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记</p>
+  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记 · <a href="/westlake-rl/最优状态价值与贝尔曼最优方程/最优状态价值与贝尔曼最优方程.pdf">阅读原版 PDF</a></p>
 </header>
 <nav class="note-jump" aria-label="本篇阅读导航"><a href="#动机示例如何改进策略">3.1 动机示例：如何改进策略</a>
 <a href="#最优状态价值与最优策略">3.2 最优状态价值与最优策略</a>
@@ -366,12 +358,8 @@ v(s) &amp;= \max_{\pi(s) \in \Pi(s)} \sum_{a \in \mathcal{A}} \pi(a \mid s) \lef
 
 </section>
 </div>
-<details class="lecture-original note-details" @toggle="toggleOriginal">
-  <summary>对照原版 PDF<span>保留原页码与讲义目录</span></summary>
-  <div class="lecture-original-content">
-    <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
-    <p><a :href="pdfUrl" target="_blank" rel="noopener">在新窗口打开原版 PDF</a></p>
-    <ClientOnly><PdfViewer v-if="showOriginal" :src="pdfUrl" title="最优状态价值与贝尔曼最优方程" :outline="outline" /></ClientOnly>
-  </div>
-</details>
+<footer class="lecture-original lecture-original-content">
+  <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
+  <p><a href="/westlake-rl/最优状态价值与贝尔曼最优方程/最优状态价值与贝尔曼最优方程.pdf">阅读原版 PDF</a></p>
+</footer>
 </article>

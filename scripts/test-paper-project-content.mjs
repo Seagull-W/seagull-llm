@@ -26,7 +26,12 @@ test('every paper and project has matching navigation, card and metadata', () =>
     assert.equal(card.description, data.description, item.link)
     assert.equal(item.text, data.title, item.link)
     assert.ok(data.tags.includes('论文与项目随谈'), item.link)
-    assert.equal((content.match(/<h1\b/g) ?? []).length, 1, item.link)
+    const body = data.pdf ? readFileSync('docs/.vitepress/components/PdfViewer.vue', 'utf8') : content
+    if (data.pdf) {
+      assert.match(content, /<PdfViewer\b[^>]*\btitle="[^"]+"/, item.link)
+      assert.equal(data.layout, false, item.link)
+    }
+    assert.equal((body.match(/<h1\b/g) ?? []).length, 1, item.link)
     for (const flag of ['hidden', 'search', 'published', 'status']) assert.equal(data[flag], undefined, item.link)
   }
 })

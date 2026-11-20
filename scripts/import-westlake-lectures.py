@@ -303,14 +303,6 @@ def main():
         chips = ''.join(f'<span>{attr(t)}</span>' for t in tags)
         output = f'''<script setup lang="ts">
 import '../lecture-academic.css'
-import {{ defineAsyncComponent, shallowRef }} from 'vue'
-import pdfUrl from './{pdf_name}?url'
-import outline from './目录.json'
-const PdfViewer = defineAsyncComponent(() => import('../../.vitepress/components/PdfViewer.vue'))
-const showOriginal = shallowRef(false)
-function toggleOriginal(event: Event) {{
-  showOriginal.value = (event.target as HTMLDetailsElement).open
-}}
 </script>
 
 <article class="native-document format-course academic-lecture" data-format="course" data-design="linux-notebook" aria-label="{attr(chapter + '：' + title)}">
@@ -319,20 +311,16 @@ function toggleOriginal(event: Event) {{
   <h1 id="note-title" tabindex="-1">{title} <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
   <p class="note-deck">{description}</p>
   <div class="note-chips">{chips}</div>
-  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记</p>
+  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记 · <a href="/westlake-rl/{attr(title)}/{attr(pdf_name)}">阅读原版 PDF</a></p>
 </header>
 <nav class="note-jump" aria-label="本篇阅读导航">{jumps}</nav>
 <div id="reading-context" class="lecture-body">
 {body}
 </div>
-<details class="lecture-original note-details" @toggle="toggleOriginal">
-  <summary>对照原版 PDF<span>保留原页码与讲义目录</span></summary>
-  <div class="lecture-original-content">
-    <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
-    <p><a :href="pdfUrl" target="_blank" rel="noopener">在新窗口打开原版 PDF</a></p>
-    <ClientOnly><PdfViewer v-if="showOriginal" :src="pdfUrl" title="{attr(title)}" :outline="outline" /></ClientOnly>
-  </div>
-</details>
+<footer class="lecture-original lecture-original-content">
+  <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
+  <p><a href="/westlake-rl/{attr(title)}/{attr(pdf_name)}">阅读原版 PDF</a></p>
+</footer>
 </article>
 '''
         target.write_text(output, encoding='utf-8')

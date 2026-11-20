@@ -5,6 +5,7 @@ import { test } from 'node:test'
 import { createMarkdownRenderer } from 'vitepress'
 import { readContent } from './content-source.mjs'
 import nativeHtml, { inspectHtml } from '../docs/.vitepress/markdown/native-html.mjs'
+import { readPdfLocation } from '../docs/.vitepress/pdf-links.mjs'
 
 const files = readdirSync('docs', { recursive: true }).filter(file => file.endsWith('.md') &&
   !/^(?:research|public|adr|\.vitepress)[\\/]/.test(file)).map(file => resolve('docs', file))
@@ -58,6 +59,31 @@ test('ordinary Markdown retains its existing renderer', () => {
   assert.match(md.render('# Daily research\n\n## Update\n\nA paragraph.', env), /<h2/)
   assert.notEqual(env.frontmatter.contentFormat, 'html')
 })
+test('PDF reading links retain source, initial page and deployment base in HTML and Markdown', () => {
+  const sources = [
+    '---\ncontentFormat: html\n---\n<a href="https://arxiv.org/pdf/2504.07912v2#page=17">论文</a>',
+    '[论文](https://arxiv.org/pdf/2504.07912v2#page=17)'
+  ]
+  for (const source of sources) {
+    const html = md.render(source, { path: resolve('docs/research/sample.md') })
+    const href = html.match(/href="(\/subpath\/pdf\/#[^"]+)"/)?.[1]
+    assert.ok(href, html)
+    const entry = readPdfLocation(href.slice(href.indexOf('#')).replaceAll('&amp;', '&'))
+    assert.equal(entry.src, 'https://arxiv.org/pdf/2504.07912v2')
+    assert.equal(entry.from, '/research/sample')
+    assert.equal(entry.page, 17)
+  }
+  const html = md.render('---\ncontentFormat: html\n---\n<a href="./a.pdf">读</a> <a download href="./a.pdf">存</a> <a href="./article">正文</a>', { path: resolve('docs/papers/sample/index.md') })
+  assert.match(html, /href="\/subpath\/pdf\/#file=%2Fpapers%2Fsample%2Fa.pdf&amp;from=%2Fpapers%2Fsample%2F"/)
+  assert.match(html, /<a download href="\.\/a.pdf"/)
+  assert.match(html, /href="\.\/article"/)
+  const mirror = readPdfLocation('#' + new URLSearchParams({ file:'https://github.com/stanford-cs336/lectures/blob/main/lecture_03.pdf', from:'//example.org/' }))
+  assert.equal(mirror.src, '/cs336/sources/lectures/lecture_03.pdf')
+  assert.equal(mirror.from, '/papers/')
+  for (const file of ['javascript:example.pdf', '//example.org/a.pdf', '/a.html', '']) {
+    assert.equal(readPdfLocation('#' + new URLSearchParams({ file })), undefined)
+  }
+})
 test('native figures reserve their size and bare table rows hydrate consistently', () => {
   const html = md.render('---\ncontentFormat: html\n---\n<h1>Example</h1><img src="./figures/RLInfra.png"><table><tr><th>列</th></tr><tr><td>数据</td></tr></table>', { path: resolve('docs/papers/deepseek-r1/index.md') })
   assert.match(html, /loading="lazy" decoding="async" width="1800" height="902"/)
@@ -79,6 +105,12 @@ test('visible notebooks have editorial structure, usable anchors and clean summa
   let disclosures = 0
   for (const file of files.filter(file => /[/\\](?:papers|rl-book|westlake-rl|rust-notes|linux-notes)[/\\]/.test(file))) {
     const { data, content } = readContent(file)
+    if (data.pdf) {
+      assert.equal(data.layout, false, file)
+      assert.match(content, /<PdfViewer\b/, file)
+      assert.doesNotMatch(content, /note-hero|<ClientOnly>/, file)
+      continue
+    }
     if (content.includes('format-system')) continue // bespoke Linux reference
     assert.match(content, /data-design="linux-notebook"/, file)
     if (String(data.pageClass || '').split(/\s+/).includes('chapter-index')) {

@@ -1,13 +1,5 @@
 <script setup lang="ts">
 import '../lecture-academic.css'
-import { defineAsyncComponent, shallowRef } from 'vue'
-import pdfUrl from './随机近似.pdf?url'
-import outline from './目录.json'
-const PdfViewer = defineAsyncComponent(() => import('../../.vitepress/components/PdfViewer.vue'))
-const showOriginal = shallowRef(false)
-function toggleOriginal(event: Event) {
-  showOriginal.value = (event.target as HTMLDetailsElement).open
-}
 </script>
 
 <article class="native-document format-course academic-lecture" data-format="course" data-design="linux-notebook" aria-label="第 6 讲：随机近似">
@@ -16,7 +8,7 @@ function toggleOriginal(event: Event) {
   <h1 id="note-title" tabindex="-1">随机近似 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
   <p class="note-deck">从增量均值估计进入 Robbins–Monro 递推、Dvoretzky 收敛定理与随机梯度下降，连接采样噪声和收敛条件。</p>
   <div class="note-chips"><span>随机近似</span><span>Robbins–Monro</span><span>随机梯度下降</span></div>
-  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记</p>
+  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记 · <a href="/westlake-rl/随机近似/随机近似.pdf">阅读原版 PDF</a></p>
 </header>
 <nav class="note-jump" aria-label="本篇阅读导航"><a href="#动机示例均值估计">6.1 动机示例：均值估计</a>
 <a href="#robbins-monro-算法">6.2 Robbins-Monro 算法</a>
@@ -400,12 +392,8 @@ w_{k+1} &amp;= \frac{1}{k}\sum_{j=1}^{k} x_j &amp;&amp;\text{(SGD)}
 
 </section>
 </div>
-<details class="lecture-original note-details" @toggle="toggleOriginal">
-  <summary>对照原版 PDF<span>保留原页码与讲义目录</span></summary>
-  <div class="lecture-original-content">
-    <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
-    <p><a :href="pdfUrl" target="_blank" rel="noopener">在新窗口打开原版 PDF</a></p>
-    <ClientOnly><PdfViewer v-if="showOriginal" :src="pdfUrl" title="随机近似" :outline="outline" /></ClientOnly>
-  </div>
-</details>
+<footer class="lecture-original lecture-original-content">
+  <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
+  <p><a href="/westlake-rl/随机近似/随机近似.pdf">阅读原版 PDF</a></p>
+</footer>
 </article>

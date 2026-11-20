@@ -1,0 +1,524 @@
+<script setup>
+import './reading.css'
+</script>
+
+<article class="native-document format-paper survey-web" data-design="linux-notebook" aria-labelledby="sec:resources">
+  <header class="document-intro note-hero">
+    <p class="note-kicker">中文译本<span>arXiv:2509.02547v5</span></p>
+    <h1 id="sec:resources">5 环境与框架</h1>
+    <p class="survey-links"><a href="/papers/agentic-rl-survey/web/">摘要与目录</a> <a href="/papers/agentic-rl-survey/?view=pdf">PDF 阅读工作台</a></p>
+  </header>
+  <details class="note-details survey-toc"><summary>全文目录</summary><nav class="survey-sections" aria-label="全文目录"><a href="/papers/agentic-rl-survey/web/introduction">1 引言</a><a href="/papers/agentic-rl-survey/web/foundations">2 预备知识：从 LLM RL 到 Agentic RL</a><a href="/papers/agentic-rl-survey/web/capabilities">3 Agentic RL：模型能力视角</a><a href="/papers/agentic-rl-survey/web/tasks">4 Agentic RL：任务视角</a><a href="/papers/agentic-rl-survey/web/resources">5 环境与框架</a><a href="/papers/agentic-rl-survey/web/future">6 开放挑战与未来方向</a><a href="/papers/agentic-rl-survey/web/conclusion">7 结论</a><a href="/papers/agentic-rl-survey/web/references">参考文献</a></nav></details>
+  <nav class="note-jump" aria-label="本章小节"><a href="#subsec:simulator">5.1 环境模拟器</a>
+<a href="#subsec:framework">5.2 RL 框架</a></nav>
+  <section class="document-section note-panel" aria-labelledby="sec:resources">
+<h2 id="subsec:simulator">5.1 环境模拟器</h2>
+<p>在智能体强化学习中，环境是智能体与之交互的世界。智能体接收感官输入（观测），通过执行器实施选择（动作）；环境响应动作，转移到新状态并提供奖励。随着 LLM 智能体范式兴起，许多工作提出了训练特定任务的环境。表 <a href="#tab:rl_environments_restructured" data-reference-type="ref" data-reference="tab:rl_environments_restructured">10</a>概览本节讨论的主要环境。</p>
+<div id="tab:rl_environments_restructured">
+<div class="survey-table" role="region" aria-label="表格，可水平滑动" tabindex="0"><table>
+<caption>表 10 · 智能体强化学习环境与基准汇总，按智能体能力、任务领域和模态分类。能力符号：① 推理，② 规划，③ 工具使用，④ 记忆，⑤ 协作，⑥ 自我改进。</caption>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>环境／基准</strong></th>
+<th style="text-align: left;"><strong>能力</strong></th>
+<th style="text-align: left;"><strong>任务领域</strong></th>
+<th style="text-align: left;"><strong>模态</strong></th>
+<th style="text-align: left;"><strong>资源链接</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>环境／基准</strong></td>
+<td style="text-align: left;"><strong>能力</strong></td>
+<td style="text-align: left;"><strong>任务领域</strong></td>
+<td style="text-align: left;"><strong>模态</strong></td>
+<td style="text-align: left;"><strong>资源链接</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">LMRL-Gym <span class="citation" data-cites="abdulhai2025lmrl">(<a href="/papers/agentic-rl-survey/web/references#ref-abdulhai2025lmrl">Abdulhai et al. 2025</a>)</span></td>
+<td style="text-align: left;">①, ④</td>
+<td style="text-align: left;">交互</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/abdulhaim/LMRL-Gym">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ALFWorld <span class="citation" data-cites="shridhar2021alfworldaligningtextembodied">(<a href="/papers/agentic-rl-survey/web/references#ref-shridhar2021alfworldaligningtextembodied">Shridhar et al. 2021</a>)</span></td>
+<td style="text-align: left;">②, ①</td>
+<td style="text-align: left;">具身、文本游戏</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/alfworld/alfworld">GitHub</a> <a href="https://alfworld.github.io/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">TextWorld <span class="citation" data-cites="cote18textworld">(<a href="/papers/agentic-rl-survey/web/references#ref-cote18textworld">Côté et al. 2019</a>)</span></td>
+<td style="text-align: left;">②, ①</td>
+<td style="text-align: left;">文本游戏</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/microsoft/TextWorld">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ScienceWorld <span class="citation" data-cites="wang2022scienceworldagentsmarter5th">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2022scienceworldagentsmarter5th">Wang et al. 2022</a>)</span></td>
+<td style="text-align: left;">①, ②</td>
+<td style="text-align: left;">具身、科学</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/allenai/ScienceWorld">GitHub</a> <a href="https://sciworld.apps.allenai.org/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">AgentGym <span class="citation" data-cites="xi2024agentgymevolvinglargelanguage">(<a href="/papers/agentic-rl-survey/web/references#ref-xi2024agentgymevolvinglargelanguage">Xi et al. 2025</a>)</span></td>
+<td style="text-align: left;">①, ④</td>
+<td style="text-align: left;">文本游戏</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/WooooDyy/AgentGym">GitHub</a> <a href="https://agentgym.github.io/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Agentbench <span class="citation" data-cites="liu2023agentbench">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2023agentbench">X. Liu et al. 2024</a>)</span></td>
+<td style="text-align: left;">①</td>
+<td style="text-align: left;">通用</td>
+<td style="text-align: left;">文本、视觉</td>
+<td style="text-align: left;"><a href="https://github.com/THUDM/AgentBench">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">InternBootcamp <span class="citation" data-cites="li2025internbootcamptechnicalreportboosting">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025internbootcamptechnicalreportboosting">P. Li et al. 2025</a>)</span></td>
+<td style="text-align: left;">①</td>
+<td style="text-align: left;">通用、编程、逻辑</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/InternLM/InternBootcamp">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">LoCoMo <span class="citation" data-cites="maharana2024evaluatinglongtermconversationalmemory">(<a href="/papers/agentic-rl-survey/web/references#ref-maharana2024evaluatinglongtermconversationalmemory">Maharana et al. 2024</a>)</span></td>
+<td style="text-align: left;">④</td>
+<td style="text-align: left;">交互</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/snap-research/LoCoMo">GitHub</a> <a href="https://snap-research.github.io/locomo/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">MemoryAgentBench <span class="citation" data-cites="hu2025evaluatingmemoryllmagents">(<a href="/papers/agentic-rl-survey/web/references#ref-hu2025evaluatingmemoryllmagents">Y. Hu et al. 2025</a>)</span></td>
+<td style="text-align: left;">④</td>
+<td style="text-align: left;">交互</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/HUST-AI-HYZ/MemoryAgentBench">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">WebShop <span class="citation" data-cites="yao2022webshop">(<a href="/papers/agentic-rl-survey/web/references#ref-yao2022webshop">Yao et al. 2022</a>)</span></td>
+<td style="text-align: left;">②, ③</td>
+<td style="text-align: left;">网页</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/princeton-nlp/WebShop">GitHub</a> <a href="https://webshop-pnlp.github.io/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Mind2Web <span class="citation" data-cites="gou2025mind2web2evaluatingagentic">(<a href="/papers/agentic-rl-survey/web/references#ref-gou2025mind2web2evaluatingagentic">Gou et al. 2025</a>)</span></td>
+<td style="text-align: left;">②, ③</td>
+<td style="text-align: left;">网页</td>
+<td style="text-align: left;">文本、视觉</td>
+<td style="text-align: left;"><a href="https://github.com/OSU-NLP-Group/Mind2Web-2">GitHub</a> <a href="https://osu-nlp-group.github.io/Mind2Web-2/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">WebArena <span class="citation" data-cites="zhou2024webarena">(<a href="/papers/agentic-rl-survey/web/references#ref-zhou2024webarena">S. Zhou et al. 2024</a>)</span></td>
+<td style="text-align: left;">②, ③</td>
+<td style="text-align: left;">网页</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/web-arena-x/webarena">GitHub</a> <a href="https://webarena.dev/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">VisualwebArena <span class="citation" data-cites="koh2024visualwebarena">(<a href="/papers/agentic-rl-survey/web/references#ref-koh2024visualwebarena">Koh et al. 2024</a>)</span></td>
+<td style="text-align: left;">①, ②, ③</td>
+<td style="text-align: left;">网页</td>
+<td style="text-align: left;">文本、视觉</td>
+<td style="text-align: left;"><a href="https://github.com/web-arena-x/visualwebarena">GitHub</a> <a href="https://jykoh.com/vwa">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">AppBench <span class="citation" data-cites="wang-etal-2024-appbench">(<a href="/papers/agentic-rl-survey/web/references#ref-wang-etal-2024-appbench">H. Wang et al. 2024</a>)</span></td>
+<td style="text-align: left;">②, ③</td>
+<td style="text-align: left;">应用</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/hrwise-nlp/AppBench">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">AppWorld <span class="citation" data-cites="appworld">(<a href="/papers/agentic-rl-survey/web/references#ref-appworld">Trivedi et al. 2024</a>)</span></td>
+<td style="text-align: left;">②, ③</td>
+<td style="text-align: left;">应用</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/stonybrooknlp/appworld">GitHub</a> <a href="https://appworld.dev/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">AndroidWorld <span class="citation" data-cites="rawles2024androidworlddynamicbenchmarkingenvironment">(<a href="/papers/agentic-rl-survey/web/references#ref-rawles2024androidworlddynamicbenchmarkingenvironment">Rawles et al. 2025</a>)</span></td>
+<td style="text-align: left;">②, ③</td>
+<td style="text-align: left;">GUI、应用</td>
+<td style="text-align: left;">文本、视觉</td>
+<td style="text-align: left;"><a href="https://github.com/google-research/android_world">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">OSWorld <span class="citation" data-cites="OSWorld">(<a href="/papers/agentic-rl-survey/web/references#ref-OSWorld">Xie et al. 2024</a>)</span></td>
+<td style="text-align: left;">②, ③</td>
+<td style="text-align: left;">GUI、操作系统</td>
+<td style="text-align: left;">文本、视觉</td>
+<td style="text-align: left;"><a href="https://github.com/xlang-ai/OSWorld">GitHub</a> <a href="https://os-world.github.io/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">WindowsAgentArena <span class="citation" data-cites="bonatti2024windowsagentarenaevaluating">(<a href="/papers/agentic-rl-survey/web/references#ref-bonatti2024windowsagentarenaevaluating">Bonatti et al. 2024</a>)</span></td>
+<td style="text-align: left;">②</td>
+<td style="text-align: left;">GUI、操作系统</td>
+<td style="text-align: left;">文本、视觉</td>
+<td style="text-align: left;"><a href="https://github.com/microsoft/WindowsAgentArena">GitHub</a> <a href="https://microsoft.github.io/WindowsAgentArena/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Debug-Gym <span class="citation" data-cites="yuan2025debuggymtextbasedenvironmentinteractive">(<a href="/papers/agentic-rl-survey/web/references#ref-yuan2025debuggymtextbasedenvironmentinteractive">X. Yuan et al. 2025</a>)</span></td>
+<td style="text-align: left;">①, ③</td>
+<td style="text-align: left;">软件工程</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/microsoft/debug-gym">GitHub</a> <a href="https://microsoft.github.io/debug-gym/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">MLE-Dojo <span class="citation" data-cites="qiang2025mledojointeractiveenvironmentsempowering">(<a href="/papers/agentic-rl-survey/web/references#ref-qiang2025mledojointeractiveenvironmentsempowering">Qiang et al. 2025</a>)</span></td>
+<td style="text-align: left;">②, ①</td>
+<td style="text-align: left;">机器学习工程</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/MLE-Dojo/MLE-Dojo">GitHub</a> <a href="https://mle-dojo.github.io/MLE-Dojo-page/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math-inline" data-tex="\tau"></span>-bench <span class="citation" data-cites="barres2025tau2">(<a href="/papers/agentic-rl-survey/web/references#ref-barres2025tau2">Barres et al. 2025</a>)</span></td>
+<td style="text-align: left;">①, ③</td>
+<td style="text-align: left;">软件工程</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/sierra-research/tau2-bench">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">TheAgentCompany <span class="citation" data-cites="xu2024theagentcompanybenchmarkingllmagents">(<a href="/papers/agentic-rl-survey/web/references#ref-xu2024theagentcompanybenchmarkingllmagents">F. F. Xu et al. 2024</a>)</span></td>
+<td style="text-align: left;">②, ③, ⑤</td>
+<td style="text-align: left;">软件工程</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/TheAgentCompany/TheAgentCompany">GitHub</a> <a href="https://the-agent-company.com/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">MedAgentGym <span class="citation" data-cites="xu2025medagentgymtrainingllmagents">(<a href="/papers/agentic-rl-survey/web/references#ref-xu2025medagentgymtrainingllmagents">R. Xu et al. 2025</a>)</span></td>
+<td style="text-align: left;">①</td>
+<td style="text-align: left;">科学</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/wshi83/MedAgentGym">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">SecRepoBench <span class="citation" data-cites="dilgren2025secrepobenchbenchmarkingllmssecure">(<a href="/papers/agentic-rl-survey/web/references#ref-dilgren2025secrepobenchbenchmarkingllmssecure">Dilgren et al. 2025</a>)</span></td>
+<td style="text-align: left;">①, ③</td>
+<td style="text-align: left;">编程、安全</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">R2E-Gym <span class="citation" data-cites="jain2025r2e-gym">(<a href="/papers/agentic-rl-survey/web/references#ref-jain2025r2e-gym">N. Jain, Singh, et al. 2025</a>)</span></td>
+<td style="text-align: left;">①, ②</td>
+<td style="text-align: left;">软件工程</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/R2E-Gym/R2E-Gym">GitHub</a> <a href="https://r2e-gym.github.io/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">BigCodeBench <span class="citation" data-cites="zhuo2025bigcodebench">(<a href="/papers/agentic-rl-survey/web/references#ref-zhuo2025bigcodebench">Zhuo et al. 2025</a>)</span></td>
+<td style="text-align: left;">①</td>
+<td style="text-align: left;">编程</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/bigcode-project/bigcodebench">GitHub</a> <a href="https://bigcode-bench.github.io/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">LiveCodeBench <span class="citation" data-cites="jain2024livecodebenchholisticcontaminationfree">(<a href="/papers/agentic-rl-survey/web/references#ref-jain2024livecodebenchholisticcontaminationfree">N. Jain, Han, et al. 2025</a>)</span></td>
+<td style="text-align: left;">①</td>
+<td style="text-align: left;">编程</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/LiveCodeBench/LiveCodeBench">GitHub</a> <a href="https://livecodebench.github.io">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">SWE-bench <span class="citation" data-cites="jimenez2024swebenchlanguagemodelsresolve">(<a href="/papers/agentic-rl-survey/web/references#ref-jimenez2024swebenchlanguagemodelsresolve">Jimenez et al. 2024</a>)</span></td>
+<td style="text-align: left;">①, ③</td>
+<td style="text-align: left;">软件工程</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/swe-bench/SWE-bench">GitHub</a> <a href="https://www.swebench.com/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">SWE-rebench <span class="citation" data-cites="badertdinov2025swerebenchautomatedpipelinetask">(<a href="/papers/agentic-rl-survey/web/references#ref-badertdinov2025swerebenchautomatedpipelinetask">Badertdinov et al. 2025</a>)</span></td>
+<td style="text-align: left;">①, ③</td>
+<td style="text-align: left;">软件工程</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://swe-rebench.com/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">DevBench <span class="citation" data-cites="li2024promptinglargelanguagemodels">(<a href="/papers/agentic-rl-survey/web/references#ref-li2024promptinglargelanguagemodels">B. Li et al. 2025</a>)</span></td>
+<td style="text-align: left;">②, ①</td>
+<td style="text-align: left;">软件工程</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/open-compass/DevEval">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ProjectEval <span class="citation" data-cites="liu2025projectevalbenchmarkprogrammingagents">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025projectevalbenchmarkprogrammingagents">K. Liu et al. 2025</a>)</span></td>
+<td style="text-align: left;">②, ①</td>
+<td style="text-align: left;">软件工程</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/RyanLoil/ProjectEval/">GitHub</a> <a href="https://ryanloil.github.io/ProjectEval/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">DA-Code <span class="citation" data-cites="huang2024dacodeagentdatascience">(<a href="/papers/agentic-rl-survey/web/references#ref-huang2024dacodeagentdatascience">Y. Huang et al. 2024</a>)</span></td>
+<td style="text-align: left;">①, ③</td>
+<td style="text-align: left;">数据科学、软件工程</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://aclanthology.org/2024.emnlp-main.748/">GitHub</a> <a href="https://github.com/yiyihum/da-code">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ColBench <span class="citation" data-cites="zhou2025sweetrltrainingmultiturnllm">(<a href="/papers/agentic-rl-survey/web/references#ref-zhou2025sweetrltrainingmultiturnllm">Y. Zhou et al. 2025</a>)</span></td>
+<td style="text-align: left;">②, ①</td>
+<td style="text-align: left;">软件工程、网页开发</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://arxiv.org/abs/2503.15478">GitHub</a> <a href="https://github.com/facebookresearch/sweet_rl">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">NoCode-bench <span class="citation" data-cites="deng2025nocodebenchbenchmarkevaluatingnatural">(<a href="/papers/agentic-rl-survey/web/references#ref-deng2025nocodebenchbenchmarkevaluatingnatural">L. Deng et al. 2025</a>)</span></td>
+<td style="text-align: left;">②, ①</td>
+<td style="text-align: left;">软件工程</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/NoCode-bench/NoCode-bench">GitHub</a> <a href="https://nocodebench.org/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">MLE-Bench <span class="citation" data-cites="chan2025mlebench">(<a href="/papers/agentic-rl-survey/web/references#ref-chan2025mlebench">Chan et al. 2025</a>)</span></td>
+<td style="text-align: left;">②, ①, ③</td>
+<td style="text-align: left;">机器学习工程</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/openai/mle-bench/">GitHub</a> <a href="https://openai.com/index/mle-bench/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">PaperBench <span class="citation" data-cites="starace2025paperbench">(<a href="/papers/agentic-rl-survey/web/references#ref-starace2025paperbench">Starace et al. 2025</a>)</span></td>
+<td style="text-align: left;">②, ①, ③</td>
+<td style="text-align: left;">机器学习工程</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;"><a href="https://github.com/openai/preparedness/tree/main/project/paperbench">GitHub</a> <a href="https://openai.com/index/paperbench/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Crafter <span class="citation" data-cites="hafner2021crafter">(<a href="/papers/agentic-rl-survey/web/references#ref-hafner2021crafter">Hafner 2022</a>)</span></td>
+<td style="text-align: left;">②, ④</td>
+<td style="text-align: left;">游戏</td>
+<td style="text-align: left;">视觉</td>
+<td style="text-align: left;"><a href="https://openreview.net/forum?id=1W0z96MFEoH">GitHub</a> <a href="https://danijar.com/crafter">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Craftax <span class="citation" data-cites="matthews2024craftax">(<a href="/papers/agentic-rl-survey/web/references#ref-matthews2024craftax">Matthews et al. 2024</a>)</span></td>
+<td style="text-align: left;">②, ④</td>
+<td style="text-align: left;">游戏</td>
+<td style="text-align: left;">视觉</td>
+<td style="text-align: left;"><a href="https://github.com/MichaelTMatthews/Craftax">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ELLM （Crafter 变体） <span class="citation" data-cites="ellm">(<a href="/papers/agentic-rl-survey/web/references#ref-ellm">Du et al. 2023</a>)</span></td>
+<td style="text-align: left;">②, ①</td>
+<td style="text-align: left;">游戏</td>
+<td style="text-align: left;">视觉</td>
+<td style="text-align: left;"><a href="https://proceedings.mlr.press/v202/du23f.html">GitHub</a> <a href="https://github.com/yuqingd/ellm">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">SMAC / SMAC-Exp <span class="citation" data-cites="samvelyan19smac">(<a href="/papers/agentic-rl-survey/web/references#ref-samvelyan19smac">Samvelyan et al. 2019</a>)</span></td>
+<td style="text-align: left;">⑤, ②</td>
+<td style="text-align: left;">游戏</td>
+<td style="text-align: left;">视觉</td>
+<td style="text-align: left;"><a href="https://github.com/oxwhirl/smac">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Factorio <span class="citation" data-cites="hopkins2025factoriolearningenvironment">(<a href="/papers/agentic-rl-survey/web/references#ref-hopkins2025factoriolearningenvironment">Hopkins et al. 2025</a>)</span></td>
+<td style="text-align: left;">②, ①</td>
+<td style="text-align: left;">游戏</td>
+<td style="text-align: left;">视觉</td>
+<td style="text-align: left;"><a href="https://github.com/JackHopkins/factorio-learning-environment">GitHub</a> <a href="https://jackhopkins.github.io/factorio-learning-environment/">网站</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">SMAC-Hard <span class="citation" data-cites="smachard">(<a href="/papers/agentic-rl-survey/web/references#ref-smachard">Y. Deng et al. 2024</a>)</span></td>
+<td style="text-align: left;">②, ④</td>
+<td style="text-align: left;">游戏</td>
+<td style="text-align: left;">视觉</td>
+<td style="text-align: left;"><a href="https://github.com/devindeng94/smac-hard">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">TacticCraft <span class="citation" data-cites="tacticCraft">(<a href="/papers/agentic-rl-survey/web/references#ref-tacticCraft">Weiyu Ma, Jiang, et al. 2025</a>)</span></td>
+<td style="text-align: left;">②, ⑤</td>
+<td style="text-align: left;">游戏</td>
+<td style="text-align: left;">文本</td>
+<td style="text-align: left;">-</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<h3 id="网页环境">5.1.1 网页环境</h3>
+<p>多个基准为 Agentic RL 提供可控且真实的静态网页环境。WebShop <span class="citation" data-cites="yao2022webshop">(<a href="/papers/agentic-rl-survey/web/references#ref-yao2022webshop">Yao et al. 2022</a>)</span>是模拟电商网站，包含大量真实商品目录和众包文本指令。智能体浏览不同类型页面，执行搜索、选择商品、定制、购买等动作来寻找并购买商品；其确定性搜索引擎有助于复现。Mind2Web <span class="citation" data-cites="gou2025mind2web2evaluatingagentic">(<a href="/papers/agentic-rl-survey/web/references#ref-gou2025mind2web2evaluatingagentic">Gou et al. 2025</a>)</span>是面向通用网页智能体的数据集，涵盖跨领域大量真实网站任务，提供页面快照和众包动作序列，例如查找航班、操作社交资料，强调对未见网站与领域的泛化。</p>
+<p>WebArena <span class="citation" data-cites="zhou2024webarena">(<a href="/papers/agentic-rl-survey/web/references#ref-zhou2024webarena">S. Zhou et al. 2024</a>)</span>及其多模态扩展 VisualwebArena <span class="citation" data-cites="koh2024visualwebarena">(<a href="/papers/agentic-rl-survey/web/references#ref-koh2024visualwebarena">Koh et al. 2024</a>)</span>通过 Docker 容器交付，可自行托管且可复现。WebArena 包括电商、社交论坛、协作开发、内容管理等常见领域的完整网站，配有实用工具和知识库，支持多标签任务及用户角色模拟。VisualwebArena 增加需要视觉理解的任务，并用标记集合（Set-of-Marks，SoM）表示在截图上标注可交互元素，补足多模态网页智能体需求。AppWorld <span class="citation" data-cites="appworld">(<a href="/papers/agentic-rl-survey/web/references#ref-appworld">Trivedi et al. 2024</a>)</span>模拟多应用生态，包含 Amazon、Spotify、Gmail 等 9 个日常应用和 457 个可调用 API，构建约 100 名虚拟人物及其社会关系的数字世界。智能体通过编写代码调用 API，完成旅行规划、社会关系管理等复杂任务。在这些环境中，页面或视觉元素的变化均由智能体动作触发。</p>
+<h3 id="gui-环境">5.1.2 GUI 环境</h3>
+<p>AndroidWorld <span class="citation" data-cites="rawles2024androidworlddynamicbenchmarkingenvironment">(<a href="/papers/agentic-rl-survey/web/references#ref-rawles2024androidworlddynamicbenchmarkingenvironment">Rawles et al. 2025</a>)</span>运行在实时 Android 模拟器上，包含横跨 20 个真实应用的 116 项人工任务。参数实例化可生成数百万种独特任务变体，使环境在没有智能体直接影响时也能进入新配置，体现其动态性。智能体通过一致接口进行屏幕交互、应用导航和文本输入，接收实时状态反馈；与 MiniWoB++ 的集成为评估适应性提供持久奖励信号。OSWorld <span class="citation" data-cites="OSWorld">(<a href="/papers/agentic-rl-survey/web/references#ref-OSWorld">Xie et al. 2024</a>)</span>是面向多模态智能体的可扩展真实计算机环境，支持 Ubuntu、Windows、macOS 上的任务设置和基于执行的评估。它包含大量涉及真实网页与桌面应用、操作系统文件 I/O，以及跨应用工作流的任务，其中操作系统状态变化均由智能体动作触发。</p>
+<h3 id="编程与软件工程环境">5.1.3 编程与软件工程环境</h3>
+<p>代码任务由广泛的可执行环境与基准支持，大体可分为智能体直接改变状态的交互环境，以及提供整理后的任务和评估流程的基准或数据集。</p>
+<h4 id="交互式软件工程环境">交互式软件工程环境。</h4>
+<p>Debug-Gym <span class="citation" data-cites="yuan2025debuggymtextbasedenvironmentinteractive">(<a href="/papers/agentic-rl-survey/web/references#ref-yuan2025debuggymtextbasedenvironmentinteractive">X. Yuan et al. 2025</a>)</span>是面向调试的文本交互编程环境，为 LLM 智能体配备 Python 调试器 pdb 等工具，主动探索和修改有缺陷的代码库，支持仓库级信息处理，并通过 Docker 容器确保安全。R2E-Gym <span class="citation" data-cites="jain2025r2e-gym">(<a href="/papers/agentic-rl-survey/web/references#ref-jain2025r2e-gym">N. Jain, Singh, et al. 2025</a>)</span>通过 SWE-Gen 流水线与混合验证器，程序化构建包含超过 8K 软件工程任务的可执行 Gym 式环境。TheAgentCompany <span class="citation" data-cites="xu2024theagentcompanybenchmarkingllmagents">(<a href="/papers/agentic-rl-survey/web/references#ref-xu2024theagentcompanybenchmarkingllmagents">F. F. Xu et al. 2024</a>)</span>模拟软件开发公司，智能体作为“数字员工”浏览网页、编程、运行程序，并与模拟同事交流。多样的长时程任务设有可获得部分得分的检查点，为真实工作场景提供全面试验平台。这些环境的底层问题定义与代码库固定，变化只由智能体动作产生。</p>
+<h4 id="代码基准与数据集">代码基准与数据集。</h4>
+<p>HumanEval <span class="citation" data-cites="chen2021evaluatinglarge">(<a href="/papers/agentic-rl-survey/web/references#ref-chen2021evaluatinglarge">Chen et al. 2021</a>)</span>包含 164 道人工 Python 编程任务，用 pass@k 衡量功能正确性。MBPP <span class="citation" data-cites="austin2021programsynthesis">(<a href="/papers/agentic-rl-survey/web/references#ref-austin2021programsynthesis">Austin et al. 2021</a>)</span>提供 974 道带自然语言描述的入门 Python 任务，评估短程序合成。BigCodeBench <span class="citation" data-cites="zhuo2025bigcodebench">(<a href="/papers/agentic-rl-survey/web/references#ref-zhuo2025bigcodebench">Zhuo et al. 2025</a>)</span>是包含 1,140 项任务的大规模无污染函数级基准，要求组合多个函数调用。LiveCodeBench <span class="citation" data-cites="jain2024livecodebenchholisticcontaminationfree">(<a href="/papers/agentic-rl-survey/web/references#ref-jain2024livecodebenchholisticcontaminationfree">N. Jain, Han, et al. 2025</a>)</span>从真实竞赛题构建持续更新、无污染的基准。SWE-bench <span class="citation" data-cites="jimenez2024swebenchlanguagemodelsresolve">(<a href="/papers/agentic-rl-survey/web/references#ref-jimenez2024swebenchlanguagemodelsresolve">Jimenez et al. 2024</a>)</span>从真实 GitHub Issue 构建动态、执行驱动的代码修复基准；SWE-rebench <span class="citation" data-cites="badertdinov2025swerebenchautomatedpipelinetask">(<a href="/papers/agentic-rl-survey/web/references#ref-badertdinov2025swerebenchautomatedpipelinetask">Badertdinov et al. 2025</a>)</span>通过持续挖掘 GitHub 的流水线，为训练与评估提供超过 21k 个任务。DevBench <span class="citation" data-cites="li2024promptinglargelanguagemodels">(<a href="/papers/agentic-rl-survey/web/references#ref-li2024promptinglargelanguagemodels">B. Li et al. 2025</a>)</span>评估从设计、设置、实现到测试的端到端开发。ProjectEval <span class="citation" data-cites="liu2025projectevalbenchmarkprogrammingagents">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2025projectevalbenchmarkprogrammingagents">K. Liu et al. 2025</a>)</span>构建 LLM 生成、人工审查、包含模拟用户交互的项目任务。ColBench <span class="citation" data-cites="zhou2025sweetrltrainingmultiturnllm">(<a href="/papers/agentic-rl-survey/web/references#ref-zhou2025sweetrltrainingmultiturnllm">Y. Zhou et al. 2025</a>)</span>提供多轮前后端任务，以拥有特权信息的评论家给出逐步奖励。NoCode-bench <span class="citation" data-cites="deng2025nocodebenchbenchmarkevaluatingnatural">(<a href="/papers/agentic-rl-survey/web/references#ref-deng2025nocodebenchbenchmarkevaluatingnatural">L. Deng et al. 2025</a>)</span>评估 LLM 根据文档更新在真实代码库中添加功能的能力。CodeBoost <span class="citation" data-cites="wang2025codeboostboostingcodellms">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025codeboostboostingcodellms">Sijie Wang et al. 2025</a>)</span>通过提取和增强代码片段，形成以数据为中心、执行驱动的训练流水线。</p>
+<h4 id="程序化世界模型环境">程序化世界模型环境。</h4>
+<p>除独立编程任务外，近期基准还评估智能体是否能够归纳可执行世界模型。代码世界模型基准（CWMB） <span class="citation" data-cites="gif-mcts">(<a href="/papers/agentic-rl-survey/web/references#ref-gif-mcts">Dainese et al. 2024</a>)</span>要求合成 Python “Environment”类，特别是“step”函数，复现真实动力学，同时评估转移保真度和下游规划价值。Code Simulation 套件 <span class="citation" data-cites="codesimlationchallengesforllm lamalfa2025codesimulationproxyhighorder">(<a href="/papers/agentic-rl-survey/web/references#ref-codesimlationchallengesforllm">Malfa et al. 2024</a>, <a href="/papers/agentic-rl-survey/web/references#ref-lamalfa2025codesimulationproxyhighorder">2025</a>)</span>提供逐行执行预测与算法泛化的细粒度测试。这些任务将评估重点从功能正确性扩展到构建程序化世界模型所需的动力学归纳和程序模拟能力。</p>
+<h3 id="领域专用环境">5.1.4 领域专用环境</h3>
+<h4 id="科学与研究">科学与研究。</h4>
+<p>ScienceWorld <span class="citation" data-cites="wang2022scienceworldagentsmarter5th">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2022scienceworldagentsmarter5th">Wang et al. 2022</a>)</span>将热力学、电学、化学等科学模拟融入围绕小学科学教育设计的复杂文本任务。PaperBench <span class="citation" data-cites="starace2025paperbench">(<a href="/papers/agentic-rl-survey/web/references#ref-starace2025paperbench">Starace et al. 2025</a>)</span>要求从头复现 20 篇 ICML 2024 论文，按评分细则中的子任务计分，评估 LLM 智能体复现前沿机器学习研究的能力。<span class="math-inline" data-tex="\tau"></span>-bench <span class="citation" data-cites="barres2025tau2">(<a href="/papers/agentic-rl-survey/web/references#ref-barres2025tau2">Barres et al. 2025</a>)</span>模拟软件工程任务中的动态对话，其底层数据库状态和领域规则只通过智能体 API 调用发生变化。</p>
+<h4 id="机器学习工程mle">机器学习工程（MLE）。</h4>
+<p>MLE-Dojo <span class="citation" data-cites="qiang2025mledojointeractiveenvironmentsempowering">(<a href="/papers/agentic-rl-survey/web/references#ref-qiang2025mledojointeractiveenvironmentsempowering">Qiang et al. 2025</a>)</span>基于真实 Kaggle 竞赛，为迭代式机器学习工程工作流提供 Gym 式框架，让智能体反复实验、调试和改进。MLE-Bench <span class="citation" data-cites="chan2025mlebench">(<a href="/papers/agentic-rl-survey/web/references#ref-chan2025mlebench">Chan et al. 2025</a>)</span>整理 75 项 Kaggle 竞赛，将智能体与公开排行榜上的人类基线比较。DA-Code <span class="citation" data-cites="huang2024dacodeagentdatascience">(<a href="/papers/agentic-rl-survey/web/references#ref-huang2024dacodeagentdatascience">Y. Huang et al. 2024</a>)</span>聚焦基于真实数据集和可执行分析的智能体数据科学工作流。</p>
+<h4 id="生物医学">生物医学。</h4>
+<p>MedAgentGym <span class="citation" data-cites="xu2025medagentgymtrainingllmagents">(<a href="/papers/agentic-rl-survey/web/references#ref-xu2025medagentgymtrainingllmagents">R. Xu et al. 2025</a>)</span>为生物医学代码生成与测试提供专用环境，聚焦这一科学领域中的任务。</p>
+<h4 id="网络安全">网络安全。</h4>
+<p>SecRepoBench <span class="citation" data-cites="dilgren2025secrepobenchbenchmarkingllmssecure">(<a href="/papers/agentic-rl-survey/web/references#ref-dilgren2025secrepobenchbenchmarkingllmssecure">Dilgren et al. 2025</a>)</span>是安全漏洞修复的专用基准，涵盖 27 个仓库和 15 类常见弱点枚举（CWE）。</p>
+<h3 id="模拟与游戏环境">5.1.5 模拟与游戏环境</h3>
+<p>文本环境模拟以自然语言表达动作的交互场景。LMRL-Gym <span class="citation" data-cites="abdulhai2025lmrl">(<a href="/papers/agentic-rl-survey/web/references#ref-abdulhai2025lmrl">Abdulhai et al. 2025</a>)</span>评估多轮语言交互中的 RL 算法，包括“20 个问题”和国际象棋等任务。TextWorld <span class="citation" data-cites="cote18textworld">(<a href="/papers/agentic-rl-survey/web/references#ref-cote18textworld">Côté et al. 2019</a>)</span>是训练文本游戏智能体的沙箱，提供人工编写和程序化生成的游戏。游戏环境还强调可能自主演化的视觉场景。Crafter <span class="citation" data-cites="hafner2021crafter">(<a href="/papers/agentic-rl-survey/web/references#ref-hafner2021crafter">Hafner 2022</a>)</span>是二维开放世界生存游戏，评估深入探索和长时程推理。Craftax <span class="citation" data-cites="matthews2024craftax">(<a href="/papers/agentic-rl-survey/web/references#ref-matthews2024craftax">Matthews et al. 2024</a>)</span>基于 Crafter，用 JAX 增加复杂度并提供 GPU 加速，支持开放式 RL。ELLM <span class="citation" data-cites="ellm">(<a href="/papers/agentic-rl-survey/web/references#ref-ellm">Du et al. 2023</a>)</span>的 Crafter 变体扩展动作空间并加入干扰任务。SMAC <span class="citation" data-cites="samvelyan19smac">(<a href="/papers/agentic-rl-survey/web/references#ref-samvelyan19smac">Samvelyan et al. 2019</a>)</span>和 SMAC-Hard <span class="citation" data-cites="smachard">(<a href="/papers/agentic-rl-survey/web/references#ref-smachard">Y. Deng et al. 2024</a>)</span>以星际争霸 II 为基础，评估多智能体协作与去中心化控制。SMAC-R1 <span class="citation" data-cites="smachard">(<a href="/papers/agentic-rl-survey/web/references#ref-smachard">Y. Deng et al. 2024</a>)</span>、Adaptive Command <span class="citation" data-cites="adaptiveCommand">(<a href="/papers/agentic-rl-survey/web/references#ref-adaptiveCommand">Weiyu Ma, Xu, et al. 2025</a>)</span>和 TacticCraft <span class="citation" data-cites="tacticCraft">(<a href="/papers/agentic-rl-survey/web/references#ref-tacticCraft">Weiyu Ma, Jiang, et al. 2025</a>)</span>进一步推进 LLM 智能体在此类环境中的表现。Factorio <span class="citation" data-cites="hopkins2025factoriolearningenvironment">(<a href="/papers/agentic-rl-survey/web/references#ref-hopkins2025factoriolearningenvironment">Hopkins et al. 2025</a>)</span>是基于时间刻的动态工业模拟，即使智能体不行动，世界状态也会变化。</p>
+<h3 id="通用环境">5.1.6 通用环境</h3>
+<p>一些环境与基准用于广泛评估或改进通用能力。AgentGym <span class="citation" data-cites="xi2024agentgymevolvinglargelanguage">(<a href="/papers/agentic-rl-survey/web/references#ref-xi2024agentgymevolvinglargelanguage">Xi et al. 2025</a>)</span>通过指令微调和自我纠错提高 LLM 智能体泛化，在 ALFWorld、BabyAI、SciWorld 等确定性环境运行。Agentbench <span class="citation" data-cites="liu2023agentbench">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2023agentbench">X. Liu et al. 2024</a>)</span>是广泛评估框架，在 SQL、游戏、网页等不同交互环境中评估 LLM 智能体。InternBootcamp <span class="citation" data-cites="li2025internbootcamptechnicalreportboosting">(<a href="/papers/agentic-rl-survey/web/references#ref-li2025internbootcamptechnicalreportboosting">P. Li et al. 2025</a>)</span>整合超过 1000 项可验证推理任务，涵盖编程、逻辑谜题和游戏，提供用于 RL 训练和自动任务生成的标准接口。</p>
+<h2 id="subsec:framework">5.2 RL 框架</h2>
+<p>本节总结与本文最相关的三类代码库或框架：Agentic RL 框架、RLHF 与 LLM 微调框架，以及通用 RL 框架。表 <a href="#tab:rl_frameworks_summary" data-reference-type="ref" data-reference="tab:rl_frameworks_summary">11</a>概览主要 Agentic RL 和 LLM RL 框架，供读者参考。</p>
+<div id="tab:rl_frameworks_summary">
+<div class="survey-table" role="region" aria-label="表格，可水平滑动" tabindex="0"><table>
+<caption>表 11 · 按类型和关键特征分类的强化学习框架汇总。</caption>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>框架</strong></th>
+<th style="text-align: left;"><strong>关键特征</strong></th>
+<th style="text-align: left;"><strong>资源</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>框架</strong></td>
+<td style="text-align: left;"><strong>关键特征</strong></td>
+<td style="text-align: left;"><strong>资源</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">Verifiers <span class="citation" data-cites="brown2025verifiers">(<a href="/papers/agentic-rl-survey/web/references#ref-brown2025verifiers">Brown 2025</a>)</span></td>
+<td style="text-align: left;">可验证环境设置</td>
+<td style="text-align: left;"><a href="https://github.com/willccbb/verifiers">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">SkyRL-v0 <span class="citation" data-cites="cao2025skyrl">(<a href="/papers/agentic-rl-survey/web/references#ref-cao2025skyrl">S. Cao et al. 2025</a>)</span></td>
+<td style="text-align: left;">长时程真实环境训练</td>
+<td style="text-align: left;"><a href="https://github.com/NovaSky-AI/SkyRL">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">AREAL <span class="citation" data-cites="fu2025areallargescaleasynchronousreinforcement">(<a href="/papers/agentic-rl-survey/web/references#ref-fu2025areallargescaleasynchronousreinforcement">Fu et al. 2025</a>)</span></td>
+<td style="text-align: left;">异步训练</td>
+<td style="text-align: left;"><a href="https://github.com/inclusionAI/AReaL">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">MARTI <span class="citation" data-cites="marti2025">(<a href="/papers/agentic-rl-survey/web/references#ref-marti2025">Kaiyan Zhang et al. 2025</a>)</span></td>
+<td style="text-align: left;">集成多智能体训练</td>
+<td style="text-align: left;"><a href="https://github.com/TsinghuaC3I/MARTI">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">EasyR1 <span class="citation" data-cites="zheng2025easyr1">(<a href="/papers/agentic-rl-survey/web/references#ref-zheng2025easyr1">Yaowei Zheng et al. 2025</a>)</span></td>
+<td style="text-align: left;">多模态支持</td>
+<td style="text-align: left;"><a href="https://github.com/hiyouga/EasyR1">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">AgentFly <span class="citation" data-cites="wang2025agentflyextensiblescalablereinforcement">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025agentflyextensiblescalablereinforcement">R. Wang et al. 2025</a>)</span></td>
+<td style="text-align: left;">可扩展异步执行</td>
+<td style="text-align: left;"><a href="https://github.com/Agent-One-Lab/AgentFly">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Agent Lightning <span class="citation" data-cites="luo2025agentlightningtrainai">(<a href="/papers/agentic-rl-survey/web/references#ref-luo2025agentlightningtrainai">X. Luo et al. 2025</a>)</span></td>
+<td style="text-align: left;">解耦的分层 RL</td>
+<td style="text-align: left;"><a href="https://github.com/microsoft/agent-lightning">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">AWorld <span class="citation" data-cites="yu2025aworldorchestratingtrainingrecipe">(<a href="/papers/agentic-rl-survey/web/references#ref-yu2025aworldorchestratingtrainingrecipe">C. Yu et al. 2025</a>)</span></td>
+<td style="text-align: left;">跨集群并行轨迹采样</td>
+<td style="text-align: left;"><a href="https://github.com/inclusionAI/AWorld/tree/main/train">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">RL-Factory <span class="citation" data-cites="githubGitHubSimpleEfficientRLFactory">(<a href="/papers/agentic-rl-survey/web/references#ref-githubGitHubSimpleEfficientRLFactory">RL-Factory 2025</a>)</span></td>
+<td style="text-align: left;">易于设计奖励</td>
+<td style="text-align: left;"><a href="https://github.com/Simple-Efficient/RL-Factory">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ROLL <span class="citation" data-cites="wang2025reinforcement">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025reinforcement"><span class="nocase">W. Wang et al.</span> 2025</a>)</span></td>
+<td style="text-align: left;">稳定的多 GPU 并行训练</td>
+<td style="text-align: left;"><a href="https://github.com/alibaba/ROLL">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">AgentRL <span class="citation" data-cites="zhang2025agentrlscalingagenticreinforcement">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025agentrlscalingagenticreinforcement">Zhang et al. 2025a</a>)</span></td>
+<td style="text-align: left;">异步多任务训练</td>
+<td style="text-align: left;"><a href="https://github.com/THUDM/AgentRL">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">VerlTool <span class="citation" data-cites="jiang2025verltoolholisticagenticreinforcement">(<a href="/papers/agentic-rl-survey/web/references#ref-jiang2025verltoolholisticagenticreinforcement">Dongfu Jiang et al. 2025</a>)</span></td>
+<td style="text-align: left;">工具集成轨迹采样</td>
+<td style="text-align: left;"><a href="https://github.com/TIGER-AI-Lab/verl-tool">GitHub</a></td>
+</tr>
+<tr>
+<td colspan="3" style="text-align: center;"><em>RLHF 与 LLM 微调框架</em></td>
+</tr>
+<tr>
+<td style="text-align: left;">OpenRLHF <span class="citation" data-cites="hu2025openrlhfeasytousescalablehighperformance">(<a href="/papers/agentic-rl-survey/web/references#ref-hu2025openrlhfeasytousescalablehighperformance">J. Hu, Wu, et al. 2025</a>)</span></td>
+<td style="text-align: left;">高性能、可扩展 RLHF</td>
+<td style="text-align: left;"><a href="https://github.com/OpenRLHF/OpenRLHF">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">TRL <span class="citation" data-cites="vonwerra2022trl">(<a href="/papers/agentic-rl-survey/web/references#ref-vonwerra2022trl">Werra et al. 2020</a>)</span></td>
+<td style="text-align: left;">Hugging Face RLHF</td>
+<td style="text-align: left;"><a href="https://github.com/huggingface/trl">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">trlX <span class="citation" data-cites="havrilla-etal-2023-trlx">(<a href="/papers/agentic-rl-survey/web/references#ref-havrilla-etal-2023-trlx">Havrilla et al. 2023</a>)</span></td>
+<td style="text-align: left;">分布式大模型 RLHF</td>
+<td style="text-align: left;"><a href="https://github.com/CarperAI/trlx">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">HybridFlow <span class="citation" data-cites="Sheng_2025">(<a href="/papers/agentic-rl-survey/web/references#ref-Sheng_2025">Sheng et al. 2025</a>)</span></td>
+<td style="text-align: left;">简化实验管理</td>
+<td style="text-align: left;"><a href="https://github.com/volcengine/verl">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">SLiMe <span class="citation" data-cites="THUDM2025slime">(<a href="/papers/agentic-rl-survey/web/references#ref-THUDM2025slime">THUDM 2025</a>)</span></td>
+<td style="text-align: left;">高性能异步 RL</td>
+<td style="text-align: left;"><a href="https://github.com/THUDM/slime">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Oat <span class="citation" data-cites="liu2024sampleefficientalignmentllms">(<a href="/papers/agentic-rl-survey/web/references#ref-liu2024sampleefficientalignmentllms">Z. Liu et al. 2024</a>)</span></td>
+<td style="text-align: left;">轻量 RL 支持</td>
+<td style="text-align: left;"><a href="https://github.com/sail-sg/oat">GitHub</a></td>
+</tr>
+<tr>
+<td colspan="3" style="text-align: center;"><em>通用 RL 框架</em></td>
+</tr>
+<tr>
+<td style="text-align: left;">RLlib <span class="citation" data-cites="liang2018rllib">(<a href="/papers/agentic-rl-survey/web/references#ref-liang2018rllib">Liang et al. 2018</a>)</span></td>
+<td style="text-align: left;">生产级可扩展库</td>
+<td style="text-align: left;"><a href="https://github.com/ray-project/ray/tree/master/rllib">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Acme <span class="citation" data-cites="hoffman2020acme">(<a href="/papers/agentic-rl-survey/web/references#ref-hoffman2020acme"><span class="nocase">Hoffman et al.</span> 2020</a>)</span></td>
+<td style="text-align: left;">模块化分布式组件</td>
+<td style="text-align: left;"><a href="https://github.com/google-deepmind/acme">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Tianshou <span class="citation" data-cites="tianshou">(<a href="/papers/agentic-rl-survey/web/references#ref-tianshou">Weng et al. 2022</a>)</span></td>
+<td style="text-align: left;">高性能 PyTorch 平台</td>
+<td style="text-align: left;"><a href="https://github.com/thu-ml/tianshou/">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Stable Baselines3 <span class="citation" data-cites="raffin2021stable">(<a href="/papers/agentic-rl-survey/web/references#ref-raffin2021stable">Raffin et al. 2021</a>)</span></td>
+<td style="text-align: left;">可靠的 PyTorch 算法</td>
+<td style="text-align: left;"><a href="https://github.com/DLR-RM/stable-baselines3">GitHub</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">PFRL <span class="citation" data-cites="JMLR:v22:20-376">(<a href="/papers/agentic-rl-survey/web/references#ref-JMLR:v22:20-376">Fujita et al. 2021</a>)</span></td>
+<td style="text-align: left;">经过基准测试的原型开发算法</td>
+<td style="text-align: left;"><a href="https://github.com/pfnet/pfrl">GitHub</a></td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<h4 id="agentic-rl-框架">Agentic RL 框架。</h4>
+<p>Verifiers <span class="citation" data-cites="brown2025verifiers">(<a href="/papers/agentic-rl-survey/web/references#ref-brown2025verifiers">Brown 2025</a>)</span>提供可验证环境设置，用于 LLM 端到端策略优化；SkyRL-v0 <span class="citation" data-cites="cao2025skyrl">(<a href="/papers/agentic-rl-survey/web/references#ref-cao2025skyrl">S. Cao et al. 2025</a>)</span>及后续模块化版本 <span class="citation" data-cites="griggs2025skrylv01">(<a href="/papers/agentic-rl-survey/web/references#ref-griggs2025skrylv01">Griggs et al. 2025</a>)</span>展示了通过 RL 进行长时程真实环境智能体训练。AREAL <span class="citation" data-cites="fu2025areallargescaleasynchronousreinforcement">(<a href="/papers/agentic-rl-survey/web/references#ref-fu2025areallargescaleasynchronousreinforcement">Fu et al. 2025</a>)</span>以面向语言推理任务的异步分布式架构扩展这一范式；MARTI <span class="citation" data-cites="marti2025">(<a href="/papers/agentic-rl-survey/web/references#ref-marti2025">Kaiyan Zhang et al. 2025</a>)</span>进一步面向集成强化训练和推理的多智能体 LLM 系统。EasyR1 <span class="citation" data-cites="zheng2025easyr1">(<a href="/papers/agentic-rl-survey/web/references#ref-zheng2025easyr1">Yaowei Zheng et al. 2025</a>)</span>提供多模态支持，使智能体在统一 RL 框架中联合使用视觉与语言信号。</p>
+<p>AgentFly <span class="citation" data-cites="wang2025agentflyextensiblescalablereinforcement">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025agentflyextensiblescalablereinforcement">R. Wang et al. 2025</a>)</span>是可扩展、可扩充的智能体 RL 框架，通过传统 RL 算法赋能语言模型智能体，采用装饰器定义工具与奖励，支持词元级多轮交互、异步执行及集中资源管理，实现高吞吐训练。Agent Lightning <span class="citation" data-cites="luo2025agentlightningtrainai">(<a href="/papers/agentic-rl-survey/web/references#ref-luo2025agentlightningtrainai">X. Luo et al. 2025</a>)</span>将执行建模为 MDP，使用分层算法 LightningRL，将智能体执行与训练解耦，以近乎零代码修改训练任意 AI 智能体。AWorld <span class="citation" data-cites="yu2025aworldorchestratingtrainingrecipe">(<a href="/papers/agentic-rl-survey/web/references#ref-yu2025aworldorchestratingtrainingrecipe">C. Yu et al. 2025</a>)</span>针对经验生成这一主要训练瓶颈，在集群间编排大规模并行轨迹采样，相较单节点获得 14.6 倍加速，支持可扩展端到端训练。ROLL <span class="citation" data-cites="wang2025reinforcement">(<a href="/papers/agentic-rl-survey/web/references#ref-wang2025reinforcement"><span class="nocase">W. Wang et al.</span> 2025</a>)</span>采用统一控制器、并行工作者和自动资源映射，为大规模 RL 提供高效多 GPU 训练库。VerlTool <span class="citation" data-cites="jiang2025verltoolholisticagenticreinforcement">(<a href="/papers/agentic-rl-survey/web/references#ref-jiang2025verltoolholisticagenticreinforcement">Dongfu Jiang et al. 2025</a>)</span>基于 Verl <span class="citation" data-cites="Sheng_2025">(<a href="/papers/agentic-rl-survey/web/references#ref-Sheng_2025">Sheng et al. 2025</a>)</span>构建带工具使用的智能体 RL（ARLT），在交互环境中联合优化规划与执行。AgentRL <span class="citation" data-cites="zhang2025agentrlscalingagenticreinforcement">(<a href="/papers/agentic-rl-survey/web/references#ref-zhang2025agentrlscalingagenticreinforcement">Zhang et al. 2025a</a>)</span>支持多轮、多任务异步 RL，统一环境编排，并引入跨策略采样和任务优势归一化，以稳定大规模训练。</p>
+<h4 id="rlhf-与-llm-微调框架">RLHF 与 LLM 微调框架。</h4>
+<p>OpenRLHF <span class="citation" data-cites="hu2025openrlhfeasytousescalablehighperformance">(<a href="/papers/agentic-rl-survey/web/references#ref-hu2025openrlhfeasytousescalablehighperformance">J. Hu, Wu, et al. 2025</a>)</span>提供面向大规模模型对齐的高性能可扩展工具包；TRL <span class="citation" data-cites="vonwerra2022trl">(<a href="/papers/agentic-rl-survey/web/references#ref-vonwerra2022trl">Werra et al. 2020</a>)</span>提供 Hugging Face 的 RLHF 基础实现；trlX <span class="citation" data-cites="havrilla-etal-2023-trlx">(<a href="/papers/agentic-rl-survey/web/references#ref-havrilla-etal-2023-trlx">Havrilla et al. 2023</a>)</span>支持数百亿参数模型的分布式微调；HybridFlow <span class="citation" data-cites="Sheng_2025">(<a href="/papers/agentic-rl-survey/web/references#ref-Sheng_2025">Sheng et al. 2025</a>)</span>简化 RLHF 研究的实验管理与扩展。SLiMe <span class="citation" data-cites="THUDM2025slime">(<a href="/papers/agentic-rl-survey/web/references#ref-THUDM2025slime">THUDM 2025</a>)</span>是面向 RL 扩展的 LLM 后训练框架，将 Megatron 与 SGLang 结合进行高性能多模式训练，支持异步 RL，并通过自定义接口和基于服务的引擎，为奖励与数据生成提供灵活的分离式工作流。</p>
+<h4 id="通用-rl-框架">通用 RL 框架。</h4>
+<p>这些框架提供支撑智能体式 LLM 系统的核心算法和分布式执行引擎。RLlib <span class="citation" data-cites="liang2018rllib">(<a href="/papers/agentic-rl-survey/web/references#ref-liang2018rllib">Liang et al. 2018</a>)</span>是生产级可扩展库，为同策略、离策略和多智能体方法提供统一 API；Acme <span class="citation" data-cites="hoffman2020acme">(<a href="/papers/agentic-rl-survey/web/references#ref-hoffman2020acme"><span class="nocase">Hoffman et al.</span> 2020</a>)</span>提供面向研究的模块化分布式 RL 组件；Tianshou <span class="citation" data-cites="tianshou">(<a href="/papers/agentic-rl-survey/web/references#ref-tianshou">Weng et al. 2022</a>)</span>提供支持在线、离线和分层 RL 的高性能纯 PyTorch 平台；Stable Baselines3 <span class="citation" data-cites="raffin2021stable">(<a href="/papers/agentic-rl-survey/web/references#ref-raffin2021stable">Raffin et al. 2021</a>)</span>封装可靠的标准无模型算法 PyTorch 实现；PFRL <span class="citation" data-cites="JMLR:v22:20-376">(<a href="/papers/agentic-rl-survey/web/references#ref-JMLR:v22:20-376">Fujita et al. 2021</a>)</span>（原 ChainerRL）提供经过基准测试的深度 RL 算法，便于快速原型开发。</p>
+  </section>
+
+  <nav class="survey-pager" aria-label="章节导航"><a href="/papers/agentic-rl-survey/web/tasks">上一章</a><a href="/papers/agentic-rl-survey/web/">摘要与目录</a><a href="/papers/agentic-rl-survey/web/future">下一章</a></nav>
+</article>

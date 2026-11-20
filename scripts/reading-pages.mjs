@@ -6,7 +6,7 @@ const compiled = await build({
   entryPoints: ['docs/.vitepress/theme/reading-design.ts'], bundle: true,
   write: false, platform: 'node', format: 'esm'
 })
-export const { usesAcademicReading } = await import(
+export const { usesAcademicReading, usesPaperNotebook } = await import(
   `data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].text).toString('base64')}`
 )
 

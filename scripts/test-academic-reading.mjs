@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { readFileSync } from 'node:fs'
-import { readingPages, usesAcademicReading } from './reading-pages.mjs'
+import { readdirSync, readFileSync } from 'node:fs'
+import { readContent } from './content-source.mjs'
+import { readingPages, usesAcademicReading, usesPaperNotebook } from './reading-pages.mjs'
 
 test('all public text collections receive academic reading typography', () => {
   const pages = readingPages()
@@ -24,4 +25,24 @@ test('directories, non-article pages and private content keep their own presenta
     ['/papers/unlisted', {}], ['/papers/deepseek-r1/', { hidden: true }],
     ['/papers/deepseek-r1/', { status: 'draft' }], ['/papers/deepseek-r1/', { search: false }]
   ]) assert.equal(usesAcademicReading(path, data), false, path)
+})
+
+test('survey web chapters opt in to annotations and keep a single catalog entry', () => {
+  const route = '/papers/agentic-rl-survey/web'
+  const directory = 'docs' + route
+  const chapters = readdirSync(directory).filter(file => file.endsWith('.md'))
+  assert.ok(chapters.length > 1)
+  for (const file of chapters) {
+    const { data } = readContent(directory + '/' + file)
+    assert.equal(data.readingNotes, true, file)
+    assert.equal(data.search, false, file)
+    assert.equal(data.pdf, undefined, file)
+    assert.equal(usesPaperNotebook(route + '/' + file, data), true, file)
+  }
+})
+
+test('docked notebooks follow the paper close-reading group', () => {
+  assert.equal(usesPaperNotebook('/papers/deepseek-r1/index.md', {}), true)
+  assert.equal(usesPaperNotebook('/papers/agentic-rl-survey/', { pdf: true }), false)
+  assert.equal(usesPaperNotebook('/papers/projects/coverage', {}), false)
 })

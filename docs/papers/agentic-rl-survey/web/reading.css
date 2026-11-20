@@ -1,0 +1,87 @@
+.Layout .VPDoc .vp-doc .survey-web .note-hero .survey-links,
+.Layout .VPDoc .vp-doc .survey-web .note-hero .survey-links a {
+  color: inherit;
+}
+
+.survey-web .survey-links a {
+  text-decoration: underline;
+  text-underline-offset: .22em;
+}
+
+.survey-links,
+.survey-sections,
+.survey-pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1rem;
+}
+
+.survey-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+}
+
+.survey-sections a,
+.survey-pager a {
+  padding: .4rem .65rem;
+  border-radius: .35rem;
+  background: var(--vp-c-bg-soft);
+}
+
+.survey-toc .survey-sections {
+  padding: 0 .75rem .75rem;
+}
+
+.survey-web .note-panel,
+.survey-web .note-figure {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.survey-web .note-figure img {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: white;
+}
+
+.survey-web .survey-table,
+.survey-web .survey-equation {
+  max-width: 100%;
+  margin: 1em 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.survey-web .survey-table table {
+  display: table;
+  width: 100%;
+  min-width: 34rem;
+  margin: 0;
+}
+
+.survey-table caption {
+  margin-bottom: .5rem;
+  color: var(--vp-c-text-2);
+  text-align: left;
+}
+
+.survey-table .survey-rl-row td {
+  background: var(--vp-c-bg-soft);
+}
+
+.survey-equation-number {
+  display: block;
+  color: var(--vp-c-text-2);
+  font-size: .85em;
+  text-align: right;
+}
+
+.survey-web .csl-entry + .csl-entry {
+  margin-top: .85em;
+}
+
+.survey-web :is([id], [tabindex]) {
+  scroll-margin-top: calc(var(--vp-nav-height) + .8rem);
+}

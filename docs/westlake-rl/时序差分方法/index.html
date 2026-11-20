@@ -1,13 +1,5 @@
 <script setup lang="ts">
 import '../lecture-academic.css'
-import { defineAsyncComponent, shallowRef } from 'vue'
-import pdfUrl from './时序差分方法.pdf?url'
-import outline from './目录.json'
-const PdfViewer = defineAsyncComponent(() => import('../../.vitepress/components/PdfViewer.vue'))
-const showOriginal = shallowRef(false)
-function toggleOriginal(event: Event) {
-  showOriginal.value = (event.target as HTMLDetailsElement).open
-}
 </script>
 
 <article class="native-document format-course academic-lecture" data-format="course" data-design="linux-notebook" aria-label="第 7 讲：时序差分方法">
@@ -16,7 +8,7 @@ function toggleOriginal(event: Event) {
   <h1 id="note-title" tabindex="-1">时序差分方法 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
   <p class="note-deck">从状态价值的 TD 更新出发，比较 Sarsa、n 步 Sarsa 与 Q-learning 的更新目标。</p>
   <div class="note-chips"><span>时序差分</span><span>Sarsa</span><span>Q-learning</span></div>
-  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记</p>
+  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记 · <a href="/westlake-rl/时序差分方法/时序差分方法.pdf">阅读原版 PDF</a></p>
 </header>
 <nav class="note-jump" aria-label="本篇阅读导航"><a href="#状态价值的td学习">7.1 状态价值的TD学习</a>
 <a href="#动作价值的td学习sarsa">7.2 动作价值的TD学习：Sarsa</a>
@@ -447,12 +439,8 @@ q_{t+n}(s_t, a_t) = q_{t+n-1}(s_t, a_t) - \alpha_{t+n-1}(s_t, a_t)\Big[&amp;q_{t
 
 </section>
 </div>
-<details class="lecture-original note-details" @toggle="toggleOriginal">
-  <summary>对照原版 PDF<span>保留原页码与讲义目录</span></summary>
-  <div class="lecture-original-content">
-    <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
-    <p><a :href="pdfUrl" target="_blank" rel="noopener">在新窗口打开原版 PDF</a></p>
-    <ClientOnly><PdfViewer v-if="showOriginal" :src="pdfUrl" title="时序差分方法" :outline="outline" /></ClientOnly>
-  </div>
-</details>
+<footer class="lecture-original lecture-original-content">
+  <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
+  <p><a href="/westlake-rl/时序差分方法/时序差分方法.pdf">阅读原版 PDF</a></p>
+</footer>
 </article>

@@ -1,13 +1,5 @@
 <script setup lang="ts">
 import '../lecture-academic.css'
-import { defineAsyncComponent, shallowRef } from 'vue'
-import pdfUrl from './值迭代与策略迭代.pdf?url'
-import outline from './目录.json'
-const PdfViewer = defineAsyncComponent(() => import('../../.vitepress/components/PdfViewer.vue'))
-const showOriginal = shallowRef(false)
-function toggleOriginal(event: Event) {
-  showOriginal.value = (event.target as HTMLDetailsElement).open
-}
 </script>
 
 <article class="native-document format-course academic-lecture" data-format="course" data-design="linux-notebook" aria-label="第 4 讲：值迭代与策略迭代">
@@ -16,7 +8,7 @@ function toggleOriginal(event: Event) {
   <h1 id="note-title" tabindex="-1">值迭代与策略迭代 <a class="header-anchor" href="#note-title" aria-label="文章链接">&#8203;</a></h1>
   <p class="note-deck">沿着策略评估与策略改进两条线索，比较值迭代、策略迭代与截断策略迭代的更新方式和收敛性。</p>
   <div class="note-chips"><span>值迭代</span><span>策略迭代</span><span>截断策略迭代</span></div>
-  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记</p>
+  <p class="lecture-source">据赵世钰《强化学习》课程整理的个人 LaTeX 笔记 · <a href="/westlake-rl/值迭代与策略迭代/值迭代与策略迭代.pdf">阅读原版 PDF</a></p>
 </header>
 <nav class="note-jump" aria-label="本篇阅读导航"><a href="#值迭代">4.1 值迭代</a>
 <a href="#策略迭代">4.2 策略迭代</a>
@@ -467,12 +459,8 @@ s_2 &amp; -9 &amp; -7.1 &amp; -9.1
 
 </section>
 </div>
-<details class="lecture-original note-details" @toggle="toggleOriginal">
-  <summary>对照原版 PDF<span>保留原页码与讲义目录</span></summary>
-  <div class="lecture-original-content">
-    <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
-    <p><a :href="pdfUrl" target="_blank" rel="noopener">在新窗口打开原版 PDF</a></p>
-    <ClientOnly><PdfViewer v-if="showOriginal" :src="pdfUrl" title="值迭代与策略迭代" :outline="outline" /></ClientOnly>
-  </div>
-</details>
+<footer class="lecture-original lecture-original-content">
+  <p>网页正文依据原 LaTeX 源稿排版，保留原有定理标题、公式编号与引用。文中涉及课程教材的图号沿用源笔记；源稿未附这些插图。</p>
+  <p><a href="/westlake-rl/值迭代与策略迭代/值迭代与策略迭代.pdf">阅读原版 PDF</a></p>
+</footer>
 </article>

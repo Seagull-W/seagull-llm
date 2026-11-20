@@ -34,12 +34,20 @@ for (const page of pages) {
     assert.equal((htmlBody.match(/class="lecture-equation-number"/g) ?? []).length, page.numbered_equations)
     assert.equal((htmlBody.match(/class="math-block"/g) ?? []).length, page.math.DisplayMath)
     // A full rendering pass catches unsupported TeX, not just source counts.
-    const env = {}
+    const env = { path: resolve(file) }
     const rendered = md.render(source.replace(/<!--@include:[\s\S]*?-->/, content), env)
     assert.doesNotMatch(rendered, /data-mjx-error|<merror\b|data-tex=/)
     assert.match(rendered, /<mjx-assistive-mml/)
     assert.equal((rendered.match(/<mjx-container[^>]+display="true"/g) ?? []).length, page.math.DisplayMath)
-    assert.match(content, /<details class="lecture-original note-details"/)
-    assert.match(content, /PdfViewer v-if="showOriginal"/)
+    const pdfLink = rendered.match(/<a href="([^"]+)">阅读原版 PDF<\/a>/)
+    assert.ok(pdfLink, page.chapter)
+    const url = new URL(pdfLink[1].replaceAll('&amp;', '&'), 'https://example.org')
+    assert.equal(url.pathname, '/subpath/pdf/')
+    const params = new URLSearchParams(url.hash.slice(1))
+    const pdf = decodeURI(params.get('file'))
+    assert.ok(readFileSync(resolve('docs', '.' + pdf)).subarray(0, 5).equals(Buffer.from('%PDF-')))
+    assert.ok(JSON.parse(readFileSync(resolve('docs', '.' + pdf.replace(/[^/]+$/, '目录.json')), 'utf8')).length > 0)
+    assert.equal(params.get('from'), '/' + file.replace(/^docs\//, '').replace(/(?:index)?\.md$/, ''))
+    assert.doesNotMatch(content, /PdfViewer|showOriginal/)
   })
 }

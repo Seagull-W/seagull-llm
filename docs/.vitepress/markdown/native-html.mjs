@@ -1,7 +1,19 @@
 import matter from 'gray-matter'
 import { parse } from '@vue/compiler-dom'
 import { existsSync, readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { dirname, relative, resolve } from 'node:path'
+import { pdfReaderHref } from '../pdf-links.mjs'
+
+function linkPdfReaders(html, env, base, prefix) {
+  const path = env.relativePath || (env.path && relative(resolve('docs'), env.path)) || 'index.md'
+  const from = '/' + path.replaceAll('\\', '/').replace(/(?:^|\/)index\.md$/, '/').replace(/^\/|\.md$/g, '')
+  return html.replace(/<a\b[^>]*>/gi, tag => {
+    const href = tag.match(/\shref\s*=\s*(["'])(.*?)\1/i)
+    if (!href || !/\.pdf\b|\/pdf[/?]/i.test(href[2]) || /\sdownload(?=[\s=>])/i.test(tag)) return tag
+    const target = pdfReaderHref(href[2].replaceAll('&amp;', '&'), from, base)
+    return target ? tag.replace(href[0], ' href="' + prefix + target.slice(1).replaceAll('&', '&amp;') + '"') : tag
+  })
+}
 
 const imageDimensions = new Map()
 function prepareImages(html, env) {
@@ -82,7 +94,7 @@ export default function nativeHtml(md, base = '/') {
   const render = md.render.bind(md)
   md.render = (source, env = {}) => {
     const { data, content } = matter(source)
-    if (data.contentFormat !== 'html') return prepareImages(mathBaselines(render(source, env)), env)
+    if (data.contentFormat !== 'html') return linkPdfReaders(prepareImages(mathBaselines(render(source, env)), env), env, base, base)
     if (/<!--\s*@include:/.test(content)) {
       throw new Error('HTML source must be expanded with VitePress processIncludes before rendering.')
     }
@@ -108,7 +120,7 @@ export default function nativeHtml(md, base = '/') {
     // Browsers insert tbody around bare rows; compile the same structure so
     // hydration and the shared table controls see one consistent DOM.
     html = html.replace(/(<table\b[^>]*>)(\s*(?:<tr\b[\s\S]*?<\/tr>\s*)+)(<\/table>)/g, '$1<tbody>$2</tbody>$3')
-    html = prepareImages(html, env)
+    html = linkPdfReaders(prepareImages(html, env), env, base, '/')
     const info = inspectHtml(html)
     // Root-relative links and public assets must also work under GitHub Pages.
     // Keep relative assets static so Vite can hash and bundle them as usual.

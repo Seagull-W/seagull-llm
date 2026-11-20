@@ -7,6 +7,8 @@ docs/.vitepress/.temp/
 Thumbs.db
 .env
 .env.*
+.dev.vars
+.dev.vars.*
 !.env.example
 
 # Build/deploy temp files

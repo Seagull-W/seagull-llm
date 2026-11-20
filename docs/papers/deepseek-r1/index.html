@@ -1,3 +1,15 @@
+<script setup>
+import { onMounted } from 'vue'
+import { useData, withBase } from 'vitepress'
+
+const { page } = useData()
+onMounted(() => {
+  if (page.value.relativePath === 'papers/deepseek-r1/web.md') {
+    location.replace(withBase('/papers/deepseek-r1/') + location.hash)
+  }
+})
+</script>
+
 <article class="native-document format-paper" data-format="paper" aria-label="DeepSeek-R1 技术报告阅读笔记" data-design="linux-notebook">
 <header class="document-intro note-hero">
   <p class="note-kicker">论文与项目随谈<span>从问题、方法到证据</span></p>
@@ -24,7 +36,7 @@
 <section class="document-section note-panel" aria-labelledby="reading-context">
 <h2 id="reading-context" tabindex="-1">阅读起点 <a class="header-anchor" href="#reading-context" aria-label="章节链接">&#8203;</a></h2>
 <blockquote>
-<p>论文链接：<a href="https://arxiv.org/abs/2501.12948" target="_blank" rel="noreferrer">deepseek-r1</a>，此次阅读的是 v2 版本。</p>
+<p>论文链接：<a href="https://arxiv.org/abs/2501.12948v2" target="_blank" rel="noreferrer">deepseek-r1</a>，此次阅读的是 v2 版本。</p>
 </blockquote>
 </section>
 
@@ -36,7 +48,7 @@
 </blockquote>
 <h3 id="训练设置" tabindex="-1">训练设置 <a class="header-anchor" href="#训练设置" aria-label="Permalink to &quot;训练设置&quot;">&ZeroWidthSpace;</a></h3>
 <p>学习率设置为 3e-6，KL 系数设置为 0.001，rollout 采样温度为 1。
-在8,200步之前每个问题采样16个输出，最大长度规定为32,786 token。之后最大长度调整为65,536 token。</p>
+在8,200步之前每个问题采样16个输出，最大长度规定为32,768 token。之后最大长度调整为65,536 token。</p>
 <blockquote>
 <p>每个step为一次策略更新的过程，每个epoch代表总训练数据遍历一遍。</p>
 </blockquote>

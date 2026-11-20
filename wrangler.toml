@@ -6,4 +6,14 @@ name = "seagull-llm"
 pages_build_output_dir = "docs/.vitepress/dist"
 compatibility_date = "2024-12-01"
 
-# 免费额度：无限请求/带宽，Pages Functions 100,000 请求/天
+[[d1_databases]]
+binding = "NOTES_DB"
+database_name = "seagull-notes"
+database_id = "e4f9eea5-ccf6-4d8b-9639-2504ffa88344"
+migrations_dir = "migrations"
+
+# 预览环境独立绑定，避免预览代码接触生产笔记。
+[env.preview]
+[[env.preview.d1_databases]]
+binding = "NOTES_DB"
+database_name = "seagull-notes-preview"

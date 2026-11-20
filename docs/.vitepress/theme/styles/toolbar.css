@@ -21,12 +21,29 @@
 }
 .Layout.Layout .VPNavScreen { border:0; box-shadow:none; }
 .Layout.Layout .reader-drawer { border:0; border-left:1px solid var(--vp-c-divider); box-shadow:-12px 0 36px #14223026; }
+@media screen and (min-width:1100px) {
+  .Layout.Layout.paper-notebook-layout .reader-drawer {
+    --panel-origin:translateX(-10px);
+    border-left:0;
+    border-right:1px solid var(--vp-c-divider);
+    box-shadow:12px 0 36px #14223026;
+  }
+}
 .Layout.Layout :is(.search-dialog header,.reader-drawer header) { border-bottom:1px solid var(--vp-c-divider); }
 
 @media(max-width:639px) {
   .Layout.Layout .site-search-trigger { width:40px; padding:0; justify-content:center; }
   .Layout.Layout .site-search-trigger > span { display:none; }
   .Layout.Layout .seagull-nav-actions { gap:2px; margin-left:0; padding-left:8px; }
+}
+@media (max-width:460px) {
+  .Layout.Layout.paper-notebook-layout .reader-tools,
+  .paper-notebook-layout .reader-tools-actions { gap:4px; }
+  .Layout.Layout.paper-notebook-layout .reader-tools button { gap:5px; padding-inline:4px; }
+  .Layout.Layout.paper-notebook-layout .reader-pocket-position { display:none; }
+}
+@media (max-width:360px) {
+  .paper-notebook-layout .paper-tool-label { display:none; }
 }
 @media(prefers-reduced-motion:reduce) {
   .Layout.Layout :is(.site-search-trigger,.seagull-nav-actions > button,.reader-tools button) { transition:none; }
