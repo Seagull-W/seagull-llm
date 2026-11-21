@@ -260,12 +260,12 @@ onBeforeUnmount(() => {
           <button aria-label="下一页" :disabled="!ready || page>=count" @click="goTo(page+1)"><ReaderIcon name="next" /></button>
         </div>
         <div class="pdf-tools pdf-zoom">
-          <button class="zoom-step" aria-label="缩小 PDF" :disabled="!ready || percent<=25" @click="zoom(-1)">−</button>
+          <button class="zoom-step" aria-label="缩小 PDF" :disabled="!ready || percent<=25" @click="zoom(-1)"><ReaderIcon name="minus" /></button>
           <select aria-label="PDF 缩放比例" :value="percent" :disabled="!ready" @change="setZoom(Number(($event.target as HTMLSelectElement).value))">
             <option v-if="customZoom" :value="percent">{{percent}}%</option>
             <option v-for="value in zoomOptions" :key="value" :value="value">{{value}}%</option>
           </select>
-          <button class="zoom-step" aria-label="放大 PDF" :disabled="!ready || percent>=400" @click="zoom(1)">+</button>
+          <button class="zoom-step" aria-label="放大 PDF" :disabled="!ready || percent>=400" @click="zoom(1)"><ReaderIcon name="plus" /></button>
           <button aria-label="适应宽度" title="适应宽度" :disabled="!ready" @click="fitWidth"><ReaderIcon name="fit" /></button>
         </div>
         <div class="pdf-tools pdf-writing">

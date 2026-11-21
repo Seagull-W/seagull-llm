@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { withBase } from 'vitepress'
+import SectionArtwork from './SectionArtwork.vue'
 import { bilibiliSpaceUrl, scienceVideos } from '../data/videos'
 import { useVisualStyle } from '../theme/visual-styles'
 
@@ -13,8 +14,9 @@ const videos = computed(() => props.preview ? scienceVideos.slice(0, 3) : scienc
 <template>
   <section class="video-gallery" :data-index="style.iconSet" :class="{ 'is-preview': preview }" aria-labelledby="video-gallery-title">
     <header class="gallery-header">
-      <div>
-        <p class="eyebrow">通过视频，一起学习</p>
+      <SectionArtwork v-if="style.iconSet === 'pixel' && !preview" class="video-emblem" section="videos" />
+      <div class="gallery-heading">
+        <p v-if="style.iconSet !== 'pixel'" class="eyebrow">通过视频，一起学习</p>
         <component :is="preview ? 'h2' : 'h1'" id="video-gallery-title">科普视频</component>
         <p class="gallery-intro">用画面和讲解分享知识，让抽象的概念更容易理解。</p>
       </div>
@@ -32,6 +34,7 @@ const videos = computed(() => props.preview ? scienceVideos.slice(0, 3) : scienc
         target="_blank"
         rel="noopener noreferrer"
         :aria-label="`${video.title}，在 Bilibili 观看（新窗口）`"
+        :aria-describedby="style.iconSet === 'pixel' && video.duration ? `runtime-${video.bvid}` : undefined"
       >
         <div class="video-cover">
           <img
@@ -46,14 +49,18 @@ const videos = computed(() => props.preview ? scienceVideos.slice(0, 3) : scienc
             @error="failedCovers[video.bvid] = true"
           />
           <span v-else class="cover-fallback">{{ video.title }}</span>
-          <span class="source-badge">{{ video.source }}</span>
+          <span v-if="style.iconSet !== 'pixel'" class="source-badge">{{ video.source }}</span>
           <span class="play-icon" aria-hidden="true">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
           </span>
-          <span v-if="video.duration" class="duration">{{ video.duration }}</span>
+          <span v-if="video.duration" :id="`runtime-${video.bvid}`" class="duration">{{ video.duration }}</span>
         </div>
         <div class="video-info">
-          <div class="video-meta"><span class="video-reel" aria-hidden="true">{{ String(i + 1).padStart(2,'0') }}</span><time :datetime="video.publishedAt">{{ video.publishedAt }}</time></div>
+          <div class="video-meta">
+            <span v-if="style.iconSet === 'pixel'" class="video-source">{{ video.source }}</span>
+            <span v-else class="video-reel" aria-hidden="true">{{ String(i + 1).padStart(2,'0') }}</span>
+            <time :datetime="video.publishedAt">{{ video.publishedAt }}</time>
+          </div>
           <h3>{{ video.title }}</h3>
           <p class="video-description">{{ video.description }}</p>
           <span class="watch-link">在 Bilibili 观看 <span aria-hidden="true">↗</span></span>
@@ -124,9 +131,37 @@ time { color: var(--vp-c-text-2); font-size: 12px; }
 .video-gallery[data-index='paper'] .video-info { padding:10px 0; }
 .video-gallery[data-index='paper'] .video-info h3 { font-family:'Seagull Academic Serif',SimSun,serif; }
 .video-gallery[data-index='paper'] .source-badge,.video-gallery[data-index='cinema'] .source-badge { display:none; }
-.video-gallery[data-index='pixel'] .video-card { padding:8px; box-shadow:none; border:0; border-bottom:2px solid var(--pixel-edge); background:var(--pixel-panel); }
-.video-gallery[data-index='pixel'] .video-info { padding:12px 8px 6px; }
-.video-gallery[data-index='pixel']:not(.is-preview) .video-reel { display:block; padding:2px 5px; font:12px/1.4 var(--vp-font-family-mono); background:var(--vp-c-brand-1); color:var(--vp-button-brand-text); }
+.video-gallery[data-index='pixel']:not(.is-preview) .gallery-header {
+  display:grid; grid-template-columns:auto minmax(0, 1fr) auto; align-items:center;
+  gap:8px clamp(12px, 2vw, 24px); padding:16px 0; border-block:1px solid var(--vp-c-divider);
+}
+.video-gallery[data-index='pixel'] .video-emblem { width:90px; height:66px; }
+.video-gallery[data-index='pixel'] .gallery-link { display:inline-flex; align-items:center; gap:4px; min-height:44px; }
+.video-gallery[data-index='pixel'] .video-grid { gap:clamp(14px, 2vw, 24px); }
+.video-gallery[data-index='pixel'] .video-card {
+  min-width:0; padding:0; border:1px solid var(--vp-c-border); border-bottom:2px solid var(--pixel-edge);
+  box-shadow:none; background:var(--pixel-panel);
+}
+.video-gallery[data-index='pixel'] .video-card:is(:hover,:focus-visible) { border-color:var(--vp-c-brand-1); box-shadow:none; }
+.video-gallery[data-index='pixel'] .video-card:is(:hover,:focus-visible) .watch-link { text-decoration:underline; text-underline-offset:.2em; }
+.video-gallery[data-index='pixel'] .video-info { padding:14px clamp(14px, 2vw, 22px) 18px; }
+.video-gallery[data-index='pixel'] .video-info h3 { margin:6px 0 0; font-size:clamp(17px, 1.5vw, 21px); overflow-wrap:anywhere; }
+.video-gallery[data-index='pixel'] .video-meta { gap:8px 12px; flex-wrap:wrap; font:12px/1.5 var(--vp-font-family-mono); color:var(--vp-c-text-2); }
+.video-gallery[data-index='pixel'] .video-source { padding-right:12px; border-right:1px solid var(--pixel-edge); }
+.video-gallery[data-index='pixel'] :is(.play-icon,.duration) {
+  inset:auto auto 8px 8px; height:28px; background:#132944; color:#f4f8ff; border-radius:0;
+}
+.video-gallery[data-index='pixel'] .play-icon { width:30px; }
+.video-gallery[data-index='pixel'] .duration {
+  display:flex; align-items:center; left:38px; padding:0 8px 0 0; font:600 12px/1 var(--vp-font-family-mono);
+}
+.video-gallery[data-index='pixel'] .cover-fallback { color:#e5efff; background:#243f63; }
+@media (max-width:639px) {
+  .video-gallery[data-index='pixel']:not(.is-preview) .gallery-header { grid-template-columns:60px minmax(0, 1fr); }
+  .video-gallery[data-index='pixel'] .video-emblem { width:60px; height:44px; align-self:start; }
+  .video-gallery[data-index='pixel']:not(.is-preview) .gallery-link { grid-column:2; justify-self:start; }
+  .video-gallery[data-index='pixel'].is-preview .gallery-header { flex-direction:row; align-items:center; flex-wrap:wrap; gap:0 12px; }
+}
 .video-gallery[data-index='cinema'] .video-card { border:0; border-radius:0; background:transparent; }
 .video-gallery[data-index='cinema'] .video-cover { aspect-ratio:1.85; }
 .video-gallery[data-index='cinema'] .video-info { padding:12px 0; border-bottom:1px solid var(--vp-c-divider); }

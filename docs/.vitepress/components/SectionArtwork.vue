@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useVisualStyle } from '../theme/visual-styles'
-import { sectionArtwork } from './section-artwork'
+import { paperSectionArtwork, pixelSectionArtwork } from './section-artwork'
 import SectionPhotograph from './SectionPhotograph.vue'
 
 const props = defineProps<{ section: string }>()
 const style = useVisualStyle()
 const isPixel = computed(() => style.value.iconSet === 'pixel')
 const layers = computed(() => {
-  const study = sectionArtwork[props.section] || sectionArtwork.papers
-  return isPixel.value ? study.pixel : study.paper
+  const studies = isPixel.value ? pixelSectionArtwork : paperSectionArtwork
+  return studies[props.section] || studies.papers
 })
 </script>
 
@@ -29,9 +29,16 @@ const layers = computed(() => {
 }
 .section-artwork.is-pixel {
   width:120px; height:88px; shape-rendering:crispEdges;
-  --study-paper:color-mix(in srgb,var(--pixel-edge) 72%,#f6f1e7); --study-ground:var(--vp-c-bg-soft);
-  --study-ink:#26364a; --study-light:var(--pixel-paper);
-  --study-shade:var(--pixel-edge); --study-accent:var(--pixel-signal);
+  --study-paper:#8aaed9; --study-ground:var(--vp-c-bg-soft);
+  --study-ink:#243e67; --study-light:var(--pixel-paper);
+  --study-shade:#426799; --study-accent:var(--pixel-signal);
+}
+.dark .section-artwork.is-pixel,
+.pixel-mountain-home .section-artwork.is-pixel {
+  --study-paper:#a0c4ef; --study-shade:#698ab7;
+}
+.pixel-mountain-home .section-artwork.is-pixel {
+  --study-ground:#243e5b; --study-light:#e4effd; --study-accent:#f2c588;
 }
 .paper { fill:var(--study-paper); }
 .ground { fill:var(--study-ground); }

@@ -107,6 +107,27 @@ body > .annotation-mark.is-region.is-filled,
   .notebook-html .notebook-resizer { display:none; }
   .notebook-html .notebook-panel { border-left:0; border-top:1px solid var(--nw-line); }
 }
+/* The notebook and selection toolbar can live directly under body. */
+:root[data-visual-style='pixel-voyage'] :is(.pdf-reader,.annotation-notebook,.selection-actions,.notebook-toast,.html-notebook-launch) {
+  --nw-bg:var(--vp-c-bg-alt); --nw-canvas:var(--vp-c-bg-soft); --nw-soft:var(--vp-c-bg-soft);
+  --nw-text:var(--vp-c-text-1); --nw-muted:var(--vp-c-text-2); --nw-line:var(--vp-c-divider);
+  --nw-accent:var(--vp-c-brand-1); --nw-on-accent:var(--vp-button-brand-text);
+  --nw-tint:color-mix(in srgb,var(--nw-accent) 12%,var(--nw-bg));
+}
+:root[data-visual-style='pixel-voyage'] :is(.html-notebook-launch,.notebook-toast,.selection-actions),
+:root[data-visual-style='pixel-voyage'] :is(.pdf-toolbar,.pdf-outline,.notebook-panel,.selection-actions) :is(button,input,select,a,summary,.menu-items) {
+  border-radius:0;
+}
+:root[data-visual-style='pixel-voyage'] :is(.pdf-toolbar,.notebook-head) {
+  border-bottom:1px solid var(--pixel-edge); background:var(--nw-bg);
+}
+:root[data-visual-style='pixel-voyage'] :is(.pdf-toolbar button,.notebook-filters button,.html-notebook-launch):is([aria-expanded='true'],[aria-pressed='true']),
+:root[data-visual-style='pixel-voyage'] .pdf-files[open] summary {
+  box-shadow:inset 0 -2px var(--nw-accent); color:var(--nw-accent); background:var(--nw-tint);
+}
+:root[data-visual-style='pixel-voyage'] :is(.selection-actions,.pdf-files .menu-items,.notebook-menu .menu-items) {
+  border-color:var(--pixel-edge); box-shadow:3px 3px var(--pixel-shadow);
+}
 @media print { .notebook-html { display:none; } }
 @container pdfspace (max-width:679px) {
   .pdf-body>.annotation-notebook.notebook-open { width:100%; flex:0 0 44%; }

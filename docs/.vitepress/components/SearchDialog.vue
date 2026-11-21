@@ -3,8 +3,11 @@ import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } fr
 import { useRoute, withBase } from 'vitepress'
 import { data as pages } from '../data/tagged-pages.data'
 import { contextFor, excerpt, searchContent, type SearchDocument } from '../content-catalog'
+import { useVisualStyle } from '../theme/visual-styles'
 import InterfaceIcon from './InterfaceIcon.vue'
 
+const visual = useVisualStyle()
+const shortcutLabel = ref('Ctrl K')
 const dialog = ref<HTMLDialogElement>()
 const input = ref<HTMLInputElement>()
 const query = ref('')
@@ -50,17 +53,20 @@ function move(event: KeyboardEvent) {
 }
 watch(query, () => { limit.value = 12 })
 watch(() => route.path, close)
-onMounted(() => { window.addEventListener('keydown', shortcut); window.addEventListener('seagull-search', open) })
+onMounted(() => {
+  if (/Mac|iPhone|iPad/.test(navigator.platform)) shortcutLabel.value = '⌘ K'
+  window.addEventListener('keydown', shortcut); window.addEventListener('seagull-search', open)
+})
 onUnmounted(() => { close(); window.removeEventListener('keydown', shortcut); window.removeEventListener('seagull-search', open) })
 </script>
 
 <template>
-  <button class="site-search-trigger" aria-haspopup="dialog" aria-label="搜索全部内容" @click="open">
+  <button class="site-search-trigger" :class="{ 'pixel-search-trigger': visual.iconSet === 'pixel' }" aria-haspopup="dialog" aria-keyshortcuts="Control+k Meta+k" aria-label="搜索全部内容" @click="open">
     <InterfaceIcon name="search" />
-    <span>搜索</span><kbd>Ctrl K</kbd>
+    <span>搜索</span><kbd>{{ visual.iconSet === 'pixel' ? shortcutLabel : 'Ctrl K' }}</kbd>
   </button>
-  <dialog ref="dialog" class="search-dialog" aria-label="搜索全部内容" @close="restore" @click="($event.target === dialog) && close()" @keydown="move">
-    <header><input ref="input" v-model="query" aria-label="搜索关键词" placeholder="搜索标题、主题或正文…" type="search" autocomplete="off" @keydown.enter.prevent="dialog?.querySelector<HTMLAnchorElement>('.search-hit > a')?.click()"><button aria-label="关闭搜索" @click="close">关闭</button></header>
+  <dialog ref="dialog" class="search-dialog" :class="{ 'pixel-search-dialog': visual.iconSet === 'pixel' }" aria-label="搜索全部内容" @close="restore" @click="($event.target === dialog) && close()" @keydown="move">
+    <header><InterfaceIcon v-if="visual.iconSet === 'pixel'" name="search" /><input ref="input" v-model="query" aria-label="搜索关键词" placeholder="搜索标题、主题或正文…" type="search" autocomplete="off" @keydown.enter.prevent="dialog?.querySelector<HTMLAnchorElement>('.search-hit > a')?.click()"><button aria-label="关闭搜索" @click="close">关闭</button></header>
     <div class="search-body">
       <template v-if="query.trim()">
         <p class="search-status" role="status">{{ loading ? '正在加载全文…' : `找到 ${results.length} 项内容` }}<span v-if="failed"> · 全文加载失败，<button @click="load">重试</button></span></p>
@@ -75,7 +81,8 @@ onUnmounted(() => { close(); window.removeEventListener('keydown', shortcut); wi
       </template>
       <div v-else class="search-empty"><p>可以搜索正文，也可以直接找主题。</p><div class="search-suggestions"><button v-for="term in ['强化学习', '智能体', '奖励建模', 'Linux']" :key="term" @click="query = term">{{ term }}</button></div><a :href="withBase('/tags')" @click="close">按栏目和主题浏览全部内容 →</a></div>
     </div>
-    <footer>↑ ↓ 选择文章 · Enter 打开 · Esc 关闭</footer>
+    <footer v-if="visual.iconSet === 'pixel'" class="search-shortcuts"><span><kbd>↑</kbd><kbd>↓</kbd> 选择文章</span><span><kbd>Enter</kbd> 打开</span><span><kbd>Esc</kbd> 关闭</span></footer>
+    <footer v-else>↑ ↓ 选择文章 · Enter 打开 · Esc 关闭</footer>
   </dialog>
 </template>
 
@@ -107,5 +114,23 @@ strong { display:block; font-size:17px; line-height:1.6; font-weight:600; }
 .search-empty a,.search-status button { color:var(--vp-c-brand-1); }
 .search-more { display:block; margin:18px auto 0; padding:8px 16px; color:var(--vp-c-brand-1); }
 footer { border-top:1px solid var(--vp-c-divider); padding:10px 20px; font-size:11px; color:var(--vp-c-text-2); }
+.pixel-search-dialog.search-dialog[open] { border:1px solid var(--pixel-edge); border-radius:3px; background:var(--vp-c-bg-alt); }
+.pixel-search-dialog header { background:var(--vp-c-bg-soft); color:var(--vp-c-brand-1); }
+.pixel-search-dialog header input { color:var(--vp-c-text-1); outline-offset:1px; }
+.pixel-search-dialog header input::placeholder { color:var(--vp-c-text-3); opacity:1; }
+.pixel-search-dialog header button { color:var(--vp-c-brand-1); }
+.pixel-search-dialog header button:is(:hover,:focus-visible), .pixel-search-dialog .search-empty a { text-decoration:underline; text-underline-offset:.22em; }
+.pixel-search-dialog .search-hit > a { padding:9px 10px; border-inline-start:3px solid transparent; }
+.pixel-search-dialog .search-hit > a:is(:hover,:focus-visible) { border-inline-start-color:var(--vp-c-brand-1); }
+.pixel-search-dialog .search-hit a:focus-visible { outline:2px solid var(--vp-c-brand-1); outline-offset:-2px; }
+.pixel-search-dialog .search-context { color:var(--vp-c-brand-1); margin-bottom:3px; }
+.pixel-search-dialog .search-passages { margin-inline-start:22px; border-color:var(--pixel-edge); }
+.pixel-search-dialog .search-suggestions button { border:1px solid var(--vp-c-border); color:var(--vp-c-brand-1); box-shadow:none; }
+.pixel-search-dialog .search-suggestions button:is(:hover,:focus-visible) { border-color:var(--vp-c-brand-1); }
+.pixel-search-dialog .search-shortcuts span { display:inline-flex; align-items:center; gap:4px; margin-inline-end:16px; }
+.pixel-search-dialog .search-shortcuts kbd, .site-search-trigger.pixel-search-trigger kbd {
+  margin:0; padding:1px 4px; border:1px solid var(--vp-c-border); border-bottom-width:2px; border-radius:2px;
+  color:var(--vp-c-text-2); background:var(--vp-c-bg-alt); font:11px/1.45 var(--vp-font-family-mono); opacity:1;
+}
 @media(max-width:767px) { kbd { display:none; } .site-search-trigger { border:0; background:transparent; padding:0 10px; } .search-dialog { inset:12px 12px auto; max-width:calc(100vw - 24px); max-height:calc(100dvh - 24px); } header { padding:10px 14px; } .search-body { padding-inline:14px; } footer { display:none; } }
 </style>

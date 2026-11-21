@@ -3,36 +3,44 @@ import SectionIcon from './SectionIcon.vue'
 import SectionArtwork from './SectionArtwork.vue'
 import SectionPhotograph from './SectionPhotograph.vue'
 import { graceCharacterFor, portraitPath } from './grace-characters'
-import { sectionArtwork } from './section-artwork'
+import { paperSectionArtwork, pixelSectionArtwork } from './section-artwork'
 import { computed } from 'vue'
 import { withBase } from 'vitepress'
 import { useVisualStyle } from '../theme/visual-styles'
 const props = defineProps<{ section: string }>()
 const style = useVisualStyle()
-const banner = computed(() => style.value.iconSet === 'pixel'
+const hasPixelStudy = computed(() => style.value.iconSet === 'pixel' && Object.hasOwn(pixelSectionArtwork, props.section))
+const banner = computed(() => style.value.iconSet === 'pixel' && !hasPixelStudy.value
   ? style.value.sectionArt?.[props.section] || style.value.sectionArt?.papers || style.value.assets.coverLight
   : undefined)
-const hasStudy = computed(() => Object.hasOwn(sectionArtwork, props.section))
+const hasStudy = computed(() => Object.hasOwn(paperSectionArtwork, props.section))
 </script>
 <template>
-  <div class="section-illustration" :class="{ 'pixel-section-art': banner, 'film-section-art': style.iconSet === 'cinema' }" aria-hidden="true">
+  <div class="section-illustration" :class="{ 'pixel-directory-emblem': hasPixelStudy, 'pixel-section-art': banner, 'film-section-art': style.iconSet === 'cinema' }" aria-hidden="true">
     <SectionPhotograph v-if="style.iconSet === 'cinema'" :section="section" />
     <img v-else-if="style.iconSet === 'grace'" class="grace-directory-portrait" :src="withBase(portraitPath(graceCharacterFor(section)))" alt="" width="154" height="116" loading="lazy" decoding="async" fetchpriority="low" />
-    <picture v-else-if="banner" class="pixel-banner"><source media="(max-width:639px)" :srcset="withBase(style.icons?.[section] || style.assets.coverLight)" /><img :src="withBase(banner)" alt="" width="2304" height="768" /></picture>
-    <SectionArtwork v-else-if="hasStudy" :section="section" />
+    <picture v-else-if="banner" class="pixel-banner"><source media="(max-width:639px)" :srcset="withBase(style.icons?.[section] || style.icons?.papers || banner)" /><img :src="withBase(banner)" alt="" width="2304" height="768" /></picture>
+    <SectionArtwork v-else-if="hasPixelStudy || hasStudy" :section="section" />
     <svg v-else class="paper-landscape" viewBox="0 0 200 130" fill="none">
       <path d="M10 100Q60 56 105 88T195 80L186 125H14Z" fill="var(--illustration-mist)" />
       <path d="M25 104Q79 116 130 73T194 64" stroke="var(--illustration-ink)" stroke-width="1" stroke-dasharray="3 6" opacity=".5" />
       <path d="m143 19 28-7-12 24-23 3Z" fill="var(--illustration-paper)" />
       <circle cx="34" cy="54" r="3" fill="var(--illustration-ink)" opacity=".55" />
     </svg>
-    <SectionIcon v-if="style.iconSet !== 'cinema' && style.iconSet !== 'grace' && !banner && !hasStudy" :section="section" />
+    <SectionIcon v-if="style.iconSet === 'paper' && !hasStudy" :section="section" />
   </div>
 </template>
 <style scoped>
 .section-illustration { position:absolute; right:0; top:0; width:180px; height:130px; pointer-events:none; }
 .paper-landscape { width:100%; height:100%; }
 .section-illustration .section-artwork { width:180px; height:130px; }
+.section-illustration.pixel-directory-emblem {
+  inset:0 0 0 auto; display:grid; place-items:center;
+  width:42%; height:100%; overflow:hidden;
+}
+.pixel-directory-emblem .section-artwork {
+  width:clamp(100px, 72%, 210px); height:auto;
+}
 .section-illustration .grace-directory-portrait { display:block; width:100%; height:100%; object-fit:contain; padding:5px 8px; }
 .section-icon { position:absolute; width:76px; height:76px; top:23px; left:54px; transform:rotate(-7deg); }
 @media(max-width:639px) {
@@ -40,6 +48,8 @@ const hasStudy = computed(() => Object.hasOwn(sectionArtwork, props.section))
   .section-illustration .grace-directory-portrait { padding:0 2px; }
   .paper-landscape { display:none; }
   .section-illustration .section-artwork { width:54px; height:40px; }
+  .section-illustration.pixel-directory-emblem { inset:18px 14px auto auto; width:48px; height:38px; }
+  .pixel-directory-emblem .section-artwork { width:48px; height:auto; }
   .section-icon { width:44px; height:44px; top:0; left:5px; transform:none; }
 }
 </style>
