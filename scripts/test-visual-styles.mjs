@@ -9,7 +9,8 @@ import { runInNewContext } from 'node:vm'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import sharp from 'sharp'
 import { closingImageFor, gracePortraitMedia, heroImageFor, heroMediaFor, pageArtPreload, visualStyles, resolveVisualStyle, visualStyleBoot } from '../docs/.vitepress/theme/visual-styles.ts'
-import { pixelDaylightMatrix } from '../docs/.vitepress/theme/pixel-daylight.ts'
+import { pixelArtPalettes, pixelDaylightMatrix } from '../docs/.vitepress/theme/pixel-daylight.ts'
+import { pixelSectionArtwork } from '../docs/.vitepress/components/section-artwork.ts'
 import { graceParties, graceCharacterFor, graceReadingPortraits, readingPortraitFor, portraitPath } from '../docs/.vitepress/components/grace-characters.ts'
 import { huntSheetPath, sheets } from '../docs/.vitepress/components/pixel-hunt/choreography.ts'
 import { createThemeImageBuild } from '../docs/.vitepress/versioned-theme-images.mts'
@@ -188,7 +189,23 @@ test('the pixel homepage uses its landscape and portrait mountain crops in both 
   }
 })
 
-test('pixel icons retain their native 32px grid and binary transparency', async () => {
+test('each public section and the tag index has a distinct visible pixel silhouette', async () => {
+  const sections = JSON.parse(await readFile(new URL('../docs/.vitepress/sections.json', import.meta.url), 'utf8'))
+  const silhouettes = new Set()
+  for (const id of [...sections.map(section => section.id), 'tags']) {
+    const layers = pixelSectionArtwork[id]
+    assert.ok(layers?.length, id)
+    const paths = layers.filter(layer => layer.tone !== 'ground').map(layer => `<path d="${layer.d}"/>`).join('')
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="60" height="44" shape-rendering="crispEdges">${paths}</svg>`
+    const mask = await sharp(Buffer.from(svg)).ensureAlpha().extractChannel('alpha').raw().toBuffer()
+    assert.ok(mask.includes(255) && mask.includes(0), id)
+    const shape = mask.toString('base64')
+    assert.ok(!silhouettes.has(shape), `Duplicate section silhouette: ${id}`)
+    silhouettes.add(shape)
+  }
+})
+
+test('fallback pixel icons retain their native 32px grid and binary transparency', async () => {
   for (const asset of Object.values(visualStyles['pixel-voyage'].icons)) {
     const image = sharp(fileURLToPath(new URL('../docs/public' + asset, import.meta.url)))
     const metadata = await image.metadata()
@@ -199,17 +216,30 @@ test('pixel icons retain their native 32px grid and binary transparency', async 
   }
 })
 
-test('daylight rendering maps every source pigment precisely and preserves alpha', () => {
+test('pixel bitmap filters map all four pigments to day and night colors and preserve alpha', () => {
   const matrix = pixelDaylightMatrix.split(' ').map(Number)
   const rgb = hex => hex.match(/../g).map(v => parseInt(v, 16) / 255)
-  for (const [source, target] of [['26364a', 'ece9df'], ['79a99b', '698f82'], ['f2c690', 'b57c3b'], ['f6f1e7', '26364a']]) {
-    for (const alpha of [0, 1]) {
+  const pigments = [
+    ['26364a', 'ece9df', 'eaf1f9', '1b304a'],
+    ['79a99b', '698f82', '6388ad', '729bc8'],
+    ['f2c690', 'b57c3b', 'a97036', 'e0af77'],
+    ['f6f1e7', '26364a', '213f69', 'e6f1ff'],
+  ]
+  for (const [source, calibrated, day, night] of pigments) {
+    for (const alpha of [0, 0.5, 1]) {
       const input = [...rgb(source), alpha, 1]
-      const expected = [...rgb(target), alpha]
-      expected.forEach((channel, row) => {
-        const actual = input.reduce((sum, value, col) => sum + value * matrix[row * 5 + col], 0)
-        assert.ok(Math.abs(actual - channel) < 0.00001, `${source}, row ${row}`)
-      })
+      const output = [0, 1, 2, 3].map(row =>
+        input.reduce((sum, value, col) => sum + value * matrix[row * 5 + col], 0))
+      for (const [row, channel] of [...rgb(calibrated), alpha].entries()) {
+        assert.ok(Math.abs(output[row] - channel) < 0.00001, `${source}, row ${row}`)
+      }
+      for (const [filter, target] of [['pixel-daylight', day], ['pixel-night', night]]) {
+        const mapped = pixelArtPalettes[filter].map((table, channel) => {
+          const values = table.split(' ').map(Number)
+          return values[Math.floor(output[channel] * values.length)]
+        })
+        assert.deepEqual(mapped, rgb(target), `${filter}: ${source}`)
+      }
     }
   }
 })
@@ -226,13 +256,11 @@ test('each closing scene has a distinct day and night artwork on both screen siz
   }
 })
 
-test('pixel artwork rendered with the daylight filter uses its four supported pigments', async () => {
+test('all pixel fallback bitmaps use the four supported source pigments', async () => {
   const style = visualStyles['pixel-voyage']
-  const { logo, coverLight, coverDark } = style.assets
-  const assets = new Set([logo, coverLight, coverDark, ...Object.values(style.icons), ...Object.values(style.sectionArt)])
+  const assets = new Set([...Object.values(style.icons), ...Object.values(style.sectionArt)])
   const palette = new Set(['26364a', '79a99b', 'f2c690', 'f6f1e7'])
   for (const asset of assets) {
-    if (!asset.endsWith('.png')) continue
     const pixels = await sharp(fileURLToPath(new URL('../docs/public' + asset, import.meta.url))).ensureAlpha().raw().toBuffer()
     const colors = new Set()
     for (let i = 0; i < pixels.length; i += 4) {

@@ -5,6 +5,7 @@ import { data as pages } from '../data/tagged-pages.data'
 import { normalizeContentPath } from '../public-content'
 import { readingSeries, sectionFor } from '../content-catalog'
 import { useVisualStyle } from '../theme/visual-styles'
+import SectionIcon from './SectionIcon.vue'
 import SectionPhotograph from './SectionPhotograph.vue'
 import GraceEmblem from './GraceEmblem.vue'
 const style = useVisualStyle()
@@ -39,6 +40,9 @@ const related = computed(() => {
         <SectionPhotograph v-if="style.iconSet === 'cinema' && section" class="recommendation-still" :section="section.id" :style="{ gridRow: '1 / span ' + related.length }" />
         <a v-for="item in related" :key="item.url" class="related-link" :href="withBase(item.url)">
           <GraceEmblem v-if="style.iconSet === 'grace'" class="recommendation-emblem" :section="item.section" />
+          <span v-if="style.iconSet === 'pixel' && item.section" class="recommendation-source">
+            <SectionIcon :section="item.section" />{{ sectionFor(item.url)?.title }}
+          </span>
           <span class="recommendation-copy"><strong>{{ item.title }}</strong><small>{{ item.common.slice(0, 2).join(' · ') }}</small></span>
         </a>
       </div>
@@ -52,6 +56,8 @@ h2 { font-size:17px; font-weight:600; margin-bottom:8px; }
 .related-link { display:flex; justify-content:space-between; gap:16px; padding:12px 0; border-bottom:1px solid var(--vp-c-divider); font-size:14px; line-height:1.7; }
 small { color:var(--vp-c-text-2); font-size:11px; }
 .related-link small { text-align:right; flex:0 0 100px; }
+.recommendation-source { display:flex; gap:6px; align-items:center; margin-bottom:4px; color:var(--vp-c-text-2); font-size:12px; line-height:1.4; }
+.recommendation-source .section-icon { width:30px; height:22px; }
 a:hover { color:var(--vp-c-brand-1); }
 .reading-sequence { margin-bottom:28px; }
 .reading-sequence p { color:var(--vp-c-text-2); font-size:12px; margin-bottom:10px; }
