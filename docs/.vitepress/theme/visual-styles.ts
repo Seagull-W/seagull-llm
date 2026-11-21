@@ -47,7 +47,7 @@ export const visualStyles = {
     },
   },
   'pixel-voyage': {
-    id: 'pixel-voyage', name: '像素', version: 1.5, iconSet: 'pixel',
+    id: 'pixel-voyage', name: '雪山', version: 1.6, iconSet: 'pixel',
     description: '雪峰、云丝与细像素', collectionTitle: '栏目', closingTitle: '返航',
     assets: {
       logo: '/logo-pixel-voyage.svg',
@@ -55,8 +55,8 @@ export const visualStyles = {
       heroDark: '/images/pixel-voyage/snowpeak-wide.webp',
       mobile: '/images/pixel-voyage/snowpeak-portrait.webp',
       shuffleDie: '/images/pixel-voyage/cliff-dice.png',
-      coverLight: '/images/pixel-voyage/mobile.png',
-      coverDark: '/images/pixel-voyage/mobile.png',
+      coverLight: '/snowpeak-cover.webp',
+      coverDark: '/snowpeak-cover.webp',
       closing: '/images/pixel-voyage/closing/mountain-day.png',
       closingDark: '/images/pixel-voyage/closing/mountain-night.png',
     },

@@ -30,10 +30,23 @@ const visual = useVisualStyle()
 .chapter-cards[data-index='paper'] .chapter-no { position:absolute; left:0; top:22px; font:italic 14px Georgia,serif; }
 .chapter-cards[data-index='paper'] .chapter-card-title { font-family:'Seagull Academic Serif',SimSun,serif; }
 .chapter-cards[data-index='paper'] .chapter-card:is(:focus-visible,:hover)::after { content:''; position:absolute; right:0; top:0; width:11px; height:11px; background:linear-gradient(45deg,var(--vp-c-bg-soft) 49%,var(--vp-c-divider) 50%,transparent 57%); }
-.vp-doc .chapter-cards[data-index='pixel'] { border-top:0; }
-.vp-doc .chapter-cards[data-index='pixel'] .chapter-card { position:relative; display:grid; grid-template-columns:34px minmax(0,1fr); column-gap:16px; padding:15px 10px 15px 0; border-left:0; }
-.chapter-cards[data-index='pixel'] .chapter-card:not(:last-child)::after { content:''; position:absolute; top:50%; bottom:-50%; left:16px; width:2px; background:repeating-linear-gradient(var(--pixel-edge) 0 4px,transparent 4px 9px); pointer-events:none; }
-.chapter-cards[data-index='pixel'] .chapter-no { display:grid; place-items:center; position:relative; z-index:1; grid-row:1/4; align-self:center; background:var(--pixel-panel); color:var(--vp-c-brand-1); font:14px/34px var(--vp-font-family-mono); border-block:2px solid var(--pixel-edge); }
+.vp-doc .chapter-cards[data-index='pixel'] { border-top:1px solid var(--vp-c-divider); }
+.vp-doc .chapter-cards[data-index='pixel'] .chapter-card {
+  display:grid; grid-template-columns:32px minmax(0,1fr); column-gap:14px;
+  padding:16px 10px 16px 2px; border-left:0;
+}
+.chapter-cards[data-index='pixel'] .chapter-no {
+  grid-row:1/4; align-self:start; margin-top:4px; padding-block:2px; text-align:center;
+  font:13px/1.5 var(--vp-font-family-mono); color:var(--vp-c-text-2);
+  background:var(--vp-c-bg-soft); border-bottom:2px solid var(--vp-c-divider);
+}
+.vp-doc .chapter-cards[data-index='pixel'] .chapter-card:is(:hover,:focus-visible) {
+  background:var(--vp-c-bg-soft);
+}
+.chapter-cards[data-index='pixel'] .chapter-card:is(:hover,:focus-visible) .chapter-card-title {
+  color:var(--vp-c-brand-1); text-decoration:underline; text-underline-offset:.2em;
+}
+.chapter-cards[data-index='pixel'] .chapter-card:is(:hover,:focus-visible) .chapter-no { border-color:var(--pixel-signal); }
 .chapter-cards[data-index='cinema'] .chapter-card { display:grid; grid-template-columns:2.4em minmax(0,.9fr) minmax(0,1.15fr); column-gap:16px; align-items:start; }
 .chapter-cards[data-index='cinema'] .chapter-no { grid-column:1; grid-row:1/3; font:italic 21px/1.35 Georgia,serif; }
 .chapter-cards[data-index='cinema'] .chapter-card-meta { grid-column:2; margin-bottom:3px; }

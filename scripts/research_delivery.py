@@ -466,7 +466,7 @@ class DeliveryContract:
         self.w.write_json(path, manifest)
         guide = self.w.read_research_guide()
         out = guide + '\n\n# 本次调研分派与交付约定\n\n原始问题：' + task['question'] + '\n\n'
-        out += '本次已选择结构化交接。assignment.json 保留完整 task；文件接口见 .agents/skills/seagull-research/references/task-pipeline.md，目录型任务另读 references/delivery-contract.md（相对 skill 目录）。\n\n'
+        out += '本次使用结构化交接。assignment.json 保留完整任务。文件接口见 research/task-pipeline.md，目录型任务另读 research/delivery-contract.md。\n\n'
         out += '## 必须交付\n\n'
         for requirement in task.get('delivery', {}).get('requirements', []):
             out += '- ' + requirement + '\n'
@@ -475,6 +475,6 @@ class DeliveryContract:
             out += '\n## 对象与必答内容\n\n| 对象 | 必答内容 | 样本要求 |\n| --- | --- | --- |\n'
             for subject in d['subjects']:
                 out += '| ' + subject['name'] + ' | ' + '、'.join(f['label'] for f in d['facets']) + ' | ' + str(subject.get('min_examples', 0)) + ' 个；角色 ' + ', '.join(subject.get('required_roles', [])) + ' |\n'
-        out += '\n## 工具步骤\n\n检索与阅读 → 累计 evidence/search-log → collect → 写作 → report → 实际负责人试读与 accept。目录型交付在 collect 前另准备 cards.json 和要求的样本。完成判断使用前附 skill 与本次 requirements。\n'
+        out += '\n## 工具步骤\n\n检索与阅读 → 累计 evidence/search-log → collect → 写作 → report → 实际负责人试读与 accept。目录型交付在 collect 前另准备 cards.json 和要求的样本。按前附调研体例和本次 requirements 检查交付。\n'
         self.w.write_text(run / 'handoff.md', out)
         return manifest

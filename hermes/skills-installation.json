@@ -6,16 +6,6 @@
       "url": "https://skillhub.cn/skills/scholar-deep-research",
       "version": "0.5.0",
       "zip_sha256": "3655d4b865d1f09e9a5b9508d72edfe1131935cca6967c91560494a8cbe01085"
-    },
-    "scientific-writing": {
-      "repository": "https://github.com/KalarisLabs/research-agent-skills",
-      "commit": "df088027ff233dc511fa74cb7f406b4e87fa438c",
-      "path": "skills/scientific-writing"
-    },
-    "unslop-academic-writing": {
-      "repository": "https://github.com/KalarisLabs/research-agent-skills",
-      "commit": "df088027ff233dc511fa74cb7f406b4e87fa438c",
-      "path": "skills/unslop-academic-writing"
     }
   },
   "packages": [
@@ -24,18 +14,6 @@
       "files": 44,
       "tree_sha256": "e5a06ed62549c044248bc7dd0e63f7266dabb21388a5d78775abe82c83a5ec9e",
       "skill_sha256": "b46e25beb7c8e132c021d4a6de8a0f6de16bccd623b018022b26f603eb31b9f3"
-    },
-    {
-      "name": "scientific-writing",
-      "files": 32,
-      "tree_sha256": "a5ec26acbc3364dc7f429f050a9b833f74eeb253e78fb86700de8aa5632b817f",
-      "skill_sha256": "2356866a673a86ea675ef9adeb43e7c803ad2daa9bc5d29b32ca6a3a2cdccabb"
-    },
-    {
-      "name": "unslop-academic-writing",
-      "files": 5,
-      "tree_sha256": "3b5e32b187bfb84c8d579f49bb4f32d9b9a84f7dafbf12915c5211d1dfb9680c",
-      "skill_sha256": "978e0f89c50b1f01ea4a6ef80c44d06c83f1f8e59a0518c4c71b348809c16aaf"
     }
   ]
 }

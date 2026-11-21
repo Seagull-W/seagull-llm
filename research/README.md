@@ -47,6 +47,6 @@ node scripts/test-content-discovery.mjs --built
 
 ## 从选题开始的调研
 
-明确布置的主题调研可按交付目的检索、归纳和试读，普通交付直接使用 Markdown。[项目调研技能](../.agents/skills/seagull-research/SKILL.md)及其引用文件随仓库维护：`references/task-pipeline.md` 说明结构化任务与恢复，`references/delivery-contract.md` 说明验收，`references/daily.md` 说明固定订阅和定时运行。可选的第三方研究与表达技能见 [技能目录](../hermes/skills.md)，其安装与本次实际调用分别核实。
+明确布置的主题调研按[调研体例](../writing/research.md)检索、归纳和试读，普通交付直接使用 Markdown。脚本使用见[结构化任务与恢复](task-pipeline.md)、[交付验收](delivery-contract.md)及[固定订阅](daily.md)。批量文献发现可按需使用[文献检索工具](../hermes/skills.md)。
 
 本目录中的配置、JSON schema、`examples/` 和 `systemd/` 供相应脚本使用；各 VALIDATION 文件记录过去的实测情况。

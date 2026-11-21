@@ -38,11 +38,10 @@ __pycache__/
 /archive/*
 !/archive/llm-book-docs/
 
-# Local agent configuration and third-party installs; project-owned guidance is versioned.
+# Local agent configuration and third-party installs.
 /.agents/*
 !/.agents/skills/
 /.agents/skills/*
-!/.agents/skills/seagull-research/
 /.codex/
 /.hermes/
 /.aws/

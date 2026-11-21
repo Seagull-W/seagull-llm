@@ -1,0 +1,9 @@
+<script setup>
+import { withBase } from 'vitepress'
+import PdfViewer from '../../.vitepress/components/PdfViewer.vue'
+</script>
+
+<PdfViewer :src="withBase('/papers/score-centering/arxiv-2609.20807v1-zh.pdf')"
+  title="Score Centering：得分函数中心化使离策略强化学习更稳定（中文译本）" :outline="[]"
+  :back-href="withBase('/papers/#论文精读')" back-label="返回论文精读"
+  source-href="https://arxiv.org/abs/2609.20807v1" source-label="arXiv 原文与 TeX 源码" />

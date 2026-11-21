@@ -4,6 +4,7 @@ import { withBase } from 'vitepress'
 import { sections, type ContentEntry } from '../content-catalog'
 import { visualStyles } from '../theme/visual-styles'
 import { getHomeTopics, discoveryGroups } from './home-discovery-data'
+import SectionArtwork from './SectionArtwork.vue'
 
 const props = defineProps<{ pages: ContentEntry[] }>()
 const die = visualStyles['pixel-voyage'].assets.shuffleDie
@@ -80,7 +81,10 @@ function sectionUrl(id: string) { return withBase('/' + id + '/') }
       <h2 id="cliff-directory-title">栏目</h2>
       <div class="cliff-links">
         <a v-for="section in directory" :key="section.id" class="cliff-section"
-          :class="{ 'is-lit': litSections.has(section.id) }" :href="sectionUrl(section.id)">{{ section.title }}</a>
+          :class="{ 'is-lit': litSections.has(section.id) }" :href="sectionUrl(section.id)">
+          <SectionArtwork :section="section.id" />
+          <span>{{ section.title }}</span>
+        </a>
       </div>
     </nav>
   </div>

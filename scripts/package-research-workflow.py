@@ -16,12 +16,11 @@ ROOT = Path(__file__).resolve().parents[1]
 # An explicit list prevents accidental inclusion of auth caches, logs or raw inputs.
 SOURCES = {
     'research/README.md': '完整操作手册与已知限制',
-    '.agents/skills/seagull-research/references/task-pipeline.md': '通用任务、时间策略、发现与证据审阅契约',
-    '.agents/skills/seagull-research/references/delivery-contract.md': '提示词优先的对象介绍、具体样本与成稿验收流程',
-    '.agents/skills/seagull-research/SKILL.md': '围绕研究问题检索、核对与交接证据的 skill',
+    'research/task-pipeline.md': '通用任务、时间策略、发现与证据审阅契约',
+    'research/delivery-contract.md': '提示词优先的对象介绍、具体样本与成稿验收流程',
     'research/DELIVERY_VALIDATION.md': '最新 benchmark 文章失败案例与交付回归范围',
     'research/TASK_VALIDATION.md': '通用调研的回归与真实资料验证范围',
-    '.agents/skills/seagull-research/references/daily.md': '固定日报来源与补充阅读规范',
+    'research/daily.md': '固定日报来源与补充阅读规范',
     'research/examples/concept.json': '已细化的概念调研任务样例，非已执行记录',
     'research/examples/benchmark-delivery.json': '逐 benchmark 介绍与实际数据形式的任务约定样例',
     'research/catalog-article.schema.json': '按对象集中交付的文章契约',
@@ -47,13 +46,11 @@ SOURCES = {
     'AGENTS.md': '当前仓库工作指导',
     'writing/README.md': '正文类型路由、跨类硬规则与分层仲裁',
     'writing/note.md': '知识笔记体例',
-    'writing/research.md': '每日调研体例与项目技能入口',
+    'writing/research.md': '调研检索、证据综合与成稿说明',
     'writing/publishing.md': '当前内容接入与发布规范',
     'HTML_FORMATS.md': '正文文件、公式、图注与组件格式',
     'VISUAL_STYLES.md': '页面外观、配色与动效',
-    '.agents/skills/seagull-research/references/readable-survey.md': '调研可读性检查',
-    '.agents/skills/seagull-research/references/paper-survey.md': '按问题选用的文献速览方法',
-    '.agents/skills/seagull-research/scripts/prose-scan.py': '可选的正文结构与句式定位工具，不作质量评分',
+    'writing/references/paper-survey.md': '按问题选用的文献速览方法',
     'package.json': 'Node 依赖与构建命令',
     'package-lock.json': 'Node 依赖版本锁',
     'wrangler.toml': '现有 Pages 项目与构建输出配置',
@@ -71,14 +68,12 @@ SOURCES = {
 }
 
 
-# Shared research skills and the Hermes/Codex handoff docs are part of this bundle.
+# Include the Hermes/Codex handoff docs and any local Scholar installation.
 for relative in ('hermes/README.md', 'hermes/task-template.md', 'hermes/skills.md',
                  'hermes/skills-installation.json'):
     SOURCES[relative] = 'Hermes/Codex 共用执行与技能安装记录'
-for skill_name in ('scholar-deep-research', 'scientific-writing', 'unslop-academic-writing'):
-    skill_root = ROOT / '.agents' / 'skills' / skill_name
-    if not (skill_root / 'SKILL.md').is_file():
-        raise ValueError('Missing shared skill: ' + skill_name)
+skill_root = ROOT / '.agents' / 'skills' / 'scholar-deep-research'
+if (skill_root / 'SKILL.md').is_file():
     for resource in sorted(skill_root.rglob('*')):
         if resource.is_file() and not resource.is_symlink() and '__pycache__' not in resource.parts:
             if resource.suffix in ('.md', '.py', '.json', '.yaml', '.yml', '.txt', '.html') or resource.name == 'LICENSE':
@@ -161,11 +156,11 @@ def main():
 
 ## 用途与范围
 
-通用任务先读 repo/.agents/skills/seagull-research/SKILL.md，按文献整理、领域汇报等交付目的检索、归纳和试读，默认直接交付 Markdown。
+通用任务先读 repo/writing/research.md，按文献整理、领域汇报等交付目的检索、归纳和试读，默认直接交付 Markdown。
 
-只有需要结构化交接或恢复已有任务时，才使用 skill 的 references/task-pipeline.md 与 references/delivery-contract.md。这些契约约束文件接口，不证明内容质量。网站接入与发布按当前授权进行。
+结构化交接或恢复已有任务时，使用 repo/research/task-pipeline.md 与 repo/research/delivery-contract.md。按写作总则试读正文。网站接入与发布按当前授权进行。
 
-方案与初稿回传执行 [协作约定](repo/hermes/README.md#阶段回传与反馈)，技能选用见 [技能目录](repo/hermes/skills.md)。需要初稿反馈时在本地报告阶段停下，不能用一键 run 或内部验收跳过操作者反馈。
+按 [协作约定](repo/hermes/README.md#阶段回传与反馈) 回传方案与初稿。需要初稿反馈时在本地报告阶段停下。批量查找文献可参考 [检索工具](repo/hermes/skills.md)。
 
 不带 --task 的兼容日报仍围绕大模型强化学习、后训练与 agentic RL，通过 workflow.json 的固定来源和近期窗口执行；不能用这个默认值回答任意知识问题。
 
@@ -182,7 +177,7 @@ def main():
 
 ## 已验证与未验证
 
-以下为历史工作流记录；当前技能与 CLI 的后续验证见 repo/hermes/skills.md，实际可用性在本次运行核对。
+以下为历史工作流记录。使用工具前核实当前环境。
 
 - 已验证：公开 arXiv/HF 采集、当前本机 Codex 会话写作、文章接入、本地构建、GitHub 构建、Pages 部署、线上文章内容。
 - 未通过：独立 Codex CLI 生成，历史探测显示未登录且遇到证书信任错误。
@@ -211,7 +206,7 @@ def main():
 
 ## 可选结构化任务 v2
 
-以 repo/.agents/skills/seagull-research/references/task-pipeline.md 为当前契约。plan 生成可编辑的 task.json；discover 执行 arXiv/Crossref/URL 等已配置适配器，网页任务交给 Agent。Agent 交回真实 search-log.json 和 evidence.json；collect/review 输出逐轴审核和补查任务。prompt/generate 使用 task-article.schema.json；report 输出本地 report.md。所有这些阶段传 --task。
+以 repo/research/task-pipeline.md 为当前契约。plan 生成可编辑的 task.json。discover 执行 arXiv/Crossref/URL 等已配置适配器，网页任务交给 Agent。Agent 交回真实 search-log.json 和 evidence.json。collect/review 输出逐轴审核和补查任务。prompt/generate 使用 task-article.schema.json，report 输出本地 report.md。所有这些阶段传 --task。
 
 概念任务默认跨年代；背景材料允许无发布日期，现状证据另有时效检查。只在本次任务内规范 URL 去重，不排除往期日报引用。每段新增 kind 与 axis_ids，已知缺口必须披露。候选不自动变成证据。其他网站接入与发布阶段仍沿用下表；默认 report 不接入网站。
 
@@ -261,7 +256,7 @@ catalog 是跨日期去重状态，不能在迁移时随意清空。旧论文修
 
 1. 获取完整仓库 `https://github.com/Seagull-W/seagull-llm`，核对基准提交 `{head}`。本包中 repo 是精选文件快照；主题和资产不齐全。
 2. 安装 Python 3.10+、Node.js 24、npm 和 Git，在完整仓库运行 `npm ci`。
-3. 通用任务先读 .agents/skills/seagull-research/SKILL.md；需要结构化任务时再读 references/task-pipeline.md；固定日报才检查 workflow.json 的主题、英文检索词、来源和窗口。网站发布目标仍在 workflow.json。
+3. 通用任务先读 writing/research.md。结构化任务再读 research/task-pipeline.md。运行固定日报前，核对 research/workflow.json 中的主题、英文检索词、来源、窗口与网站发布目标。
 4. 选择 Agent。继续用独立 Codex CLI 时先核验登录与网络；网页发现必须有可用搜索/阅读工具。换 Agent 时按 CONTRACTS.md 返回对应版本的 JSON；通用任务先本地 report，已授权网站接入才 integrate/verify。
 5. 保留 catalog 和已有文章；若需要恢复未完成运行，另行在受控环境迁移本机 .research/runs，不能将其凭据或日志放到公开仓库。
 6. 按操作手册完成测试、构建与样例检查，再启用 Git 推送，等待 CI/Pages 完成后运行 verify-site。

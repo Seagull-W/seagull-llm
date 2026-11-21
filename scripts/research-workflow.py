@@ -27,8 +27,8 @@ GROUPS = ['paper', 'research-blog', 'release', 'manual', 'systematic']
 
 
 def read_research_guide():
-    """Load the operator's local skill; offline tests provide their own guide."""
-    return (ROOT / '.agents/skills/seagull-research/SKILL.md').read_text(encoding='utf-8')
+    """Load the project's research writing guide."""
+    return (ROOT / 'writing/research.md').read_text(encoding='utf-8')
 
 
 def task_engine():

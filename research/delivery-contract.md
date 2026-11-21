@@ -2,7 +2,7 @@
 
 仅适用于已有 delivery 约定的脚本任务。普通 Markdown 调研无需 cards.json 或 acceptance.json。
 
-内容试读统一依据 [成稿质量与试读](../../../../writing/README.md#成稿质量与试读)，操作者交互执行 [阶段回传与反馈](../../../../hermes/README.md#阶段回传与反馈)。本文件的 `accept` 是绑定具体产物的内部内容验收，不代表操作者已收到初稿或已反馈；定稿与发布仍须完成相应反馈环节。
+内容试读统一依据 [成稿质量与试读](../writing/README.md#成稿质量与试读)，操作者交互执行 [阶段回传与反馈](../hermes/README.md#阶段回传与反馈)。本文件的 `accept` 是绑定具体产物的内部内容验收，不代表操作者已收到初稿或已反馈；定稿与发布仍须完成相应反馈环节。
 
 ## 使用交付约定
 
@@ -15,7 +15,7 @@ python3 scripts/research-workflow.py handoff --task .research/tasks/benchmark-in
 python3 scripts/research-workflow.py discover --task .research/tasks/benchmark-intro/task.json
 ```
 
-真实调研任务样例见 [examples/benchmark-delivery.json](../../../../research/examples/benchmark-delivery.json)。它是计划，未宣称样例中的所有对象已完成调研。
+真实调研任务样例见 [examples/benchmark-delivery.json](examples/benchmark-delivery.json)。它是计划，未宣称样例中的所有对象已完成调研。
 
 目录型任务的必答矩阵为“每个对象 × 每项内容”。默认数据集项：是什么、测什么、样本单位、版本、规模与切分、存储格式、模型输入、预期输出、判分、训练/评测用途与局限。检索的知识轴不能替代这个矩阵；全局 data 轴有足够引用，不代表每个数据集都已介绍。
 
@@ -27,7 +27,7 @@ python3 scripts/research-workflow.py discover --task .research/tasks/benchmark-i
 
 - facets：按 task.delivery.facets 的 ID 填写，每项为 `{"text":"连贯的说明","source_urls":["已读原文 URL"]}`。清单用于防漏，段落应连贯，避免像填写检查日志一样写正文。
 - schema：数组，每项有 path（如 `/question`）、type、role、description、source_urls。role 区分 input/reference/scoring/environment/metadata。type 用 string/integer/number/boolean/array/object/null。
-- evidence：对应资料增加 subject_ids；一份资料支持哪个对象就标哪个，不将所有 URL 批量贴到所有对象上。还需按 SKILL.md 的来源规则 区分发现方法和实际阅读内容。
+- evidence：对应资料增加 subject_ids；一份资料支持哪个对象就标哪个，不将所有 URL 批量贴到所有对象上。还需按[调研体例](../writing/research.md#检索与成稿检查)区分发现方法和实际阅读内容。
 - specimens：实际文件中的记录，由脚本读取，不让模型手写一段自称真实的 JSON。
 
 样本配置例子（仅格式演示，不是真实采集记录）：
@@ -59,7 +59,7 @@ collect 会先做来源检查，再检查逐对象矩阵与样本。即使全局
 
 catalog-article.schema.json 在通用文章上增加 catalog_order，必须包含所有约定对象，顺序固定。事实底稿中的对象卡和原始样本自动插入同一节，避免模型把它们再次拆散。字段表与代码块作为说明工具，不能替代自然语言解释。普通 narrative 仍使用 task-article.schema.json。
 
-report 生成本地报告与 acceptance-prompt.md。实际负责人按 SKILL.md 试读全文；数据集交付另核对输入—输出—评分，并抽查原始材料。通过后写 acceptance.json：
+report 生成本地报告与 acceptance-prompt.md。实际负责人按[写作总则](../writing/README.md#成稿质量与试读)试读全文；数据集交付另核对输入—输出—评分，并抽查原始材料。通过后写 acceptance.json：
 
 ```json
 {
@@ -79,4 +79,4 @@ python3 scripts/research-workflow.py accept --task .research/tasks/benchmark-int
 
 新任务必须先读成稿并 accept，才能 integrate 或 publish。哈希用于确保验收的是这份文章和这份报告，改文后需重新试读与验收；它不证明文章正确。已接入文章的内容哈希登记在 catalog，CI 能发现验收后直接改写页面的情况。不要用手工 origin=manual 或先写网页再补 JSON 绕开交付约定。
 
-旧任务和历史文章保持兼容，不追认它们已经通过新标准。失败案例与验证范围见 [DELIVERY_VALIDATION.md](../../../../research/DELIVERY_VALIDATION.md)。
+旧任务和历史文章保持兼容，不追认它们已经通过新标准。失败案例与验证范围见 [DELIVERY_VALIDATION.md](DELIVERY_VALIDATION.md)。

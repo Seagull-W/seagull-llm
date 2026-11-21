@@ -4,6 +4,8 @@ import { withBase } from 'vitepress'
 import { sectionGlyphs, type SectionGlyph } from './section-glyphs'
 import { useVisualStyle } from '../theme/visual-styles'
 import GraceEmblem from './GraceEmblem.vue'
+import SectionArtwork from './SectionArtwork.vue'
+import { pixelSectionArtwork } from './section-artwork'
 const props = defineProps<{ section: string }>()
 const style = useVisualStyle()
 const glyph = computed(() => sectionGlyphs[props.section as SectionGlyph] || sectionGlyphs.papers)
@@ -11,6 +13,7 @@ const pixelIcon = computed(() => style.value.icons?.[props.section] || style.val
 </script>
 <template>
   <GraceEmblem v-if="style.iconSet === 'grace'" class="section-icon" :section="section" />
+  <SectionArtwork v-else-if="style.iconSet === 'pixel' && Object.hasOwn(pixelSectionArtwork, section)" class="section-icon pixel-glyph" :section="section" />
   <img v-else-if="pixelIcon" class="section-icon pixel-icon" :src="withBase(pixelIcon)" alt="" aria-hidden="true" width="32" height="32" />
   <svg v-else class="section-icon" :data-icon-set="style.iconSet" viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false">
     <path :d="glyph.paper" class="paper" />
@@ -19,7 +22,8 @@ const pixelIcon = computed(() => style.value.icons?.[props.section] || style.val
 </template>
 <style scoped>
 .section-icon { display:inline-block; width:32px; height:32px; flex:none; vertical-align:middle; }
-.pixel-icon { image-rendering:pixelated; background:#26364a; }
+.pixel-icon { image-rendering:pixelated; }
+.section-icon.pixel-glyph { width:40px; height:auto; }
 .paper { fill:var(--illustration-paper,#d3e3e6); }
 .ink { stroke:var(--illustration-ink,#397580); stroke-width:1.65; stroke-linecap:round; stroke-linejoin:round; }
 </style>
