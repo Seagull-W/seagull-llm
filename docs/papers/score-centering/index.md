@@ -1,7 +1,7 @@
 ---
-title: Score Centering：训推不一致下的漂移修正（中文精读）
-description: 精读 arXiv:2609.20807v1，推导逐前缀 score 中心化如何消除漂移，并解读量化与采样器陈旧实验。
-tags: ["论文与项目随谈", "论文精读", "强化学习", "Score Centering", "训练推理不一致"]
+title: Score Centering：得分函数中心化使离策略强化学习更稳定（中文译本）
+description: "arXiv:2609.20807v1 全文中文译本，包含原论文的推导、实验、图表和两份附录。"
+tags: ["论文与项目随谈", "论文精读", "强化学习", "Score Centering", "训练推理不一致", "中文翻译"]
 layout: false
 contentFormat: html
 pdf: true

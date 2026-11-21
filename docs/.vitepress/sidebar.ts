@@ -76,7 +76,7 @@ export const papersSidebar = [
         "link": "/papers/ripo/"
       },
       {
-        "text": "Score Centering：训推不一致下的漂移修正（中文精读）",
+        "text": "Score Centering：得分函数中心化使离策略强化学习更稳定（中文译本）",
         "link": "/papers/score-centering/"
       }
     ]
