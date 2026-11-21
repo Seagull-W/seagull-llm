@@ -70,6 +70,14 @@ export const papersSidebar = [
       {
         "text": "Echo Chamber：强化学习会放大哪些预训练行为？",
         "link": "/papers/echo-chamber/"
+      },
+      {
+        "text": "RIPO：黎曼等距策略优化（中文译本）",
+        "link": "/papers/ripo/"
+      },
+      {
+        "text": "Score Centering：训推不一致下的漂移修正（中文精读）",
+        "link": "/papers/score-centering/"
       }
     ]
   },
