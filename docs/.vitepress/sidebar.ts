@@ -78,6 +78,10 @@ export const papersSidebar = [
       {
         "text": "Score Centering：得分函数中心化使离策略强化学习更稳定（中文译本）",
         "link": "/papers/score-centering/"
+      },
+      {
+        "text": "拓展开放语言模型后训练的前沿（中文译本）",
+        "link": "/papers/lambert-cornell-2026/"
       }
     ]
   },

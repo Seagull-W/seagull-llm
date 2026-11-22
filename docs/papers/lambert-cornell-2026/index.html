@@ -1,0 +1,18 @@
+<script setup>
+import { withBase } from 'vitepress'
+import PdfViewer from '../../.vitepress/components/PdfViewer.vue'
+
+const outline = [
+  { title: '封面', page: 1 },
+  { title: '后训练的方法与历史', page: 4 },
+  { title: '后训练中的具体研究问题', page: 20 },
+  { title: '递归自我改进、学术研究的本质，以及几点结论', page: 38 },
+  { title: '参考文献', page: 48 }
+]
+</script>
+
+<PdfViewer :src="withBase('/papers/lambert-cornell-2026/slides-zh.pdf')"
+  title="拓展开放语言模型后训练的前沿（中文译本）" :outline="outline"
+  :back-href="withBase('/papers/#论文精读')" back-label="返回论文精读"
+  source-href="https://natolambert.com/slides/2026/cornell-post-training/talk#1" source-label="英文原版幻灯片"
+  :source-archive-href="withBase('/papers/lambert-cornell-2026/slides-zh-source.zip')" />

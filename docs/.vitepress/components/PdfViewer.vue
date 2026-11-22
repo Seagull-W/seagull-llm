@@ -15,6 +15,7 @@ const props = defineProps<{
   backLabel: string
   sourceHref?: string
   sourceLabel?: string
+  sourceArchiveHref?: string
   webHref?: string
   initialPage?: number
 }>()
@@ -276,6 +277,7 @@ onBeforeUnmount(() => {
               <a :href="originalFile" target="_blank" rel="noopener">在新窗口打开 PDF</a>
               <a v-if="webHref" :href="webHref">网页版正文</a>
               <a v-if="sourceHref" :href="sourceHref" target="_blank" rel="noopener">{{sourceLabel || '查看来源'}}</a>
+              <a v-if="sourceArchiveHref" :href="sourceArchiveHref" download>下载译本源码（ZIP）</a>
             </div>
           </details>
           <button v-if="author" aria-label="框选批注" :aria-pressed="areaMode" :disabled="!ready" title="框选批注" @click="notebook?.toggleBox()"><ReaderIcon name="box" /><span class="tool-label">框选</span></button>
