@@ -5,7 +5,7 @@ import { readingPortraitFor } from './grace-characters'
 import { themeImagePath } from '../theme/visual-styles'
 
 const host = ref<HTMLElement>()
-const paperLeft = ref(0)
+const readingEdge = ref(0)
 const { page, isDark } = useData()
 const switches = ref(0)
 watch(isDark, () => { switches.value++ }, { flush: 'sync' })
@@ -17,11 +17,15 @@ onMounted(() => {
   const paper = doc?.querySelector('.content-container')
   if (!doc || !paper) return
 
-  const measure = () => { paperLeft.value = Math.floor(paper.getBoundingClientRect().left) }
+  const measure = () => {
+    const outline = doc.querySelector('.reader-toc')
+    const leftmost = outline?.getClientRects().length ? outline : paper
+    readingEdge.value = Math.floor(leftmost.getBoundingClientRect().left)
+  }
   observer = new ResizeObserver(measure)
   observer.observe(doc)
   observer.observe(paper)
-  // The toolbar spans both columns and changes width when the outline appears.
+  // The toolbar spans the reading grid and resizes when the outline collapses.
   const tools = doc.querySelector('.reader-tools')
   if (tools) observer.observe(tools)
   measure()
@@ -31,8 +35,8 @@ onUnmounted(() => observer?.disconnect())
 </script>
 
 <template>
-  <div ref="host" class="grace-reading-portrait" :style="{ '--paper-left': paperLeft + 'px' }" aria-hidden="true" inert>
-    <img v-if="paperLeft >= 140" :src="withBase(themeImagePath(portrait))"
+  <div ref="host" class="grace-reading-portrait" :style="{ '--reading-edge': readingEdge + 'px' }" aria-hidden="true" inert>
+    <img v-if="readingEdge >= 140" :src="withBase(themeImagePath(portrait))"
       alt="" width="425" height="972" decoding="async" draggable="false" />
   </div>
 </template>
@@ -43,7 +47,7 @@ onUnmounted(() => observer?.disconnect())
   left: 0;
   bottom: 0;
   z-index: 2;
-  width: min(calc(var(--paper-left) + 12px), calc(76vh * 425 / 972), 425px);
+  width: min(var(--reading-edge), calc(76vh * 425 / 972), 425px);
   pointer-events: none;
   user-select: none;
 }

@@ -72,8 +72,8 @@ html[data-visual-style='pixel-voyage'] .Layout[data-visual-style='paper-coast'] 
 /* Section boundaries share a square landmark and a stepped rule. */
 .Layout[data-visual-style='pixel-voyage'] .gallery-header { padding-top:12px; border-top:2px solid var(--pixel-edge); }
 .Layout[data-visual-style='pixel-voyage'] .gallery-header :is(h1,h2) { margin:0; padding:0; border:0; }
-.Layout[data-visual-style='pixel-voyage'] :is(.gallery-header h2,.reader-toc > h2) { display:flex; align-items:center; gap:12px; }
-.Layout[data-visual-style='pixel-voyage'] :is(.gallery-header h2,.reader-toc > h2)::before {
+.Layout[data-visual-style='pixel-voyage'] :is(.gallery-header h2,.reader-toc-header h2) { display:flex; align-items:center; gap:12px; }
+.Layout[data-visual-style='pixel-voyage'] :is(.gallery-header h2,.reader-toc-header h2)::before {
   content:''; flex:none; width:8px; height:8px; background:var(--pixel-signal); box-shadow:4px 4px 0 var(--pixel-shadow);
 }
 .Layout[data-visual-style='pixel-voyage'] .section-grid { border-top:0; gap:12px 24px; }

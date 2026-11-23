@@ -195,11 +195,6 @@
     color:var(--grace-panel-gold);
   }
 }
-@media(min-width:1100px) {
-  .Layout.academic-reading .reader-toc:has(.reader-position) { display:flex; flex-direction:column; max-height:calc(100dvh - var(--vp-nav-height) - 45px); }
-  .reader-toc .reader-position, .reader-toc h2 { flex:none; }
-  .reader-toc .reader-toc-list { min-height:0; }
-}
 @media(max-width:1099px) {
   .reader-pocket-position { display:inline; color:var(--vp-c-text-2); font:12px/1.4 var(--vp-font-family-base); font-variant-numeric:tabular-nums; }
   .Layout[data-visual-style='paper-coast'] .reader-pocket-position { border-bottom:2px solid var(--illustration-shade); }

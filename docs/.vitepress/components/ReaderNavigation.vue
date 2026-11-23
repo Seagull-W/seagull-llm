@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, shallowRef, useId, watch } from 'vue'
 import { onContentUpdated, useData, useRoute, withBase } from 'vitepress'
 import { data as pages } from '../data/tagged-pages.data'
 import { normalizeContentPath } from '../public-content'
@@ -35,6 +35,14 @@ const hasPosition = computed(() => stops.value.length > 1 && usesAcademicReading
 const drawer = ref<HTMLDialogElement>(), rail = ref<HTMLElement>()
 const tocEnabled = computed(() => frontmatter.value.aside !== false && frontmatter.value.outline !== false && headings.value.length > 0)
 const tocRail = computed(() => tocEnabled.value && !props.outlineInDrawer)
+const outlineOpen = ref(true)
+const outlineId = useId()
+const outlineLabel = computed(() => outlineOpen.value ? '收起本页目录' : '展开本页目录')
+const outlinePreference = 'seagull-reader-outline'
+function toggleOutline() {
+  outlineOpen.value = !outlineOpen.value
+  try { localStorage.setItem(outlinePreference, outlineOpen.value ? 'open' : 'closed') } catch { /* Keep the current choice in memory. */ }
+}
 const collection = computed(() => {
   const ordered: string[] = []
   function collect(items: any[]) { for (const item of items) { if (item.link) ordered.push(normalizeContentPath(item.link)); if (item.items) collect(item.items) } }
@@ -64,18 +72,19 @@ function refresh() {
   expanded.value = headings.value[0]?.id || ''; schedule()
 }
 onContentUpdated(refresh)
-watch(active, async id => {
+watch(active, id => {
   const group = groups.value.find(g => g.heading.id === id || g.children.some(h => h.id === id))
   expanded.value = group?.heading.id || ''
-  await nextTick()
+})
+watch([active, outlineOpen], () => {
   for (const root of [rail.value, drawer.value?.open && mode.value === 'toc' ? drawer.value : null]) {
     const link = root?.querySelector<HTMLElement>('[aria-current="location"]'), list = root?.querySelector<HTMLElement>('.reader-toc-list')
-    if (link && list) {
+    if (link && list?.clientHeight) {
       const y = link.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop
       if (y < list.scrollTop || y + link.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = y - list.clientHeight / 2
     }
   }
-})
+}, { flush: 'post' })
 function toggle(id: string) { expanded.value = expanded.value === id ? '' : id }
 function open(event: MouseEvent, nextMode: 'toc' | 'collection') {
   mode.value = nextMode; trigger = event.currentTarget as HTMLElement
@@ -95,11 +104,16 @@ function jump(id: string) {
   target.setAttribute('tabindex', '-1'); target.focus({ preventScroll: true }); active.value = id
 }
 watch(() => route.path, close)
-onMounted(() => { window.addEventListener('scroll', schedule, { passive: true }); window.addEventListener('resize', schedule); refresh() })
+onMounted(() => {
+  try { outlineOpen.value = localStorage.getItem(outlinePreference) !== 'closed' } catch { /* Use the default when storage is unavailable. */ }
+  window.addEventListener('scroll', schedule, { passive: true })
+  window.addEventListener('resize', schedule)
+  refresh()
+})
 onUnmounted(() => { close(); cancelAnimationFrame(frame); window.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule) })
 </script>
 <template>
-  <div v-if="enabled" class="reader-navigation" :class="{ 'has-toc': tocRail }">
+  <div v-if="enabled" class="reader-navigation" :class="{ 'has-toc': tocRail, 'toc-collapsed': tocRail && !outlineOpen }">
     <nav class="reader-tools" aria-label="阅读导航">
       <button v-if="section" aria-haspopup="dialog" @click="open($event, 'collection')"><InterfaceIcon name="collection" />栏目目录<InterfaceIcon class="reader-tool-chevron" name="chevron" /></button>
       <span v-if="tocEnabled && hasPosition" class="reader-pocket-position" aria-hidden="true" :title="stops[positionIndex]?.text">{{ positionIndex + 1 }} / {{ stops.length }}</span>
@@ -109,9 +123,17 @@ onUnmounted(() => { close(); cancelAnimationFrame(frame); window.removeEventList
       </div>
     </nav>
     <aside v-if="tocRail" ref="rail" class="reader-toc" aria-label="本页目录">
-      <ReadingPosition v-if="hasPosition" :stops="stops" :index="positionIndex" :section="section?.id || ''" @jump="jump" />
-      <h2>本页目录</h2>
-      <ContentsList :groups="groups" :active="active" :expanded="expanded" @jump="jump" @toggle="toggle" />
+      <div class="reader-toc-header">
+        <h2 v-show="outlineOpen">本页目录</h2>
+        <button class="reader-toc-toggle" type="button" :aria-label="outlineLabel" :title="outlineLabel"
+          :aria-expanded="outlineOpen" :aria-controls="outlineId" @click="toggleOutline">
+          <InterfaceIcon :name="outlineOpen ? 'chevron' : 'contents'" />
+        </button>
+      </div>
+      <div v-show="outlineOpen" :id="outlineId" class="reader-toc-content">
+        <ReadingPosition v-if="hasPosition" :stops="stops" :index="positionIndex" :section="section?.id || ''" @jump="jump" />
+        <ContentsList :groups="groups" :active="active" :expanded="expanded" @jump="jump" @toggle="toggle" />
+      </div>
     </aside>
     <dialog ref="drawer" class="reader-drawer" aria-labelledby="reader-drawer-title" @close="restore" @click="($event.target === drawer) && close()">
       <header><h2 id="reader-drawer-title">{{ mode === 'toc' ? '本页目录' : section?.title }}</h2><button autofocus aria-label="关闭目录" @click="close">关闭</button></header>
