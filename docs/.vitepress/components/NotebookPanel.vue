@@ -34,9 +34,15 @@ async function reveal(n:Annotation|PaperNote, edit:boolean) {
   const card=panel.value?.querySelector<HTMLElement>('[data-note-id="'+n.id+'"]')
   const list=card?.closest<HTMLElement>('.notebook-list')
   if (card && list) {
-    if (edit) card.querySelector('textarea')?.focus({preventScroll:true})
-    const r=card.getBoundingClientRect(), v=list.getBoundingClientRect()
-    if (r.top < v.top+5 || r.bottom > v.bottom-5) list.scrollTop+=r.top-v.top-6
+    const field=edit ? card.querySelector('textarea') : null
+    field?.focus({preventScroll:true})
+    const row=card.getBoundingClientRect(), view=list.getBoundingClientRect()
+    let {top,bottom}=row
+    if (field && row.height > view.height) {
+      top=(field.labels?.[0] ?? field).getBoundingClientRect().top
+      bottom=field.getBoundingClientRect().bottom
+    }
+    if (top < view.top+5 || bottom > view.bottom-5) list.scrollTop+=top-view.top-6
   }
   emit('layout')
 }
@@ -56,10 +62,15 @@ function outside(e:Event) {
   }
 }
 function escape(e:KeyboardEvent) {
-  if (e.key!=='Escape') return
+  if (e.key!=='Escape' || e.isComposing || e.keyCode===229) return
   const menu=panel.value?.querySelector<HTMLDetailsElement>('.notebook-menu[open]')
   if (menu) { e.stopPropagation(); menu.open=false; menu.querySelector('summary')?.focus() }
-  else if (editing.value) { e.stopPropagation(); setMode('','read') }
+  else if (editing.value) {
+    e.stopPropagation()
+    const card=panel.value?.querySelector<HTMLElement>('[data-note-id="'+editing.value+'"]')
+    setMode('','read')
+    nextTick(() => card?.querySelector<HTMLButtonElement>('.edit-note')?.focus({ preventScroll:true }))
+  }
 }
 watch(section,() => { nextTick(() => emit('layout')) })
 onMounted(() => document.addEventListener('pointerdown',outside))
@@ -69,7 +80,7 @@ defineExpose({reveal, finish:() => setMode('','read')})
 <template>
   <aside ref="panel" class="notebook-panel" aria-label="阅读笔记" @keydown="escape">
     <header class="notebook-head">
-      <strong>{{author?'我的笔记':'作者批注'}}</strong>
+      <strong>{{author ? (section==='annotation' ? '页边批注' : '我的笔记') : '作者批注'}}</strong>
       <button v-if="!author" class="notebook-login" title="使用首选网易邮箱或备用邮箱接收验证码" @click="emit('login')">作者登录</button>
       <details v-if="author" ref="backup" class="notebook-menu"><summary title="备份与导出" aria-label="备份与导出"><ReaderIcon name="more" /></summary>
         <div class="menu-items"><button @click="backupAction('json')">导出 JSON 备份</button><button @click="backupAction('md')">导出 Markdown</button><button @click="backupAction('import')">导入笔记备份</button><button @click="emit('logout')">退出登录</button></div>

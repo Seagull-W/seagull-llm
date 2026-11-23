@@ -273,7 +273,7 @@ export function useAnnotationSource(options: {
     }
   }
   let focusRun = 0
-  async function focusSource(n: Annotation, part = 0) {
+  async function focusSource(n: Annotation, part = 0, scrollPolicy: 'center' | 'if-hidden' = 'center') {
     const run = ++focusRun
     partIndex = part
     await nextTick(); await frame(); await frame()
@@ -288,6 +288,15 @@ export function useAnnotationSource(options: {
     }
     const r = rects(n.anchor)[part]
     if (!r) return
+    const view = visibleArea()
+    const toolbar = root?.closest('.VPDoc')?.querySelector('.reader-navigation')
+    const nav = document.querySelector('.VPNav')
+    const toolbarHeight = toolbar && getComputedStyle(toolbar).position === 'sticky' ? toolbar.getBoundingClientRect().height : 0
+    const top = Math.max(view.top, (nav?.getBoundingClientRect().bottom ?? 0) + toolbarHeight)
+    if (scrollPolicy === 'if-hidden' && r.top >= top && r.bottom <= view.bottom && r.left >= view.left && r.right <= view.right) {
+      layout()
+      return
+    }
     const scroll = scroller()
     if (scroll) {
       const reader = scroll.closest('.pdf-reader')!.getBoundingClientRect()
@@ -295,11 +304,6 @@ export function useAnnotationSource(options: {
       const v = scroll.getBoundingClientRect()
       scroll.scrollBy({ left: r.x-v.x-(scroll.clientWidth-r.width)/2, top: r.y-v.y-(scroll.clientHeight-r.height)*.42, behavior:'instant' })
     } else {
-      const view = visibleArea()
-      const toolbar = root?.closest('.VPDoc')?.querySelector('.reader-navigation')
-      const nav = document.querySelector('.VPNav')
-      const toolbarHeight = toolbar && getComputedStyle(toolbar).position === 'sticky' ? toolbar.getBoundingClientRect().height : 0
-      const top = Math.max(view.top, (nav?.getBoundingClientRect().bottom ?? 0) + toolbarHeight)
       const readingLine = top + Math.max(0, view.bottom-top-r.height)*.42
       window.scrollBy({ top: r.y-readingLine, behavior:'instant' })
     }

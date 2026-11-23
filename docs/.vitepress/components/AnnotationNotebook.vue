@@ -88,7 +88,7 @@ function meta() {
 async function show(n:Annotation|PaperNote, edit:boolean, locate=false, part=0) {
   active.value=n.id; section.value=n.type; open.value=true
   await nextTick(); await panel.value?.reveal(n,edit)
-  if (locate && n.type==='annotation') await focusSource(n,part)
+  if (locate && n.type==='annotation') await focusSource(n,part,edit ? 'if-hidden' : 'center')
 }
 function sameAnchor(a:Anchor,b:Anchor) {
   if (a.region || b.region) {

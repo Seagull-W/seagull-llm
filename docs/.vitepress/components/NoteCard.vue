@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { anchorLabel, isVisualPart, type Annotation, type PaperNote } from './annotations'
 import ReaderIcon from './ReaderIcon.vue'
 import NoteEditor from './NoteEditor.vue'
-export type CardMode = 'read' | 'edit' | 'preview'
+export type CardMode = 'read' | 'edit'
 export type CardAction = 'edit' | 'locate' | 'remove' | 'comment' | 'highlight' | 'favorite' | 'publish'
 const props = defineProps<{ author:boolean; note: Annotation | PaperNote; number: number; active: boolean; mode: CardMode; images?: Map<string,string>; missing?: boolean; showTime?: boolean }>()
 const emit = defineEmits<{ action: [name: CardAction,part?:number]; mode: [value: CardMode]; body: [value:string] }>()
 const menu = ref<HTMLDetailsElement>()
+const editButton = ref<HTMLButtonElement>()
+const excerptOpen = ref(true)
 const previews = computed(() => {
   const n = props.note
   if (n.type !== 'annotation') return []
@@ -25,23 +27,26 @@ function act(name: CardAction,part?:number) {
   if (menu.value) menu.value.open=false
   emit('action',name,part)
 }
-function cardClick(event: MouseEvent) {
-  if (props.note.type==='annotation' && props.mode==='read' && !(event.target as Element).closest('button,a,summary,details,input,textarea') && !window.getSelection()?.toString()) act('locate')
+async function finishEditing(mode: CardMode) {
+  emit('mode', mode)
+  if (mode === 'read') {
+    await nextTick()
+    editButton.value?.focus({ preventScroll: true })
+  }
 }
 </script>
 <template>
-  <article class="note-card" :class="{active}" :data-note-id="note.id" @click="cardClick">
+  <article class="note-card" :class="{active,'is-editing':mode==='edit'}" :data-note-id="note.id">
     <div class="note-card-head">
       <button v-if="note.type==='annotation'" class="note-location" title="定位原文" @click="act('locate')">
         <span class="note-number">{{ number }}</span>
-        {{ note.anchor.boxes.length ? '第 '+note.anchor.boxes[0].page+' 页' : '原文' }}
+        {{ note.anchor.boxes.length ? '第 '+note.anchor.boxes[0].page+' 页' : '定位原文' }}
         <span v-if="anchorLabel(note.anchor)!=='选文'">· {{anchorLabel(note.anchor)}}</span><ReaderIcon v-if="note.favorite" name="star" />
       </button>
       <time v-else class="note-location" :datetime="note.created">{{ new Date(note.created).toLocaleDateString('zh-CN') }}</time>
       <time v-if="showTime" class="note-created" :datetime="note.created">{{new Date(note.created).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}}</time>
-      <small v-if="author && note.type==='annotation'">{{note.published?'公开':'仅自己'}}</small>
+      <small v-if="author && note.type==='annotation'" class="note-visibility">{{note.published?'公开':'仅自己'}}</small>
       <div v-if="author" class="note-card-actions">
-        <button v-if="mode==='read'" class="edit-note" title="编辑笔记" aria-label="编辑笔记" @click="act('edit')"><ReaderIcon name="edit" /></button>
         <details ref="menu" class="notebook-menu"><summary aria-label="笔记操作" title="笔记操作"><ReaderIcon name="more" /></summary>
           <div class="menu-items">
             <template v-if="note.type==='annotation'">
@@ -56,11 +61,19 @@ function cardClick(event: MouseEvent) {
       </div>
     </div>
     <template v-if="note.type==='annotation'">
-      <button v-if="note.anchor.quote" class="note-source" title="定位到这段原文" @click="act('locate')">{{note.anchor.quote}}</button>
-      <button v-else-if="note.anchor.region?.label" class="note-source" title="定位到框选区域" @click="act('locate')">{{note.anchor.region.label}}</button>
-      <button v-for="p in previews" :key="p.part" class="note-source-image" title="定位到原文区域" @click="act('locate',p.part)"><img :src="p.image" alt="所选原文区域" /></button>
+      <div v-if="note.anchor.quote || note.anchor.region?.label || previews.length" class="note-excerpt">
+        <button class="note-excerpt-toggle" :aria-expanded="excerptOpen" @click="excerptOpen=!excerptOpen">
+          {{ note.anchor.quote ? '原文摘录' : '原文区域' }}<ReaderIcon name="next" />
+        </button>
+        <div v-show="excerptOpen">
+          <button v-if="note.anchor.quote" class="note-source" title="定位到这段原文" @click="act('locate')"><span>{{ note.anchor.quote }}</span></button>
+          <button v-else-if="note.anchor.region?.label" class="note-source" title="定位到框选区域" @click="act('locate')"><span>{{ note.anchor.region.label }}</span></button>
+          <button v-for="p in previews" :key="p.part" class="note-source-image" title="定位到原文区域" @click="act('locate',p.part)"><img :src="p.image" alt="所选原文区域" /></button>
+        </div>
+      </div>
       <span v-if="missing" class="note-hint">{{note.anchor.region ? '框选位置待确认' : '引用已保留，原文位置待确认'}}</span>
     </template>
-    <NoteEditor v-if="note.type==='paper' || note.comment!==null || mode!=='read'" :mode="mode" :model-value="note.type==='paper'?note.body:note.comment||''" @mode="emit('mode',$event)" @update:model-value="emit('body',$event)" />
+    <NoteEditor v-if="note.type==='paper' || note.comment!==null || mode!=='read'" :kind="note.type" :mode="mode" :model-value="note.type==='paper'?note.body:note.comment||''" @mode="finishEditing" @update:model-value="emit('body',$event)" />
+    <button v-if="author && mode==='read'" ref="editButton" class="edit-note" @click="act('edit')"><ReaderIcon name="edit" />{{ note.type==='annotation' && !note.comment ? '写批注' : '继续编辑' }}</button>
   </article>
 </template>
