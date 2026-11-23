@@ -1,22 +1,15 @@
 /* The picture belongs to the layout so its framing survives the entire scroll. */
 .Layout.pixel-mountain-home {
   isolation: isolate;
-  background: #193e77;
+  background: #1039a0;
   --mountain-gutter: max(6%, calc((100% - 1440px) / 2));
   --mountain-measure: min(630px, 45vw);
 }
+.dark .Layout.pixel-mountain-home { background: #0c2d7d; }
 .Layout.pixel-mountain-home::before, .Layout.pixel-mountain-home::after { content: none; }
 .pixel-mountain-world { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
 .pixel-mountain-world img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: 63% 65%; image-rendering: pixelated; }
-.pixel-mountain-world::after {
-  content: ''; position: absolute; inset: 0;
-  /* Keep the reading column dark even when a bright cloud passes behind it. */
-  background: linear-gradient(90deg,
-    rgb(5 22 53 / .76),
-    rgb(7 29 63 / .72) calc(var(--mountain-gutter) + var(--mountain-measure)),
-    transparent calc(var(--mountain-gutter) + var(--mountain-measure) + 16vw));
-}
-.dark .pixel-mountain-world img { filter: brightness(.69); }
+.dark .pixel-mountain-world img { filter: brightness(.78); }
 .pixel-mountain-home :is(.VPHome, .VPFooter, .VPNav) {
   --vp-c-text-1: #f6f9ff; --vp-c-text-2: #d9e8fa; --vp-c-text-3: #c3d8f1;
   --vp-c-brand-1: #bedfff; --vp-c-brand-2: #e5f3ff;
@@ -25,16 +18,17 @@
   color: var(--vp-c-text-1);
 }
 .pixel-mountain-home .VPNav {
-  --vp-c-bg: #112746; --vp-c-bg-alt: #182f52; --vp-c-bg-elv: #182f52;
-  --vp-c-bg-soft: #25446c; --vp-nav-screen-bg-color: var(--vp-c-bg);
-  --vp-nav-bg-color: rgb(10 27 55 / .95);
+  --vp-c-bg: #132239; --vp-c-bg-alt: #192b43; --vp-c-bg-elv: #1d314c;
+  --vp-c-bg-soft: #203650; --vp-nav-screen-bg-color: var(--vp-c-bg);
+  --vp-nav-bg-color: rgb(19 34 57 / .94);
 }
 .Layout.pixel-mountain-home .VPNav .VPNavBar { background: var(--vp-nav-bg-color); border-color: var(--vp-c-divider); }
 .Layout.pixel-mountain-home .VPNavBar .content-body { background: transparent; }
 .pixel-mountain-home .VPNavBar .visual-logo { filter: none; }
-.pixel-mountain-home .VPHome {
-  margin-bottom: 0;
-  --mountain-scrim: linear-gradient(95deg, rgb(10 29 59 / .91), rgb(14 38 74 / .82));
+.pixel-mountain-home .VPHome { margin-bottom: 0; }
+/* Scrolling can put a label over snow. Keep contrast at the letter edges. */
+.pixel-mountain-home :is(.seagull-hero-wordmark, .pixel-cliff-discovery, .pixel-journal, .gallery-header, .closing-line) {
+  text-shadow: 0 0 2px #0c2857, 0 1px 3px #0c2857;
 }
 .pixel-mountain-home .VPHome .VPHero {
   margin: 0;
@@ -68,12 +62,15 @@
 }
 @media (max-width: 639px) {
   .Layout.pixel-mountain-home { --mountain-gutter: clamp(14px, 4.6vw, 24px); --mountain-measure: 100%; }
-  .pixel-mountain-world img { object-position: 34% 52%; }
-  .pixel-mountain-world::after { background: linear-gradient(90deg, rgb(3 20 48 / .20), transparent 78%); }
+  .pixel-mountain-world img { object-position: left 52%; }
   .pixel-mountain-home .VPHome .VPHero { padding-top: 28px; padding-bottom: clamp(98px, 27svh, 224px); }
-  .pixel-mountain-home .seagull-hero-wordmark { font-size: clamp(43px, 11vw, 68px); text-shadow: 0 1px 4px #0c274f; }
+  .pixel-mountain-home .seagull-hero-wordmark { font-size: clamp(43px, 11vw, 68px); }
   .pixel-mountain-home .VPHome .format-home :is(.cliff-reading, .cliff-directory, .pixel-journal, .video-gallery, .closing-line) {
-    background: var(--mountain-scrim); padding: 17px 15px;
+    padding: 17px 0;
+  }
+  .pixel-mountain-home :is(.pixel-cliff-discovery, .pixel-journal, .gallery-header, .closing-line) {
+    -webkit-text-stroke: 2px #142f5e;
+    paint-order: stroke fill;
   }
   .pixel-mountain-home .VPHome .format-home :is(.pixel-journal, .video-gallery) { margin-top: 22px; }
 }

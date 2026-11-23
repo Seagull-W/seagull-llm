@@ -128,7 +128,6 @@ onUnmounted(() => { cancelPicturePreview(); dialog.value?.close(); if (scrollLoc
 .cover-scene { position:relative; display:block; height:166px; margin:0 4px 18px; overflow:hidden; isolation:isolate; border-radius:3px 8px 8px 3px; background:var(--preview-paper); box-shadow:1px 2px 0 var(--vp-c-divider),3px 4px 0 var(--vp-c-bg-soft),0 6px 12px #14223016; transform:rotate(-3deg); transform-origin:8px 85%; transition:transform .2s,box-shadow .2s; }
 .cover-scene::after { content:''; position:absolute; inset:0 auto 0 7px; width:1px; background:#26364a1c; box-shadow:1px 0 #ffffff30; }
 .style-cover[data-style='pixel-voyage'] .cover-scene { background:#193967; border-radius:2px; transform:rotate(3deg); }
-.style-cover[data-style='pixel-voyage'] .cover-scene::before { content:''; position:absolute; inset:0; z-index:1; background:linear-gradient(#08204dd9, #08204dbd 30%, transparent 60%); }
 .cover-art { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:70% center; }
 .style-cover[data-style='along-the-way'] .cover-art { object-position:55% 60%; }
 .style-cover[data-style='along-the-way'] .cover-scene { transform:rotate(-2deg); border-radius:2px; }
@@ -142,9 +141,9 @@ onUnmounted(() => { cancelPicturePreview(); dialog.value?.close(); if (scrollLoc
 .style-cover[data-style='grace-archive'] .cover-brand { inset:auto 12px 18px; z-index:2; color:#f0dab1; font:small-caps 19px/1 Georgia,serif; letter-spacing:.09em; text-align:center; }
 .style-cover[data-style='grace-archive'] .cover-horizon { display:none; }
 .style-cover[data-style='pixel-voyage'] .cover-art { object-position:55% 65%; image-rendering:pixelated; }
-.is-night .style-cover[data-style='pixel-voyage'] .cover-art { filter:brightness(.69); }
+.is-night .style-cover[data-style='pixel-voyage'] .cover-art { filter:brightness(.78); }
 .cover-brand { position:absolute; top:18px; left:19px; color:var(--preview-ink); font:25px/1 Georgia,serif; }
-.style-cover[data-style='pixel-voyage'] .cover-brand { z-index:2; right:12px; color:#f4f8ff; }
+.style-cover[data-style='pixel-voyage'] .cover-brand { right:12px; color:#f4f8ff; }
 .style-cover .cover-brand .pixel-wordmark { display:block; width:123px; max-width:100%; height:auto; }
 .cover-horizon { position:absolute; bottom:14px; left:18px; width:24px; height:1px; background:var(--preview-ink); opacity:.5; }
 .style-cover[data-style='pixel-voyage'] .cover-horizon { display:none; }
