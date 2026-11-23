@@ -1,4 +1,4 @@
-import { isPublicContent, normalizeContentPath } from '../public-content'
+import { isChapterIndex, isPublicContent, normalizeContentPath } from '../public-content'
 import { sectionFor } from '../content-catalog'
 import { papersSidebar } from '../sidebar'
 
@@ -11,8 +11,12 @@ export function usesAcademicReading(path: string, metadata: Record<string, any>)
   return !!section && section.kind !== 'gallery' && isPublicContent(path, metadata)
 }
 
+export function supportsHtmlNotebook(metadata: Record<string, unknown>): boolean {
+  return (metadata.layout ?? 'doc') === 'doc' && !metadata.pdf && !isChapterIndex(metadata)
+}
+
 export function usesPaperNotebook(path: string, metadata: Record<string, any>): boolean {
-  if (metadata.pdf) return false
+  if (!supportsHtmlNotebook(metadata)) return false
   const article = normalizeContentPath(path)
   if (paperReading.has(article)) return isPublicContent(path, metadata)
   return metadata.readingNotes === true &&

@@ -13,7 +13,7 @@ import ReadingMedia from '../components/ReadingMedia.vue'
 import GraceReadingPortrait from '../components/GraceReadingPortrait.vue'
 import PixelThemeFilter from '../components/PixelThemeFilter.vue'
 import ReaderIcon from '../components/ReaderIcon.vue'
-import { usesAcademicReading, usesPaperNotebook } from './reading-design'
+import { supportsHtmlNotebook, usesAcademicReading, usesPaperNotebook } from './reading-design'
 import { sectionFor } from '../content-catalog'
 import { createVisualStyleControls, gracePortraitMedia, heroImageFor, heroMobileMedia, visualStyles, visualStyleKey, visualStyleControlsKey } from './visual-styles'
 import './styles/route-arrival.css'
@@ -97,7 +97,7 @@ const sectionClass = computed(() => {
     <template #doc-before>
       <ArticleContext v-if="academicReading" />
       <ClientOnly>
-        <HtmlNotebook v-if="!frontmatter.pdf && !paperNotebook" :key="page.relativePath" :document="'html:'+page.relativePath" :title="page.title" />
+        <HtmlNotebook v-if="!paperNotebook && supportsHtmlNotebook(frontmatter)" :key="page.relativePath" :document="'html:'+page.relativePath" :title="page.title" />
       </ClientOnly>
       <div v-if="frontmatter.status === 'draft'" class="draft-notice">本文仍在写作中，内容尚未完成。</div>
     </template>

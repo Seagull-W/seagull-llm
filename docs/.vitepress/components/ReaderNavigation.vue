@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, shallowRef, useId, watch } from 'vue'
 import { onContentUpdated, useData, useRoute, withBase } from 'vitepress'
 import { data as pages } from '../data/tagged-pages.data'
-import { normalizeContentPath } from '../public-content'
+import { isChapterIndex, normalizeContentPath } from '../public-content'
 import { sectionFor } from '../content-catalog'
 import { sidebar } from '../sidebar'
 import ContentsList, { type Heading } from './ContentsList.vue'
@@ -12,7 +12,7 @@ import { usesAcademicReading } from '../theme/reading-design'
 const { frontmatter, page } = useData()
 const props = defineProps<{ outlineInDrawer?: boolean }>()
 const route = useRoute()
-const enabled = computed(() => frontmatter.value.layout !== 'page' && !String(frontmatter.value.pageClass || '').includes('chapter-index'))
+const enabled = computed(() => frontmatter.value.layout !== 'page' && !isChapterIndex(frontmatter.value))
 const section = computed(() => sectionFor('/' + page.value.relativePath))
 function pageHeadings(items: any[]): Heading[] {
   return items.flatMap(h => [{ id: h.slug, text: h.title, level: h.level }, ...pageHeadings(h.children || [])])

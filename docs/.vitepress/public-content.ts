@@ -7,6 +7,10 @@ export function normalizeContentPath(path: string): string {
     .replace(/\.(?:html|md)$/, '').replace(/\/index$/, '').replace(/\/$/, '')
 }
 
+export function isChapterIndex(frontmatter: Record<string, unknown>): boolean {
+  return String(frontmatter.pageClass ?? '').split(/\s+/).includes('chapter-index')
+}
+
 const publicPaths = new Set<string>(['/videos'])
 function collect(items: NavigationItem[]) {
   for (const item of items) {
@@ -25,6 +29,6 @@ export function isPublicContent(path: string, frontmatter: Record<string, any>):
   return publicPaths.has(normalizeContentPath(path)) &&
     frontmatter.status !== 'draft' && frontmatter.hidden !== true &&
     frontmatter.published !== false && frontmatter.search !== false &&
-    !String(frontmatter.pageClass ?? '').split(/\s+/).includes('chapter-index') &&
+    !isChapterIndex(frontmatter) &&
     frontmatter.layout !== 'home' && !noindex
 }

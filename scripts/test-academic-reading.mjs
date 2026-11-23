@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import { readContent } from './content-source.mjs'
-import { readingPages, usesAcademicReading, usesPaperNotebook } from './reading-pages.mjs'
+import { readingPages, supportsHtmlNotebook, usesAcademicReading, usesPaperNotebook } from './reading-pages.mjs'
 
 test('all public text collections receive academic reading typography', () => {
   const pages = readingPages()
@@ -25,6 +25,19 @@ test('directories, non-article pages and private content keep their own presenta
     ['/papers/unlisted', {}], ['/papers/deepseek-r1/', { hidden: true }],
     ['/papers/deepseek-r1/', { status: 'draft' }], ['/papers/deepseek-r1/', { search: false }]
   ]) assert.equal(usesAcademicReading(path, data), false, path)
+})
+
+test('HTML annotations follow the page type even when an article is named index.md', () => {
+  for (const [file, expected] of [
+    ['datawhale-agentic-rl/index.md', false], ['datawhale-agentic-rl/task-01.md', true],
+    ['research/index.md', false], ['tags.md', false], ['videos/index.md', false],
+    ['papers/deepseek-r1/index.md', true], ['papers/agentic-rl-survey/index.md', false],
+  ]) {
+    assert.equal(supportsHtmlNotebook(readContent('docs/' + file).data), expected, file)
+  }
+  const directory = { pageClass: 'native-html-page chapter-index', readingNotes: true }
+  assert.equal(supportsHtmlNotebook(directory), false)
+  assert.equal(usesPaperNotebook('/papers/agentic-rl-survey/web/index.md', directory), false)
 })
 
 test('survey web chapters use docked annotations and keep a single catalog entry', () => {
