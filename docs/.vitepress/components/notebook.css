@@ -98,7 +98,12 @@ body > .annotation-mark.is-region.is-filled,
 .notebook-toast button { color:var(--nw-accent); }
 .notebook-html { position:fixed; top:var(--vp-nav-height,64px); right:0; bottom:0; z-index:40; }
 .html-notebook-launch { color:var(--nw-accent); margin:4px 0 12px; background:var(--nw-tint); }
-@media(min-width:1100px) { body.annotation-html-open .Layout:not(.paper-notebook-layout) .VPContent { margin-right:var(--notebook-width,336px); } }
+@media(min-width:1100px) {
+  body.annotation-html-open .Layout:not(.paper-notebook-layout) .VPContent {
+    width:calc(100% - var(--notebook-width,336px));
+    margin-right:var(--notebook-width,336px);
+  }
+}
 @media(max-width:1099px) {
   body.annotation-html-open { --html-notebook-height:min(44dvh,420px); }
   body.annotation-html-open .VPContent { margin-bottom:var(--html-notebook-height); }

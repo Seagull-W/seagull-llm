@@ -95,7 +95,7 @@ defineExpose({reveal, finish:() => setMode('','read')})
     <div v-if="author" v-show="section==='paper'" class="notebook-section">
       <div class="notebook-filters"><button @click="emit('addPaper')"><ReaderIcon name="plus" />写整篇笔记</button></div>
       <div class="notebook-list">
-        <p v-if="!papers.length" class="notebook-empty">在这里记录对整篇论文的理解。</p>
+        <p v-if="!papers.length" class="notebook-empty">在这里记录对整篇文档的理解。</p>
         <NoteCard :author="author" v-for="n in papers" :key="n.id" :note="n" :number="0" :mode="editing===n.id?mode:'read'" :active="active===n.id"
           @action="emit('action',n,$event)" @mode="setMode(n.id,$event)" @body="emit('body',n,$event)" />
       </div>

@@ -27,7 +27,7 @@ test('directories, non-article pages and private content keep their own presenta
   ]) assert.equal(usesAcademicReading(path, data), false, path)
 })
 
-test('survey web chapters opt in to annotations and keep a single catalog entry', () => {
+test('survey web chapters use docked annotations and keep a single catalog entry', () => {
   const route = '/papers/agentic-rl-survey/web'
   const directory = 'docs' + route
   const chapters = readdirSync(directory).filter(file => file.endsWith('.md'))

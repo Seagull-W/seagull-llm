@@ -49,8 +49,6 @@ onMounted(() => {
 })
 onUnmounted(() => stopHomeOpening?.())
 const academicReading = computed(() => usesAcademicReading('/' + page.value.relativePath, frontmatter.value))
-const htmlNotes = computed(() => !frontmatter.value.pdf &&
-  (academicReading.value || frontmatter.value.readingNotes === true))
 const paperNotebook = computed(() => usesPaperNotebook('/' + page.value.relativePath, frontmatter.value))
 const paperNotesOpen = ref(false)
 const paperAuthor=ref(false)
@@ -99,7 +97,7 @@ const sectionClass = computed(() => {
     <template #doc-before>
       <ArticleContext v-if="academicReading" />
       <ClientOnly>
-        <HtmlNotebook v-if="htmlNotes && !paperNotebook" :key="page.relativePath" :document="'html:'+page.relativePath" :title="page.title" />
+        <HtmlNotebook v-if="!frontmatter.pdf && !paperNotebook" :key="page.relativePath" :document="'html:'+page.relativePath" :title="page.title" />
       </ClientOnly>
       <div v-if="frontmatter.status === 'draft'" class="draft-notice">本文仍在写作中，内容尚未完成。</div>
     </template>
