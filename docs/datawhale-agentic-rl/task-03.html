@@ -1,0 +1,37 @@
+<article class="native-document format-lab" data-format="lab" data-design="linux-notebook" aria-label="Task 03 · Vision GRPO 几何问答实验">
+<header class="document-intro note-hero">
+<p class="note-kicker">DataWhale Agentic RL</p>
+<h1 id="task-03-vision-grpo" tabindex="-1">Task 03 · Vision GRPO 几何问答实验 <a class="header-anchor" href="#task-03-vision-grpo" aria-label="章节链接">&#8203;</a></h1>
+<p class="note-deck">用图文 GRPO 训练 Qwen3.5-4B，再逐题对照同一组 100 道 GeoQA 测试题，分析准确率从 71% 升至 83% 的原因。</p>
+<p class="note-meta">实验笔记 · 多模态强化学习 · GeoQA</p>
+</header>
+<nav class="note-jump" aria-label="页内导航"><details><summary>本页目录</summary>
+<a href="#architecture">代码解读</a>
+<a href="#training">训练结果</a>
+<a href="#evaluation">GeoQA 测评</a>
+</details></nav>
+<section class="document-section note-panel" aria-labelledby="architecture">
+<h2 id="architecture" tabindex="-1">代码解读 <a class="header-anchor" href="#architecture" aria-label="章节链接">&#8203;</a></h2>
+<figure class="note-figure"><a href="/datawhale-agentic-rl/task-03/vision-grpo-architecture.png" aria-label="查看原尺寸图片"><img src="/datawhale-agentic-rl/task-03/vision-grpo-architecture.png" alt="Vision GRPO 训练架构" loading="lazy"></a><figcaption>从 GeoQA 图文输入到一次参数更新的训练流程。</figcaption></figure>
+<h3 id="image-prompt" tabindex="-1">把几何图插进图文 prompt <a class="header-anchor" href="#image-prompt" aria-label="章节链接">&#8203;</a></h3>
+<p>GeoQA 每题包含几何图、题干和四个选项。代码用 <code>ImageChunk</code> 替换对话模板中的图片占位符，按「题干和选项、图片、回答起点」拼接。图片占用的视觉 token 数为 <code>patches // merge_size**2</code>，采样时用服务端返回的 <code>input_tokens</code> 核对整个 prompt 的长度。<a href="https://github.com/Seagull-W/agentic-rl-lab/blob/93d2be3cda9527e338cfe0ab39e4147d3c64e6a7/experiments/vision-grpo/train.py#L146">图文输入</a></p>
+<h3 id="group-reward" tabindex="-1">在同一份图文上下文中采样和评分 <a class="header-anchor" href="#group-reward" aria-label="章节链接">&#8203;</a></h3>
+<p>同一题采样 8 条回答。评分器取最后一个合法的 <code>\boxed{A}</code> 至 <code>\boxed{D}</code>，答对得 1 分，其余得 0 分。每条回答的优势是自己的奖励减去组内均值。全对或全错时，整组优势为零，跳过这道题。<a href="https://github.com/Seagull-W/agentic-rl-lab/blob/93d2be3cda9527e338cfe0ab39e4147d3c64e6a7/experiments/vision-grpo/train.py#L218">采样与评分</a></p>
+<h3 id="token-alignment" tabindex="-1">保留图文上下文，对齐回答 token <a class="header-anchor" href="#token-alignment" aria-label="章节链接">&#8203;</a></h3>
+<p>设图文 prompt 长度为 <code>P</code>。模型输入保留完整 prompt，再拼上 <code>completion[:-1]</code>，因此位置 <code>P - 1</code> 预测第一个回答 token。训练目标、采样时的 logprob 和优势都从这里开始填，前面补零，只有回答部分参与策略损失。<a href="https://github.com/Seagull-W/agentic-rl-lab/blob/93d2be3cda9527e338cfe0ab39e4147d3c64e6a7/experiments/vision-grpo/train.py#L274">构造 Datum</a></p>
+<h3 id="micro-batches" tabindex="-1">按图文序列长度分批反传 <a class="header-anchor" href="#micro-batches" aria-label="章节链接">&#8203;</a></h3>
+<p>有效回答按图文总长度降序排列，再按样本数、图片数和 padding 后的 token 数切成 micro-batch。本次每批最多 4 张图，各批按样本占比累积梯度，最后更新一次参数。<a href="https://github.com/Seagull-W/agentic-rl-lab/blob/93d2be3cda9527e338cfe0ab39e4147d3c64e6a7/experiments/vision-grpo/train.py#L302">分批与更新</a></p>
+</section>
+<section class="document-section note-panel" aria-labelledby="training">
+<h2 id="training" tabindex="-1">训练结果 <a class="header-anchor" href="#training" aria-label="章节链接">&#8203;</a></h2>
+<p>Qwen3.5-4B 使用 LoRA（rank 32，学习率 <code>4e-5</code>）训练 100 步，每步 8 题、每题 8 条回答，耗时约 1 小时 54 分钟。从前 10 步到最后 10 步，平均奖励从 0.773 升到 0.911，格式合规率从 78.6% 升到 92.5%，同题 8 条回答奖励完全相同的比例也从 67.5% 升到 85.0%。<a href="https://swanlab.cn/@WenJiaxin/agentic-rl-lab-vision-grpo/runs/5fgjgxfb">SwanLab 运行记录</a> · <a href="https://github.com/Seagull-W/agentic-rl-lab/blob/93d2be3cda9527e338cfe0ab39e4147d3c64e6a7/%E4%B8%AA%E4%BA%BA%E7%AC%94%E8%AE%B0/figures/task03/plot_results.py">本地绘图脚本</a></p>
+<figure class="note-figure"><a href="/datawhale-agentic-rl/task-03/training.png" aria-label="查看原尺寸图片"><img src="/datawhale-agentic-rl/task-03/training.png" alt="本地 SwanLab 记录的 100 步 Vision GRPO 训练曲线" loading="lazy"></a><figcaption>100 步训练记录。上图粗线为最近 5 步均值，右下图仅记录实际更新步骤的损失。</figcaption></figure>
+<p>800 个题组中，201 组有奖励差异，共 1,608 条回答参与训练。11 步的 8 个题组全部同奖，因此实际更新参数 89 次，这 11 步没有 loss 记录。第 100 步保存了<a href="trio://run_bhjht9x46cyy/sampler_weights/vision-grpo-qwen35-4b-geoqa-step-100-sampler">评测权重</a>和<a href="trio://run_bhjht9x46cyy/weights/vision-grpo-qwen35-4b-geoqa-step-100-state">续训状态</a>。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="evaluation">
+<h2 id="evaluation" tabindex="-1">GeoQA 测评 <a class="header-anchor" href="#evaluation" aria-label="章节链接">&#8203;</a></h2>
+<p>基座和第 100 步的 sampler 在同一组 100 道测试题上各答一次，温度为 0，最多生成 1,024 个 token。准确率从 <strong>71% 升到 83%</strong>，格式合规率从 <strong>73% 升到 88%</strong>。两次评测分别耗时 64.28 秒和 193.70 秒。逐题结果保存在评测脚本同目录的 <code>eval-results-base.json</code> 和 <code>eval-results-step-100.json</code>。<a href="https://github.com/Seagull-W/agentic-rl-lab/blob/93d2be3cda9527e338cfe0ab39e4147d3c64e6a7/experiments/vision-grpo/eval.py">评测脚本</a></p>
+<figure class="note-figure"><a href="/datawhale-agentic-rl/task-03/evaluation.png" aria-label="查看原尺寸图片"><img src="/datawhale-agentic-rl/task-03/evaluation.png" alt="基座与第 100 步权重在相同 100 道题上的准确率和格式合规率" loading="lazy"></a><figcaption>在相同的 100 道 GeoQA 测试题上，两组各生成一次回答。可提取选项的回答从 73 条增至 88 条，其中答对的从 71 条增至 83 条。</figcaption></figure>
+<p>逐题对照后，基座能提取选项的 73 题在训练后都选了原答案，其中 71 题正确。基座提取不到选项的 27 题，训练后有 12 题答对、3 题给出错误选项、12 题仍提取不到选项。例如第 3333 题，基座已经算出正确的 50°，却没给出可提取的选项。训练后它算出同样的角度，并以 <code>\boxed{B}</code> 作答。</p>
+</section>
+</article>

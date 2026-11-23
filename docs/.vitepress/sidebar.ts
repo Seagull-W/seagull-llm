@@ -290,7 +290,8 @@ export const sidebar = {
       items: [
         { text: '学习项目介绍', link: '/datawhale-agentic-rl/' },
         { text: 'Task 01 · Loss Function', link: '/datawhale-agentic-rl/task-01' },
-        { text: 'Task 02 · 同步 GRPO 训练实验', link: '/datawhale-agentic-rl/task-02' }
+        { text: 'Task 02 · 同步 GRPO 训练实验', link: '/datawhale-agentic-rl/task-02' },
+        { text: 'Task 03 · Vision GRPO 几何问答实验', link: '/datawhale-agentic-rl/task-03' }
       ]
     }
   ],

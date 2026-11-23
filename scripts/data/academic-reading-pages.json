@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1774,
+  "character_count": 1776,
   "pages": [
     {
       "path": "/cs336/a1-bpe.md",
@@ -70,6 +70,10 @@
     {
       "path": "/datawhale-agentic-rl/task-02.md",
       "title": "Task 02 · 同步 GRPO 训练实验"
+    },
+    {
+      "path": "/datawhale-agentic-rl/task-03.md",
+      "title": "Task 03 · Vision GRPO 几何问答实验"
     },
     {
       "path": "/linux-notes/linux-isolation.md",
