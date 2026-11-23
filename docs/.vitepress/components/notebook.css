@@ -131,11 +131,10 @@ body > .annotation-mark.is-region.is-filled,
   }
 }
 @media(max-width:1099px) {
-  body.annotation-html-open { --html-notebook-height:min(44dvh,420px); }
-  body.annotation-html-open:has(.notebook-html.notebook-open .note-card.is-editing) { --html-notebook-height:min(72dvh,680px); }
-  body.annotation-html-open .VPContent { margin-bottom:var(--html-notebook-height); }
-  .notebook-html { top:auto; left:0; }
-  .notebook-html.notebook-open { width:100%; height:var(--html-notebook-height); }
+  body.annotation-html-open { --html-notebook-height:min(calc(var(--notebook-viewport-height,100dvh) * .4),320px); }
+  body.annotation-html-open .VPContent { margin-bottom:calc(var(--html-notebook-height) + var(--notebook-viewport-inset,0px)); }
+  .notebook-html { top:auto; left:0; bottom:var(--notebook-viewport-inset,0px); }
+  .notebook-html.notebook-open { container:notebook-sheet / size; width:100%; height:var(--html-notebook-height); }
   .notebook-html .notebook-resizer { display:none; }
   .notebook-html .notebook-panel { border-left:0; border-top:1px solid var(--nw-line); }
 }
@@ -162,12 +161,15 @@ body > .annotation-mark.is-region.is-filled,
 }
 @media print { .notebook-html { display:none; } }
 @container pdfspace (max-width:679px) {
-  .pdf-body>.annotation-notebook.notebook-open { width:100%; flex:0 0 44%; }
-  .pdf-body>.annotation-notebook.notebook-open:has(.note-card.is-editing) { flex-basis:68%; }
+  .pdf-body:has(> .notebook-open) { margin-bottom:var(--notebook-viewport-inset,0px); }
+  .pdf-body>.annotation-notebook.notebook-open { container:notebook-sheet / size; width:100%; flex:0 0 min(calc(var(--notebook-viewport-height,100dvh) * .4),320px); }
   .pdf-body .notebook-resizer { display:none; }
   .pdf-body .notebook-panel { border-left:0; border-top:1px solid var(--nw-line); }
   .pdf-body .notebook-head { min-height:36px; padding-block:0; }
   .pdf-body .notebook-head::before { height:26px; }
   .pdf-body .notebook-tabs button { min-height:28px; padding-block:3px; }
   .pdf-body .notebook-filters { min-height:27px; padding-block:0; }.pdf-body .notebook-save { min-height:26px; padding-block:0; }
+}
+@container notebook-sheet (min-width:0px) {
+  .notebook-panel { padding-bottom:max(0px,calc(env(safe-area-inset-bottom,0px) - var(--notebook-viewport-inset,0px))); }
 }

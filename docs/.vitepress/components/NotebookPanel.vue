@@ -12,6 +12,11 @@ const emit = defineEmits<{ close:[]; retry:[]; login:[]; logout:[]; importLocal:
   action:[entry:Annotation|PaperNote,name:CardAction,part?:number]; layout:[] }>()
 const panel = ref<HTMLElement>(), file = ref<HTMLInputElement>(), backup = ref<HTMLDetailsElement>()
 const editing = ref(''), mode = ref<CardMode>('read'), sort = ref('position'), favorites = ref(false)
+const editedNote = computed(() => {
+  if (!editing.value) return
+  const entries=section.value==='paper' ? props.papers : props.annotations
+  return entries.find(n => n.id===editing.value)
+})
 const numbers = computed(() => new Map(props.annotations.map((n,i) => [n.id,i+1])))
 const order = computed(() => {
   const list = props.annotations.filter(n => !favorites.value || n.favorite)
@@ -25,6 +30,25 @@ const tabs = computed(() => [
 ])
 
 function setMode(id:string, value:CardMode) { editing.value=value==='read'?'':id; mode.value=value; nextTick(() => emit('layout')) }
+function isBottomSheet() {
+  const host=panel.value?.parentElement
+  return host && getComputedStyle(host).containerName==='notebook-sheet'
+}
+async function finishEditing() {
+  const card=panel.value?.querySelector<HTMLElement>('.note-card.is-editing')
+  setMode('','read')
+  await nextTick()
+  const button=card?.querySelector<HTMLButtonElement>('.edit-note')
+  if (!button) return
+  button.focus({preventScroll:true})
+  // Other cards return to the list when the compact editor closes.
+  const list=card?.closest<HTMLElement>('.notebook-list')
+  if (list && isBottomSheet()) {
+    const bounds=button.getBoundingClientRect(), view=list.getBoundingClientRect()
+    if (bounds.top<view.top) list.scrollTop+=bounds.top-view.top
+    else if (bounds.bottom>view.bottom) list.scrollTop+=bounds.bottom-view.bottom
+  }
+}
 async function reveal(n:Annotation|PaperNote, edit:boolean) {
   section.value=n.type
   if (n.type==='annotation' && !n.favorite) favorites.value=false
@@ -39,7 +63,8 @@ async function reveal(n:Annotation|PaperNote, edit:boolean) {
     const row=card.getBoundingClientRect(), view=list.getBoundingClientRect()
     let {top,bottom}=row
     if (field && row.height > view.height) {
-      top=(field.labels?.[0] ?? field).getBoundingClientRect().top
+      const start=isBottomSheet() ? field : (field.labels?.[0] ?? field)
+      top=start.getBoundingClientRect().top
       bottom=field.getBoundingClientRect().bottom
     }
     if (top < view.top+5 || bottom > view.bottom-5) list.scrollTop+=top-view.top-6
@@ -67,9 +92,7 @@ function escape(e:KeyboardEvent) {
   if (menu) { e.stopPropagation(); menu.open=false; menu.querySelector('summary')?.focus() }
   else if (editing.value) {
     e.stopPropagation()
-    const card=panel.value?.querySelector<HTMLElement>('[data-note-id="'+editing.value+'"]')
-    setMode('','read')
-    nextTick(() => card?.querySelector<HTMLButtonElement>('.edit-note')?.focus({ preventScroll:true }))
+    finishEditing()
   }
 }
 watch(section,() => { nextTick(() => emit('layout')) })
@@ -78,9 +101,13 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown',outside))
 defineExpose({reveal, finish:() => setMode('','read')})
 </script>
 <template>
-  <aside ref="panel" class="notebook-panel" aria-label="阅读笔记" @keydown="escape">
+  <aside ref="panel" class="notebook-panel" :class="{'is-writing':editedNote}" aria-label="阅读笔记" @keydown="escape">
     <header class="notebook-head">
       <strong>{{author ? (section==='annotation' ? '页边批注' : '我的笔记') : '作者批注'}}</strong>
+      <template v-if="editedNote">
+        <button v-if="editedNote.type==='annotation'" class="sheet-edit-action" @click="emit('action',editedNote,'locate')">定位原文</button>
+        <button class="sheet-edit-action sheet-done" @click="finishEditing"><ReaderIcon name="check" />{{editedNote.type==='annotation'?'完成批注':'完成笔记'}}</button>
+      </template>
       <button v-if="!author" class="notebook-login" title="使用首选网易邮箱或备用邮箱接收验证码" @click="emit('login')">作者登录</button>
       <details v-if="author" ref="backup" class="notebook-menu"><summary title="备份与导出" aria-label="备份与导出"><ReaderIcon name="more" /></summary>
         <div class="menu-items"><button @click="backupAction('json')">导出 JSON 备份</button><button @click="backupAction('md')">导出 Markdown</button><button @click="backupAction('import')">导入笔记备份</button><button @click="emit('logout')">退出登录</button></div>
@@ -100,7 +127,7 @@ defineExpose({reveal, finish:() => setMode('','read')})
       <div class="notebook-list">
         <p v-if="!order.length" class="notebook-empty">{{!author?'暂无公开批注。':favorites?'暂无收藏的选文。':kind==='pdf'?'拖选文字或点选图像，按 Enter 写批注。':'选中原文后按 Enter 写批注。'}}</p>
         <NoteCard :author="author" v-for="n in order" :key="n.id" :note="n" :number="numbers.get(n.id)!" :mode="editing===n.id?mode:'read'" :active="active===n.id" :images="images" :show-time="sort==='time'" :missing="missing.includes(n.id)"
-          @action="(name,part)=>emit('action',n,name,part)" @mode="setMode(n.id,$event)" @body="emit('body',n,$event)" />
+          @action="(name,part)=>emit('action',n,name,part)" @mode="finishEditing" @body="emit('body',n,$event)" />
       </div>
     </div>
     <div v-if="author" v-show="section==='paper'" class="notebook-section">
@@ -108,7 +135,7 @@ defineExpose({reveal, finish:() => setMode('','read')})
       <div class="notebook-list">
         <p v-if="!papers.length" class="notebook-empty">在这里记录对整篇文档的理解。</p>
         <NoteCard :author="author" v-for="n in papers" :key="n.id" :note="n" :number="0" :mode="editing===n.id?mode:'read'" :active="active===n.id"
-          @action="emit('action',n,$event)" @mode="setMode(n.id,$event)" @body="emit('body',n,$event)" />
+          @action="emit('action',n,$event)" @mode="finishEditing" @body="emit('body',n,$event)" />
       </div>
     </div>
     <div v-if="author && kind==='pdf'" v-show="section==='bookmark'" class="notebook-section">
@@ -128,3 +155,19 @@ defineExpose({reveal, finish:() => setMode('','read')})
     </footer>
   </aside>
 </template>
+<style>
+.notebook-head > button.sheet-edit-action { display:none; }
+@container notebook-sheet (min-width:0px) {
+  .notebook-panel .notebook-head { flex:none; min-height:40px; padding-block:0; }
+  .notebook-panel .notebook-head::before { height:25px; }
+  .notebook-panel .notebook-head strong { font-size:17px; }
+  .notebook-panel .notebook-save { min-height:26px; max-height:30%; overflow:auto; padding-block:0; }
+  .notebook-panel.is-writing .notebook-head { padding-inline:24px 6px; }
+  .notebook-panel.is-writing .notebook-head::before { left:8px; width:8px; }
+  .notebook-panel.is-writing .notebook-head > button:last-child { width:36px; height:36px; }
+  .notebook-panel.is-writing :is(.notebook-tabs,.notebook-filters,.notebook-head > .notebook-menu,.note-card:not(.is-editing)) { display:none; }
+  .notebook-panel.is-writing .notebook-list { padding:2px 12px 6px; }
+  .notebook-head > button.sheet-edit-action { display:inline-flex; width:auto; min-height:36px; font-size:13px; color:var(--nw-accent); }
+  .notebook-head > button.sheet-done { color:var(--nw-on-accent); background:var(--nw-accent); border-radius:100px; padding-inline:12px; }
+}
+</style>

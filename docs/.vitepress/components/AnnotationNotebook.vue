@@ -11,7 +11,7 @@ import { jsonBackup, markdownBackup, newerEntry, parseBackup, type Anchor, type 
 import type { CardAction } from './NoteCard.vue'
 import './notebook.css'
 
-const props = defineProps<{ target?: HTMLElement; document:string; title:string; kind:Kind; docked?:boolean; boxActive?:boolean }>()
+const props = defineProps<{ target?: HTMLElement; document:string; title:string; kind:Kind; docked?:boolean; wideDock?:boolean; boxActive?:boolean }>()
 const open = defineModel<boolean>('open',{required:true})
 const emit = defineEmits<{ boxMode:[active:boolean]; author:[value:boolean] }>()
 const legacy = useNotebook(props.document,props.kind)
@@ -46,12 +46,11 @@ watch(author, value => {
 watch(boxMode,v => emit('boxMode',v))
 watch(() => props.boxActive, v => { if (v !== undefined) boxMode.value=author.value && v }, { immediate:true })
 
-let wideViewport: MediaQueryList | undefined
 const preferenceKey = () => 'seagull-notebook-panel-v2:'+props.kind +
-  (wideViewport ? (wideViewport.matches ? ':paper-wide' : ':paper-narrow') : '')
+  (props.docked ? (props.wideDock ? ':paper-wide' : ':paper-narrow') : '')
 let initialized=false
 function restorePanel() {
-  const defaultOpen = wideViewport?.matches === true
+  const defaultOpen = props.wideDock === true
   let saved: { section?: string; open?: boolean } = {}
   try {
     saved=JSON.parse(localStorage.getItem(preferenceKey()) || '{}') ?? {}
@@ -59,11 +58,8 @@ function restorePanel() {
   section.value=author.value && (saved.section==='paper' || (saved.section==='bookmark' && props.kind==='pdf')) ? saved.section : 'annotation'
   open.value=typeof saved.open==='boolean' ? saved.open : defaultOpen
 }
+watch(() => props.wideDock, restorePanel)
 onMounted(() => {
-  if (props.docked) {
-    wideViewport=matchMedia('(min-width:1100px)')
-    wideViewport.addEventListener('change',restorePanel)
-  }
   restorePanel()
   if (props.kind==='html') document.body.classList.toggle('annotation-html-open',open.value)
   initialized=true
@@ -77,9 +73,33 @@ watch([open,section],([shown,tab]) => {
 })
 onBeforeUnmount(() => {
   clearTimeout(messageTimer)
-  wideViewport?.removeEventListener('change',restorePanel)
   if (props.kind==='html') document.body.classList.remove('annotation-html-open')
 })
+
+// Mobile keyboards can shrink and pan the visual viewport while fixed elements
+// still use the full layout viewport. Share the inset with the article/PDF too.
+watch([open, host], ([shown, element], _, onCleanup) => {
+  if (!shown || !element) return
+  const viewport = window.visualViewport
+  const owner = props.kind === 'html' ? document.body : element.closest<HTMLElement>('.pdf-reader')
+  if (!viewport || !owner) return
+  const update = () => {
+    const inset = Math.max(0, document.documentElement.clientHeight - viewport.height - viewport.offsetTop)
+    owner.style.setProperty('--notebook-viewport-inset', inset + 'px')
+    owner.style.setProperty('--notebook-viewport-height', viewport.height + 'px')
+  }
+  update()
+  viewport.addEventListener('resize', update)
+  viewport.addEventListener('scroll', update)
+  window.addEventListener('resize', update)
+  onCleanup(() => {
+    viewport.removeEventListener('resize', update)
+    viewport.removeEventListener('scroll', update)
+    window.removeEventListener('resize', update)
+    owner.style.removeProperty('--notebook-viewport-inset')
+    owner.style.removeProperty('--notebook-viewport-height')
+  })
+}, { flush: 'post' })
 
 function meta() {
   const now=new Date().toISOString()
@@ -88,7 +108,8 @@ function meta() {
 async function show(n:Annotation|PaperNote, edit:boolean, locate=false, part=0) {
   active.value=n.id; section.value=n.type; open.value=true
   await nextTick(); await panel.value?.reveal(n,edit)
-  if (locate && n.type==='annotation') await focusSource(n,part,edit ? 'if-hidden' : 'center')
+  const editingInBottomPanel = edit && host.value && getComputedStyle(host.value).containerName === 'notebook-sheet'
+  if (n.type==='annotation' && (locate || editingInBottomPanel)) await focusSource(n,part,edit ? 'if-hidden' : 'center')
 }
 function sameAnchor(a:Anchor,b:Anchor) {
   if (a.region || b.region) {

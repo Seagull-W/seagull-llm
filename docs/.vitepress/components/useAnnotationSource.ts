@@ -73,10 +73,13 @@ export function useAnnotationSource(options: {
   }
   function visibleArea() {
     const r = scroller()?.getBoundingClientRect()
+    const viewport = window.visualViewport
+    const left = viewport?.offsetLeft ?? 0, top = viewport?.offsetTop ?? 0
+    const right = left + (viewport?.width ?? innerWidth), bottom = top + (viewport?.height ?? innerHeight)
     const panel = kind === 'html' && options.showing() ? options.panel.value?.getBoundingClientRect() : undefined
-    const bottom = panel && panel.width >= innerWidth - 1 ? panel.top : innerHeight
-    return { left: Math.max(0, r?.left ?? 0), top: Math.max(0, r?.top ?? 0),
-      right: Math.min(innerWidth, r?.right ?? innerWidth), bottom: Math.min(bottom, r?.bottom ?? innerHeight) }
+    const panelTop = panel && panel.left <= left + 1 && panel.right >= right - 1 ? panel.top : bottom
+    return { left: Math.max(left, r?.left ?? left), top: Math.max(top, r?.top ?? top),
+      right: Math.min(right, r?.right ?? right), bottom: Math.min(bottom, panelTop, r?.bottom ?? bottom) }
   }
   function rebuild() {
     if (!mounted || geometryFrame) return
@@ -277,7 +280,7 @@ export function useAnnotationSource(options: {
     const run = ++focusRun
     partIndex = part
     await nextTick(); await frame(); await frame()
-    if (!mounted || run !== focusRun || options.active.value !== n.id) return
+    if (!mounted || !options.showing() || run !== focusRun || options.active.value !== n.id) return
     const root = target()
     if (root && n.anchor.region) {
       const element = locateHtmlRegion(root,n.anchor.region)
@@ -286,25 +289,31 @@ export function useAnnotationSource(options: {
         rebuild()
       }
     }
+    const scroll = scroller()
+    if (scroll) {
+      const reader = scroll.closest<HTMLElement>('.pdf-reader')!
+      const bounds = reader.getBoundingClientRect(), viewport = window.visualViewport
+      const top = viewport?.offsetTop ?? 0
+      if (bounds.bottom < top + 80 || bounds.top > top + (viewport?.height ?? innerHeight)) reader.scrollIntoView({ block: 'nearest' })
+    }
     const r = rects(n.anchor)[part]
     if (!r) return
     const view = visibleArea()
     const toolbar = root?.closest('.VPDoc')?.querySelector('.reader-navigation')
     const nav = document.querySelector('.VPNav')
-    const toolbarHeight = toolbar && getComputedStyle(toolbar).position === 'sticky' ? toolbar.getBoundingClientRect().height : 0
-    const top = Math.max(view.top, (nav?.getBoundingClientRect().bottom ?? 0) + toolbarHeight)
-    if (scrollPolicy === 'if-hidden' && r.top >= top && r.bottom <= view.bottom && r.left >= view.left && r.right <= view.right) {
+    const toolbarRect = toolbar && getComputedStyle(toolbar).position === 'sticky' ? toolbar.getBoundingClientRect() : null
+    let top = Math.max(view.top, nav?.getBoundingClientRect().bottom ?? 0)
+    if (toolbarRect && toolbarRect.top <= top + 1) top = Math.max(top, toolbarRect.bottom)
+    if (top >= view.bottom) return
+    const visibleHeight = Math.min(r.bottom, view.bottom) - Math.max(r.top, top)
+    if (scrollPolicy === 'if-hidden' && visibleHeight >= Math.min(r.height,view.bottom-top) - 1 && r.left >= view.left && r.right <= view.right) {
       layout()
       return
     }
-    const scroll = scroller()
+    const readingLine = top + Math.max(0, view.bottom-top-r.height)*.42
     if (scroll) {
-      const reader = scroll.closest('.pdf-reader')!.getBoundingClientRect()
-      if (reader.bottom < 80 || reader.top > innerHeight) scroll.closest('.pdf-reader')!.scrollIntoView({ block: 'nearest' })
-      const v = scroll.getBoundingClientRect()
-      scroll.scrollBy({ left: r.x-v.x-(scroll.clientWidth-r.width)/2, top: r.y-v.y-(scroll.clientHeight-r.height)*.42, behavior:'instant' })
+      scroll.scrollBy({ left:r.x-view.left-(view.right-view.left-r.width)/2, top:r.y-readingLine, behavior:'instant' })
     } else {
-      const readingLine = top + Math.max(0, view.bottom-top-r.height)*.42
       window.scrollBy({ top: r.y-readingLine, behavior:'instant' })
     }
     layout()
@@ -477,6 +486,24 @@ export function useAnnotationSource(options: {
   function sourceLoaded(event: Event) {
     if (event.target instanceof HTMLImageElement && target()?.contains(event.target)) rebuild()
   }
+  let keyboardResizeTimer: ReturnType<typeof setTimeout> | undefined
+  function monitorKeyboard(viewport: VisualViewport, signal: AbortSignal) {
+    let settledHeight = viewport.height
+    viewport.addEventListener('resize', () => {
+      clearTimeout(keyboardResizeTimer)
+      keyboardResizeTimer = setTimeout(() => {
+        const heightLost = settledHeight - viewport.height
+        settledHeight = viewport.height
+        // Browser bars can also resize the viewport during normal reading.
+        if (heightLost < 100 || viewport.scale !== 1) return
+        const field = document.activeElement
+        const panel = options.panel.value
+        if (!options.showing() || !(field instanceof HTMLTextAreaElement) || !panel?.contains(field) || getComputedStyle(panel).containerName !== 'notebook-sheet') return
+        const note = options.annotations.value.find(n => n.id === options.active.value)
+        if (note) void focusSource(note, partIndex, 'if-hidden')
+      }, 100)
+    }, { signal })
+  }
   let events: AbortController
   onMounted(() => {
     mounted=true; bind(); events=new AbortController()
@@ -489,10 +516,12 @@ export function useAnnotationSource(options: {
     document.addEventListener('keyup',keyup,listener)
     window.addEventListener('scroll',scrollChanged,listener); window.addEventListener('resize',rebuild,{ signal:events.signal })
     if (kind === 'html') document.addEventListener('load',sourceLoaded,listener)
+    if (window.visualViewport) monitorKeyboard(window.visualViewport, events.signal)
     document.fonts.ready.then(rebuild)
   })
   onBeforeUnmount(() => {
     mounted=false; events?.abort(); observer?.disconnect(); resize?.disconnect(); cardResize?.disconnect()
+    clearTimeout(keyboardResizeTimer)
     cancelAnimationFrame(geometryFrame); cancelAnimationFrame(layoutFrame); cancelDrag()
     target()?.classList.remove(boxClass)
     target()?.querySelectorAll('.notebook-marks').forEach(el => el.remove())

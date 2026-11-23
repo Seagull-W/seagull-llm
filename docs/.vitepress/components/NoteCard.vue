@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { anchorLabel, isVisualPart, type Annotation, type PaperNote } from './annotations'
 import ReaderIcon from './ReaderIcon.vue'
 import NoteEditor from './NoteEditor.vue'
@@ -8,7 +8,6 @@ export type CardAction = 'edit' | 'locate' | 'remove' | 'comment' | 'highlight' 
 const props = defineProps<{ author:boolean; note: Annotation | PaperNote; number: number; active: boolean; mode: CardMode; images?: Map<string,string>; missing?: boolean; showTime?: boolean }>()
 const emit = defineEmits<{ action: [name: CardAction,part?:number]; mode: [value: CardMode]; body: [value:string] }>()
 const menu = ref<HTMLDetailsElement>()
-const editButton = ref<HTMLButtonElement>()
 const excerptOpen = ref(true)
 const previews = computed(() => {
   const n = props.note
@@ -26,13 +25,6 @@ const previews = computed(() => {
 function act(name: CardAction,part?:number) {
   if (menu.value) menu.value.open=false
   emit('action',name,part)
-}
-async function finishEditing(mode: CardMode) {
-  emit('mode', mode)
-  if (mode === 'read') {
-    await nextTick()
-    editButton.value?.focus({ preventScroll: true })
-  }
 }
 </script>
 <template>
@@ -73,7 +65,14 @@ async function finishEditing(mode: CardMode) {
       </div>
       <span v-if="missing" class="note-hint">{{note.anchor.region ? '框选位置待确认' : '引用已保留，原文位置待确认'}}</span>
     </template>
-    <NoteEditor v-if="note.type==='paper' || note.comment!==null || mode!=='read'" :kind="note.type" :mode="mode" :model-value="note.type==='paper'?note.body:note.comment||''" @mode="finishEditing" @update:model-value="emit('body',$event)" />
-    <button v-if="author && mode==='read'" ref="editButton" class="edit-note" @click="act('edit')"><ReaderIcon name="edit" />{{ note.type==='annotation' && !note.comment ? '写批注' : '继续编辑' }}</button>
+    <NoteEditor v-if="note.type==='paper' || note.comment!==null || mode!=='read'" :kind="note.type" :mode="mode" :model-value="note.type==='paper'?note.body:note.comment||''" @mode="emit('mode',$event)" @update:model-value="emit('body',$event)" />
+    <button v-if="author && mode==='read'" class="edit-note" @click="act('edit')"><ReaderIcon name="edit" />{{ note.type==='annotation' && !note.comment ? '写批注' : '继续编辑' }}</button>
   </article>
 </template>
+<style>
+@container notebook-sheet (min-width:0px) {
+  .notebook-panel .note-card.is-editing { margin:0; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
+  .note-card.is-editing .note-card-head,
+  .note-card.is-editing:not(:has(.note-hint)) .note-excerpt { display:none; }
+}
+</style>

@@ -18,6 +18,7 @@ const body = computed({
   set: (value: string) => emit('update:modelValue', value)
 })
 let selection: [number, number] = [0, 0]
+let previewChosen = false
 
 watch([() => props.modelValue, previewing], ([text, visible], [, wasVisible], onCleanup) => {
   if (!visible) return
@@ -33,6 +34,8 @@ watch([() => props.modelValue, previewing], ([text, visible], [, wasVisible], on
 watch(() => props.mode, mode => {
   if (mode === 'edit') {
     nextTick(() => {
+      const host = input.value?.closest('.annotation-notebook')
+      if (host && !previewChosen) showPreview.value = getComputedStyle(host).containerName !== 'notebook-sheet'
       input.value?.focus({ preventScroll: true })
       input.value?.setSelectionRange(...selection)
     })
@@ -43,6 +46,7 @@ watch(() => props.mode, mode => {
 }, { immediate: true })
 
 function togglePreview(event: MouseEvent) {
+  previewChosen = true
   showPreview.value = !showPreview.value
   if (event.detail) input.value?.focus({ preventScroll: true })
 }
@@ -150,6 +154,24 @@ function insert(before: string, after = '', placeholder = '文字') {
 @media(pointer:coarse) {
   .note-editor .editor-actions button,.note-editor .format-tools button,.note-editor .note-preview-toggle { min-height:44px; }
   .note-editor .note-format { min-width:44px; }
+}
+@container notebook-sheet (min-width:0px) {
+  .note-editor[data-mode="edit"] {
+    display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center;
+    margin:0; padding:0; border:0;
+  }
+  .note-writing-head { display:contents; }
+  .note-writing-head label { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+  .note-editor textarea {
+    grid-row:1; grid-column:1/-1; field-sizing:fixed; resize:none;
+    height:clamp(36px,38cqh,120px); min-height:0; margin:0; padding:5px 2px; line-height:1.5;
+  }
+  .note-editor .editor-actions { grid-row:2; grid-column:1; margin:0; }
+  .note-editor .note-preview-toggle { grid-row:2; grid-column:2; }
+  .note-editor .editor-actions .note-done { display:none; }
+  .note-editor .format-tools { grid-row:3; grid-column:1/-1; }
+  .note-editor .note-proof { grid-row:4; grid-column:1/-1; margin-top:5px; }
+  .note-editor .note-proof:has(.note-empty-body) { display:none; }
 }
 @media(prefers-reduced-motion:reduce) { .note-switch-track::after { transition:none; } }
 </style>
