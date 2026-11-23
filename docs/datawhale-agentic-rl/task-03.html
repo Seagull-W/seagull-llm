@@ -1,3 +1,81 @@
+<style scoped>
+.vision-grpo {
+  container-type: inline-size;
+  min-width: 0;
+  color: var(--vp-c-text-1);
+  overflow-wrap: anywhere;
+}
+.vision-grpo p { margin: .35rem 0; }
+.vision-grpo .diagram-h1, .vision-grpo .diagram-h2, .vision-grpo .diagram-h3 { display: block; line-height: 1.4; }
+.vision-grpo .diagram-h1 { font-size: 1.45rem; }
+.vision-grpo .diagram-h2 { font-size: 1.13rem; }
+.vision-grpo .mast, .vision-grpo .stage-head, .vision-grpo .step-start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .35rem 1rem;
+}
+.vision-grpo .source, .vision-grpo .model, .vision-grpo .key, .vision-grpo .detail, .vision-grpo .caption {
+  font-size: .85rem;
+  color: var(--vp-c-text-2);
+}
+.vision-grpo .model strong, .vision-grpo .gold strong, .vision-grpo .chunk strong { display: block; }
+.vision-grpo .step-start, .vision-grpo .stage, .vision-grpo .problem, .vision-grpo .update, .vision-grpo .outputs {
+  padding: .85rem 1rem;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+}
+.vision-grpo .step-start, .vision-grpo .outputs { margin-top: .85rem; }
+.vision-grpo .problem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: .65rem;
+  align-items: center;
+}
+.vision-grpo .problem figure { margin: 0; padding: .25rem; background: #eaf0e7; }
+.vision-grpo .problem svg { display: block; width: 7rem; }
+.vision-grpo .drop, .vision-grpo .feed { position: relative; width: 2px; height: 1.25rem; background: var(--vp-c-divider); }
+.vision-grpo .drop { margin-left: 1.5rem; }
+.vision-grpo .drop::after, .vision-grpo .feed::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: -3px;
+  border: 4px solid transparent;
+  border-top-color: var(--vp-c-text-2);
+  border-bottom: 0;
+}
+.vision-grpo .stage-head { margin-bottom: .7rem; }
+.vision-grpo .assembly, .vision-grpo .feeds, .vision-grpo .chunks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .4rem;
+}
+.vision-grpo .lane, .vision-grpo .chunk { padding: .65rem; background: var(--vp-c-bg-soft); border-radius: 4px; }
+.vision-grpo .lane-label, .vision-grpo .chunk strong { font: 600 .88rem/1.5 var(--vp-font-family-mono); }
+.vision-grpo .lane-label { margin-bottom: .5rem; }
+.vision-grpo .pixel, .vision-grpo .pixel-chunk, .vision-grpo .first { background: var(--vp-c-brand-soft); }
+.vision-grpo .feed { justify-self: center; }
+.vision-grpo .bracket { height: .5rem; border: solid var(--vp-c-divider); border-width: 0 1px 1px; }
+.vision-grpo .roll-grid, .vision-grpo .outputs { display: grid; gap: .85rem; }
+.vision-grpo .outputs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.vision-grpo .scroll { min-width: 0; max-width: 100%; overflow-x: auto; }
+.vision-grpo table { display: table; width: 100%; margin: .4rem 0; border-collapse: collapse; }
+.vision-grpo th, .vision-grpo td { padding: .35rem .5rem; font-size: .85rem; }
+.vision-grpo caption { text-align: left; font-weight: 600; }
+.vision-grpo .align th, .vision-grpo .align td { white-space: nowrap; }
+.vision-grpo .update { border-left: 3px solid var(--vp-c-brand-1); }
+.vision-grpo .scroll-hint { font-size: .8rem; color: var(--vp-c-text-2); }
+@container (max-width: 35rem) {
+  .vision-grpo .problem, .vision-grpo .assembly, .vision-grpo .outputs { grid-template-columns: minmax(0, 1fr); }
+  .vision-grpo .problem figure { justify-self: start; }
+  .vision-grpo .feeds { display: flex; justify-content: center; }
+  .vision-grpo .feed:not(.image-feed) { display: none; }
+  .vision-grpo .chunk { padding: .35rem; font-size: .8rem; }
+}
+</style>
+
 <article class="native-document format-lab" data-format="lab" data-design="linux-notebook" aria-label="Task 03 · Vision GRPO 几何问答实验">
 <header class="document-intro note-hero">
 <p class="note-kicker">DataWhale Agentic RL</p>
@@ -12,7 +90,132 @@
 </details></nav>
 <section class="document-section note-panel" aria-labelledby="architecture">
 <h2 id="architecture" tabindex="-1">代码解读 <a class="header-anchor" href="#architecture" aria-label="章节链接">&#8203;</a></h2>
-<figure class="note-figure"><a href="/datawhale-agentic-rl/task-03/vision-grpo-architecture.png" aria-label="查看原尺寸图片"><img src="/datawhale-agentic-rl/task-03/vision-grpo-architecture.png" alt="Vision GRPO 训练架构" loading="lazy"></a><figcaption>从 GeoQA 图文输入到一次参数更新的训练流程。</figcaption></figure>
+<figure class="note-diagram" aria-labelledby="vision-diagram-title">
+<div class="vision-grpo">
+<header class="mast">
+    <div><strong class="diagram-h1" id="vision-diagram-title">Vision GRPO 训练架构</strong><p>一张几何图如何进入上下文，又如何参与下一轮策略更新</p></div>
+    <div class="model"><strong>Qwen/Qwen3.5-4B</strong>GeoQA 选择题 · PyTRIO · 默认 LoRA rank 32</div>
+  </header>
+  <div class="flow" id="vision-flow">
+    <div class="step-start" id="vision-sampler">
+      <b>每个训练步</b><span>从打乱的 <code>train.parquet</code> 取一批题，用当前 LoRA 权重建立本步共享的采样器。</span>
+      <a class="source" href="https://github.com/Seagull-W/agentic-rl-lab/blob/93d2be3cda9527e338cfe0ab39e4147d3c64e6a7/experiments/vision-grpo/train.py#L468">每步采样器 · train.py L468</a>
+    </div>
+    <section class="problem" aria-label="GeoQA 字段示例">
+      <figure>
+        <svg viewBox="0 0 200 154" role="img" aria-labelledby="vision-triangle-title">
+          <title id="vision-triangle-title">三角形示意图，A 角 50 度，B 角 60 度，C 角待求</title>
+          <path d="M24 130 170 130 110.6 26.8Z" fill="#fffef8" stroke="#295f51" stroke-width="2.3" stroke-linejoin="round"/>
+          <g fill="none" stroke="#678d80" stroke-width="1.4">
+            <path d="M46 130 A22 22 0 0 0 38.1 113.1"/><path d="M149 130 A21 21 0 0 1 159.5 111.8"/>
+            <path d="M99 40.6 Q109 50 119.6 42.4" stroke="#2b7391"/>
+          </g>
+          <g fill="#204c40" font-family="Consolas,monospace" font-size="15"><text x="12" y="145">A</text><text x="170" y="146">B</text><text x="109" y="21">C</text><text x="48" y="124">50°</text><text x="119" y="124">60°</text><text x="106" y="61" fill="#245877">?</text></g>
+        </svg>
+      </figure>
+      <div class="question">
+        <p class="key">按 GeoQA 字段构造的示例题</p>
+        <strong class="diagram-h2">如图，三角形 ABC 的 ∠C 等于多少？</strong>
+        <p class="choice">A. 50°　B. 60°　C. 70°　D. 80°</p>
+      </div>
+      <div class="gold" id="vision-gold"><strong><code>label = 2 → C</code></strong><small>标准选项 → <a href="#vision-grade">采样后评分</a></small></div>
+    </section>
+    <div class="drop" aria-hidden="true"></div>
+    <section class="stage context" id="vision-context">
+      <header class="stage-head"><strong class="diagram-h2">将图片插入题目上下文</strong><a class="source" href="https://github.com/Seagull-W/agentic-rl-lab/blob/93d2be3cda9527e338cfe0ab39e4147d3c64e6a7/experiments/vision-grpo/train.py#L146">图文输入 · train.py L146</a></header>
+      <div class="context-body">
+        <div class="template">
+          <strong class="diagram-h3">构造用户消息</strong>
+          <p><code>subject + choices</code> 写成题目、选项和作答要求，随后追加图片标记 <code>{"type": "image", "image": "geoqa"}</code>。</p>
+          <p class="settings"><code>apply_chat_template</code> 渲染字符串，开启 <code>add_generation_prompt</code>，设置 <code>enable_thinking=False</code>。</p>
+        </div>
+        <p class="split">在模板生成的 <code>&lt;|image_pad|&gt;</code> 处切开字符串，按下列顺序组装三个 chunk。</p>
+        <div class="assembly">
+          <div class="lane">
+            <div class="lane-label">before_image</div>
+            <div class="lane-body"><strong class="diagram-h3">编码前段文本</strong><p>保留占位符之前的模板文本，包括用户题目、四个选项和回答格式。</p><p class="detail"><code>tokenizer.encode(…, add_special_tokens=False)</code></p></div>
+          </div>
+          <div class="lane pixel">
+            <div class="lane-label">&lt;|image_pad|&gt;</div>
+            <div class="lane-body">
+              <strong class="diagram-h3">在此插入 <code>row["image"]</code> 的像素</strong>
+              <p>RGBA 合成到白底 → RGB → 图片字节。原图为 JPG/JPEG 时编码为 JPEG，其他格式编码为 PNG。</p>
+              <p class="detail"><code>encode_image</code> 调用模型的 image processor，按图像高、宽计算 patch 数。</p>
+              <p class="equation">expected_tokens = patches // merge_size²</p>
+            </div>
+          </div>
+          <div class="lane">
+            <div class="lane-label">after_image</div>
+            <div class="lane-body"><strong class="diagram-h3">编码后段文本</strong><p>保留占位符之后的模板文本，其中包含引导 assistant 开始回答的生成提示。</p><p class="detail"><code>tokenizer.encode(…, add_special_tokens=False)</code></p></div>
+          </div>
+        </div>
+        <div class="feeds" aria-hidden="true"><i class="feed"></i><i class="feed image-feed"></i><i class="feed"></i></div>
+        <div class="chunks" aria-label="按顺序组成 ModelInput 的三个块">
+          <div class="chunk"><strong>EncodedTextChunk</strong><span>前段文本 token</span></div>
+          <div class="chunk pixel-chunk"><strong>ImageChunk</strong><span><code>data · format · expected_tokens</code></span></div>
+          <div class="chunk"><strong>EncodedTextChunk</strong><span>后段文本 token</span></div>
+        </div>
+        <div class="bracket" aria-hidden="true"></div>
+        <p class="prompt-length"><b><code>ModelInput(chunks=prompt_chunks)</code></b> 长度 P = 前段 token 数 + 预期视觉 token 数 + 后段 token 数。<a href="#vision-datum-input">查看训练时如何对齐回答</a></p>
+      </div>
+    </section>
+    <div class="drop" aria-hidden="true"></div>
+    <section class="stage rollout">
+      <header class="stage-head"><strong class="diagram-h2">同一份图文 prompt，采样一组回答</strong><a class="source" href="https://github.com/Seagull-W/agentic-rl-lab/blob/93d2be3cda9527e338cfe0ab39e4147d3c64e6a7/experiments/vision-grpo/train.py#L224">采样与评分 · train.py L224</a></header>
+      <div class="roll-grid">
+        <div class="sample-notes">
+          <div><strong class="diagram-h3">批内各题并发，每题一次请求</strong><p><code>sample_async(num_samples=G)</code> 生成 G 条回答。每条保留生成 token 及其采样时的 logprob。</p></div>
+          <p class="check">校验 <code>response.input_tokens == P</code>，并逐条核对回答的 token 数与 logprob 数。长度不符时抛错。</p>
+          <p><b>组内优势</b>　<code>Aᵢ = rᵢ − mean(r)</code>。本题示例中，4 条回答有 2 条得分，平均奖励为 0.5。</p>
+        </div>
+        <div class="scroll" role="region" aria-label="组内评分示例" tabindex="0">
+        <table class="scores" id="vision-grade">
+          <caption>示例评分 · 提取最后一个有效的 boxed 选项，与标准 C 比较</caption>
+          <thead><tr><th scope="col">回答末尾（示例）</th><th scope="col">提取</th><th scope="col">奖励 rᵢ</th><th scope="col">优势 Aᵢ</th></tr></thead>
+          <tbody>
+            <tr><td><code>… &#92;boxed{C}</code></td><td>C</td><td>1</td><td class="value">+0.5</td></tr>
+            <tr><td><code>… &#92;boxed{B} … &#92;boxed{C}</code></td><td>C</td><td>1</td><td class="value">+0.5</td></tr>
+            <tr><td><code>… &#92;boxed{B}</code></td><td>B</td><td>0</td><td class="value negative">−0.5</td></tr>
+            <tr><td>… 所以是 70°。</td><td>无</td><td>0</td><td class="value negative">−0.5</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+      <p class="gate"><b>组内有分差</b> → 每条非空回答生成一个 Datum。　<b>整组同分</b> → 所有优势为 0，跳过该题。</p>
+    </section>
+    <div class="drop" aria-hidden="true"></div>
+    <section class="stage datum">
+      <header class="stage-head"><strong class="diagram-h2">复用图文上下文，对齐每个回答 token</strong><a class="source" href="https://github.com/Seagull-W/agentic-rl-lab/blob/93d2be3cda9527e338cfe0ab39e4147d3c64e6a7/experiments/vision-grpo/train.py#L274">build_grpo_datum · train.py L274</a></header>
+      <p>取示例第一条回答，设生成序列为 y₁ … y<sub>T</sub>。模型输入保留完整的三个 prompt chunks，末尾追加 <code>sample.tokens[:-1]</code>。</p>
+      <div class="scroll-hint">左右滑动可查看全部预测位置。</div>
+      <div class="scroll" role="region" aria-label="训练输入与目标按预测位置对齐" tabindex="0">
+        <table class="align">
+          <thead><tr><th scope="col">预测位置</th><th scope="col" class="context-pos">前 P−1 位</th><th scope="col" class="first">第 P 位</th><th scope="col" class="answer-pos">第 P+1 位</th><th scope="col" class="answer-pos">…</th><th scope="col" class="answer-pos">第 P+T−1 位</th></tr></thead>
+          <tbody>
+            <tr><th scope="row" id="vision-datum-input">model_input</th><td class="context-pos">图文上下文前 P−1 位</td><td class="first">最后一个 prompt token</td><td class="answer-pos">y₁</td><td class="answer-pos">…</td><td class="answer-pos">y<sub>T−1</sub></td></tr>
+            <tr><th scope="row">target_tokens</th><td class="context-pos">0 … 0</td><td class="first"><b>y₁</b></td><td class="answer-pos">y₂</td><td class="answer-pos">…</td><td class="answer-pos">y<sub>T</sub></td></tr>
+            <tr><th scope="row">logprobs</th><td class="context-pos">0 … 0</td><td class="first">log p<sub>old</sub>(y₁)</td><td class="answer-pos">log p<sub>old</sub>(y₂)</td><td class="answer-pos">…</td><td class="answer-pos">log p<sub>old</sub>(y<sub>T</sub>)</td></tr>
+            <tr><th scope="row">advantages</th><td class="context-pos">0 … 0</td><td class="first">+0.5</td><td class="answer-pos">+0.5</td><td class="answer-pos">…</td><td class="answer-pos">+0.5</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="caption"><b>最后一个 prompt token 预测 y₁。</b> 因此三组训练数组各以 P−1 个零开头，后接 T 个回答位置。图片随上下文参与预测，优势逐个赋给生成 token。</div>
+    </section>
+    <div class="drop" aria-hidden="true"></div>
+    <section class="update" id="vision-update">
+      <header class="stage-head"><strong class="diagram-h2">汇总本批 Datum，更新一次 LoRA</strong><a class="source" href="https://github.com/Seagull-W/agentic-rl-lab/blob/93d2be3cda9527e338cfe0ab39e4147d3c64e6a7/experiments/vision-grpo/train.py#L302">分批与更新 · train.py L302</a></header>
+      <p>按图文总长度降序排列有效样本，再按样本数、图片数和填充后的 token 数切分 micro-batch。本次每批最多 4 张图。</p>
+      <p>按各批样本数占比缩放优势 → 分批 <code>forward_backward_async(loss_fn="importance_sampling")</code> → <code>optim_step_async(Adam)</code> → <a class="jump" href="#vision-sampler">下一步刷新采样器</a>。</p>
+      <p>本批没有有效 Datum 时跳过参数更新。两种情况均向 SwanLab 记录奖励、格式率、退化组占比、Datum 数和平均生成长度。</p>
+    </section>
+  </div>
+  <footer class="outputs">
+    <section><strong class="diagram-h3">保存权重与状态</strong><a class="source" href="https://github.com/Seagull-W/agentic-rl-lab/blob/93d2be3cda9527e338cfe0ab39e4147d3c64e6a7/experiments/vision-grpo/train.py#L417">save_checkpoint · train.py L417</a><p>启用保存时，按间隔存档并补存最终步。<code>sampler_weights</code> 用于推理，<code>training_state</code> 用于恢复训练。</p></section>
+    <section><strong class="diagram-h3">用相同输入评测</strong><a class="source" href="https://github.com/Seagull-W/agentic-rl-lab/blob/93d2be3cda9527e338cfe0ab39e4147d3c64e6a7/experiments/vision-grpo/eval.py#L75">GeoQA 评测 · eval.py L75</a><p>Base 或采样权重 → 固定的 GeoQA 测试子集（默认 100 题）→ 复用 <code>build_prompt_chunks</code> → 每题采样一次（温度 0），统计准确率与格式率。</p></section>
+  </footer>
+</div>
+<figcaption>图文输入、组内评分与参数更新。图中用 4 条回答演示优势计算，本次训练每题采样 8 条。</figcaption>
+</figure>
 <h3 id="image-prompt" tabindex="-1">把几何图插进图文 prompt <a class="header-anchor" href="#image-prompt" aria-label="章节链接">&#8203;</a></h3>
 <p>GeoQA 每题包含几何图、题干和四个选项。代码用 <code>ImageChunk</code> 替换对话模板中的图片占位符，按「题干和选项、图片、回答起点」拼接。图片占用的视觉 token 数为 <code>patches // merge_size**2</code>，采样时用服务端返回的 <code>input_tokens</code> 核对整个 prompt 的长度。<a href="https://github.com/Seagull-W/agentic-rl-lab/blob/93d2be3cda9527e338cfe0ab39e4147d3c64e6a7/experiments/vision-grpo/train.py#L146">图文输入</a></p>
 <h3 id="group-reward" tabindex="-1">在同一份图文上下文中采样和评分 <a class="header-anchor" href="#group-reward" aria-label="章节链接">&#8203;</a></h3>
@@ -33,5 +236,6 @@
 <p>基座和第 100 步的 sampler 在同一组 100 道测试题上各答一次，温度为 0，最多生成 1,024 个 token。准确率从 <strong>71% 升到 83%</strong>，格式合规率从 <strong>73% 升到 88%</strong>。两次评测分别耗时 64.28 秒和 193.70 秒。逐题结果保存在评测脚本同目录的 <code>eval-results-base.json</code> 和 <code>eval-results-step-100.json</code>。<a href="https://github.com/Seagull-W/agentic-rl-lab/blob/93d2be3cda9527e338cfe0ab39e4147d3c64e6a7/experiments/vision-grpo/eval.py">评测脚本</a></p>
 <figure class="note-figure"><a href="/datawhale-agentic-rl/task-03/evaluation.png" aria-label="查看原尺寸图片"><img src="/datawhale-agentic-rl/task-03/evaluation.png" alt="基座与第 100 步权重在相同 100 道题上的准确率和格式合规率" loading="lazy"></a><figcaption>在相同的 100 道 GeoQA 测试题上，两组各生成一次回答。可提取选项的回答从 73 条增至 88 条，其中答对的从 71 条增至 83 条。</figcaption></figure>
 <p>逐题对照后，基座能提取选项的 73 题在训练后都选了原答案，其中 71 题正确。基座提取不到选项的 27 题，训练后有 12 题答对、3 题给出错误选项、12 题仍提取不到选项。例如第 3333 题，基座已经算出正确的 50°，却没给出可提取的选项。训练后它算出同样的角度，并以 <code>\boxed{B}</code> 作答。</p>
+<p><strong>新增答对的 12 题中，有 2 题只需补上 <code>\boxed{}</code> 格式就能得分</strong>，占新增正确题的 <strong>16.7%</strong>，对应测试集准确率的 <strong>2 个百分点</strong>。</p>
 </section>
 </article>
