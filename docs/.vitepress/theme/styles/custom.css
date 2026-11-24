@@ -27,6 +27,11 @@ button,summary,select { cursor:pointer; }
 ::selection { background:color-mix(in srgb,var(--vp-c-brand-1) 22%,transparent); }
 .Layout .VPNav { position:fixed; top:0; }
 .Layout .VPNavBar { background:var(--vp-c-bg); border-bottom:1px solid var(--vp-c-divider); }
+/* VitePress clears the bar on wide pages and paints only the menu strip with a root-level colour,
+   so scrolled text shows beside the logo. Except over the home artwork at the very top, the whole
+   bar uses the page ground of the current style. */
+.Layout .VPNav .VPNavBar:not(.home.top) { background-color:var(--vp-c-bg); }
+.Layout .VPNav .VPNavBar:not(.home.top) .content-body { background-color:transparent; }
 .Layout .VPNavBar .wrapper,.Layout .VPNav .VPNavBar.has-sidebar .wrapper { padding-inline:24px; }
 .Layout .VPNavBar .container,.Layout .VPNav .VPNavBar.has-sidebar .container { max-width:1200px; gap:24px; }
 .Layout .VPNavBar .container > .title { position:static; width:auto; padding:0; flex:none; }

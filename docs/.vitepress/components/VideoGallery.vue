@@ -91,8 +91,10 @@ h1, h2 { color: var(--vp-c-text-1); font-size: 30px; line-height: 1.3; font-weig
 .gallery-link:hover { text-decoration: underline; }
 .video-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 .video-grid.two-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.video-card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--vp-c-border); border-radius: 16px; background: var(--glass-bg); box-shadow: var(--glass-shadow); transition: border-color .2s, box-shadow .2s; }
+.video-card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--vp-c-border); border-radius: 16px; background: var(--glass-bg); box-shadow: var(--glass-shadow); text-decoration: none; transition: border-color .2s, box-shadow .2s; }
 .video-card:hover { border-color: var(--vp-c-brand-1); box-shadow: var(--glass-shadow-hover); }
+/* The whole card is one link; only the title carries the link underline on hover or focus. */
+.video-card:is(:hover,:focus-visible) h3 { text-decoration: underline; text-underline-offset: .2em; }
 a:focus-visible { outline: 3px solid var(--vp-c-brand-1); outline-offset: 4px; }
 .video-cover { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: var(--vp-c-bg-soft); }
 .video-cover img { width: 100%; height: 100%; object-fit: cover; }
@@ -169,7 +171,8 @@ time { color: var(--vp-c-text-2); font-size: 12px; }
 .video-gallery[data-index='cinema'] .video-info h3 { font:500 19px/1.5 'Seagull Academic Serif',SimSun,serif; }
 .video-gallery[data-index='cinema'] .play-icon { width:28px; height:28px; left:7px; bottom:7px; background:#1a1b16aa; }
 .video-gallery[data-index='grace'] .video-grid { grid-template-columns:1fr; gap:0; }
-.video-gallery[data-index='grace'] .video-card { flex-direction:row; align-items:center; gap:clamp(14px,3vw,34px); border:0; border-bottom:1px solid var(--grace-etch); border-radius:0; background:transparent; padding:18px 0; }
+/* The rows sit on the landscape, so each keeps its own dark ground; light grass must not show through the text. */
+.video-gallery[data-index='grace'] .video-card { flex-direction:row; align-items:center; gap:clamp(14px,3vw,34px); border:0; border-bottom:1px solid var(--grace-etch); border-radius:0; background:#1b211ee6; padding:18px clamp(12px,2vw,24px); }
 .video-gallery[data-index='grace'] .video-cover { width:clamp(130px,24%,240px); flex:none; }
 .video-gallery[data-index='grace'] .video-info { padding:0; }
 .video-gallery[data-index='grace'] .video-description { margin:5px 0 8px; }

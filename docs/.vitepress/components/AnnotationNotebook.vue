@@ -46,27 +46,47 @@ watch(author, value => {
 watch(boxMode,v => emit('boxMode',v))
 watch(() => props.boxActive, v => { if (v !== undefined) boxMode.value=author.value && v }, { immediate:true })
 
-const preferenceKey = () => 'seagull-notebook-panel-v2:'+props.kind +
+// v2 also stored the automatic default, so a column that opened by itself stayed
+// open everywhere afterwards. v3 keeps only an open/close the reader chose.
+const preferenceKey = () => 'seagull-notebook-panel-v3:'+props.kind +
   (props.docked ? (props.wideDock ? ':paper-wide' : ':paper-narrow') : '')
 let initialized=false
+let savedOpen: boolean | undefined
+let automatic: boolean | undefined
+// The wide docked column opens by itself only when it has something to show.
+const hasContent = computed(() => author.value || annotations.value.length>0 || papers.value.length>0)
+function applyDefault() {
+  if (savedOpen!==undefined) return
+  const value=props.wideDock===true && hasContent.value
+  if (open.value===value) return
+  automatic=value
+  open.value=value
+}
 function restorePanel() {
-  const defaultOpen = props.wideDock === true
   let saved: { section?: string; open?: boolean } = {}
   try {
     saved=JSON.parse(localStorage.getItem(preferenceKey()) || '{}') ?? {}
   } catch {}
   section.value=author.value && (saved.section==='paper' || (saved.section==='bookmark' && props.kind==='pdf')) ? saved.section : 'annotation'
-  open.value=typeof saved.open==='boolean' ? saved.open : defaultOpen
+  savedOpen=typeof saved.open==='boolean' ? saved.open : undefined
+  if (savedOpen!==undefined) open.value=savedOpen
+  else applyDefault()
 }
 watch(() => props.wideDock, restorePanel)
+watch(hasContent, () => { if (initialized) applyDefault() })
 onMounted(() => {
   restorePanel()
   if (props.kind==='html') document.body.classList.toggle('annotation-html-open',open.value)
   initialized=true
 })
-watch([open,section],([shown,tab]) => {
+watch([open,section],([shown,tab],[wasShown]) => {
   if (!initialized) return
-  try { localStorage.setItem(preferenceKey(),JSON.stringify({open:shown,section:tab})) } catch {}
+  if (shown!==wasShown) {
+    if (shown===automatic) automatic=undefined
+    else savedOpen=shown
+  }
+  const preference=savedOpen===undefined ? {section:tab} : {open:savedOpen,section:tab}
+  try { localStorage.setItem(preferenceKey(),JSON.stringify(preference)) } catch {}
   if (props.kind==='html') document.body.classList.toggle('annotation-html-open',shown)
   if (!shown) panel.value?.finish()
   nextTick(layout)

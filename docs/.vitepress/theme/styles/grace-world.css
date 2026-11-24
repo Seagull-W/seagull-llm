@@ -24,7 +24,8 @@
   background: linear-gradient(180deg, #151b18d9, #151b18aa);
   box-shadow: none; border-color: #ddcc9e38;
 }
-.Layout[data-visual-style='grace-archive'] .VPNavBar:not(.has-sidebar):not(.home.top) { background-color: transparent; }
+/* Once the page scrolls, text passes beneath the bar; keep a solid ground under the gradient. */
+.Layout[data-visual-style='grace-archive'] .VPNavBar:not(.has-sidebar):not(.home.top) { background-color: var(--grace-deep); }
 .Layout.academic-reading[data-visual-style='grace-archive'] .VPNav .VPNavBar:not(.top) {
   background: #1b211e;
 }

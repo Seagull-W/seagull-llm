@@ -49,8 +49,8 @@ function advance(direction: number) {
 .reel-index a { text-decoration:none; font-weight:inherit; }
 .reel-index h3 { margin:0; padding:0; border:0; }
 
-.contact-strip { display:flex; align-items:start; gap:clamp(14px,2.5vw,28px); overflow-x:auto; padding:3px 3px 15px; scroll-snap-type:x proximity; overscroll-behavior-x:contain; scrollbar-width:thin; scrollbar-color:var(--vp-c-border-hover) transparent; }
-.contact-strip a { display:block; flex:0 0 clamp(220px,34%,405px); min-width:0; scroll-snap-align:start; color:var(--vp-c-text-1); }
+.contact-strip { --strip-gap:clamp(14px,2.5vw,28px); display:flex; align-items:start; gap:var(--strip-gap); overflow-x:auto; padding:3px 0 15px; scroll-snap-type:x proximity; overscroll-behavior-x:contain; scrollbar-width:thin; scrollbar-color:var(--vp-c-border-hover) transparent; }
+.contact-strip a { display:block; flex:0 0 calc((100% - 2 * var(--strip-gap)) / 3); min-width:0; scroll-snap-align:start; color:var(--vp-c-text-1); }
 .contact-strip .section-photograph { width:100%; aspect-ratio:1.85; }
 .contact-strip a:focus-visible { outline-offset:-2px; }
 .shot-caption { display:flex; gap:13px; align-items:baseline; padding:12px 0 4px; }
@@ -61,6 +61,9 @@ function advance(direction: number) {
 .reel-transport span { margin-right:auto; color:var(--vp-c-text-2); font-size:12px; }
 .reel-transport button { width:44px; height:40px; font-size:20px; color:var(--vp-c-brand-1); }
 .reel-transport button:disabled { opacity:.35; cursor:default; }
+@media(max-width:899px) {
+  .contact-strip a { flex-basis:calc((100% - var(--strip-gap)) / 2); }
+}
 @media(max-width:540px) {
   .contact-strip a { flex-basis:83%; }
   .shot-caption h3 { font-size:17px; }

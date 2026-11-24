@@ -52,7 +52,6 @@ function monthLabel(month: string) {
         <select v-model="month" aria-label="调研月份" @change="expanded = false">
           <option v-for="m in months" :key="m" :value="m">{{ monthLabel(m) }}</option>
         </select>
-        <svg aria-hidden="true" width="10" height="6" viewBox="0 0 10 6"><path d="m1 1 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
       </div>
       <a class="archive-entry" :href="withBase('/research/')">调研归档 <span aria-hidden="true">→</span></a>
     </header>
@@ -110,11 +109,10 @@ function monthLabel(month: string) {
 .journal-head h2 { font: 600 clamp(21px, 2vw, 28px)/1.5 var(--journal-type); }
 .month-picker { display: inline-flex; align-items: center; position: relative; color: var(--vp-c-text-2); }
 .month-picker select {
-  min-height: 44px; padding: 0 17px 0 2px; border: 0; appearance: none; border-radius: 0;
+  min-height: 44px; padding: 0 4px 0 2px; border: 0; appearance: auto; border-radius: 0;
   color: inherit; background: transparent; font: inherit; font-size: 13px; cursor: pointer;
 }
 .month-picker select option { background: var(--vp-c-bg); color: var(--vp-c-text-1); }
-.month-picker svg { position: absolute; right: 1px; pointer-events: none; }
 .paper-journal a { color: inherit; text-decoration: none; }
 .paper-journal a:hover { color: var(--vp-c-brand-1); text-decoration: underline; text-underline-offset: .22em; }
 .paper-journal :is(a, select, button):focus-visible { outline: 2px solid var(--vp-c-brand-1); outline-offset: 3px; }

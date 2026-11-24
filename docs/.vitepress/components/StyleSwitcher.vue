@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, nextTick, onUnmounted, ref, watch } from 'vue'
+import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useData, useRoute, withBase } from 'vitepress'
 import { visualStyles, visualStyleControlsKey, useVisualStyle, type VisualStyleId } from '../theme/visual-styles'
 import { cancelPicturePreview, changeAppearance, previewAppearancePicture, warmAppearancePicture } from '../theme/appearance-motion'
@@ -9,15 +9,23 @@ import ReaderIcon from './ReaderIcon.vue'
 const controls = inject(visualStyleControlsKey)
 const current = useVisualStyle()
 const { isDark } = useData()
+const mounted = ref(false)
+const dark = computed(() => mounted.value && isDark.value)
 const route = useRoute()
 const trigger = ref<HTMLButtonElement>()
 const dialog = ref<HTMLDialogElement>()
 const opened = ref(false)
 let previousOverflow = ''
 let scrollLocked = false
+let openedByKeyboard = false
+let restoreFocus = false
+
+onMounted(() => { mounted.value = true })
 
 async function open(event: MouseEvent) {
   if (!dialog.value || opened.value) return
+  openedByKeyboard = event.detail === 0
+  restoreFocus = false
   opened.value = true
   await nextTick()
   if (!opened.value || !dialog.value) return
@@ -26,7 +34,7 @@ async function open(event: MouseEvent) {
   scrollLocked = true
   dialog.value.showModal()
   // Keyboard users land on the current choice; pointer users get an unobscured preview.
-  if (event.detail === 0) dialog.value.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus()
+  if (openedByKeyboard) dialog.value.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus()
   else dialog.value.focus()
 }
 function restore() {
@@ -35,7 +43,10 @@ function restore() {
   if (scrollLocked) { document.documentElement.style.overflow = previousOverflow; scrollLocked = false }
   if (!opened.value) return
   opened.value = false
-  trigger.value?.focus({ preventScroll: true })
+  const shouldFocus = openedByKeyboard || restoreFocus
+  openedByKeyboard = false
+  restoreFocus = false
+  if (shouldFocus) trigger.value?.focus({ preventScroll: true })
 }
 function close() { dialog.value?.close(); restore() }
 function dismissOutside(event: MouseEvent) {
@@ -69,13 +80,13 @@ onUnmounted(() => { cancelPicturePreview(); dialog.value?.close(); if (scrollLoc
 </script>
 
 <template>
-  <div v-if="controls" class="style-switcher" :class="{ 'is-night': isDark }">
+  <div v-if="controls" class="style-switcher" :class="{ 'is-night': dark }">
     <button ref="trigger" class="style-trigger" type="button" aria-label="切换视觉风格" aria-haspopup="dialog" :aria-expanded="opened" aria-controls="style-book" :title="`当前：${current.name} · 翻阅风格`" @click="open">
       <span class="style-miniatures" aria-hidden="true"><span class="miniature-back"></span><span class="miniature-front" :data-style="current.id"><img :src="withBase(current.assets.logo)" alt="" width="24" height="24" /></span></span>
       <span class="style-trigger-label">{{ current.name }}</span>
     </button>
     <span class="sr-only" role="status">当前视觉风格：{{ current.name }}</span>
-    <dialog id="style-book" ref="dialog" class="style-book" tabindex="-1" aria-labelledby="style-book-title" aria-describedby="style-book-hint" @close="restore" @click="dismissOutside" @keydown="move">
+    <dialog id="style-book" ref="dialog" class="style-book" tabindex="-1" aria-labelledby="style-book-title" aria-describedby="style-book-hint" @cancel="restoreFocus = true" @close="restore" @click="dismissOutside" @keydown="move">
       <template v-if="opened">
         <header class="style-book-heading">
           <div><h2 id="style-book-title">换一片风景</h2><p id="style-book-hint">点选封面，换一种阅读氛围</p></div>
@@ -86,7 +97,7 @@ onUnmounted(() => { cancelPicturePreview(); dialog.value?.close(); if (scrollLoc
             @pointerenter="previewAppearancePicture(style, isDark)" @pointerleave="cancelPicturePreview"
             @focus="previewAppearancePicture(style, isDark)" @blur="cancelPicturePreview" @click="choose(id)">
             <span class="cover-scene" aria-hidden="true">
-              <img class="cover-art" :src="withBase(isDark ? style.assets.coverDark : style.assets.coverLight)" alt="" width="260" height="180" decoding="async" />
+              <img class="cover-art" :src="withBase(dark ? style.assets.coverDark : style.assets.coverLight)" alt="" width="260" height="180" decoding="async" />
               <span class="cover-brand"><PixelWordmark v-if="id === 'pixel-voyage'" /><span v-else>Seagull</span></span>
               <span class="cover-horizon"></span>
             </span>

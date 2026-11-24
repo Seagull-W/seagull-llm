@@ -20,7 +20,8 @@
 .pixel-mountain-home .VPNav {
   --vp-c-bg: #132239; --vp-c-bg-alt: #192b43; --vp-c-bg-elv: #1d314c;
   --vp-c-bg-soft: #203650; --vp-nav-screen-bg-color: var(--vp-c-bg);
-  --vp-nav-bg-color: rgb(19 34 57 / .94);
+  /* Opaque: the left column scrolls beneath the bar. */
+  --vp-nav-bg-color: rgb(19 34 57);
 }
 .Layout.pixel-mountain-home .VPNav .VPNavBar { background: var(--vp-nav-bg-color); border-color: var(--vp-c-divider); }
 .Layout.pixel-mountain-home .VPNavBar .content-body { background: transparent; }

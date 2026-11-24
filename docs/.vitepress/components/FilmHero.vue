@@ -31,7 +31,8 @@ const style = useVisualStyle()
 .film-wordmark { font:italic 400 38px/1.15 'Times New Roman',Georgia,serif; letter-spacing:-.025em; color:var(--vp-c-text-1); }
 .film-title { font:400 clamp(17px,1.65vw,21px)/1.6 'Seagull Academic Serif','Noto Serif SC',SimSun,serif; letter-spacing:.035em; text-wrap:balance; }
 .film-heading p { margin:7px 0 0; font:italic 400 13px/1.6 'Times New Roman',Georgia,serif; letter-spacing:.015em; color:var(--vp-c-text-2); }
-.film-frame { margin:0; }
+/* Cap desktop frame height so search/content peeks above the fold without cropping the 2560:1446 frame. */
+.film-frame { max-width:min(100%, calc(56dvh * 2560 / 1446)); margin:0 auto; }
 .film-frame picture {
   display:block;
   aspect-ratio:2560 / 1446;

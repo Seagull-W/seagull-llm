@@ -99,6 +99,8 @@
     grid-row:2;
     position:sticky;
     inset:auto;
+    /* Below the fixed nav: near the article end the sticky column scrolls up and must pass under it. */
+    z-index:1;
     top:calc(var(--vp-nav-height) + 12px);
     height:calc(100dvh - var(--vp-nav-height) - 24px);
     width:100%;
