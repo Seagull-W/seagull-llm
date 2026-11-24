@@ -20,7 +20,73 @@
 
 ### 把批注放在原文右侧
 
-读网页文章或 PDF 时，我可以选中一句话，也可以框出图表的一部分，写下当时的疑问。公开后，读者点原文里的标记就能展开批注，也能从批注卡片跳回对应段落或图表。网页用选文和上下文定位文字，PDF 用页码和区域坐标定位。批注由 Cloudflare Pages Functions 读写，保存在 D1 数据库中。[批注组件](docs/.vitepress/components/AnnotationNotebook.vue) · [存储与访问接口](server/notes-api.ts)
+读网页文章或 PDF 时，我可以选中一句话，也可以在「框选」模式下拖框圈出图表、公式或幻灯片中的任意区域，写下当时的疑问（支持 Markdown 与 LaTeX 公式）。公开后，读者点原文里的标记就能展开批注，也能从批注卡片跳回对应段落或图表；无公开批注时面板默认收起，保持正文居中阅读。
+
+| 场景 | 定位与交互方式 |
+| --- | --- |
+| **网页文章（PC）** | 选中文本按上下文锚定，或开启工具栏「框选」直接圈选图表区域；右侧停靠面板与原文并排对照 |
+| **PDF 论文 / 幻灯片（PC）** | 内置 `pdf.js` 阅读器，按页码与归一化区域坐标定位，支持文字高亮、区域框选裁切与页面书签 |
+| **手机端阅读** | 底部固定批注抽屉，上方为原文与输入法键盘保留可视空间，对照阅读不遮挡当前行 |
+| **数据与同步** | Cloudflare Pages Functions 读写 D1 数据库；读者端公开只读，作者登录后自动离线排队同步 |
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="design/readme/notes-pc-html.webp" alt="PC 端网页文章与右侧批注面板并排对照" width="100%">
+      <br><sub><b>PC 端 · 网页正文批注</b>（右侧停靠面板，与原文同屏对照）</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="design/readme/notes-pc-pdf.webp" alt="PC 端 PDF 阅读器与右侧批注面板" width="100%">
+      <br><sub><b>PC 端 · PDF 论文与幻灯片批注</b>（支持页码跳转、缩放、目录与区域框选）</sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="design/readme/notes-mobile.webp" alt="手机端文章页底部固定批注面板" width="280">
+  <br><sub><b>手机端 · 底部固定批注面板</b>（为原文与输入法保留阅读空间）</sub>
+</p>
+
+> 代码入口：[批注组件](docs/.vitepress/components/AnnotationNotebook.vue) · [PDF 阅读器](docs/.vitepress/components/PdfViewer.vue) · [存储与访问接口](server/notes-api.ts)
+
+## 四套视觉风格
+
+全站正文共用同一套学术阅读版式（本地 Noto Serif SC 宋体、720px 版心、等宽数字表格），点击顶栏的风格封面即可打开「换一片风景」手册，在四套主题间切换，昼夜模式独立保存。[视觉规范](VISUAL_STYLES.md)
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="design/readme/style-paper-coast.webp" alt="剪纸 Paper Coast 风格首页" width="100%">
+      <br><sub><b>剪纸 · Paper Coast</b> — 折纸分册地图、跨栏选读与月刊式每日调研</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="design/readme/style-pixel-voyage.webp" alt="雪山 Pixel Voyage 风格首页" width="100%">
+      <br><sub><b>雪山 · Pixel Voyage</b> — 钴蓝雪峰、像素栏目图标与卷尾太刀遭遇战</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="design/readme/style-along-the-way.webp" alt="灿烂人生 Along the Way 风格首页" width="100%">
+      <br><sub><b>灿烂人生 · Along the Way</b> — 保留电影原帧比例与胶片接触印相索引</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="design/readme/style-switcher.webp" alt="换一片风景风格选择手册" width="100%">
+      <br><sub><b>风格手册 · 换一片风景</b> — 四套封面实时预览，支持键盘方向键切换</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="design/readme/style-grace-day.webp" alt="艾尔登法环 Grace Archive 白天亚坛高原首页" width="100%">
+      <br><sub><b>艾尔登法环 · Grace Archive（昼）</b> — 亚坛高原晴昼与暗金栏目选单</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="design/readme/style-grace-night.webp" alt="艾尔登法环 Grace Archive 夜间艾雷月夜首页" width="100%">
+      <br><sub><b>艾尔登法环 · Grace Archive（夜）</b> — 艾雷教堂月夜、人物藏品格与每日调研</sub>
+    </td>
+  </tr>
+</table>
+
+## 自动调研与站点构建
 
 ### 自动调研
 
