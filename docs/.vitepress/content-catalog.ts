@@ -23,7 +23,8 @@ export const readingSeries = [
     '/cs336/a1-bpe', '/cs336/a1-transformer', '/cs336/a2-benchmark'
   ] },
   { title: 'DataWhale Agentic RL · 学习笔记', paths: [
-    '/datawhale-agentic-rl/task-01', '/datawhale-agentic-rl/task-02', '/datawhale-agentic-rl/task-03'
+    '/datawhale-agentic-rl/task-01', '/datawhale-agentic-rl/task-02', '/datawhale-agentic-rl/task-03',
+    '/datawhale-agentic-rl/task-04'
   ] },
   { title: 'CUDA C++ · 编程指南', paths: [
     '/cuda-notes/programming-model', '/cuda-notes/cuda-platform', '/cuda-notes/cuda-cpp',

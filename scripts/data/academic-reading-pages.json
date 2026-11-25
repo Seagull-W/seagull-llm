@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1776,
+  "character_count": 1781,
   "pages": [
     {
       "path": "/cs336/a1-bpe.md",
@@ -74,6 +74,10 @@
     {
       "path": "/datawhale-agentic-rl/task-03.md",
       "title": "Task 03 · Vision GRPO 几何问答实验"
+    },
+    {
+      "path": "/datawhale-agentic-rl/task-04.md",
+      "title": "Task 04 · DeepMath 在线策略蒸馏实验"
     },
     {
       "path": "/linux-notes/linux-isolation.md",
@@ -284,12 +288,24 @@
       "title": "Graph-GPO：基于状态转移图的信用分配"
     },
     {
+      "path": "/papers/lambert-cornell-2026/index.md",
+      "title": "拓展开放语言模型后训练的前沿（中文译本）"
+    },
+    {
       "path": "/papers/mai-gym/index.md",
       "title": "MAI-Gym：GUI 智能体的一体化评测与在线 RL 平台"
     },
     {
       "path": "/papers/projects/coverage.md",
       "title": "项目目录与全链路覆盖"
+    },
+    {
+      "path": "/papers/ripo/index.md",
+      "title": "RIPO：黎曼等距策略优化（中文译本）"
+    },
+    {
+      "path": "/papers/score-centering/index.md",
+      "title": "Score Centering：得分函数中心化使离策略强化学习更稳定（中文译本）"
     },
     {
       "path": "/research/2026-10-18-rl-reward-hacking/01-formalization.md",

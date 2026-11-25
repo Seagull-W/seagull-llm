@@ -1,0 +1,192 @@
+<article class="native-document format-lab" data-format="lab" data-design="linux-notebook" aria-label="Task 04 · DeepMath 在线策略蒸馏实验">
+<header class="document-intro note-hero">
+<p class="note-kicker">DataWhale Agentic RL</p>
+<h1 id="general-opd" tabindex="-1">Task 04 · DeepMath 在线策略蒸馏实验 <a class="header-anchor" href="#general-opd" aria-label="文章链接">&#8203;</a></h1>
+<p class="note-deck">用 27B teacher 给 4B student 的数学推理逐 token 打分，结合 10 步训练曲线分析反向 KL、回答截断与同步打分耗时。</p>
+</header>
+<nav class="note-jump" aria-label="页内导航"><details><summary>本页目录</summary>
+<a href="#一、opd-原理">一、OPD 原理</a>
+<a href="#二、opd-与相似方法的区别">二、OPD 与相似方法的区别</a>
+<a href="#三、适用场景与局限">三、适用场景与局限</a>
+<a href="#四、同步版-demo-实验与结果分析">四、同步版 Demo 实验与结果分析</a>
+</details></nav>
+<section class="document-section note-panel" aria-labelledby="一、opd-原理">
+<h2 id="一、opd-原理" tabindex="-1">一、OPD 原理 <a class="header-anchor" href="#一、opd-原理" aria-label="Permalink to &quot;一、OPD 原理&quot;">&ZeroWidthSpace;</a></h2>
+<h3 id="_1-1-核心思想与训练闭环" tabindex="-1">1.1 核心思想与训练闭环 <a class="header-anchor" href="#_1-1-核心思想与训练闭环" aria-label="Permalink to &quot;1.1 核心思想与训练闭环&quot;">&ZeroWidthSpace;</a></h3>
+<p><strong>OPD（On-Policy Distillation，在线策略蒸馏）</strong> 把「学生自己生成轨迹（on-policy）」和「老师逐 token 纠偏（dense feedback）」结合在一起。传统离线蒸馏往往让学生背老师提前写好的答案，但真正推理时学生是沿着自己的分布一步步往后生成的，一旦走出训练集没覆盖过的错误路径，就容易雪崩（exposure bias）。</p>
+<p>OPD 换了思路：不让老师重新答题，而是让<strong>当前 student</strong> 先对 prompt 采样出自己的回答，再把 <code>prompt + student completion</code> 这条完全相同的 token 序列交给冻结的 <strong>teacher</strong> 做一次前向打分（<code>compute_logprobs</code>），得到每个 completion token 的对数概率，最后用两者差值驱动 student 向 teacher 靠拢。<a href="https://github.com/Seagull-W/agentic-rl-lab/blob/22c68b83277ac1902f2165f5a567408943f7bdd5/experiments/general-opd/01-demo-sync.py" target="_blank" rel="noreferrer">同步版实现</a></p>
+<p>整个训练步是一个五步闭环：</p>
+<ol>
+<li><strong>刷新 sampler</strong>：每步开始把当前 student LoRA 权重导出为采样客户端（<code>sampler_refresh_steps=1</code>，严格 on-policy）。<a href="https://github.com/Seagull-W/agentic-rl-lab/blob/22c68b83277ac1902f2165f5a567408943f7bdd5/experiments/general-opd/01-demo-sync.py#L306" target="_blank" rel="noreferrer">刷新采样器</a></li>
+<li><strong>学生自采样</strong>：对 batch 内每道题采样 <code>group_size</code> 条回答，记录生成的 <code>tokens</code> 和采样时的旧策略 <code>student_lps</code>。<a href="https://github.com/Seagull-W/agentic-rl-lab/blob/22c68b83277ac1902f2165f5a567408943f7bdd5/experiments/general-opd/01-demo-sync.py#L327" target="_blank" rel="noreferrer">学生采样</a></li>
+<li><strong>老师逐 token 打分</strong>：把 <code>prompt_ids + completion_ids</code> 拼起来交给 teacher，截取 completion 区间对应的 <code>teacher_lps</code>。<a href="https://github.com/Seagull-W/agentic-rl-lab/blob/22c68b83277ac1902f2165f5a567408943f7bdd5/experiments/general-opd/01-demo-sync.py#L182" target="_blank" rel="noreferrer">Teacher 打分</a></li>
+<li><strong>构造逐 token 优势并右移对齐</strong>：计算 <code>reverse_kl = student_lps - teacher_lps</code> 与 <code>advantages = -beta * reverse_kl</code>，prompt 区间用 0 占位不参与损失。<a href="https://github.com/Seagull-W/agentic-rl-lab/blob/22c68b83277ac1902f2165f5a567408943f7bdd5/experiments/general-opd/01-demo-sync.py#L203" target="_blank" rel="noreferrer">构造 Datum</a></li>
+<li><strong>策略更新</strong>：用 <code>importance_sampling</code> 做一次前向/反向和 <code>Adam</code> 参数更新。<a href="https://github.com/Seagull-W/agentic-rl-lab/blob/22c68b83277ac1902f2165f5a567408943f7bdd5/experiments/general-opd/01-demo-sync.py#L356" target="_blank" rel="noreferrer">更新参数</a></li>
+</ol>
+<h3 id="_1-2-reverse-kl-与-importance-sampling-更新" tabindex="-1">1.2 Reverse KL 与 Importance Sampling 更新 <a class="header-anchor" href="#_1-2-reverse-kl-与-importance-sampling-更新" aria-label="Permalink to &quot;1.2 Reverse KL 与 Importance Sampling 更新&quot;">&ZeroWidthSpace;</a></h3>
+<p>设 prompt 为 <span class="math-inline" data-tex="x"></span>，当前 student 策略为 <span class="math-inline" data-tex="\pi_\theta"></span>，冻结 teacher 为 <span class="math-inline" data-tex="\pi_T"></span>。OPD 最小化从 student 到 teacher 的<strong>反向 KL 散度（Reverse KL）</strong>：</p>
+<div class="math-block" data-tex="D_{\mathrm{KL}}\left(\pi_\theta \parallel \pi_T\right)
+= \mathbb{E}_{y \sim \pi_\theta(\cdot \mid x)}\left[\log \pi_\theta(y \mid x) - \log \pi_T(y \mid x)\right]"></div>
+<p>展开到第 <span class="math-inline" data-tex="t"></span> 个生成 token，对应的单样本估计与逐 token advantage 分别为：</p>
+<div class="math-block" data-tex="r_t^{\mathrm{KL}} = \log \pi_{\mathrm{old}}(y_t \mid x, y_{&lt;t}) - \log \pi_T(y_t \mid x, y_{&lt;t}), \qquad
+A_t = -\beta\, r_t^{\mathrm{KL}}"></div>
+<p>直觉上非常直接：</p>
+<ul>
+<li>当 <span class="math-inline" data-tex="\log \pi_{\mathrm{old}} &gt; \log \pi_T"></span>（学生比老师更偏爱该 token）时，<span class="math-inline" data-tex="r_t^{\mathrm{KL}} &gt; 0 \Rightarrow A_t &lt; 0"></span>，更新会压低这个 token 的概率；</li>
+<li>当 <span class="math-inline" data-tex="\log \pi_{\mathrm{old}} &lt; \log \pi_T"></span>（老师比学生更认可该 token）时，<span class="math-inline" data-tex="r_t^{\mathrm{KL}} &lt; 0 \Rightarrow A_t &gt; 0"></span>，更新会提高这个 token 的概率；</li>
+<li>单个 token 的 <span class="math-inline" data-tex="r_t^{\mathrm{KL}}"></span> 允许为负，只有对 <span class="math-inline" data-tex="\pi_\theta"></span> 完整分布取期望时 KL 才保证非负。</li>
+</ul>
+<p>训练侧复用 PyTRIO 的 <code>importance_sampling</code> 损失（对照 <a href="/datawhale-agentic-rl/task-01">task_01 的 Loss 总结</a>）：</p>
+<div class="math-block" data-tex="\mathcal{L}_{\mathrm{IS}}(\theta)
+= -\mathbb{E}_{y \sim \pi_{\mathrm{old}}}\left[\frac{\pi_\theta(y_t \mid x, y_{&lt;t})}{\pi_{\mathrm{old}}(y_t \mid x, y_{&lt;t})}\,\operatorname{sg}(A_t)\right]"></div>
+<p>因为本实验每步都刷新 sampler 且只做一次更新，反传时 <span class="math-inline" data-tex="\pi_\theta \approx \pi_{\mathrm{old}}"></span>，重要性比值接近 <span class="math-inline" data-tex="1"></span>，此时：</p>
+<ul>
+<li>梯度上等价于带逐 token 密集优势的策略梯度；</li>
+<li>数值上 <span class="math-inline" data-tex="-\frac{\pi_\theta}{\pi_{\mathrm{old}}} A_t \approx -1 \cdot (-\beta r_t^{\mathrm{KL}}) = \beta r_t^{\mathrm{KL}}"></span>，所以日志里的 <code>trainer/loss_mean</code> 会与 <code>opd/reverse_kl_mean</code> 同号且高度同步。</li>
+</ul>
+<hr>
+</section>
+<section class="document-section note-panel" aria-labelledby="二、opd-与相似方法的区别">
+<h2 id="二、opd-与相似方法的区别" tabindex="-1">二、OPD 与相似方法的区别 <a class="header-anchor" href="#二、opd-与相似方法的区别" aria-label="Permalink to &quot;二、OPD 与相似方法的区别&quot;">&ZeroWidthSpace;</a></h2>
+<h3 id="_2-1-opd-vs-sft-离线蒸馏-seqkd-off-policy-kd" tabindex="-1">2.1 OPD vs SFT / 离线蒸馏（SeqKD / Off-policy KD） <a class="header-anchor" href="#_2-1-opd-vs-sft-离线蒸馏-seqkd-off-policy-kd" aria-label="Permalink to &quot;2.1 OPD vs SFT / 离线蒸馏（SeqKD / Off-policy KD）&quot;">&ZeroWidthSpace;</a></h3>
+<ul>
+<li><strong>轨迹分布与暴露偏差</strong>：SFT 和离线蒸馏（如 SeqKD）使用的是静态数据或 teacher 预先生成的回答（off-policy），学生只见过“好答案”的前缀；OPD 由学生实时采样（on-policy），直接把监督打在学生当下最容易走偏的状态上。</li>
+<li><strong>散度方向与模式选择</strong>：标准 SFT / 离线蒸馏本质上最小化 Forward KL <span class="math-inline" data-tex="D_{\mathrm{KL}}(\pi_T \parallel \pi_\theta)"></span>，倾向于 <strong>mode-covering</strong>——逼着小模型覆盖老师分布的全部模式，容量不足时容易“摊薄概率”导致胡言乱语或覆盖掉原有通用能力；OPD 最小化 Reverse KL <span class="math-inline" data-tex="D_{\mathrm{KL}}(\pi_\theta \parallel \pi_T)"></span>，倾向于 <strong>mode-seeking</strong>——把概率集中在老师最认可的高概率模式上，对小模型更友好，更新也更“柔和”，不易引发灾难性遗忘。</li>
+<li><strong>词表与模型访问约束</strong>：SFT 只看文本，可以跨模型家族蒸馏；OPD 需要逐 token 比较 logprob，要求 student 与 teacher <strong>共享兼容的 tokenizer</strong>，且 teacher 必须支持 logprob 计算（纯文本黑盒 API 无法直接使用）。</li>
+</ul>
+<h3 id="_2-2-opd-vs-rlvr-grpo" tabindex="-1">2.2 OPD vs RLVR / GRPO <a class="header-anchor" href="#_2-2-opd-vs-rlvr-grpo" aria-label="Permalink to &quot;2.2 OPD vs RLVR / GRPO&quot;">&ZeroWidthSpace;</a></h3>
+<ul>
+<li><strong>监督粒度（密集 vs 稀疏）</strong>：GRPO 等 RLVR 算法只根据最终答案对错给整条回答一个标量 reward（outcome-level），整条回答的所有 token 共享同一个 advantage；OPD 在每个 token 位置都有独立的 <span class="math-inline" data-tex="A_t"></span>，信用分配粒度细得多，也不需要编写验证规则或准备标准答案。</li>
+<li><strong>退化组问题</strong>：在 <a href="/datawhale-agentic-rl/task-02">task_02</a> 和 <a href="/datawhale-agentic-rl/task-03">task_03</a> 中可以看到，GRPO 一旦遇到组内全对或全错，优势全为零，只能整组跳过（Vision GRPO 后期退化组比例高达 85%）。OPD 每条回答独立接受 teacher 逐 token 评分，<strong>不存在退化组丢样本问题</strong>；脚本里的 <code>group_size</code> 仅用于增加同题采样覆盖，不做组内减均值对比。</li>
+<li><strong>能力上限</strong>：OPD 的上限受限于 teacher，很难靠纯蒸馏稳定超越老师；RLVR 则依赖环境或规则验证器，有机会探索出超越初始模型甚至教师模型的解法。两者通常是前后衔接或混合互补的关系。</li>
+</ul>
+<h3 id="_2-3-opd-vs-opsd-on-policy-self-distillation" tabindex="-1">2.3 OPD vs OPSD（On-Policy Self-Distillation） <a class="header-anchor" href="#_2-3-opd-vs-opsd-on-policy-self-distillation" aria-label="Permalink to &quot;2.3 OPD vs OPSD（On-Policy Self-Distillation）&quot;">&ZeroWidthSpace;</a></h3>
+<p>仓库后续的 <a href="https://github.com/Seagull-W/agentic-rl-lab/blob/22c68b83277ac1902f2165f5a567408943f7bdd5/experiments/opsd/readme.md" target="_blank" rel="noreferrer">OPSD</a> 可以看作 OPD 的“无外部大模型”变体：通用 OPD 需要一个外部更强模型（如本实验的 27B）或领域专家 LoRA 当 teacher；OPSD 则用<strong>同一个模型</strong>（或其冻结副本）在额外看到参考答案/特权上下文（privileged context）时充当 teacher，给“闭卷答题”的 student 轨迹逐 token 打分。OPSD 省去了外部大模型与词表对齐的限制，但前提是训练集需要提供可构造特权提示的参考答案或辅助信息。</p>
+<h3 id="_2-4-一表对比" tabindex="-1">2.4 一表对比 <a class="header-anchor" href="#_2-4-一表对比" aria-label="Permalink to &quot;2.4 一表对比&quot;">&ZeroWidthSpace;</a></h3>
+<div class="note-table" tabindex="0" role="region" aria-label="蒸馏与强化学习方法对照"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>SFT / 离线蒸馏</th>
+<th>OPD（本文）</th>
+<th>OPSD（自蒸馏）</th>
+<th>GRPO / RLVR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>轨迹来源</td>
+<td>固定数据 / Teacher 预生成（off-policy）</td>
+<td>当前 Student 实时采样（on-policy）</td>
+<td>当前 Student 闭卷采样（on-policy）</td>
+<td>当前策略实时采样（on-policy）</td>
+</tr>
+<tr>
+<td>监督信号</td>
+<td>示范 token 交叉熵（逐 token）</td>
+<td>外部 Teacher logprob 差（逐 token 密集）</td>
+<td>同模型特权上下文 logprob 差（逐 token 密集）</td>
+<td>可验证结果奖励（序列级稀疏）</td>
+</tr>
+<tr>
+<td>核心目标</td>
+<td>Forward KL（mode-covering）</td>
+<td>Reverse KL（mode-seeking）</td>
+<td>Reverse KL（mode-seeking）</td>
+<td>组内相对优势最大化</td>
+</tr>
+<tr>
+<td>数据要求</td>
+<td>需完整 <code>(prompt, response)</code></td>
+<td>仅需 prompt（无需答案）</td>
+<td>需 prompt + 参考答案/特权信息</td>
+<td>需 prompt + 可验证规则/答案</td>
+</tr>
+<tr>
+<td>Tokenizer 要求</td>
+<td>可跨词表</td>
+<td>Student 与 Teacher 必须兼容</td>
+<td>天然一致（同模型）</td>
+<td>无外部模型约束</td>
+</tr>
+<tr>
+<td>退化组跳过</td>
+<td>无</td>
+<td>无（100% 样本参与更新）</td>
+<td>无</td>
+<td>常见（全对/全错即跳过）</td>
+</tr>
+<tr>
+<td>能力上限</td>
+<td>受限于静态数据质量</td>
+<td>受限于外部 Teacher</td>
+<td>受限于自身开卷上限</td>
+<td>可探索超越初始/教师模型</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+</section>
+<section class="document-section note-panel" aria-labelledby="三、适用场景与局限">
+<h2 id="三、适用场景与局限" tabindex="-1">三、适用场景与局限 <a class="header-anchor" href="#三、适用场景与局限" aria-label="Permalink to &quot;三、适用场景与局限&quot;">&ZeroWidthSpace;</a></h2>
+<p><strong>适合优先使用 OPD 的场景：</strong></p>
+<ol>
+<li><strong>大模型向小模型压缩提速</strong>：同家族大模型（如 27B/72B）向小模型（如 4B/7B）迁移推理风格、格式与分布，只需准备 prompt 池即可开训。</li>
+<li><strong>缺乏确定性验证器的开放任务</strong>：开放问答、长文写作、对话风格对齐、复杂指令遵循、多步 Agent 行为模仿等难以写死 reward 规则的任务，RLVR 难以落地，而 OPD 可以提供稳定的 token 级偏好监督。</li>
+<li><strong>领域能力增强且防止通用能力遗忘</strong>：相较 SFT 容易破坏原分布，配合领域专家 teacher 与原始 base teacher（如仓库 <a href="https://github.com/Seagull-W/agentic-rl-lab/blob/22c68b83277ac1902f2165f5a567408943f7bdd5/experiments/medical-opd/readme.md" target="_blank" rel="noreferrer">Medical OPD</a> 中的分阶段锚点恢复或双教师交替），更容易在提分的同时守住通用能力。</li>
+<li><strong>RLVR 冷启动 / 缓解全错退化</strong>：当小模型在难题上几乎答不对、GRPO 退化组逼近 100% 时，可先用 OPD 把策略拉进有效解区域，再切入 GRPO 冲上限。</li>
+</ol>
+<p><strong>需要注意的边界条件：</strong></p>
+<ul>
+<li><strong>强依赖同词表白盒 Teacher</strong>：必须能拿到对齐 token ID 的逐 token logprob；无法直接用不同词表或闭源文本 API 模型做标准 OPD。</li>
+<li><strong>不解决“超越老师”的问题</strong>：如果目标是在数学/代码等可验证领域突破 teacher 上限，仍需引入 RLVR 或环境反馈。</li>
+<li><strong>在线开销高于静态 SFT</strong>：每步都包含 student 自回归采样和 teacher 前向打分（虽然 teacher 只需一次 prefill 而非解码，但仍明显慢于离线 SFT）。</li>
+</ul>
+<hr>
+</section>
+<section class="document-section note-panel" aria-labelledby="四、同步版-demo-实验与结果分析">
+<h2 id="四、同步版-demo-实验与结果分析" tabindex="-1">四、同步版 Demo 实验与结果分析 <a class="header-anchor" href="#四、同步版-demo-实验与结果分析" aria-label="Permalink to &quot;四、同步版 Demo 实验与结果分析&quot;">&ZeroWidthSpace;</a></h2>
+<p>本次运行命令如下：</p>
+<div class="language-bash vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">uv</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> run</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> python</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> experiments/general-opd/01-demo-sync.py</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> \</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  --steps</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 10</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> \</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  --batch-size</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 4</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> \</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  --group-size</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 4</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> \</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  --max-tokens</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 512</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> \</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  --sample-size</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 100</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> \</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  --swanlab-mode</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> online</span></span></code></pre>
+<div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br></div></div><p>实验配置：Student 为 <code>Qwen/Qwen3.5-4B</code>（LoRA rank 32，学习率 <code>4e-5</code>，关闭 thinking），Teacher 为冻结的 <code>Qwen/Qwen3.8-27B</code>，数据取自 <code>AI-ModelScope/DeepMath-103K</code> 第 1 分片随机抽样的 100 道题（仅用 <code>question</code> 字段作为 prompt）。每步采样 4 题 × 每题 4 条 = 16 条轨迹，<code>kl_penalty_coef = 1.0</code>，<code>sampler_refresh_steps = 1</code>，共训练 10 步，总计耗时约 <strong>20 分 04 秒</strong>（1,204 秒），最终导出权重保存在 <code>trio://run_xq69x9p15yos/sampler_weights/opd-deepmath-qwen35-4b-sync</code>。<a href="https://swanlab.cn/@WenJiaxin/agentic-rl-lab-opd/runs/mgpcfyoz" target="_blank" rel="noreferrer">SwanLab 运行记录</a> · <a href="https://github.com/Seagull-W/agentic-rl-lab/blob/22c68b83277ac1902f2165f5a567408943f7bdd5/%E4%B8%AA%E4%BA%BA%E7%AC%94%E8%AE%B0/figures/task04/plot_results.py" target="_blank" rel="noreferrer">本地绘图脚本</a></p>
+<figure class="note-figure"><a href="/datawhale-agentic-rl/task-04/training.png"><img src="/datawhale-agentic-rl/task-04/training.png" alt="本地 SwanLab 记录的 10 步 General OPD 同步版训练曲线" loading="lazy"></a><figcaption>本地 SwanLab 记录的 10 步 General OPD 同步版训练曲线。每步采样 4 道题，每题 4 条回答。</figcaption></figure>
+<p>结合上图和逐 step 日志，可以得到四点观察：</p>
+<ol>
+<li>
+<p><strong>Reverse KL 温和回落，且与 Trainer Loss 高度自洽</strong></p>
+<ul>
+<li><code>opd/reverse_kl_mean</code> 从第 1 步的 <strong>0.1639</strong> 降至第 10 步的 <strong>0.1276</strong>（前 3 步均值 <code>0.1443</code> → 后 3 步均值 <code>0.1253</code>，前 5 步均值 <code>0.1368</code> → 后 5 步均值 <code>0.1296</code>）。中间第 3 步探低至 <code>0.1081</code>，第 6 步回升至 <code>0.1546</code>，第 7–10 步落在 <code>0.1175–0.1276</code> 区间。每步只有 4 道新题，不同题目上 4B 与 27B 的天然分歧会带来明显批次波动，因此 10 步表现为“高位起步、带波动收敛”。</li>
+<li><code>opd/reverse_kl_std</code> 10 步均值为 <strong>0.6519</strong>（范围 <code>0.5768–0.7450</code>，同样从第 1 步 <code>0.7450</code> 降至第 10 步 <code>0.6533</code>），约为均值的 <strong>4.9 倍</strong>。这符合自回归蒸馏的常见形态：大量常规连接词与固定表述上 student 与 teacher 几乎一致，真正产生大梯度的是少数关键推理分叉 token。</li>
+<li><code>trainer/loss_mean</code>（<code>0.0930–0.1448</code>）与 <code>opd/reverse_kl_mean</code> 的 Pearson 相关系数高达 <strong>0.961</strong>。进一步核对总和：<code>trainer/loss_sum</code> 与 <code>8,192 × reverse_kl_mean</code> 的比值在全部 10 步都落在 <code>0.990–1.000</code> 之间（微小差值来自采样端与训练端数值精度差），验证了严格 on-policy 下 IS 目标与反向 KL 的一致关系；<code>loss_mean</code> 之所以系统性地略低于 <code>reverse_kl_mean</code>，是因为 <code>trainer/token_count</code>（<code>9,208–10,456</code>）计入了 prompt 区间用 <code>0</code> 占位的 token（每步 <code>1,016–2,264</code> 个，折合单条 prompt 约 <code>63.5–141.5</code> token），拉低了整序列平均。</li>
+</ul>
+</li>
+<li>
+<p><strong>样本 100% 有效，但 160 条轨迹全部撞到 512 长度上限</strong></p>
+<ul>
+<li>每步 <code>data/datums</code> 恒为 <strong>16</strong>，10 步共 40 道题、160 条回答全部参与了梯度更新，没有出现 GRPO 那样的退化组跳过。</li>
+<li>但每步 <code>data/completion_tokens_mean</code> 严格等于 <strong>512.0</strong>（每步固定 <code>8,192</code> 个 completion token，10 步共 <code>81,920</code> 个），说明所有生成都在达到 <code>max_tokens=512</code> 时被强行截断，未能自然生成 EOS。DeepMath 题目在 <code>step by step</code> 推导下普遍需要更长篇幅，因此在 512 预算内，本次训练主要是在<strong>前半段解题思路</strong>上向 27B 对齐，尚未覆盖收尾推理与最终 <code>\boxed{}</code> 答案。</li>
+</ul>
+</li>
+<li>
+<p><strong>同步版近七成时间耗在串行采样与 Teacher 打分</strong></p>
+<ul>
+<li>10 个训练步累计耗时 <strong>1,191.52 秒</strong>（平均 <strong>119.15 秒/步</strong>，最快第 8 步 <code>97.94 秒</code>，最慢第 4 步 <code>154.76 秒</code>），整步吞吐 <code>completion_tokens_per_second</code> 均值 <strong>70.2 tokens/s</strong>（<code>52.9–83.6</code>）。</li>
+<li>结合 <code>tqdm</code> 进度条记录拆分阶段耗时：每步串行执行 4 次 student <code>sample</code> 和 16 次 teacher <code>compute_logprobs</code> 平均消耗 <strong>81.8 秒/步</strong>，占总步时的 <strong>68.7%</strong>（范围 <code>66–104 秒</code>）；刷新权重、<code>forward_backward</code> 与 <code>optim_step</code> 平均占 <strong>37.4 秒/步</strong>（第 4 步出现一次 <code>88.8 秒</code> 的远端等待毛刺，对应图中的耗时尖峰与吞吐低谷）。若要拉长步数，切换到并发提交请求的 <a href="https://github.com/Seagull-W/agentic-rl-lab/blob/22c68b83277ac1902f2165f5a567408943f7bdd5/experiments/general-opd/02-demo-async.py" target="_blank" rel="noreferrer"><code>02-demo-async.py</code></a> 是最直接的优化。</li>
+</ul>
+</li>
+<li>
+<p><strong>结论边界与后续计划</strong></p>
+<ul>
+<li>这次 10 步试跑验证了 DeepMath 数据下载、严格 on-policy 采样、27B teacher 逐 token 打分、reverse KL 更新与权重保存的完整链路，且 KL 与 loss 走势健康、无 NaN 或异常尖峰。</li>
+<li>但需要明确边界：<strong>reverse KL 下降只说明 student 在前 512 token 上更贴近 teacher，不能自动推导出数学解题准确率已提升</strong>。本脚本只使用 prompt 未做答案评测，且 10 步规模很小、回答全部截断；后续若要观察真实任务增益，建议：（1）切到异步版提升吞吐；（2）将 <code>max_tokens</code> 放宽至 <code>1024–2048</code> 以覆盖完整推导与 <code>\boxed{}</code>；（3）扩大训练步数并在固定数学测试集上对比基座与保存权重。</li>
+</ul>
+</li>
+</ol>
+</section>
+</article>
