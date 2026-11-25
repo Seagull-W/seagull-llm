@@ -1,203 +1,316 @@
 ---
-title: "后训练与 agent 评测：基准分数究竟证明了什么"
-description: "从模型输入、评分对象与训练反馈的区别出发，用数学、代码和交互任务解释基准的实际用途，再讨论测试缺陷、采样可靠性与奖励审计如何改变分数的解释。"
+title: "后训练基准里的「成功率」，究竟算的是什么？"
+description: "在 τ-bench 的零售任务里，使用函数调用的 GPT-4o 单次成功率为 61.2%。把要求改成同一任务独立办理八次、八次都成功，成绩就落到 25% 以下。"
 tags: ["每日调研", "后训练", "强化学习", "评测"]
 date: "2026-10-16"
 ---
 
-# 后训练与 agent 评测：基准分数究竟证明了什么
+# 后训练基准里的「成功率」，究竟算的是什么？
 
-“模型在某个基准上得了多少分”，省略了产生分数的一连串决定。数学题可以只检查最后的数字；代码可以只跑有限测试；购物助手可以只比较订单数据库的终态。它们都能产生一个成功率，成功所指的对象却不同。
+<div class="research-article">
 
-读后训练结果时，更容易混淆的是：同一个基准名下，模型收到的输入、评分器接受的对象、训练已经用过的反馈，可以是三件不同的事。分清它们，才能判断一个分数是在说明答题能力、寻找候选解的能力，还是多次交互的可靠性。
+<p class="lead">在 τ-bench 的零售任务里，使用函数调用的 GPT-4o 单次成功率为 61.2%。把要求改成同一任务独立办理八次、八次都成功，成绩就落到 25% 以下。读一个后训练分数，要先弄清模型拿到什么、评分器检查什么、几次作答合算一分，再看这份反馈有没有参与训练或挑选答案。<sup id="cite-1"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
 
-## 一个分数如何产生
+## 答错也能拿到训练奖励
 
-一次评测先固定任务记录，再决定向模型暴露哪些信息。数学数据里可以同时存题目和参考解答，但正常作答时只给题目；工具任务的完整用户意图可以交给用户模拟器，由它逐轮透露给 agent。数据文件有什么，不等于模型看到了什么。
+<p>
+  做一件长袍要用两卷蓝布，白布的用量是蓝布的一半，一共要用几卷布？GSM8K 测试集把题目和参考解答存在同一条记录里。作答时给模型的是题目，参考解答里的两步算式和末行 <code>#### 3</code> 留给评测端。官方示例程序从回答中找出第一个符合标记格式的数值，去掉逗号，再和参考答案抽出的字符串比较。<sup id="cite-2"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup>
+</p>
+<p>
+  假如回答把白布算成两卷，末行却写了 <code>#### 3</code>，程序照样给分。另一份回答写清「白布一卷加蓝布两卷，共三卷」，却会因缺少标记而失分。两份回答的得分都只取决于抽出的答案，中间的算式没有参与判定。<sup id="cite-2b"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup>
+</p>
+<p>
+  把数学题用于强化学习，还要决定模型答到什么程度就值得鼓励。ReFT 先让模型学习示范解法，再让它对训练问题反复生成解答，用参考答案计算奖励、更新参数。对全是数值答案的任务，论文把末步奖励分成三档：答对得 1，能抽出数值但答错得 0.1，抽不出得 0。仅仅把原本无法解析的错答改成可解析的错答，训练奖励就能增加，答对的题数仍然相同。<sup id="cite-3"><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup>
+</p>
+<p>
+  论文还记录了这种差别怎样影响学习。在一道 MathQA 选择题里，模型把 18 与 22 乘积的一半算成 172，最后却选中了正确选项 C。这条解答拿到了与完整答对一样的答案奖励，模型得不到关于那一步乘除出错的反馈。若要证明推导也有改善，就需要能辨别中间步骤的证据。<sup id="cite-3b"><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup>
+</p>
 
-模型接着生成一个待检查的对象：答案文本、函数实现、仓库补丁，或者一段改变环境状态的交互。**评分器**把这个对象映射为成功或失败。它可能抽取数字、判断表达式等价、执行测试，也可能检查数据库。分数首先是对这条检查规则的满足程度。规则遗漏了某种错误，会把错误算成功；规则额外要求了题目没有要求的实现细节，也会把正确解算失败。两种偏差需要分别处理。[GSM8K 评分实现](#source-s1)、[SWE-bench 复查](#source-s7)
+## 同样四次作答，可以算出三种成绩
 
-最后才是汇总。单次成功率问的是一次运行成功的概率；重复采样后，既可以问“至少有一次成功”，也可以问“每次都成功”。温度、回答长度、工具调用预算和环境初态改变了这次考试允许模型做什么，因此也属于评测协议。[HumanEval](#source-s4)、[tau-bench](#source-s8)
+<p>
+  DAPO 用约一万七千道整数答案题训练模型，在 AIME 2024 上把整套评测重复了 32 轮。作者用 <code>avg@32</code> 报告这场考试的成绩，每次答对都计入，每次答错也都留在分母里。论文表 1 从基础 GRPO 配置的 30 分升到完整 DAPO 的 50 分，列的是逐项累加改动后的成绩。可以把这二十分归到整套训练配方上，要算其中某一项的贡献还得看对应的对照。<sup id="cite-4"><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup>
+</p>
+<p>
+  换一个汇总规则，同一批记录就能回答另一种问题。下表固定一道题和同样四次独立作答，假设记录依次为「对、错、对、对」。最后一列是这组示例的实际记分，整套基准还要在题目之间求平均。<sup id="cite-1b"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup><sup id="cite-4b"><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup><sup id="cite-5"><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup>
+</p>
 
-后训练又给这条链加了一条回路：评分反馈可以拿来更新参数。规则检查提供奖励的训练常被称为可验证奖励强化学习（RLVR）。奖励也可以来自另一个模型，或混入格式、长度等辅助项。训练奖励上升只说明模型越来越擅长取得这份反馈；若验证分数还用于挑检查点，它也已经参与了选择。最终要判断迁移到新任务的能力，需要同时知道训练数据、选择过程和独立评测的关系，不能仅凭基准名字相同或不同判断是否隔离。
+<div class="table-scroll" role="region" aria-labelledby="tbl-1" tabindex="0">
+  <table>
+    <caption id="tbl-1">
+      表 1｜同一组四次作答的三种汇总方式
+      <span>假设同一道题四次独立作答依次为「对、错、对、对」；整套基准还需在题目之间求平均。</span>
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">汇总规则</th>
+        <th scope="col">同一道题怎样计分</th>
+        <th scope="col">这四次的得分</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">平均正确率 <code>avg@4</code></th>
+        <td>四次作答各计一次</td>
+        <td>3/4</td>
+      </tr>
+      <tr>
+        <th scope="row">候选覆盖率 <code>pass@4</code></th>
+        <td>至少有一个通过就算成功</td>
+        <td>1</td>
+      </tr>
+      <tr>
+        <th scope="row">重复成功率 <code>pass^4</code></th>
+        <td>四次全部通过才算成功</td>
+        <td>0</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<p class="table-hint">左右滑动查看完整表格</p>
 
-| 读到一项成绩时 | 真正需要确定的对象 |
-| --- | --- |
-| 模型在做什么 | 只看题目，还是能看测试、业务规则、工具返回和历史对话 |
-| 什么算成功 | 末答案、有限测试、补丁回归检查，还是环境终态 |
-| 分数怎么汇总 | 一次成功、多次中至少一次，还是多次全部成功 |
-| 反馈在哪里用过 | 参数训练、奖励模型训练、调参选模型，还是最终评测 |
+<p>
+  HumanEval 用测试检查生成的函数，<code>pass@k</code> 衡量给定数量的候选里有没有过关的实现。交付给用户时如果只能返回一份代码，系统还得能从候选里挑中它。对客服来说，下一个顾客带着相同要求来，还能不能办成？τ-bench 的每轮试验都从相同任务设定重新开始，模拟用户可以换一种说法，客服也可以走另一条工具调用路径。一次办砸，就足以让这组运行失去「全部成功」的一分。<sup id="cite-1c"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup><sup id="cite-5b"><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup>
+</p>
 
-## 数学基准：同一道题，训练奖励与考试判分可以不同
+## 评分器为何会放过违规退货，也会拒绝有效补丁
 
-### GSM8K：数字正确，不代表推理经过了检查
+<p>
+  τ-bench 有位顾客想退水瓶，也想把宠物床和办公椅换成最便宜的款式。如果只能办一件，她希望知道两种办法各省多少钱，再办省得更多的那件。完整意图给模拟顾客，客服拿到业务规则和工具接口，要在对话中问清要求。评分器则知道目标订单状态，还会检查客服回复是否包含两笔金额 54.04 和 41.64。这里，问过哪些问题、按什么顺序查价，都可以因人而异。<sup id="cite-1d"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup>
+</p>
+<p>
+  业务规则还要求客服在办理退货前得到顾客的明确确认。作者指出，客服即使跳过确认，也可能让订单状态和回复金额同时达标。事后查看数据库，两条路径留下的结果可以完全一样。要查出这类错误，还得把对话和操作记录放在一起，核对顾客的确认是否发生在提交退货之前。<sup id="cite-1e"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup>
+</p>
 
-GSM8K 标准测试文件中的一道真实题目是：一件长袍需要 2 卷蓝色布料，白色布料用量是蓝色的一半，总共需要多少卷？参考解答先算白布为 1 卷，再相加，末行写 `#### 3`。正常评测时，模型只收到 `question`，不会收到这份解答。[S1](#source-s1)
+<figure class="figure" id="fig-tau-return">
+  <svg class="flow-wide" viewBox="0 0 920 335" role="img" aria-labelledby="fig-tau-title-wide">
+    <title id="fig-tau-title-wide">同一笔退货，两条路径都可能得满分</title>
 
-官方仓库的示例评分器用正则找到第一个 `#### 数值`，去掉逗号，然后比较抽出的字符串。因而，一份过程有错、最后仍写 `#### 3` 的回答会通过；一份文字里说对了总数、却没有可识别标记的回答会失败。这里检查的是带指定格式的末答案，没有逐步验证算式。
+    <text x="220" y="26" text-anchor="middle" data-kind="label">对话与操作</text>
+    <text x="636" y="26" text-anchor="middle" data-kind="label">评分器读取</text>
+    <text x="828" y="26" text-anchor="middle" data-kind="label">记分</text>
 
-这使 GSM8K 很容易接到数学后训练中：保留训练题的答案供奖励函数比较，让当前模型反复作答，再用测试题检查变化。但奖励未必沿用官方对错。ReFT 在监督微调之后，继续用同一批训练问题和答案做 PPO；其数值题奖励允许“抽得出数值但答错”得 0.1，答对得 1，抽不出得 0。这个辅助信号帮助模型进入可评分的输出空间，却不等于官方正确率。ReFT 表中的 GSM8K 计数是处理后的：自然语言推理 7,465 条、程序推理 7,356 条，测试 1,319 条。[S11](#source-s11)
+    <!-- 连接线 -->
+    <path d="M124 152 H140 V82 H152" />
+    <path d="M292 82 H316" />
+    <path d="M124 182 H140 V252 H152" />
+    <path d="M292 252 H316" />
+    <path d="M422 82 H444 V252 H422" />
+    <path d="M444 167 H546" />
+    <path d="M546 167 V98 H564" />
+    <path d="M546 167 V236 H564" />
+    <path d="M704 98 H773 V115" />
+    <path d="M704 236 H773 V219" />
+    <path d="M828 167 H842" />
 
-SimpleRL-Zoo 则用 GSM8K 和 MATH 的训练题构造不同难度的数据，正确奖励为 +1、错误为 0，不额外给格式奖励；GSM8K、MATH-500、AIME 2024 出现在评测列表中。它的难度实验说明，这些题在训练中承担的是“让基座探索到有用反馈”的角色：Mistral-7B 面对过难题时缺少正反馈，而 Qwen2.5-7B 在过易题上获益受限。[S10](#source-s10)
+    <!-- 箭头 -->
+    <polygon class="arrow-head" points="156,82 148,77 148,87" />
+    <polygon class="arrow-head" points="320,82 312,77 312,87" />
+    <polygon class="arrow-head" points="156,252 148,247 148,257" />
+    <polygon class="arrow-head" points="320,252 312,247 312,257" />
+    <polygon class="arrow-head" points="568,98 560,93 560,103" />
+    <polygon class="arrow-head" points="568,236 560,231 560,241" />
+    <polygon class="arrow-head" points="773,119 768,111 778,111" />
+    <polygon class="arrow-head" points="773,215 768,223 778,223" />
+    <polygon class="arrow-head" points="846,167 838,162 838,172" />
 
-### MATH-500：换了答案判等，也换了留出集
+    <!-- 节点 -->
+    <rect x="16" y="135" width="108" height="64" rx="8" />
+    <rect x="156" y="50" width="136" height="64" rx="8" />
+    <rect x="320" y="50" width="102" height="64" rx="8" />
+    <rect x="156" y="220" width="136" height="64" rx="8" data-tone="caution" />
+    <rect x="320" y="220" width="102" height="64" rx="8" />
 
-MATH-500 中有一道题要求把直角坐标点 `(0,3)` 转为极坐标，并限定半径为正、角度在指定的一周范围内；参考答案是 `(3, π/2)`。模型需要给出数学对象，评分器需要识别不同写法是否等价，而非要求复制参考推导。PRM800K 仓库提供的 `grader.grade_answer` 先规范化，再用 SymPy 判等；仓库也明确说明，它仍会误拒正确答案或误收错误答案。[S2](#source-s2)
+    <!-- 汇合标注不透明底色遮线 -->
+    <rect x="448" y="142" width="94" height="48" rx="4" data-kind="mask" />
 
-这组评测题的用途要连着切分看。PRM800K 所用配方在原 MATH 的 7,500 道训练题之外，又纳入原测试集的 4,500 道，只随机留下 500 道评测；HuggingFaceH4/MATH-500 数据卡将来源指向这份留出集。用过这套训练数据之后，原 MATH 全测试集与 MATH-500 就不再是同一个独立考试。[S2](#source-s2)
+    <rect x="568" y="66" width="136" height="64" rx="8" data-tone="training" />
+    <rect x="568" y="204" width="136" height="64" rx="8" data-tone="training" />
 
-在后训练实验里，MATH-500 可以检查较复杂数学问题上的迁移；在奖励模型实验里，它也可以检查模型能否从候选解中选出正确解。后者评价的是生成器加上选择器。
+    <polygon points="773,119 828,167 773,215 718,167" />
+    <rect x="846" y="135" width="64" height="64" rx="8" data-tone="score" />
 
-DeepSeekMath 还说明了“按数据阶段看隔离”的必要性：其 RL 使用约 144K 条来自 SFT 数据、与 GSM8K 和 MATH 相关的 CoT 数据，采用 GRPO 与奖励模型；预训练数学语料另有 10-gram 精确匹配过滤，较短基准文本至少 3-gram 时也作精确匹配。10-gram 过滤发生在预训练语料，没有检查 RL 题目和评测题是否逐条重叠。[S13](#source-s13)
+    <!-- 文字 -->
+    <g text-anchor="middle">
+      <text x="70" y="162">顾客说明</text>
+      <text x="70" y="184">诉求</text>
 
-### AIME：一道固定题不自带固定成绩
+      <text x="224" y="77">列明操作，</text>
+      <text x="224" y="99">得到确认</text>
+      <text x="371" y="88">提交退货</text>
 
-`math-ai/aime24` 收录 AIME 2024 的 30 道题，包含 `problem`、`solution` 和来源 URL 等字段。题集固定了要解哪些问题，却没有同时固定所有使用者的答案抽取、采样与汇总方式。[S3](#source-s3)
+      <text x="224" y="258">跳过确认</text>
+      <text x="224" y="308" data-kind="caution">违反退货政策</text>
+      <text x="371" y="258">提交退货</text>
 
-DAPO 把网上收集并转换为整数答案的约 17K 条提示用于训练，基本奖励为答对 1、答错 −1，另有过长惩罚；AIME 2024 用于评测。报告将评测集重复 32 次，使用温度 1.0、top-p 0.7，报告 `avg@32`。这表示重复运行的平均正确率，不表示每题有 32 次机会、任意答对一次就算成功。[S12](#source-s12)
+      <text x="495" y="161" data-kind="small">两条路径均可</text>
+      <text x="495" y="181" data-kind="small">得到以下结果</text>
 
-这里 AIME 承担的是训练配方在竞赛题上的效果检查，而 DAPO-Math-17K 承担的是提供更新信号。两份数据用途不同，题源也相近；有没有重叠，要看题目本身。
+      <text x="636" y="93">数据库终态</text>
+      <text x="636" y="115">吻合</text>
+      <text x="636" y="231">回复含 54.04</text>
+      <text x="636" y="253">和 41.64</text>
 
-## 从函数到仓库：执行成功的范围由测试决定
+      <text x="773" y="162">两项均</text>
+      <text x="773" y="184">满足</text>
 
-### HumanEval：把函数补全变成可执行检查
+      <text x="878" y="162">本题得</text>
+      <text x="878" y="184">1 分</text>
+    </g>
+  </svg>
 
-`HumanEval/0` 要补全 `has_close_elements(numbers, threshold)`：判断列表中是否存在两个数，其距离小于阈值。给模型的 `prompt` 包含导入、函数签名、文档字符串和示例，不包含 `canonical_solution` 与评分用的完整 `check`。[S4](#source-s4)
+  <svg class="flow-narrow" viewBox="0 0 360 708" role="img" aria-labelledby="fig-tau-title-narrow">
+    <title id="fig-tau-title-narrow">同一笔退货，两条路径都可能得满分</title>
 
-一次使用里，模型交出函数体，执行器把它接到提示后，再调用断言测试。例如评分用列表 `[1.0, 2.0, 3.9, 4.0, 5.0, 2.2]`，阈值为 0.3 时应返回真，0.05 时应返回假。通过测试才记 `passed`，不要求代码与参考实现相同。该快照执行器默认超时为 3.0 秒。[S4](#source-s4)
+    <text x="180" y="22" text-anchor="middle" data-kind="label">对话与操作</text>
 
-HumanEval 因而适合检查代码后训练之后，模型能否把函数规格转成通过测试的实现；多次采样还可检查候选解覆盖。若把执行测试的反馈接入训练，它又成为代码奖励，训练用测试和最终评测用测试是两套题。
+    <!-- 连接线 -->
+    <path d="M180 88 V108 H92 V122" />
+    <path d="M180 108 H268 V122" />
+    <path d="M92 184 V228" />
+    <path d="M268 184 V228" />
+    <path d="M92 280 V308 H268 V280" />
+    <path d="M180 308 V366" />
+    <path d="M180 366 H92 V410" />
+    <path d="M180 366 H268 V410" />
+    <path d="M92 472 V558 H114" />
+    <path d="M268 472 V558 H246" />
+    <path d="M180 602 V632" />
 
-### SWE-bench：修复 issue，并保住已有行为
+    <!-- 箭头 -->
+    <polygon class="arrow-head" points="92,126 87,118 97,118" />
+    <polygon class="arrow-head" points="268,126 263,118 273,118" />
+    <polygon class="arrow-head" points="92,232 87,224 97,224" />
+    <polygon class="arrow-head" points="268,232 263,224 273,224" />
+    <polygon class="arrow-head" points="92,414 87,406 97,406" />
+    <polygon class="arrow-head" points="268,414 263,406 273,406" />
+    <polygon class="arrow-head" points="118,558 110,553 110,563" />
+    <polygon class="arrow-head" points="242,558 250,553 250,563" />
+    <polygon class="arrow-head" points="180,636 175,628 185,628" />
 
-SWE-bench 将 issue 文本和修复前仓库交给模型或代码 agent，要求提交补丁。评分检查两类结果：原来失败、修复后应通过的测试（`FAIL_TO_PASS`），以及原来通过、修复后应保持通过的回归测试（`PASS_TO_PASS`）。`resolved` 要求达到完整解决状态；调试报告中的部分通过不等于解决，参考补丁也不是唯一可接受的实现。[S5](#source-s5)
+    <!-- 节点 -->
+    <rect x="100" y="36" width="160" height="52" rx="8" />
+    <rect x="18" y="126" width="148" height="58" rx="8" />
+    <rect x="194" y="126" width="148" height="58" rx="8" data-tone="caution" />
+    <rect x="28" y="232" width="128" height="48" rx="8" />
+    <rect x="204" y="232" width="128" height="48" rx="8" />
 
-一个具体任务是 `pylint-dev__pylint-4551`：用户希望 UML 生成工具读取 Python 类型注解，在属性默认值为 `None` 时也显示其注解类型。一次实际 agent 评测需要先在仓库中定位解析和图生成代码，修改后交出 patch，再由测试环境应用并运行。它考察的是从问题描述到仓库修改的链条。[S7](#source-s7)
+    <!-- 穿线文字不透明底色 -->
+    <rect x="210" y="194" width="116" height="22" rx="4" data-kind="mask" />
+    <rect x="74" y="322" width="212" height="26" rx="4" data-kind="mask" />
 
-问题在于，这条任务的测试直接导入参考补丁新增的 `get_annotation`，题面却没有要求使用这个函数名。合理的另一种实现可能在功能上完成类型显示，仍因导入失败而失分。这个例子使“补丁没通过”出现两种解释：模型没有修好，或测试只接受了某一种修法。Verified 的人工筛选试图减少这类问题，得到原测试集中的 500 条任务；筛选本身并不能让全部测试从此与功能需求完全一致。[S6](#source-s6)、[S7](#source-s7)
+    <text x="180" y="396" text-anchor="middle" data-kind="label">评分器读取</text>
+    <rect x="18" y="414" width="148" height="58" rx="8" data-tone="training" />
+    <rect x="194" y="414" width="148" height="58" rx="8" data-tone="training" />
 
-SWE-bench 在 agent 评测中承担的是仓库修复的终局检查。若将这种反馈用于后训练，测试是否代表需求就同时变成奖励设计问题；若用成绩选择 agent 的搜索、工具或重试配置，最终数字还包含整套运行方案的效果，不只是基础模型的代码能力。
+    <text x="48" y="564" text-anchor="middle" data-kind="label">记分</text>
+    <polygon points="180,514 242,558 180,602 118,558" />
+    <rect x="108" y="636" width="144" height="52" rx="8" data-tone="score" />
 
-## 工具和网页：模型采取了动作，评分器未必检查动作过程
+    <!-- 文字 -->
+    <g text-anchor="middle">
+      <text x="180" y="68">顾客说明诉求</text>
 
-### tau-bench：用户意图经对话进入，成功在数据库上判断
+      <text x="92" y="149">列明操作，</text>
+      <text x="92" y="171">得到确认</text>
+      <text x="268" y="161">跳过确认</text>
+      <text x="268" y="210" data-kind="caution">违反退货政策</text>
 
-tau-bench 的零售任务中，Yusuf Rossi 要把已收货订单里的机械键盘换成 clicky 轴版本，把温控器从 Apple HomeKit 兼容款换成 Google Home 兼容款；如果没有同时满足 clicky、RGB 和全尺寸的键盘，他接受无背光款。这是任务文件中的真实用户要求，交给用户模拟器，agent 通过逐轮对话获得信息，同时能访问政策和工具接口。[S8](#source-s8)
+      <text x="92" y="262">提交退货</text>
+      <text x="268" y="262">提交退货</text>
 
-任务的参考动作包括查用户、读订单、查商品，再调用换货接口。它们用于构造目标结果，不是发给 agent 照做的操作脚本。agent 可以走不同路径；评分器从初始数据库重放参考动作，将目标数据库哈希与实际终态比较。这条任务的 `outputs` 为空，因此没有额外的回答关键词检查；其他任务若设置了 `outputs`，回答还需包含相应内容。[S8](#source-s8)
+      <text x="180" y="340" data-kind="small">两条路径均可得到以下结果</text>
 
-这个协议适合检查业务 agent 能否把对话中的复合要求落实为正确工具操作，也能反复运行以检查稳定性。但终态一致不保证过程合规：论文明确举出未经用户确认就执行退货的情况，数据库可能正确，政策仍被违反。把终态分用作训练奖励，优化的仍是终态，不是确认这一步有没有发生。
+      <text x="92" y="437">数据库终态</text>
+      <text x="92" y="459">吻合</text>
+      <text x="268" y="437">回复含 54.04</text>
+      <text x="268" y="459">和 41.64</text>
 
-### WebArena：网页是交互环境，评分器随任务而变
+      <text x="180" y="552">两项均</text>
+      <text x="180" y="574">满足</text>
 
-WebArena 中一个真实任务问：“2022 年销量第一的产品是什么？”agent 从电商后台开始，借助网页观察和操作查找结果；这条任务最终用 `exact_match` 把回答与 `Quest Lumaflex™ Band` 比较。比较前只清理首尾空白、成对引号并转为小写，不检查浏览路径是否与某条参考轨迹相同。[S9](#source-s9)
+      <text x="180" y="668">本题得 1 分</text>
+    </g>
+  </svg>
 
-因此，这条任务测的是在给定网站状态下找到并报告信息。另一些 WebArena 任务检查目标 URL 或页面内容，`fuzzy_match` 还调用模型做语义判定。
+  <figcaption>
+    <strong>图 1｜同一笔退货，两条路径都可能得满分。</strong>订单记录和两笔金额都能核对。区分这两次服务还需要操作前的确认记录。依据 τ-bench v1 图 2 及 §3 反例。<sup id="cite-1h"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup>
+  </figcaption>
+</figure>
 
-在 agent 评测里，WebArena 使观察方式、浏览器动作和功能结果接在一起。网站需自托管，初始状态与重置方式属于协议；前一次任务造成的状态变化可能影响下一次。[S9](#source-s9)
+<p>
+  自动测试也可能走向另一个极端。SWE-bench 要求模型根据 issue 和修复前的仓库交出补丁，让故障测试转绿，并让指定的回归测试继续通过。一个 pylint 任务要求制图工具在属性默认值为 <code>None</code> 时也能显示类型注解。测试却直接导入参考补丁新增的 <code>get_annotation</code>。工程师完全可以用别的函数名实现同样的显示效果，但测试会在导入时就中止，甚至还没运行到检查图形输出的那一步。<sup id="cite-6"><a href="#ref-6" aria-label="参考文献 6">[6]</a></sup>
+</p>
+<p>
+  这类失分影响了多少题，要看复查时怎么抽题。OpenAI 从 Verified 的 500 题里挑出 o3 在 64 次独立运行中未能稳定解决的 138 题。工程师在其中 59.4% 的题上发现测试设计或题面存在实质问题。这个比例描述的是被挑出来复查的难例。若把这两类任务的判分用于训练，未经确认的退货可能得到满分，换个函数名的可行修复却会失去奖励。要纠正两种信号，就得分别检查通过的对话和被拒的补丁。<sup id="cite-1f"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup><sup id="cite-6b"><a href="#ref-6" aria-label="参考文献 6">[6]</a></sup>
+</p>
 
-## 哪些进展改变了对成绩的判断
+## 78.2% 的数学题是谁做对的？
 
-### 测试缺陷和答案泄漏，需要两种不同的修复
+<p>
+  《Let’s Verify Step by Step》给每道评测题生成 1,860 份候选解，再用过程奖励模型逐步打分，按整份解答的得分选出一份，最后才核对它的答案。用论文采用的评分方式，入选解答的答案正确率为 78.2%。生成器要先写出答案正确的解，选择器还要把这样的解排到首位。作者在同一批候选上比较了逐步评分、只为最终结果评分和多数投票。三者之中，逐步评分挑中正确答案的比例最高。<sup id="cite-7"><a href="#ref-7" aria-label="参考文献 7">[7]</a></sup>
+</p>
+<p>
+  连「评测题」的含义也取决于训练时的选择。作者把原 MATH 测试集中的 4,500 题并入训练，只对随机留下的 500 题报告上述成绩。如果拿同一套模型重跑原测试集，分母中就混进了明确用于训练的问题。即便没有主动改过切分，公开题目也可能进入训练语料。SWE-bench 复查发现，受测模型能复现部分任务的人工补丁或题面细节。遇到限制函数名的测试，见过补丁的模型可能恰好掌握了解题者从题面无从获知的信息。<sup id="cite-6c"><a href="#ref-6" aria-label="参考文献 6">[6]</a></sup><sup id="cite-7b"><a href="#ref-7" aria-label="参考文献 7">[7]</a></sup>
+</p>
+<p>
+  引用这个 78.2% 时，「在留出的 500 题上，每题从 1,860 份候选里选一份」是成绩的一部分。它说明一套生成器和选择器配合起来，多大概率能交回正确答案。若进一步主张把同一个评分器接入强化学习也能取得相同收益，还要观察生成器在反复追求这份奖励、开始写出不同解答之后，独立判分的正确率怎样变化。<sup id="cite-7c"><a href="#ref-7" aria-label="参考文献 7">[7]</a></sup>
+</p>
 
-OpenAI 对 SWE-bench Verified 的复查选取模型经常失败的 27.6% 子集，其中至少 59.4% 的任务存在会拒绝功能正确提交的测试问题。这个百分比的分母是被审计子集，不能改写成整个 Verified 的缺陷率。前面的 `get_annotation` 就是测试过窄的例子：需要修的是评分规则与问题要求的对应关系。[S7](#source-s7)
-
-同一复查还报告，所测试前沿模型能在部分任务上复现原始人工补丁或题面细节，以此作为模型接触过评测材料的污染证据。污染损害的是“陌生任务考试”的解释，需要重新处理训练暴露和评测独立性；把测试改得更宽，并不能让模型忘掉答案。反过来，换一批未见题，也不会自动修好不合理的测试。
-
-两者还会相互遮蔽：如果通过测试需要题面没有给出的实现细节，见过参考补丁的模型恰好更容易通过。此时高分可能奖励了额外信息，低分可能惩罚了合理修法。OpenAI 据此停止用 Verified 衡量其前沿编程发布的能力进展。[S7](#source-s7)
-
-### 多采几次，覆盖与可靠性的方向相反
-
-HumanEval 的 `pass@k` 问：同一道题采样 k 个候选，至少一个通过测试的概率是多少？执行器用每题 n 个样本、其中 c 个通过的计数，估计 `1 − C(n−c,k) / C(n,k)`，且只在每题样本数足够时报告对应 k。缺少某项指标不能当成该项为零。[S4](#source-s4)
-
-tau-bench 的 `pass^k` 问：同一任务独立运行 k 次，是否全部成功？它衡量的是重复服务的可靠性。若单题每次成功概率为 p，且运行独立、同分布，那么前者是 `1 − (1−p)^k`，后者是 `p^k`。这是在这些假设下的概率关系。汇总不同难度的任务时，先按任务计算，再汇总。[S8](#source-s8)
-
-增加 k 会抬高“至少一次”的机会，却压低“全部成功”的概率。因此代码候选搜索中的覆盖提升，不能拿来证明业务助手可以稳定服务；AIME 的 `avg@32` 估计的是平均单次表现，既不是“至少一次”，也不是“全部成功”。
-
-### 过程奖励的筛选效果，不等于在线优化的效果
-
-过程奖励模型（PRM）评判推理中的步骤，结果奖励则评判最终结果。两者进入系统的位置还可以不同：用于给候选解排序，或直接作为在线 RL 要最大化的奖励。这个区别解释了为什么相关研究不应被收成一条统一的成功或失败叙事。
-
-《Let's Verify Step by Step》训练奖励模型，并用它对生成器已经采出的解答做 best-of-N 选择，最后按答案正确率评价选中的解答。其过程监督在这类 MATH 候选选择中优于结果监督；大规模比较的训练数据并不完全对齐，论文另设小规模控制实验处理这一点。结果支持的是过程监督能训练出更有效的选择器，不是在线策略长期追逐同一 PRM 时仍有相同收益。[S17](#source-s17)
-
-DeepSeek-R1 的失败经验针对大规模 RL 中引入 PRM：通用推理步骤难以切分，步骤正确性难标注，优化中还会出现奖励投机，持续重训奖励模型增加成本。报告同时承认 PRM 可用于重排候选与引导搜索，也明确不把这些失败写成方法不可能有效。两项结论可以同时成立，因为固定候选上的挑选与持续改变生成分布，对评分器提出了不同要求。[S16](#source-s16)
-
-### 审计需要补进评分器原来没有的信息
-
-奖励投机可以严格地表述为：一条策略在代理奖励下更优，在真实任务目标下却更差。Skalse 等人的形式化工作强调，能否避免这种排序反转取决于允许比较的策略集合。这里的非平凡指策略回报不是恒定值；开集指允许策略概率在一个邻域内连续变化的一片策略。有限状态、有限动作、动作数大于一、所有状态可达且奖励均值有限时，若策略集合包含开集，非平凡且不可相互投机的奖励对必须在该集合上给出相同排序；若策略集合有限，且至少两条策略的状态—动作访问计数不同，则可构造不等价的非平凡奖励对。存在排序反转的可能，不等于某次优化已经到达它。[S15](#source-s15)
-
-《Verifier Errors in RLVR》进一步限制了“只看训练日志就能发现问题”的想法。其分析固定题目分布、评分器、初始化和算法，假设评分器不会拒绝正确回答，且日志没有评分器以外的正确性反馈。在不同、都与评分器兼容的真实正确性标注下，日志可能同分布，因而仅靠这些日志不能统一保证识别被错误接受的回答。它针对的是固定评分器的信息边界，不覆盖 SWE-bench 中误拒正确补丁的那一侧。[S14](#source-s14)
-
-这项工作的投影审计校正引入额外正确性标签，并把校正方向投影到接受率梯度的正交空间，以保留接受率的瞬时增长。在正确、错误接受和已审计错误的概率连续可微、前两者为正，且固定审计集合覆盖全部有概率质量的错误接受时，足够强的校正可以降低错误接受占比、提高正确概率；要降低错误接受的绝对概率，还需更强的不等式。全程的指数衰减加余项界还要求统一的校正强度下界和错误增长压力上界。[S14](#source-s14)
-
-这里改变的判断是：提高同一评分器上的接受率，与减少评分器放过的错误，需要不同信息。该理论使用精确梯度流，有限样本、实际优化器和有限步长都可能破坏效果；它不构成 GRPO 在 AIME、HumanEval 或工具基准上的收敛保证。
+<details class="supplement">
+  <summary>补充口径｜重复运行与留出集</summary>
+  <p>
+    τ-bench 数字取自 v1 的零售域与函数调用配置。若一道题每次成功的概率固定为 <i>p</i>，且各次独立，则至少成功一次的概率为 <code>1 − (1 − p)^k</code>，全部成功为 <code>p^k</code>。不同题各有自己的 <i>p</i>，应先逐题计算再求平均。MATH 的 500 题相对于该研究的训练切分留出，论文 §6.3 另行讨论了预训练语料可能含有题目改写的情况。<sup id="cite-1g"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup><sup id="cite-7d"><a href="#ref-7" aria-label="参考文献 7">[7]</a></sup>
+  </p>
+</details>
 
 ## 来源与阅读范围
 
-### S1：GSM8K {#source-s1}
+<ol class="reference-list">
+  <li id="ref-1">
+    Yao 等，<cite>τ-bench</cite> v1。§3 图 2 及 Reward、Pass^k 两段给出退货实例、判分与重复试验定义，§5.1 的表 2 和图 4 给出零售结果。
+    <a href="https://arxiv.org/html/2406.12045v1#S3.F2" target="_blank" rel="noopener">任务与奖励</a> ·
+    <a href="https://arxiv.org/html/2406.12045v1#S5.T2" target="_blank" rel="noopener">单次成绩</a> ·
+    <a href="https://arxiv.org/html/2406.12045v1#S5.F4" target="_blank" rel="noopener">重复成功曲线</a>
+    <a class="reference-backlink" href="#cite-1" aria-label="返回正文引用 1">↩</a>
+  </li>
+  <li id="ref-2">
+    OpenAI，<cite>GSM8K</cite>。测试集第 2 条为长袍用料题，评分程序见 <code>ANS_RE</code>、<code>extract_answer</code>、<code>is_correct</code>。
+    <a href="https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl" target="_blank" rel="noopener">原始测试记录</a> ·
+    <a href="https://github.com/openai/grade-school-math/blob/master/grade_school_math/dataset.py" target="_blank" rel="noopener">评分源码</a>
+    <a class="reference-backlink" href="#cite-2" aria-label="返回正文引用 2">↩</a>
+  </li>
+  <li id="ref-3">
+    Luong 等，<cite>ReFT</cite> v3。§3.1 的 Warm-up 和 Reinforcement Learning 给出训练流程与末步奖励，§4.4 图 3 展示 MathQA 错算后选中 C 的实录。
+    <a href="https://arxiv.org/html/2401.08967v3#S3.SS1" target="_blank" rel="noopener">训练方法</a> ·
+    <a href="https://arxiv.org/html/2401.08967v3#S4.F3" target="_blank" rel="noopener">原始案例</a>
+    <a class="reference-backlink" href="#cite-3" aria-label="返回正文引用 3">↩</a>
+  </li>
+  <li id="ref-4">
+    Yu 等，<cite>DAPO</cite> v2。§3.5 给出整数答案训练集，§4.1 末段定义 <code>avg@32</code>，§4.2 表 1 按累积改动报告成绩。
+    <a href="https://arxiv.org/html/2503.14476v2#S3.SS5" target="_blank" rel="noopener">训练题</a> ·
+    <a href="https://arxiv.org/html/2503.14476v2#S4.SS1" target="_blank" rel="noopener">评测协议</a> ·
+    <a href="https://arxiv.org/html/2503.14476v2#S4.T1" target="_blank" rel="noopener">表 1</a>
+    <a class="reference-backlink" href="#cite-4" aria-label="返回正文引用 4">↩</a>
+  </li>
+  <li id="ref-5">
+    OpenAI，<cite>HumanEval</cite>。固定提交 <code>6d43fb9</code> 中，<code>evaluate_functional_correctness</code> 检查候选代码，<code>estimate_pass_at_k</code> 逐题估算至少一次通过的概率。
+    <a href="https://github.com/openai/human-eval/blob/6d43fb980f9fee3c892a914eda09951f772ad10d/human_eval/evaluation.py" target="_blank" rel="noopener">评测实现</a>
+    <a class="reference-backlink" href="#cite-5" aria-label="返回正文引用 5">↩</a>
+  </li>
+  <li id="ref-6">
+    OpenAI，2026 年 2 月 23 日 <cite>SWE-bench Verified 复查</cite>。Background 说明仓库与两类测试，Too narrow and too wide tests 给出抽样范围、缺陷比例及 pylint 实例，Contamination 列出复现证据。
+    <a href="https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/" target="_blank" rel="noopener">复查原文</a>
+    <a class="reference-backlink" href="#cite-6" aria-label="返回正文引用 6">↩</a>
+  </li>
+  <li id="ref-7">
+    Lightman 等，<cite>Let’s Verify Step by Step</cite> v1。§3 图 3 比较固定候选上的选择方法，附录 C 说明留出集，附录 F.2 表 4 给出 78.2%，§6.3 讨论训练暴露。
+    <a href="https://arxiv.org/html/2305.20050v1#S3.F3" target="_blank" rel="noopener">候选选择</a> ·
+    <a href="https://arxiv.org/html/2305.20050v1#A3" target="_blank" rel="noopener">切分</a> ·
+    <a href="https://arxiv.org/html/2305.20050v1#A6.T4" target="_blank" rel="noopener">计分结果</a> ·
+    <a href="https://arxiv.org/html/2305.20050v1#S6.SS3" target="_blank" rel="noopener">语料重叠</a>
+    <a class="reference-backlink" href="#cite-7" aria-label="返回正文引用 7">↩</a>
+  </li>
+</ol>
 
-[标准测试数据](https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl) · [评分实现](https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/dataset.py)。支撑蓝白布料实例、`####` 抽取和字符串比较，不提供逐步推理验证。
-
-### S2：MATH-500 与 PRM800K {#source-s2}
-
-[MATH-500 数据卡](https://huggingface.co/datasets/HuggingFaceH4/MATH-500/raw/main/README.md) · [题目数据](https://huggingface.co/datasets/HuggingFaceH4/MATH-500/resolve/main/test.jsonl) · [PRM800K README](https://raw.githubusercontent.com/openai/prm800k/main/README.md)。支撑极坐标题、数学判等误差及非标准 MATH 留出切分。
-
-### S3：AIME 2024 数据 {#source-s3}
-
-[math-ai/aime24 数据卡](https://huggingface.co/datasets/math-ai/aime24/raw/main/README.md)。支撑题目规模和字段；DAPO 的运行协议见 S12。
-
-### S4：HumanEval 固定快照 {#source-s4}
-
-[数据](https://raw.githubusercontent.com/openai/human-eval/6d43fb980f9fee3c892a914eda09951f772ad10d/data/HumanEval.jsonl.gz) · [evaluation.py](https://raw.githubusercontent.com/openai/human-eval/6d43fb980f9fee3c892a914eda09951f772ad10d/human_eval/evaluation.py)。支撑函数补全实例、测试、超时和 `pass@k` 估计条件。
-
-### S5：SWE-bench {#source-s5}
-
-[论文 v3](https://arxiv.org/html/2310.06770v3) · [grading.py](https://raw.githubusercontent.com/SWE-bench/SWE-bench/main/swebench/harness/grading.py)。支撑 issue—仓库—补丁协议与完整解决判分。
-
-### S6：SWE-bench Verified 筛选 {#source-s6}
-
-[发布说明](https://openai.com/index/introducing-swe-bench-verified/) · [标注规范](https://cdn.openai.com/introducing-swe-bench-verified/swe-b-annotation-instructions.pdf)。支撑人工筛选的目标、合理实现的接受条件与子集规模。
-
-### S7：SWE-bench Verified 复查 {#source-s7}
-
-[OpenAI，2026-02-23](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/)。支撑 pylint 类型注解实例、被审计子集的缺陷比例、污染证据和停报该成绩的判断。
-
-### S8：tau-bench {#source-s8}
-
-[论文 v1](https://arxiv.org/html/2406.12045v1) · [任务快照](https://raw.githubusercontent.com/sierra-research/tau-bench/59a200c6d575d595120f1cb70fea53cef0632f6b/tau_bench/envs/retail/tasks_test.py) · [评分接口](https://raw.githubusercontent.com/sierra-research/tau-bench/59a200c6d575d595120f1cb70fea53cef0632f6b/tau_bench/envs/base.py)。支撑换货实例、用户与 agent 信息边界、终态奖励、确认遗漏和 `pass^k`。
-
-### S9：WebArena {#source-s9}
-
-[论文 v4](https://arxiv.org/html/2307.13854v4) · [README 快照](https://raw.githubusercontent.com/web-arena-x/webarena/dce04686a56253aefba7b18a4fa0937cf1dc987b/README.md) · [任务配置](https://raw.githubusercontent.com/web-arena-x/webarena/dce04686a56253aefba7b18a4fa0937cf1dc987b/config_files/test.raw.json) · [评分器](https://raw.githubusercontent.com/web-arena-x/webarena/dce04686a56253aefba7b18a4fa0937cf1dc987b/evaluation_harness/evaluators.py)。支撑产品查询实例、不同评分类型及环境重置条件。
-
-### S10：SimpleRL-Zoo {#source-s10}
-
-[论文 v2](https://arxiv.org/html/2503.18892v2)，实验设置与难度、格式奖励实验。支撑训练集与评测集用途、正确性奖励和基座能力相关的数据难度差异。
-
-### S11：ReFT {#source-s11}
-
-[论文 v3](https://arxiv.org/html/2401.08967v3)，方法与数据表。支撑同一批训练题上的 PPO、数值可提取的辅助奖励及处理后数据计数。
-
-### S12：DAPO {#source-s12}
-
-[论文 v2](https://arxiv.org/html/2503.14476v2)，奖励、数据转换与训练评测设置。支撑整数答案训练题、奖励取值、过长惩罚及 AIME 的 `avg@32` 协议。
-
-### S13：DeepSeekMath {#source-s13}
-
-[论文 v3](https://arxiv.org/html/2402.03300v3)，预训练语料过滤与 RL 设置。支撑相关 CoT 训练数据、GRPO 和预训练去污的阶段边界。
-
-### S14：Verifier Errors in RLVR {#source-s14}
-
-[预印本 v1](https://arxiv.org/pdf/2609.35677)，固定评分器的信息限制、投影审计校正与假设 A1–A3。支撑反馈不可识别性及有条件的局部控制，不提供上述基准的收敛保证。
-
-### S15：Defining and Characterizing Reward Hacking {#source-s15}
-
-[论文 v2](https://arxiv.org/html/2209.13085v2)，奖励投机定义、开集与有限策略集合的结论。支撑代理奖励排序与策略集合之间的关系。
-
-### S16：DeepSeek-R1 {#source-s16}
-
-[报告 v1](https://arxiv.org/html/2501.12948v1)，奖励设计与失败尝试。支撑大规模在线 RL 中 PRM 的步骤、标注和优化问题，以及与候选重排的区别。
-
-### S17：Let's Verify Step by Step {#source-s17}
-
-[论文 v1](https://arxiv.org/html/2305.20050v1)，方法、大规模比较与小规模控制实验。支撑过程监督奖励模型的 best-of-N 选择效果及实验比较条件。
+</div>

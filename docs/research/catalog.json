@@ -2,8 +2,8 @@
   {
     "date": "2026-10-14",
     "slug": "llm-post-training-agentic-rl",
-    "title": "2026-10-14 后训练与 agentic RL：从轨迹奖励走向步骤反馈",
-    "description": "基于 arXiv 与 Hugging Face 公开摘要，筛选步骤信用分配、教师指导、反思训练与上下文优化的近期工作，并说明待核验的问题。",
+    "title": "一次任务只给一个结果，多轮智能体该奖惩哪一步？",
+    "description": "一次成功可能夹着几步弯路，一次失败也可能始于正确的动作。DeltaTTG 估计每一步之后还剩多少工作，ProAS 用成功路径画出哪些状态算有进展。",
     "route": "/research/2026-10-14-llm-post-training-agentic-rl",
     "source_urls": [
       "https://arxiv.org/abs/2610.15772",
@@ -15,13 +15,13 @@
     ],
     "window_end": "2026-10-15T00:00:00+08:00",
     "bundle_sha256": "fce905f4ea1dba4af68f3f68ba4513abbbca3d1a15809171852f15683cf613e0",
-    "sidebarTitle": "后训练与 agentic RL：从轨迹奖励走向步骤反馈"
+    "sidebarTitle": "一次任务只给一个结果，多轮智能体该奖惩哪一步？"
   },
   {
     "date": "2026-10-16",
     "slug": "post-training-rl-benchmarks",
-    "title": "后训练与 agent 评测：基准分数究竟证明了什么",
-    "description": "从模型输入、评分对象与训练反馈的区别出发，用数学、代码和交互任务解释基准的实际用途，再讨论测试缺陷、采样可靠性与奖励审计如何改变分数的解释。",
+    "title": "后训练基准里的「成功率」，究竟算的是什么？",
+    "description": "在 τ-bench 的零售任务里，使用函数调用的 GPT-4o 单次成功率为 61.2%。把要求改成同一任务独立办理八次、八次都成功，成绩就落到 25% 以下。",
     "route": "/research/2026-10-16-post-training-rl-benchmarks",
     "source_urls": [
       "https://raw.githubusercontent.com/openai/grade-school-math/master/README.md",
@@ -69,8 +69,8 @@
   {
     "date": "2026-10-16",
     "slug": "post-training-rl-frameworks",
-    "title": "后训练 RL 框架：从训练闭环到 TRL、verl、OpenRLHF、slime 与 AReaL",
-    "description": "解释数据、采样、奖励、优势、更新与权重交接如何组成在线后训练，再沿五条真实入口理解配置和模型产物，讨论训练生成分离、策略滞后与动态过滤怎样改变用法。",
+    "title": "一道题怎样更新语言模型？沿训练闭环读懂五个后训练 RL 框架",
+    "description": "同一道数学题，模型答对了，评分器仍可能给零分。即使评分相同，两份写着 GRPO 的配置也可能给长回答不同的权重。",
     "route": "/research/2026-10-16-post-training-rl-frameworks",
     "source_urls": [
       "https://github.com/verl-project/verl/blob/5b550b0c3dad8c7bb7aab834a3fe195f8cdfc517/README.md",
@@ -161,7 +161,7 @@
     "date": "2026-10-18",
     "slug": "rl-reward-hacking",
     "title": "强化学习中的 Reward Hacking：机制与文献整理（2022—2026）",
-    "description": "面向已有机器学习基础读者，按奖励错设、过度优化、迎合、验证器、篡改与监督泛化组织的论文整理。",
+    "description": "先讲清一处机制：奖励只检验了答案或形式，模型就可能学会绕过真正的任务；再给出这套专题的二十一章深读目录，每一章保留论文链接、阅读版本与需要区分的口径。",
     "route": "/research/2026-10-18-rl-reward-hacking",
     "source_urls": [
       "https://arxiv.org/abs/2209.13085v2",
@@ -176,7 +176,7 @@
     ],
     "window_end": "2026-10-19T00:00:00+08:00",
     "origin": "manual",
-    "sidebarTitle": "强化学习中的 Reward Hacking：机制与文献整理",
+    "sidebarTitle": "强化学习中的 Reward Hacking：机制与文献整理（2022—2026）",
     "children": [
       {
         "text": "1. 奖励漏洞的形式化：排序、覆盖、尾部与策略分布",
@@ -267,8 +267,8 @@
   {
     "date": "2026-10-20",
     "slug": "agent-sandbox-wrong-target",
-    "title": "智能体沙箱：创建延迟、空闲驻留与状态恢复",
-    "description": "对照添茶的判断与四套创建路径，用 TrEnv-X、DSec、AgentSysBench、AgentCgroup 和 Aries 的实验条件说明空闲计费、内存尖峰和快照恢复何时抵消创建优化。",
+    "title": "智能体沙箱该优化哪段时间？从模型等待到训练批次就绪",
+    "description": "沿用同一工作区的编程会话，沙箱只需创建一次，却要反复等模型决定下一步。服务端要决定空闲多久值得让出内存，以及下一条命令到来时该恢复什么。",
     "route": "/research/2026-10-20-agent-sandbox-wrong-target",
     "source_urls": [
       "https://zhuanlan.zhihu.com/p/2094034668836411382"
@@ -279,8 +279,8 @@
   {
     "date": "2026-10-23",
     "slug": "llm-distillation",
-    "title": "大语言模型蒸馏：从教师信号到学生自己的生成分布",
-    "description": "围绕教师信号、学生目标与训练上下文，解释语言模型蒸馏的经典机制、黑盒指令与理由迁移、reverse KL、on-policy训练及其理论与实验边界。",
+    "title": "语言模型蒸馏：学生换了一条解题路径，教师还能教什么？",
+    "description": "教师示范一次解题，学生就能沿着这份答案学习每一步该写什么。学生独立作答时，却可能从另一个同样合理的步骤开始。教师若能读到学生自己写的开头，就能在这条路径上给出下一步的反馈。",
     "route": "/research/2026-10-23-llm-distillation",
     "source_urls": [
       "https://www.cs.cornell.edu/~caruana/compression.kdd06.pdf",
@@ -334,8 +334,8 @@
   {
     "date": "2026-10-26",
     "slug": "agent-code-review-layers",
-    "title": "解读 Claude Code 团队的七层代码审查：风险分级、收敛与迁移边界",
-    "description": "解读 Claude Code 团队关于 code review 的文章：七层检查各自挡住什么、风险分级怎样分配人工名额、agent 作者与 agent 审查者为何会互相拖住，以及这组数字在什么条件下才成立。",
+    "title": "谁来批准，何时停手？Claude Code 团队的七层代码审查",
+    "description": "一次命令行工具改动让两个智能体忙了一夜：一个挑问题，一个改代码，来回五十多轮，直到作者叫停。Claude Code 团队给自动审查定了两条边界：由改动的风险决定谁来批准，由后续提交改了什么决定还要审什么。",
     "route": "/research/2026-10-26-agent-code-review-layers",
     "source_urls": [
       "https://claude.dev/blog/solving-code-review-at-anthropic/",
@@ -355,8 +355,8 @@
   {
     "date": "2026-10-28",
     "slug": "rollout-compute-economics",
-    "title": "rollout 的算力经济学：一条训练样本值多少 token",
-    "description": "把 LLM 强化学习的预算算清楚：组内全对全错的样本为何等于白算、长尾与异步如何用新鲜度换吞吐、截断和损失聚合怎样改变有效梯度，以及什么时候增加采样已经换不到能力。",
+    "title": "Rollout 的算力账：同样的 GPU 时间，怎样让模型多做对几道题？",
+    "description": "在数学推理强化学习里，模型每试答一次（一次 rollout），每个生成的 token 都要付费。同一道题连续答对十次，在只看对错、按组比较的训练里，反而给不出哪种回答应当更常出现的信号。",
     "route": "/research/2026-10-28-rollout-compute-economics",
     "source_urls": [
       "https://arxiv.org/abs/2503.14476",
@@ -394,8 +394,8 @@
   {
     "date": "2026-10-29",
     "slug": "prm-process-reward",
-    "title": "过程奖励到底有没有用：步骤级信号的可信度账",
-    "description": "把过程奖励模型的证据放在一起看：2023 年的正向结果在什么条件下成立、自动标注如何把结果噪声搬进步骤标签、BoN 评测为何会虚高，以及 2026 年的压力测试怎样把 PRM 打回流畅度检测器。",
+    "title": "过程奖励何时可信？挑答案、找错步与训练解题模型",
+    "description": "给数学解答的每一步打分，可以帮模型从一批候选中挑出答对的那份。在同一批训练解答上，按续写结果打标签的评分器在挑答案时略占优，由语言模型逐步审阅后训练的评分器更会找错步。用分数训练解题模型时，得看它最终解出了多少题。",
     "route": "/research/2026-10-29-prm-process-reward",
     "source_urls": [
       "https://arxiv.org/abs/2305.20050",
@@ -435,8 +435,8 @@
   {
     "date": "2026-10-31",
     "slug": "rl-framework-architecture",
-    "title": "主流 RL 框架的架构分歧：控制面、训练-推理耦合与环境边界",
-    "description": "九个框架各用一句话讲清理念与落地方式，再把三处结构决策摊开比较：谁表达算法流程、权重怎么过河、异步到什么程度、环境放在哪一侧。",
+    "title": "九种大模型强化学习框架如何组织一次策略更新",
+    "description": "把生成服务搬到另一组 GPU，训练仍可能等整批回答到齐。反过来，训练和生成共用一组 GPU，也可以让慢任务跨过一次更新。比较这九种框架，值得追问的是谁安排生成与打分，哪批数据到齐就能更新，以及一次多轮交互在训练时算几份样本。",
     "route": "/research/2026-10-31-rl-framework-architecture",
     "source_urls": [
       "https://arxiv.org/abs/2409.19256",
@@ -458,8 +458,8 @@
   {
     "date": "2026-11-02",
     "slug": "score-centering-tim",
-    "title": "Score Centering：消掉追随采样器的漂移，仍要面对采样分布偏差",
-    "description": "精读 Score Centering Stabilizes Off-policy Reinforcement Learning：从逐前缀梯度分解解释训推不一致如何产生蒸馏漂移、分组中心化与裁剪为何留有残差，以及量化、陈旧和 top-k 近似实验能支持到哪里。",
+    "title": "奖励都给满分，策略为什么还会变？Score Centering 消除逐前缀的梯度漂移",
+    "description": "在语言模型的强化学习中，一个引擎生成答案，另一个引擎计算梯度。只要两者给下一个词元的概率不同，即使每个答案都得满分，普通策略梯度也可能让模型越来越偏爱采样器常选的词。",
     "route": "/research/2026-11-02-score-centering-tim",
     "source_urls": [
       "https://arxiv.org/abs/2609.20807",
@@ -501,8 +501,8 @@
   {
     "date": "2026-11-08",
     "slug": "agent-harness-cost",
-    "title": "固定模型后，harness 与环境仍会改变表现和成本：评估须记录这些条件",
-    "description": "固定模型后只换脚手架，银行模拟里同一模型的正确率在 82.1% 与 93.6% 之间摆动；重组共享环境把 Haiku 4.5 的测试成本压低 72.7%。以三项干预实验区分正确率、违规与费用，并说明这组证据在什么条件下失效。",
+    "title": "同一个模型，怎样少办错事、少花钱？",
+    "description": "银行智能体已经办了逾期的撤回申请，却在下一轮告诉客户期限已过，办不了。在模拟银行里，给相同的模型增加执行前复核，违规率从 9.6% 降到 6.4%。",
     "route": "/research/2026-11-08-agent-harness-cost",
     "source_urls": [
       "https://arxiv.org/abs/2611.06116v1",
@@ -521,8 +521,8 @@
   {
     "date": "2026-11-09",
     "slug": "dong-bin-ai4math",
-    "title": "董彬及合作者的形式化数学工作：从陈述形式化到证明搜索与轨迹训练",
-    "description": "依据董彬及合作者的论文，梳理从 Lean 陈述翻译、库引理检索、证明状态转换到搜索与轨迹训练的工作线，说明各段的实验依据，以及文献陈述接入形式库的缺口。",
+    "title": "从题意到证明，董彬及合作者怎样用 Lean 核验数学推理",
+    "description": "原题要证明某个伽罗瓦群与八阶四元数群同构，模型却把目标群写成了四阶循环群。这样的陈述可以通过 Lean 编译，即使后来证明成功，得到的也是另一个定理。",
     "route": "/research/2026-11-09-dong-bin-ai4math",
     "source_urls": [
       "https://arxiv.org/abs/2403.13310v2",
@@ -552,8 +552,8 @@
   {
     "date": "2026-11-20",
     "slug": "agentic-rl-core-differences",
-    "title": "Agentic RL 相对于一般大模型 RL，核心差异在哪里？",
-    "description": "用同一个多跳问答对照固定输入和交互式训练，解释环境观察如何改变后续行动，以及奖励、信用分配和采样系统各自承担什么。",
+    "title": "在 Agentic RL 中，模型的动作会改变下一轮看到的证据",
+    "description": "在固定输入的大模型强化学习中，模型拿到题目和给定材料，生成一份供评分的回答。在 Agentic RL 的训练中，模型还可以先做一个动作，读到环境返回的新信息，再决定下一步。",
     "route": "/research/2026-11-20-agentic-rl-core-differences",
     "source_urls": [
       "https://arxiv.org/html/2509.02547v5",

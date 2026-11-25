@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1781,
+  "character_count": 1799,
   "pages": [
     {
       "path": "/cs336/a1-bpe.md",
@@ -89,15 +89,15 @@
     },
     {
       "path": "/research/2026-10-14-llm-post-training-agentic-rl.md",
-      "title": "2026-10-14 后训练与 agentic RL：从轨迹奖励走向步骤反馈"
+      "title": "一次任务只给一个结果，多轮智能体该奖惩哪一步？"
     },
     {
       "path": "/research/2026-10-16-post-training-rl-benchmarks.md",
-      "title": "后训练与 agent 评测：基准分数究竟证明了什么"
+      "title": "后训练基准里的「成功率」，究竟算的是什么？"
     },
     {
       "path": "/research/2026-10-16-post-training-rl-frameworks.md",
-      "title": "后训练 RL 框架：从训练闭环到 TRL、verl、OpenRLHF、slime 与 AReaL"
+      "title": "一道题怎样更新语言模型？沿训练闭环读懂五个后训练 RL 框架"
     },
     {
       "path": "/research/2026-10-17-post-training-rl-datasets.md",
@@ -109,11 +109,11 @@
     },
     {
       "path": "/research/2026-10-20-agent-sandbox-wrong-target.md",
-      "title": "智能体沙箱：创建延迟、空闲驻留与状态恢复"
+      "title": "智能体沙箱该优化哪段时间？从模型等待到训练批次就绪"
     },
     {
       "path": "/research/2026-10-23-llm-distillation.md",
-      "title": "大语言模型蒸馏：从教师信号到学生自己的生成分布"
+      "title": "语言模型蒸馏：学生换了一条解题路径，教师还能教什么？"
     },
     {
       "path": "/research/2026-10-24-llm-post-training-cluster-scheduling.md",
@@ -121,15 +121,15 @@
     },
     {
       "path": "/research/2026-10-26-agent-code-review-layers.md",
-      "title": "解读 Claude Code 团队的七层代码审查：风险分级、收敛与迁移边界"
+      "title": "谁来批准，何时停手？Claude Code 团队的七层代码审查"
     },
     {
       "path": "/research/2026-10-28-rollout-compute-economics.md",
-      "title": "rollout 的算力经济学：一条训练样本值多少 token"
+      "title": "Rollout 的算力账：同样的 GPU 时间，怎样让模型多做对几道题？"
     },
     {
       "path": "/research/2026-10-29-prm-process-reward.md",
-      "title": "过程奖励到底有没有用：步骤级信号的可信度账"
+      "title": "过程奖励何时可信？挑答案、找错步与训练解题模型"
     },
     {
       "path": "/research/2026-10-29-rl-scale-transfer.md",
@@ -141,11 +141,11 @@
     },
     {
       "path": "/research/2026-10-31-rl-framework-architecture.md",
-      "title": "主流 RL 框架的架构分歧：控制面、训练-推理耦合与环境边界"
+      "title": "九种大模型强化学习框架如何组织一次策略更新"
     },
     {
       "path": "/research/2026-11-02-score-centering-tim.md",
-      "title": "Score Centering：消掉追随采样器的漂移，仍要面对采样分布偏差"
+      "title": "奖励都给满分，策略为什么还会变？Score Centering 消除逐前缀的梯度漂移"
     },
     {
       "path": "/research/2026-11-04-daily-research-guide.md",
@@ -157,11 +157,11 @@
     },
     {
       "path": "/research/2026-11-08-agent-harness-cost.md",
-      "title": "固定模型后，harness 与环境仍会改变表现和成本：评估须记录这些条件"
+      "title": "同一个模型，怎样少办错事、少花钱？"
     },
     {
       "path": "/research/2026-11-09-dong-bin-ai4math.md",
-      "title": "董彬及合作者的形式化数学工作：从陈述形式化到证明搜索与轨迹训练"
+      "title": "从题意到证明，董彬及合作者怎样用 Lean 核验数学推理"
     },
     {
       "path": "/research/2026-11-11-agent-memory-components.md",
@@ -169,7 +169,7 @@
     },
     {
       "path": "/research/2026-11-20-agentic-rl-core-differences.md",
-      "title": "Agentic RL 相对于一般大模型 RL，核心差异在哪里？"
+      "title": "在 Agentic RL 中，模型的动作会改变下一轮看到的证据"
     },
     {
       "path": "/rl-book/cha4对话模板与监督微调.md",

@@ -1,124 +1,319 @@
 ---
-title: "rollout 的算力经济学：一条训练样本值多少 token"
-description: "把 LLM 强化学习的预算算清楚：组内全对全错的样本为何等于白算、长尾与异步如何用新鲜度换吞吐、截断和损失聚合怎样改变有效梯度，以及什么时候增加采样已经换不到能力。"
-date: "2026-10-28"
+title: "Rollout 的算力账：同样的 GPU 时间，怎样让模型多做对几道题？"
+description: "在数学推理强化学习里，模型每试答一次（一次 rollout），每个生成的 token 都要付费。同一道题连续答对十次，在只看对错、按组比较的训练里，反而给不出哪种回答应当更常出现的信号。"
 tags: ["每日调研", "强化学习", "后训练", "rollout", "推理系统"]
+date: "2026-10-28"
 ---
 
-# rollout 的算力经济学：一条训练样本值多少 token
+# Rollout 的算力账：同样的 GPU 时间，怎样让模型多做对几道题？
 
-在大模型强化学习里，GPU 时间主要不是花在“训练”上，而是花在“生成”上。一个 batch 由若干 prompt 组成，每个 prompt 要采一组 completion 才能算出组内相对优势；同步实现必须等这一批里最长的那条序列结束才能更新，于是批量越大、序列越长，等待越长，单卡吞吐越低。[PipelineRL，§1](https://arxiv.org/abs/2509.19128) 这条系统事实决定了后面所有讨论：rollout 的优化目标不是“让 GPU 更忙”，而是“让每个生成出来的 token 换到更多有效梯度”。两者经常矛盾，而矛盾的地方就是预算真正被花掉的地方。
+<div class="research-article">
 
-## 一条样本的账单由三件事决定
+<p class="lead">在数学推理强化学习里，模型每试答一次（一次 rollout），每个生成的 token 都要付费。同一道题连续答对十次，在只看对错、按组比较的训练里，反而给不出哪种回答应当更常出现的信号。要判断下一笔算力该花在多试几次、写得更长，还是缩短等待，可以先算每组有对照的答案耗了多少 token，再看模型达到同一验证正确率用了多少 GPU 小时。</p>
 
-把一次训练步的成本写成可核算的形式：`成本 ≈ prompt 数 × 组大小 G × 平均生成长度 × 单 token 生成成本`，再除以“这批样本里真正贡献梯度的那部分比例”。三个因子各自有独立的失效方式：
+## 一道题采几次，才有可学的差别？
 
-- **组大小与长度决定账面成本。** 组内相对优势需要同一条 prompt 的多个样本互相比较，所以 G 是乘数而不是可选项；长序列任务里 16,384 token 的生成上限乘以 G 直接决定单步的 wall-clock。
-- **有效比例决定真实成本。** 组内全对或全错时，优势为 0，这批 token 换来的是零梯度。有效样本成本 = 账面成本 ÷ 有效比例，而不是账面成本。
-- **新鲜度决定这些梯度是否还指向当前策略。** 异步省下的时间，本质上是用旧策略生成的样本去更新新策略，代价以偏差和方差的形式付给优化器。
+<p>给同一道题采一组答案，组相对策略优化（GRPO）用每个答案的奖励减去本组均值，再按组内波动做归一化。只按对错给奖时，有对有错，正确答案就高于均值，错误答案就低于均值。若答案奖励全相同，这一组对奖励驱动的策略更新贡献为零。DAPO 的训练中，随着模型变强，整组全对的题越来越多。即使每步抽取的题数相同，能教模型区分解法的题也会减少。<sup id="cite-1"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
+<p>可以用一个算例给这种对照定价。假设每道题单次答对的概率都是一半，各次试答独立，每个答案等长。每题答两次，有一半的组会一对一错。每题答四次，出现对错兼有的概率升到八分之七。如果一共只能生成三十二个答案，两种分法平均分别得到八组和七组对照。多试两次更容易看清同一道题，却挤掉了试其他题的机会。在训练日志里，用<strong>所有已生成的 token 数除以对错兼有的组数</strong>，就能把被筛掉的答案也算进成本。</p>
+<p>DAPO 选择继续抽新题，直到对错兼有的组凑满一批。表中最后一步保留此前的长度处理、裁剪和损失聚合，仅再加入动态采样。作者报告每步需要生成更多答案，但达到相近成绩所需的更新步数减少，总训练时间受影响不大。图 6 的横轴是训练步数，无法据此换算节省了多少 GPU 小时。<sup id="cite-1-2"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
 
-后文按这三件事展开，最后回到“什么时候该把预算加在采样上”。
+<div class="table-scroll" role="region" aria-labelledby="tbl-dapo" tabindex="0">
+  <table>
+    <caption id="tbl-dapo">
+      表 1｜DAPO 累计配方消融结果
+      <span>基座：Qwen2.5-32B；指标：AIME 2024 平均正确率（avg@32）；来源：DAPO 表 1</span>
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Qwen2.5-32B 的累计训练配方</th>
+        <th scope="col">AIME 2024 平均正确率（avg@32）</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">基础 GRPO</th>
+        <td>30%</td>
+      </tr>
+      <tr>
+        <th scope="row">已加入超长处理、提高裁剪上限和 token 级损失</th>
+        <td>42%</td>
+      </tr>
+      <tr>
+        <th scope="row">上述配方再加入动态采样</th>
+        <td>50%</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
-## 全对与全错的组：最贵的一种浪费
+<p>筛选发生在什么时候，也决定哪笔费用能省下来。DAPO 在答案生成之后筛出有对照的组，这一批被丢弃的 token 已经花出去了。ScaleRL 还试了在生成之前选题，记录历次作答的通过率，把已达到九成的题移出后续轮次。前一种做法稳住每次更新能用的题数，后一种做法把下一轮本要花在熟题上的生成预算留给了其他题。<sup id="cite-1-3"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup><sup id="cite-3"><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>
 
-GRPO 类的优势估计是组内标准化：`Â = (R - mean(R)) / std(R)`。当一组样本的奖励全部相同——全对或全错——分子为零，优势为零，这条 prompt 在这一步里不产生任何梯度。[DAPO，§3.1 与式 (9)](https://arxiv.org/abs/2503.14476)
+## 长答案多花的 token 怎样进入更新？
 
-这件事的严重程度随训练进行而上升。DAPO 的作者在实验中观察到，准确率等于 1 的样本数持续增加：模型变强以后，容易题目的所有采样都答对，于是每个 batch 里“有效 prompt 数”不断下降，梯度信号变弱、方差变大。[DAPO，图 3(b)](https://arxiv.org/abs/2503.14476) 换句话说，训练越到后期，账面样本数与有效样本数的差距越大。这与“数据不够就多采”的直觉相反：多采的样本可能全落在同一个已经学会的桶里。
+<p>一个答案因达到长度上限而中断时，验证器可能连最后的数值都没见到。若一律按错答处罚，一条本可算对的推理也会收到负反馈。DAPO 先试着屏蔽截断答案的损失，基础配方的平均正确率由 30% 升至 36%。另一种处理是把长度代价单独计入奖励。生成长度进入缓冲区以后，每多写一个 token，扣分就增加一点。这样，即使最后答对，拖到上限才交卷也有代价。<sup id="cite-1-4"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
+<p>对完整答案，长度还决定每个 token 在损失中占多大分量。设同题的两个答案分别写了两百和两千个 token。先在各答案内部取平均，再对答案等权平均，长答案里单个 token 的系数只有短答案的十分之一。DAPO 改为在同一道题的所有回答中按 token 取平均，两处 token 的系数随之相同。长答案里有助于答对的写法和伴随错答的重复片段，都会更充分地参与相应方向的更新。实际梯度仍取决于奖励与模型概率。<sup id="cite-1-5"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
 
-DAPO 的应对是动态采样：过采样，丢弃准确率为 0 和 1 的组，直到 batch 被“部分成功”的组填满。代价是每个 batch 实际采样的条数变成变量；收益是每步梯度都带有对比证据。在他们的 Qwen2.5-32B／AIME24 消融里，动态采样是单项收益最大的一步，把平均分从 42 推到 50；而总训练时间没有显著增加，因为达到目标所需的步数减少了。[DAPO，表 1 与图 6](https://arxiv.org/abs/2503.14476)
+## 生成快一倍，学习能快多少？
 
-这里有一个容易被忽略的口径：**成本单位不是“每步多少样本”，而是“到达目标性能需要多少样本”**。动态采样让每步更贵、步数更少，总账反而更便宜。把它当成“多采样”的优化会得出错误结论。
+<p>同步训练先生成整批答案，再更新模型。短答案陆续交卷后，仍在解码的序列越来越少，最后一条长答案决定训练何时开工。PipelineRL 让完成的答案先入队，训练端凑齐一批就更新，同时把新权重送回仍在生成的模型。一条长回答可以用旧权重起笔、用新权重收尾。这样缩短了等待，也使同一条回答里的 token 有了不同的滞后程度。等到训练时，当前模型给开头那些词的概率可能已经变了。<sup id="cite-2"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup></p>
 
-## 长度：截断、聚合与惩罚
+<figure class="figure" id="fig-pipeline">
+  <svg class="flow-wide" viewBox="0 0 740 426" role="img" aria-labelledby="fig-pipeline-wide-title">
+    <title id="fig-pipeline-wide-title">同步训练与 PipelineRL 流水线生成—训练时序对比</title>
+    <defs>
+      <pattern id="wait-hatch-wide" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="8" stroke="#c7cdc9" stroke-width="2" />
+      </pattern>
+    </defs>
 
-长序列任务里，长度同时影响成本与信号质量，而两者常被混为一谈。
+    <!-- 三条共用竖向时标 -->
+    <path data-kind="guide" d="M250 38 V382" />
+    <path data-kind="guide" d="M390 38 V382" />
+    <path data-kind="guide" d="M552 38 V382" />
 
-**截断不是错误，却被当成错误。** DAPO 的实验设置是期望最大长度 16,384 token，加 4,096 token 的软惩罚区间，总生成上限 20,480。若把被截断的样本一律判为错，模型会收到“这条推理路径不好”的反馈，而真实问题是长度管理。他们的两段处理很能说明信号与成本的关系：先把截断样本的损失屏蔽（Overlong Filtering），AIME24 从 30 升到 36；再把惩罚改成随长度渐变的软惩罚（Soft Overlong Punishment），升到 41。[DAPO，§3.5 与表 1](https://arxiv.org/abs/2503.14476)
+    <rect data-kind="bg-label" x="198" y="8" width="104" height="24" rx="4" />
+    <rect data-kind="bg-label" x="312" y="8" width="156" height="24" rx="4" />
+    <rect data-kind="bg-label" x="500" y="8" width="104" height="24" rx="4" />
+    <g text-anchor="middle">
+      <text x="250" y="25" data-size="sm" data-kind="muted">短答案完成</text>
+      <text x="390" y="25" data-size="sm" data-kind="muted">可更新的一批已凑齐</text>
+      <text x="552" y="25" data-size="sm" data-kind="muted">长答案完成</text>
+    </g>
 
-**聚合粒度改变谁在支配梯度。** GRPO 的损失是先按样本内 token 平均、再按样本平均，一条 16k token 的序列与一条 200 token 的序列权重相同。长序列里大量 token 的贡献被摊薄，低质量的重复与胡言乱语也不受惩罚，结果是熵和长度一起失控。DAPO 改为按 token 归一化，长序列按 token 数比例影响更新；这一项在分数上只加 1 分，但训练稳定性与长度形态的改善更明显。[DAPO，§3.3](https://arxiv.org/abs/2503.14476)
+    <!-- 组 1：同步 -->
+    <text x="14" y="70" data-kind="label" data-size="md">同步</text>
+    <text x="14" y="122" data-size="sm" data-kind="muted">生成</text>
+    <text x="14" y="178" data-size="sm" data-kind="muted">训练</text>
 
-**长度还会反噬优势估计的方差。** GSPO 指出 GRPO 的 token 级重要性比率在高方差下随响应长度累积，再被 clip 放大，最终导致不可逆的崩溃；他们改用序列级似然定义比率并做序列级裁剪，报告了更稳定的 MoE 训练。[GSPO，摘要与 §1](https://arxiv.org/abs/2507.18071) 这一条同时约束了“能不能把长度放开”和“能不能把离策略程度放大”——长度越长，任何逐 token 的比率修正都越难稳住。
+    <!-- 同步生成：短答案（细条）与长答案（粗条） -->
+    <rect x="96" y="84" width="154" height="22" rx="4" />
+    <text x="173" y="100" text-anchor="middle" data-size="xs">权重 v0</text>
 
-## 新鲜度：异步用偏差换吞吐
+    <rect x="96" y="114" width="456" height="34" rx="5" />
+    <text x="324" y="136" text-anchor="middle" data-size="sm">权重 v0</text>
 
-同步训练的问题很直白：一批 rollout 里最慢的那条决定所有人的等待。异步训练把生成与更新解耦，让生成端持续产出，代价是训练端拿到的样本来自旧权重。三种做法把这条边界推到了不同位置：
+    <!-- 同步训练：斜线等待 + 开始更新 -->
+    <rect data-tone="hatch-wide" x="96" y="158" width="456" height="30" rx="4" />
+    <rect data-kind="bg-label" x="272" y="162" width="104" height="22" rx="3" />
+    <text x="324" y="178" text-anchor="middle" data-size="xs" data-kind="muted">等最后一条</text>
 
-| 系统 | 解耦方式 | 报告的吞吐收益 | 稳住训练的手段 |
-| --- | --- | --- | --- |
-| **AReaL** | 完全解耦生成与训练，rollout worker 不等最长序列 | 同卡数下最高 2.77× 训练加速，最终性能持平或更好 | 在 rollout 与训练 worker 之间做负载均衡以控制数据陈旧度，并使用考虑了陈旧样本的 PPO 变体 |
-| **PipelineRL** | 生成与训练并发，生成过程中“在飞”接收新权重，不打断正在生成的序列 | 4 台 DGX-H100（128 卡）上约 2× 更快学会；附录的解析估计在最大滞后约 133 时可达 1.57× | 用有效样本量（ESS）衡量离策略程度；滞后是显式超参 |
-| **AsyncFlow** | 生产者—消费者式异步流，延迟参数更新但限制在陈旧阈值内 | 相对当时的 SOTA 基线平均 1.59× 吞吐 | 陈旧度阈值 + 细粒度数据调度与负载均衡 |
+    <rect data-tone="training" x="568" y="158" width="144" height="30" rx="5" />
+    <text x="640" y="178" text-anchor="middle" data-size="sm">开始更新</text>
 
-依据：[AReaL 摘要](https://arxiv.org/abs/2505.24298)、[PipelineRL 摘要与附录 A](https://arxiv.org/abs/2509.19128)、[AsyncFlow 摘要](https://arxiv.org/abs/2507.01663)。
+    <!-- 长答案右端向下实线箭头至开始更新 -->
+    <path data-kind="answer" d="M552 131 H640 V156 M634 148 L640 156 L646 148" />
 
-三者的数字不可直接比较：AReaL 比的是同卡数下的同步系统，PipelineRL 是 128 卡上的学习速度，AsyncFlow 是吞吐，任务长度与模型也不同。能比较的是方法：**它们都把“允许旧多少”做成了一个显式预算**，而不是让流水线自己决定。
+    <!-- 分隔线 -->
+    <path data-kind="guide" d="M14 214 H724" />
 
-有意思的是 PipelineRL 报告的一组反差：在他们的异步设置里，组大小 G=64 的训练曲线发散，而更小的组规模稳定（附录 B，图 10）。组越大，单步生成越长、越容易跨越多次权重更新，样本的离策略程度越高。这说明“多采样提升信号质量”和“多采样恶化新鲜度”是同一枚硬币——在异步系统里，G 同时是信号强度和陈旧度的乘数。
+    <!-- 组 2：流水线 -->
+    <text x="14" y="242" data-kind="label" data-size="md">流水线</text>
+    <text x="14" y="294" data-size="sm" data-kind="muted">生成</text>
+    <text x="14" y="354" data-size="sm" data-kind="muted">训练</text>
 
-agentic 任务把这件事放大：工具调用、沙箱执行、多轮交互让单条轨迹的完成时间分布变成重尾，同步批量几乎必然被最慢的一条拖住，因此 slime 这类框架专门提供 fully-async 模式来处理长尾生成。[slime README](https://github.com/THUDM/slime) 这也解释了为什么“rollout 经济学”在 agentic RL 里比在单轮数学题里更关键。
+    <!-- 流水线生成：短答案（细条） -->
+    <rect x="96" y="250" width="154" height="22" rx="4" />
+    <text x="173" y="266" text-anchor="middle" data-size="xs">权重 v0</text>
 
-## 修正粒度决定你能容忍多少延迟
+    <!-- 流水线生成：长答案（粗条，v0 前缀 + v1 后缀，共用外框，高亮分界） -->
+    <rect data-tone="v0" x="96" y="280" width="322" height="36" />
+    <rect data-tone="v1" x="418" y="280" width="134" height="36" />
+    <rect data-tone="split-glow" x="412" y="276" width="12" height="44" rx="2" />
+    <path data-kind="split" d="M418 276 V320" />
+    <rect data-tone="outline" x="96" y="280" width="456" height="36" rx="5" />
 
-离策略数据不是不能用，而是必须付修正费。标准做法是重要性采样：用 `π/μ` 加权，并把权重截断到上限 c 以压方差。[PipelineRL，式 (5)](https://arxiv.org/abs/2509.19128) 修正越细，能容忍的滞后越小；修正越粗，偏差越大。
+    <text x="257" y="303" text-anchor="middle" data-size="sm">v0 前缀</text>
+    <text x="485" y="303" text-anchor="middle" data-size="sm">v1 后缀</text>
 
-这条权衡把算法与系统绑在一起：token 级比率在高方差长序列上不稳（GSPO 的论证），序列级比率更稳但粒度更粗；AReaL 的“陈旧感知 PPO”与 AsyncFlow 的陈旧阈值则是把修正做进调度。工程上可操作的问题是：**你的滞后预算有多大，就选多粗的修正**，而不是反过来先选算法再抱怨吞吐。
+    <!-- 流水线训练：完成队列 -> 更新到 v1 -->
+    <rect x="266" y="336" width="106" height="30" rx="5" />
+    <text x="319" y="356" text-anchor="middle" data-size="sm">完成队列</text>
 
-度量上，PipelineRL 使用有效样本量 ESS：`(Σw)² / (N Σw²)`。它回答的是“这批加权后的旧样本，等价于多少条当前策略的新样本”。这比“滞后几步”更接近成本的本质，因为它同时反映了权重分布的形状。
+    <rect data-tone="training" x="390" y="336" width="124" height="30" rx="5" />
+    <text x="452" y="356" text-anchor="middle" data-size="sm">更新到 v1</text>
 
-## 算力—效果曲线：你在陡段还是平台段
+    <!-- 实线箭头：短答案右端 -> 完成队列 -> 更新到 v1 -->
+    <path data-kind="answer" d="M250 261 H292 V334 M286 326 L292 334 L298 326" />
+    <path data-kind="answer" d="M372 351 H388 M381 346 L388 351 L381 356" />
 
-前面都是单步内部的账，ScaleRL 给的是跨尺度的账。他们做了 40 万 GPU 小时以上的系统性实验，用 S 形曲线拟合 RL 训练的计算—性能关系，结论有三条：不同配方能达到的渐近性能不同；损失聚合、归一化、课程、离策略算法这类细节主要改变计算效率，不显著移动渐近线；稳定的配方可以从小规模外推，并在一次 10 万 GPU 小时的单次训练上验证了预测。[The Art of Scaling RL Compute，摘要](https://arxiv.org/abs/2510.13786)
+    <!-- 虚线箭头：更新到 v1 向上至长答案分界处 -->
+    <path data-kind="weight" d="M418 336 V318 M412 325 L418 318 L424 325" />
+    <rect data-kind="bg-label" x="424" y="317" width="84" height="18" rx="3" />
+    <text x="466" y="330" text-anchor="middle" data-size="xs" data-kind="weight">送回新权重</text>
 
-对预算分配的含义很清楚：**曲线的陡段该加采样，平台段该换配方。** 在陡段里，多采样本、提高有效比例、压缩长尾都能直接换成性能；在平台段，同样多的 token 只会让曲线更平，此时该动的是数据分布、任务难度或奖励定义，而不是继续加机器。
+    <!-- 图例 -->
+    <path data-kind="answer" d="M210 406 H252 M245 401 L252 406 L245 411" />
+    <text x="262" y="411" data-size="sm" data-kind="muted">实线传答案</text>
+    <path data-kind="weight" d="M398 406 H440 M433 401 L440 406 L433 411" />
+    <text x="450" y="411" data-size="sm" data-kind="muted">虚线传权重</text>
+  </svg>
 
-这也解释了 DAPO 与动态采样为什么有效：它不是让曲线更陡，而是把“有效样本”从账面样本里挑出来，等于在同一段曲线上少走弯路。
+  <svg class="flow-narrow" viewBox="0 0 340 536" role="img" aria-labelledby="fig-pipeline-narrow-title">
+    <title id="fig-pipeline-narrow-title">同步训练与 PipelineRL 流水线生成—训练时序对比（窄屏版）</title>
+    <defs>
+      <pattern id="wait-hatch-narrow" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="8" stroke="#c7cdc9" stroke-width="2" />
+      </pattern>
+    </defs>
 
-## 什么时候加采样已经换不到能力
+    <!-- 三条共用竖向时标 -->
+    <path data-kind="guide" d="M112 52 V478" />
+    <path data-kind="guide" d="M188 52 V478" />
+    <path data-kind="guide" d="M266 52 V478" />
 
-还有一个更根本的上限。以 pass@k 在大 k 上衡量，RLVR 训练后的模型在 k=1 上更好，但基座模型在 k 很大时反而更高；六个常见 RLVR 算法的表现彼此接近，并且都远没有用尽基座模型的覆盖；蒸馏能带来基座没有的新推理模式，RLVR 在这组实验里没有。[Does RL Really Incentivize Reasoning Capacity，摘要](https://arxiv.org/abs/2504.13837)
+    <rect data-kind="bg-label" x="74" y="8" width="76" height="36" rx="4" />
+    <rect data-kind="bg-label" x="150" y="8" width="76" height="36" rx="4" />
+    <rect data-kind="bg-label" x="228" y="8" width="76" height="36" rx="4" />
+    <g text-anchor="middle">
+      <text x="112" y="23" data-size="xs" data-kind="muted">短答案</text>
+      <text x="112" y="39" data-size="xs" data-kind="muted">完成</text>
+      <text x="188" y="23" data-size="xs" data-kind="muted">可更新一批</text>
+      <text x="188" y="39" data-size="xs" data-kind="muted">已凑齐</text>
+      <text x="266" y="23" data-size="xs" data-kind="muted">长答案</text>
+      <text x="266" y="39" data-size="xs" data-kind="muted">完成</text>
+    </g>
 
-这个结果对“采样预算”的含义是：如果 RL 主要在做分布锐化，那么增加采样换到的是“同一个解被更稳定地找到”，而不是“新的可达区域”。这时把预算加在 G 上，收益会很快饱和；要扩张可达区域，得靠数据、蒸馏或环境交互，而不是采样次数。
+    <!-- 组 1：同步 -->
+    <text x="10" y="74" data-kind="label" data-size="md">同步</text>
+    <text x="10" y="114" data-size="xs" data-kind="muted">生成</text>
+    <text x="10" y="182" data-size="xs" data-kind="muted">训练</text>
 
-需要谨慎的地方也在这里：该文的结论限定在数学、代码与视觉推理的基准与当时的训练设置上，评测用的是 pass@k，这本身就是采样预算的函数。它不能推出“所有 RL 都不会带来新能力”，只能推出“在其覆盖的设定里，大 k 下的覆盖仍由基座决定”。
+    <rect x="46" y="86" width="66" height="20" rx="4" />
+    <text x="79" y="100" text-anchor="middle" data-size="xs">权重 v0</text>
 
-## 结论与可操作的度量
+    <rect x="46" y="114" width="220" height="32" rx="5" />
+    <text x="156" y="135" text-anchor="middle" data-size="sm">权重 v0</text>
 
-把上面几节收成一张账：一条样本的价格，等于生成成本除以它带来的有效梯度，再乘以它偏离当前策略的折扣。任何优化都落在这三项之一，而三者经常互相抵消——动态采样提高有效比例但让每步采得更多；异步压掉等待却引入滞后；放开长度能承载更深的推理但也放大比率方差。
+    <rect data-tone="hatch-narrow" x="46" y="162" width="220" height="28" rx="4" />
+    <rect data-kind="bg-label" x="114" y="166" width="84" height="20" rx="3" />
+    <text x="156" y="181" text-anchor="middle" data-size="xs" data-kind="muted">等最后一条</text>
 
-可以落地的度量有五个：
+    <rect data-tone="training" x="274" y="162" width="58" height="28" rx="4" />
+    <text x="303" y="181" text-anchor="middle" data-size="xs">开始更新</text>
 
-- **有效样本率**：组内奖励方差非零的 prompt 占比，或 `0 < 正确数 < G` 的组占比。
-- **每有效样本成本**：单步 wall-clock ÷ 有效组数，而不是 ÷ 组总数。
-- **滞后分布**：训练样本的权重版本与当前版本的差，用步数或 token 数表示，并配 ESS。
-- **长度分布**：截断率、软惩罚区间内的比例、平均长度随时间的变化。
-- **曲线位置**：同一配方在小规模上的拟合，判断当前处于陡段还是平台段。
+    <path data-kind="answer" d="M266 130 H303 V160 M298 153 L303 160 L308 153" />
 
-如果只能改一件事，优先提高有效样本率。它不需要新硬件，不引入离策略偏差，并且直接乘在你已经付出的生成成本上。
+    <!-- 分隔线 -->
+    <path data-kind="guide" d="M10 218 H330" />
 
-## 开放问题与局限
+    <!-- 组 2：流水线 -->
+    <text x="10" y="246" data-kind="label" data-size="md">流水线</text>
+    <text x="10" y="294" data-size="xs" data-kind="muted">生成</text>
+    <text x="10" y="424" data-size="xs" data-kind="muted">训练</text>
 
-异步的收益与代价仍缺一个共同口径：AReaL 报加速比、PipelineRL 报学习速度与 ESS、AsyncFlow 报吞吐，任务与卡数不同，无法合成一条“每 GPU 小时的性能增量”曲线。ScaleRL 给了这样的曲线，但它针对的是单轮推理任务与特定配方，agentic 场景下的重尾 rollout 是否仍能拟合 S 形，还没有公开证据。
+    <rect x="46" y="260" width="66" height="20" rx="4" />
+    <text x="79" y="274" text-anchor="middle" data-size="xs">权重 v0</text>
 
-组大小的上限也缺系统结论。DAPO 的现象（全对组越来越多）与 PipelineRL 的观察（G=64 在异步下发散）分别指向“G 太小浪费”和“G 太大不稳”，但两者不是同一组实验条件下的两端，中间的最优区间只能按自己的任务测。
+    <!-- 流水线长答案：v0 前缀 + v1 后缀 -->
+    <rect data-tone="v0" x="46" y="290" width="160" height="34" />
+    <rect data-tone="v1" x="206" y="290" width="60" height="34" />
+    <rect data-tone="split-glow" x="201" y="286" width="10" height="42" rx="2" />
+    <path data-kind="split" d="M206 286 V328" />
+    <rect data-tone="outline" x="46" y="290" width="220" height="34" rx="5" />
 
-最后，所有吞吐数字都建立在“样本可被修正”的假设上：重要性采样截断、序列级比率、陈旧阈值都是为了让旧样本仍有用。若任务对策略变化极敏感（例如多轮工具调用中出现分布外动作），修正的可用范围会窄得多，这时异步的账要重算。
+    <text x="126" y="312" text-anchor="middle" data-size="sm">v0 前缀</text>
+    <text x="236" y="312" text-anchor="middle" data-size="xs">v1 后缀</text>
+
+    <!-- 完成队列 与 更新到 v1 -->
+    <rect x="112" y="406" width="68" height="28" rx="4" />
+    <text x="146" y="425" text-anchor="middle" data-size="xs">完成队列</text>
+
+    <rect data-tone="training" x="190" y="406" width="76" height="28" rx="4" />
+    <text x="228" y="425" text-anchor="middle" data-size="xs">更新到 v1</text>
+
+    <!-- 实线箭头 -->
+    <path data-kind="answer" d="M112 270 H134 V404 M129 397 L134 404 L139 397" />
+    <path data-kind="answer" d="M180 420 H188 M183 416 L188 420 L183 424" />
+
+    <!-- 虚线箭头：送回新权重 -->
+    <path data-kind="weight" d="M206 406 V326 M201 333 L206 326 L211 333" />
+    <rect data-kind="bg-label" x="212" y="354" width="74" height="20" rx="3" />
+    <text x="249" y="369" text-anchor="middle" data-size="xs" data-kind="weight">送回新权重</text>
+
+    <!-- 图例 -->
+    <path data-kind="answer" d="M48 506 H82 M76 502 L82 506 L76 510" />
+    <text x="90" y="511" data-size="xs" data-kind="muted">实线传答案</text>
+    <path data-kind="weight" d="M188 506 H222 M216 502 L222 506 L216 510" />
+    <text x="230" y="511" data-size="xs" data-kind="muted">虚线传权重</text>
+  </svg>
+
+  <figcaption><strong>图 1｜短答案交卷时，长答案还在用哪一版权重？</strong> 依据 PipelineRL 算法 1–2，时间从左到右，位置仅示意先后。<sup id="cite-2-2"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup></figcaption>
+</figure>
+
+<p>PipelineRL 用两条曲线解释学习速度。一条看单位时间处理了多少答案，另一条看处理相同数量的答案后，平均奖励提高了多少。在 Qwen2.5-7B 数学训练中，流水线达到相同平均训练奖励的速度约为常规基线的两倍，样本吞吐也约为两倍。基线每轮生成后做 32 次优化更新，耗时由较小规模测量折算。再按答案数对齐进度，流水线的奖励曲线与每轮更新八次、十六次的常规训练接近。加速主要来自同一段时间装进了更多次试答。<sup id="cite-2-3"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup></p>
+<p>作者还按当前策略与生成策略给同一 token 的概率比加权，用归一化有效样本量（ESS）观察权重是否集中在少数样本上。与常规基线相比，流水线里最旧的 token 横跨的更新步数更多，整批 ESS 却与常规基线每轮做八次更新时接近。附录里把更新次数提到 64 后发散的也是常规基线。这个实验检验的是同一版策略采完数据后可以接连更新几次。要判断同一道题值得采几个答案，还得固定总回答数来比。<sup id="cite-2-4"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup></p>
+
+## 固定预算后，多答几遍还是多写几步？
+
+<p>ScaleRL 做了这个对照。研究者把每题回答数设为 8、16、24 或 32，并相应减少或增加题数，让每批生成的回答总数相同。在所测的中等批量下，四组验证正确率随算力增长的曲线相近。把同一批回答集中到更少的题上，没有表现出稳定的算力优势。这里固定的是回答数，每个答案实际写了多长，仍会影响消耗。<sup id="cite-3-2"><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>
+<p>当研究者把额外预算用来放宽生成长度，两条曲线拉开了。研究者以累计 GPU 小时为横轴，从同一题库留出一千题检验正确率。较长设置起步慢，但训练延长后反超。表中“半程”指达到<strong>各自预计总增益的一半</strong>，两行对应不同的目标分数。后一行要晚得多才到半程，也给模型留下了更高的提升空间。<sup id="cite-3-3"><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>
+
+<div class="table-scroll" role="region" aria-labelledby="tbl-scalerl" tabindex="0">
+  <table>
+    <caption id="tbl-scalerl">
+      表 2｜放宽生成长度预算对训练半程与拟合上限的影响
+      <span>测试集：同题库留出 1,000 题；来源：ScaleRL §5、附录表 1</span>
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">ScaleRL 生成长度预算</th>
+        <th scope="col">到各自增益半程（拟合 GPU 小时）</th>
+        <th scope="col">验证通过率的拟合上限</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">14k token</th>
+        <td>2,542</td>
+        <td>61.0%</td>
+      </tr>
+      <tr>
+        <th scope="row">32k token</th>
+        <td>11,272</td>
+        <td>64.5%</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<p>ScaleRL 还检验了预算预测本身。在最大的一次数学训练中，作者用前五万 GPU 小时内的验证结果拟合曲线，再把训练延长到十万 GPU 小时，实测通过率与外推接近。对于有明确目标的训练，可以在图上画一条目标正确率水平线，读出各配方到达交点的算力。若手上只有一笔固定预算，就在对应的 GPU 小时处画竖线。两种读法都能让省下的生成、等待和更新成本，最终落实到同一批题上多答对了多少。<sup id="cite-3-4"><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>
+
+<details class="supplement">
+  <summary>统计口径与范围（按需展开）</summary>
+  <p>DAPO 的 avg@32 是同一套题重复作答 32 次的平均正确率。只按对错给奖的算例用来解释组内对照；加上长度扣分后，同为错答也可能奖励不同。PipelineRL 以同等硬件规模估算基线耗时。归一化 ESS 描述重要性权重的集中程度，权重均匀时为 1。ScaleRL 的上限来自同分布验证集的 S 形曲线拟合；表中 64.5% 是拟合参数，单个检查点的实测值另见原论文图 9。</p>
+</details>
 
 ## 来源与阅读范围
 
-阅读日期 2026-10-28。
+<ol class="reference-list">
+  <li id="ref-1">
+    Yu 等，<cite>DAPO: An Open-Source LLM Reinforcement Learning System at Scale</cite>，v2。
+    <a href="https://arxiv.org/html/2503.14476v2#S3.SS2" target="_blank" rel="noopener">§3.2、式 11（动态采样）</a>、
+    <a href="https://arxiv.org/html/2503.14476v2#S3.F3.sf2" target="_blank" rel="noopener">图 3(b)（全对组占比）</a>、
+    <a href="https://arxiv.org/html/2503.14476v2#S3.SS3" target="_blank" rel="noopener">§3.3–3.4、式 12–13（损失与超长处理）</a>、
+    <a href="https://arxiv.org/html/2503.14476v2#S4.SS1" target="_blank" rel="noopener">§4.1、图 6（评测与步数）</a>、
+    <a href="https://arxiv.org/html/2503.14476v2#S4.T1" target="_blank" rel="noopener">§4.2、表 1（累计配方）</a>。
+    <a class="reference-backlink" href="#cite-1" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-2">
+    Piché 等，<cite>PipelineRL: Faster On-policy Reinforcement Learning for Long Sequence Generation</cite>，v2。
+    <a href="https://arxiv.org/html/2509.19128v2#S2.SS1" target="_blank" rel="noopener">§2.1、式 5–6（重要性权重与 ESS）</a>、
+    <a href="https://arxiv.org/html/2509.19128v2#S3.E7" target="_blank" rel="noopener">§3、式 7（学习速度分解）</a>、
+    <a href="https://arxiv.org/html/2509.19128v2#S4" target="_blank" rel="noopener">§4（生成途中更新权重）</a>、
+    <a href="https://arxiv.org/html/2509.19128v2#S5" target="_blank" rel="noopener">§5、图 5–6（对照设置与结果）</a>、
+    <a href="https://arxiv.org/html/2509.19128v2#A2.F10" target="_blank" rel="noopener">附录 B 图 10（64 次更新）</a>。
+    <a class="reference-backlink" href="#cite-2" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-3">
+    Khatri 等，<cite>The Art of Scaling Reinforcement Learning Compute for LLMs</cite>，v1。
+    <a href="https://arxiv.org/html/2510.13786v1#S2.SS1" target="_blank" rel="noopener">§2.1、图 3（验证与拟合参数）</a>、
+    <a href="https://arxiv.org/html/2510.13786v1#S3.SS2.SSS0.Px6" target="_blank" rel="noopener">§3.2、图 6(b)（历史通过率选题）</a>、
+    <a href="https://arxiv.org/html/2510.13786v1#S0.F1" target="_blank" rel="noopener">图 1（算力外推）</a>、
+    <a href="https://arxiv.org/html/2510.13786v1#S5.F9" target="_blank" rel="noopener">§5、图 9（生成长度）</a>、
+    <a href="https://arxiv.org/html/2510.13786v1#A1.F17" target="_blank" rel="noopener">附录图 17（每题回答数对照）</a>、
+    <a href="https://arxiv.org/html/2510.13786v1#A1.T1" target="_blank" rel="noopener">附录表 1（两种长度的拟合值）</a>。
+    <a class="reference-backlink" href="#cite-3" aria-label="返回正文引用">↩</a>
+  </li>
+</ol>
 
-论文（HTML 与摘要）：
-
-- DAPO: An Open-Source LLM Reinforcement Learning System at Scale，arXiv:2503.14476。动态采样、token 级损失、超长处理、表 1 的消融（30→36→38→41→42→50）与图 3(b)、图 6。
-- AReaL: A Large-Scale Asynchronous Reinforcement Learning System for Language Reasoning，arXiv:2505.24298，v5。摘要中的 2.77× 与陈旧感知 PPO。
-- PipelineRL: Faster On-policy Reinforcement Learning for Long Sequence Generation，arXiv:2509.19128v2。§1 的同步瓶颈、式 (5) 的截断重要性采样、式 (6) 的 ESS、附录 A 的 1.57× 解析估计、附录 B 的 G=64 发散。
-- AsyncFlow: An Asynchronous Streaming RL Framework for Efficient LLM Post-Training，arXiv:2507.01663。摘要中的 1.59× 与陈旧阈值。
-- Group Sequence Policy Optimization，arXiv:2507.18071。序列级重要性比率与 token 级比率的方差论证。
-- The Art of Scaling Reinforcement Learning Compute for LLMs，arXiv:2510.13786。S 形拟合、40 万 GPU 小时、10 万 GPU 小时外推验证、细节改变效率而非渐近线。
-- Does Reinforcement Learning Really Incentivize Reasoning Capacity in LLMs Beyond the Base Model?，arXiv:2504.13837v5（NeurIPS 2025 Oral）。大 k 下基座更强、六种算法接近、蒸馏能引入新模式。
-
-仓库文档：
-
-- THUDM/slime README，https://github.com/THUDM/slime 。Megatron + SGLang 的 rollout/train 数据通路、fully-async 模式针对长尾 agentic 生成。
-
-口径说明：三个异步系统的加速数字来自不同任务、不同卡数与不同基线，不能相加或换算成统一加速比；DAPO 的消融是累计叠加（每一步在前一步基础上加一项），因此单项贡献不能直接从表 1 的差值读出，只能看增量顺序；ScaleRL 的 S 形结论针对其覆盖的单轮推理任务与配方，不外推到 agentic 重尾场景。文中标注为推断的地方（成本公式的分解、有效样本成本的定义、把 ESS 当作成本度量）是我的整理，不是原文结论。
+</div>

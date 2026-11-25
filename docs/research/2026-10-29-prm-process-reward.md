@@ -1,102 +1,240 @@
 ---
-title: "过程奖励到底有没有用：步骤级信号的可信度账"
-description: "把过程奖励模型的证据放在一起看：2023 年的正向结果在什么条件下成立、自动标注如何把结果噪声搬进步骤标签、BoN 评测为何会虚高，以及 2026 年的压力测试怎样把 PRM 打回流畅度检测器。"
-date: "2026-10-29"
+title: "过程奖励何时可信？挑答案、找错步与训练解题模型"
+description: "给数学解答的每一步打分，可以帮模型从一批候选中挑出答对的那份。在同一批训练解答上，按续写结果打标签的评分器在挑答案时略占优，由语言模型逐步审阅后训练的评分器更会找错步。用分数训练解题模型时，得看它最终解出了多少题。"
 tags: ["每日调研", "强化学习", "后训练", "过程奖励", "Reward Model"]
+date: "2026-10-29"
 ---
 
-# 过程奖励到底有没有用：步骤级信号的可信度账
+# 过程奖励何时可信？挑答案、找错步与训练解题模型
 
-一个过程奖励模型（PRM）吐出的分数，测的并不是“这一步写得对不对”，而是“从这一步出发，有多大概率走到对的最终答案”。后者取决于谁来做补全、步骤怎么切、以及当前策略处在什么水平。**所以“过程奖励有没有用”不能脱离条件回答，它实际是三个问题：标签从哪来、步骤按什么边界切、评测看的是最终答案还是步骤判断。** 三份相隔三年的证据正好把这三层拆开：2023 年的人工标注实验说明它在特定条件下明显优于结果监督；2025 年的系统实验说明把标注自动化之后这个优势会变形；2026 年的对抗实验说明它在优化压力下会退化成流畅度检测器。
+<div class="research-article">
 
-## 2023 年的优势，建立在三个不显眼的条件上
+<p class="lead">给数学解答的每一步打分，可以帮模型从一批候选中挑出答对的那份。在同一批训练解答上，按续写结果打标签的评分器在挑答案时略占优，由语言模型逐步审阅后训练的评分器更会找错步。用分数训练解题模型时，得看它最终解出了多少题。有的模型确实多做对了题，有的却学会了只写一句开场白。<sup id="cite-1"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup><sup id="cite-2"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup><sup id="cite-3"><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup><sup id="cite-5"><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup></p>
 
-Lightman 等人的《Let's Verify Step by Step》给出的结论是过程监督显著优于结果监督：在 MATH 的代表性子集上，过程监督模型解决了 78% 的题目，训练用了 80 万条人工步骤标注（PRM800K），并且主动学习能显著提升标注效率。[Let's Verify Step by Step，摘要](https://arxiv.org/abs/2305.20050)
+## 78.2% 的答对率来自一次怎样的选择
 
-这组结果常被引用成“过程奖励更好”，但它的成立条件写在方法里：题目有可判定的最终答案；PRM 的用途是 Best-of-N 重排序，即在已有的候选里挑一个；步骤边界由人工按固定分隔符切开，每一步都有人判断“这一步是否正确”。
+<p>Lightman 等人把解题和阅卷交给两个模型。解题模型固定不动，为同一道题写出多份解答。过程奖励模型（PRM）读到每一步末尾，预测标注者会怎样评价这一步，再把各步通过的概率相乘，作为整份解答的分数。从固定的候选中选出得分最高的一份，核对它的最终答案，这就是 Best-of-N 重排序。<sup><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
+<p>人给出的信息比卷末的对错多在哪里？在主要标注阶段，标注者一旦读到第一处错步就停下。这样，一份最终答错的解答仍能提供一串值得保留的正确步骤，以及推理开始失效的确切位置。团队还专门挑出那些现有评分器给了高分、最后却答错的解答，请人找出它究竟漏看了哪一步。筛选后约八十万条步骤标签来自约七万五千份解答。<sup><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
+<p>在随机留出的 500 道 MATH 题上，每题生成 1,860 份候选，PRM 选中的答案有 78.2% 正确。面对同一批候选，它胜过按整份解答打分的结果奖励模型，也胜过按最终答案多数投票的办法。排序表现最好的模型也漏过具体的推理错误。论文附录里，一份解答看到有五种颜色，就认定交换同色球只有五种换法。它漏算了接球者每次都有两个球可以回给对方，评分器也放过了这一步。<sup><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
 
-这三个条件决定了它做的是**选择**，而不是**信用分配**。选择问题的目标是在 N 个候选里排序，信号只要有单调性就够；信用分配要给每个 token 分配贡献，信号必须与策略的当前分布对齐。把两者混在一起，就会出现“BoN 分数涨了所以训练也该涨”的误推。站内 10-15 的摘要提到“过程奖励相对 GRPO 的优势并不稳定”，指的正是后一件事：训练信号这一侧，不是重排序这一侧。
+## 用续写标注一步，测到的是谁能把题做完
 
-## 自动标注：把结果的噪声搬进步骤
+<p>Math-Shepherd 提出一种省去人工逐步阅卷的办法。把解答截在当前步骤，让另一个模型从这里接着做题，用最终答案核对每次续写。通义团队复用了这套办法，每个截点独立续写八次。如果八次中恰好有一次答对，硬标签就给正例，软标签则记作八分之一。两种标签都来自同一批答案，前者记录是否出现过成功，后者估计这个续写模型从这里做对的机会。<sup><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup><sup><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>
+<p>以展开括号为例。即使上一步漏乘了一项，续写模型也可能回到题干重算，交出正确答案。反过来，一步变形完全合法，后面还有一道难解的方程，八次都算错也很容易理解。换一个更强的续写模型，或者多给几次机会，前缀原封不动，标签却可能改变。这样的分数可以帮搜索程序决定把计算花在哪条路径上。若要据此告诉学生是哪一行用了错的规则，就得直接检查那一行。<sup><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup><sup><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>
 
-人工标注 80 万条步骤不可复制，于是主流做法转向蒙特卡洛估计：从某个步骤做 N 次补全，用其中得到正确答案的比例当作这一步的价值。[Math-Shepherd，arXiv:2312.08935](https://arxiv.org/abs/2312.08935)
+<figure class="figure" id="fig-labeling">
+  <svg class="flow-wide" viewBox="0 0 960 356" role="img" aria-labelledby="fig-labeling-wide-title">
+    <title id="fig-labeling-wide-title">为什么同一个错步会得到正标签（宽屏版）</title>
+    <!-- 连线 -->
+    <path d="M 164 166 H 190 M 183 160 L 190 166 L 183 172" />
+    <!-- B -> C（逐步审阅） -->
+    <path d="M 368 146 H 396 V 62 H 480 M 473 56 L 480 62 L 473 68" />
+    <!-- C -> D -->
+    <path d="M 622 62 H 778 M 771 56 L 778 62 L 771 68" />
+    <!-- B -> E（续写核验） -->
+    <path d="M 368 186 H 396 V 248 H 480 M 473 242 L 480 248 L 473 254" />
+    <!-- E -> F / G -->
+    <path d="M 594 248 H 607 V 190 H 618 M 611 184 L 618 190 L 611 196" />
+    <path d="M 607 248 V 302 H 618 M 611 296 L 618 302 L 611 308" />
+    <!-- F / G -> H -->
+    <path d="M 754 190 H 766 V 248 H 778 M 771 242 L 778 248 L 771 254" />
+    <path d="M 754 302 H 766 V 248" />
 
-Qwen 团队的《The Lessons of Developing Process Reward Models》把这套流程完整做了一遍，并给出了成本与结果：约 50 万个带标准答案的 query，每条生成 6–8 个回答，每个步骤再做 8 次独立补全来估计该步标签。**结论是 MC 估计训出来的 PRM，在性能与泛化上都不如 LLM-as-a-judge 与人工标注，在步骤级错误识别上差距更明显。**[Lessons，§1 与 §2](https://arxiv.org/abs/2501.07301)
+    <!-- 连线文字垫不透明底色 -->
+    <rect class="label-bg" x="398" y="48" width="76" height="26" rx="4" />
+    <rect class="label-bg" x="398" y="234" width="76" height="26" rx="4" />
 
-原因不是实现细节，而是这项测量的构造：它用“未来能否得到正确答案”去估计“当前步骤是否正确”。完成模型可能从错误步骤硬凑出正确答案（假阳性），也可能从正确步骤写出错误答案（假阴性），两种误差都直接进了标签。这也是为什么它训出的 PRM 会容忍“答案对但过程错”的回答——标签本身就无法把这两种情况区分开。
+    <!-- 节点框 -->
+    <rect x="12" y="130" width="152" height="72" rx="8" />
+    <rect x="192" y="116" width="176" height="100" rx="8" />
+    <rect x="482" y="28" width="140" height="68" rx="8" />
+    <rect x="780" y="28" width="166" height="68" rx="8" data-tone="caution" data-emphasis="strong" />
+    <rect x="482" y="214" width="112" height="68" rx="8" />
+    <rect x="620" y="152" width="134" height="74" rx="8" />
+    <rect x="620" y="268" width="134" height="68" rx="8" />
+    <rect x="780" y="206" width="166" height="84" rx="8" data-tone="training" data-emphasis="strong" />
 
-他们的修法是 consensus filtering：只有当 LLM-as-a-judge 与 MC 估计都认为某一步出错时才保留该样本。加上步骤级基准评测后，训出的 Qwen2.5-Math-PRM 系列在 BoN 与 ProcessBench 上都超过了此前的开源 PRM。[Lessons，§4](https://arxiv.org/abs/2501.07301)
+    <!-- 文字 -->
+    <g text-anchor="middle">
+      <text x="436" y="67" data-kind="label">逐步审阅</text>
+      <text x="436" y="253" data-kind="label">续写核验</text>
 
-从账面上看，这是一次成本转移而不是成本消失：人力从“读步骤”换成“跑补全”，50 万 query × 6–8 个回答 × 每步 8 次补全，量级在数千万次生成。换来的是稠密标签，但标签带上了完成模型的偏差——**这就是“把噪声挪了个位置”的第一种形式：噪声从结果层搬到了步骤层，看起来更细，实际仍然由同一个完成模型决定。**
+      <text x="88" y="156" data-kind="label">原题</text>
+      <text x="88" y="185">2(x + 1) = 8</text>
 
-阈值化会把这个偏差放大。同一步做 8 次补全，若 3 次走通，软标签是 0.375；若采用“只要有一次走通就算对”的硬标签，它就是 1。Lessons 的流程里两种都在用，而硬标签的这一步会被当成完全正确，尽管 8 次尝试里有 5 次失败。标签从 0.375 跳到 1，训练信号的含义也跟着跳：模型学到的是“这一步没被证伪”，而不是“这一步可靠”。步骤越靠后、剩余补全越短，这种翻转越容易发生，于是靠近答案的步骤系统性偏乐观——这与他们在分数分布里观察到的“最低分集中在最后一步”是同一现象的两端。
+      <text x="280" y="144" data-kind="label">当前步</text>
+      <text x="280" y="173">2x + 1 = 8</text>
+      <text x="292" y="199" data-kind="caution-sub">↑ 漏乘 2</text>
 
-## 证据里的一个缺口：训练侧的对照很少
+      <text x="552" y="68">核对分配律</text>
+      <text x="863" y="68" data-kind="caution">✗ 本步错误</text>
 
-需要说清楚的是，公开材料里“同一个 PRM 作为 RL 训练奖励”与“结果奖励”的直接对照并不多。多数 PRM 论文的验收方式是 Best-of-N，即推理时的重排序，训练曲线（奖励、准确率随步数的变化）很少同时给出。这带来一个解释上的困难：BoN 分数提升可以证明排序有用，却不能证明把它塞进策略梯度是安全的；反过来，训练侧的失败也不会出现在 BoN 表里。
+      <text x="538" y="242">假设八次</text>
+      <text x="538" y="268">续写</text>
 
-能间接说明训练侧的，是隐式奖励那条线：PRIME 明确把“在线训练 PRM”列为难点，理由是高质量过程标签太贵，而用这些标签离线训出的 PRM 在 RL 中特别容易被 hack。[PRIME，摘要](https://arxiv.org/abs/2502.01456) 它选择不做独立 PRM，只保留由结果标签驱动的隐式过程奖励——这本身可以读成对“显式 PRM 当训练奖励”的一次回避。
+      <text x="687" y="182" data-kind="sub">一次回到原式</text>
+      <text x="687" y="209">答 3</text>
 
-## BoN 分数为什么会虚高
+      <text x="687" y="308">七次答错</text>
 
-评测口径是第二层陷阱。用 Best-of-N 评估 PRM 时，排序的依据是最终答案对错：从 N 个候选里挑出 PRM 打分最高的那个，看它是否答对。问题是策略模型会产出“答案正确但过程有缺陷”的回答，而一个只学到步骤表面特征的 PRM 会容忍这类回答，于是 BoN 分数被抬高，被抬高的部分并不来自过程判断能力。
+      <text x="863" y="240" data-kind="label">硬标签：正</text>
+      <text x="863" y="269" data-kind="label">软标签：1/8</text>
+    </g>
+  </svg>
 
-Lessons 给出了一条更直接的证据：在现有 PRM 的步骤分数分布里，最低分有相当比例集中在最终答案那一步。这说明在 BoN 优化下，PRM 已经从过程评估漂移成了结果评估——它学会的是“最后一步看起来不对就给低分”，而不是“中间哪一步推理断了”。[Lessons，§1](https://arxiv.org/abs/2501.07301)
+  <svg class="flow-narrow" viewBox="0 0 340 594" role="img" aria-labelledby="fig-labeling-narrow-title">
+    <title id="fig-labeling-narrow-title">为什么同一个错步会得到正标签（窄屏版）</title>
+    <!-- 连线 -->
+    <path d="M 170 70 V 96 M 164 89 L 170 96 L 176 89" />
+    <!-- 分支 -->
+    <path d="M 170 176 V 194 H 82 V 242 M 76 235 L 82 242 L 88 235" />
+    <path d="M 170 194 H 250 V 242 M 244 235 L 250 242 L 256 235" />
+    <!-- 左支 C -> D -->
+    <path d="M 82 304 V 338 M 76 331 L 82 338 L 88 331" />
+    <!-- 右支 E -> F -->
+    <path d="M 250 302 V 334 M 244 327 L 250 334 L 256 327" />
+    <!-- 右支 E -> G（绕右侧） -->
+    <path d="M 320 273 H 332 V 443 H 322 M 328 437 L 322 443 L 328 449" />
+    <!-- 右支 F -> H（绕左侧）与 G -> H -->
+    <path d="M 180 368 H 168 V 540 H 178 M 172 534 L 178 540 L 172 546" />
+    <path d="M 250 470 V 502 M 244 495 L 250 502 L 256 495" />
 
-步骤级的基准把这件事测得更清楚。《ProcessBench》用 3,400 道竞赛与奥赛级题目，要求模型指出最早出错的那一步；现有 PRM 在难题上普遍失效，例如 Math-Shepherd-PRM-7B 的 F1 从 GSM8K 的 47.9 掉到 Omni-MATH 的 23.8，而被提示做逐步批评的通用模型反而更好。[ProcessBench，摘要与结果](https://arxiv.org/abs/2412.06559) 《PRMBench》把错误类型拆成简洁性、可靠性、敏感性等维度，覆盖 6,216 道题与 83,456 条步骤标签，在 25 个模型上同样发现现有 PRM 在细粒度错误检测上系统性偏弱。[PRMBench，摘要](https://arxiv.org/abs/2501.03124)
+    <!-- 连线文字垫不透明底色 -->
+    <rect class="label-bg" x="42" y="205" width="80" height="24" rx="4" />
+    <rect class="label-bg" x="210" y="205" width="80" height="24" rx="4" />
 
-## 优化压力下，它变成流畅度检测器
+    <!-- 节点框 -->
+    <rect x="40" y="12" width="260" height="58" rx="8" />
+    <rect x="30" y="98" width="280" height="78" rx="8" />
+    <rect x="12" y="244" width="140" height="60" rx="8" />
+    <rect x="12" y="340" width="140" height="64" rx="8" data-tone="caution" data-emphasis="strong" />
+    <rect x="180" y="244" width="140" height="58" rx="8" />
+    <rect x="180" y="336" width="140" height="64" rx="8" />
+    <rect x="180" y="416" width="140" height="54" rx="8" />
+    <rect x="180" y="504" width="140" height="72" rx="8" data-tone="training" data-emphasis="strong" />
 
-2026 年 2 月的《Reward Under Attack》把 PRM 放进三级压力测试，结论比前面更硬：
+    <!-- 文字 -->
+    <g text-anchor="middle">
+      <text x="82" y="222" data-kind="label">逐步审阅</text>
+      <text x="250" y="222" data-kind="label">续写核验</text>
 
-- **静态扰动**：做表面风格改写时奖励几乎不动（变化小于 0.1），但对被破坏逻辑的推理，不同模型在不同攻击类型上检测失败——它稳定地不惩罚“写得顺的错”。
-- **梯度攻击**：可以系统性地把无效轨迹的奖励抬高，奖励地形存在大片可利用的高地。
-- **RL 训练**：在 AIME 上把策略训到 PRM 奖励超过 0.9，而真实准确率低于 4%；其中约 43% 的奖励增益可归因于风格捷径。[Reward Under Attack，摘要](https://arxiv.org/abs/2603.06621)
+      <text x="170" y="47">原题：2(x + 1) = 8</text>
 
-作者的说法是：当前的 PRM 更像流畅度检测器，而不是推理验证器。这个判断与站内 10-18 的 reward hacking 综述不同：那篇讲的是“任何奖励在足够强的优化压力下都会被钻空子”，这一篇讲的是“步骤级信号的测量对象本身含糊，即使没人攻击它，也会偏向表面特征”。两个问题会叠加，但修复方式不同——前者靠约束优化强度与验证奖励，后者要先修测量。
+      <text x="170" y="130">当前步：2x + 1 = 8</text>
+      <text x="190" y="158" data-kind="caution-sub">↑ 常数项 1 漏乘 2</text>
 
-## 它在哪儿真的有用
+      <text x="82" y="280">核对分配律</text>
+      <text x="82" y="378" data-kind="caution">✗ 本步错误</text>
 
-把证据收拢，过程奖励的价值出现在三类场景，且都不需要它承担“训练主信号”的角色。
+      <text x="250" y="279">假设八次续写</text>
+      <text x="250" y="362" data-kind="sub">一次回到原式</text>
+      <text x="250" y="387">答 3</text>
+      <text x="250" y="449">七次答错</text>
 
-**推理时的选择与重排序。** 有最终答案或可验证终检兜底时，PRM 只负责在候选里排序，错误排序的代价有限。这是 2023 年结果所处的场景，也是目前最稳的用法。
+      <text x="250" y="534" data-kind="label">硬标签：正</text>
+      <text x="250" y="560" data-kind="label">软标签：1/8</text>
+    </g>
+  </svg>
 
-**长程稀疏任务的稠密化，但用隐式奖励。** PRIME 的做法是不训练独立的 PRM、也不要过程标签，而是用策略自身的 rollout 与结果标签在线更新一个隐式过程奖励；在 Qwen2.5-Math-7B-Base 上相对 SFT 平均提升 15.1%，并用约 10% 的训练数据在七个推理基准上超过 Qwen2.5-Math-7B-Instruct。[PRIME，摘要](https://arxiv.org/abs/2502.01456) 它绕开的正是前面两项成本：不用人工步骤标签，也不用把 PRM 与策略分开训练再对齐。
+  <figcaption><strong>图 1｜为什么同一个错步会得到正标签。</strong>续写可以修正前面的错误。次数为示意，标签规则见文献 [2]、[3]。</figcaption>
+</figure>
 
-**步骤级诊断与数据筛选。** PRM 指出可疑步骤，由人或更强的 judge 复核，再决定是否保留样本——Lessons 的 consensus filtering 属于这一类。这里 PRM 是筛子，不是裁判。
+<p>通义团队请语言模型逐步审阅同一份解答，再和续写结果推断出的首错位置对照。两者指出的错误位置一致才保留样本。在这组对照里，筛完约剩四成数据，训练出的评分器在找错任务上已经接近用全量审阅标签训练的模型。这里省下的是进入训练的样本，续写和审阅仍然都要做。<sup><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>
 
-相反，把它当作 RL 的主奖励、又用 MC 自动标注、又只看 BoN 验收，是三种风险叠加：标签带完成模型偏差、评测被最终答案绑架、训练中奖励与真实正确率脱钩。
+## 换一张考卷，三种标注的排名就反过来
 
-## 用之前的五个问题
+<p>在八选一评测中，评分器每题挑一份解答，评测程序只读它的最终答案。ProcessBench 给的是一份已经写好的解答，要求指出第一处错误，或确认全篇正确。只找到首错引起的后续算错，也算定位失败。追究第一处错有数学上的理由。一旦前提写错，下一行即使遵守代数规则，也可能沿着错的前提继续推下去。<sup><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup><sup id="cite-4"><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup></p>
 
-| 问题 | 为什么关键 | 怎么查 |
-| --- | --- | --- |
-| 步骤边界怎么定义 | 按换行切分与按语义单元切分会产生不同的标签，边界一改，标签含义就变 | 抽样看切分是否与人判断一致 |
-| 标签从哪来 | MC 估计的偏差方向已知（假阳性/假阴性都常见）；judge 有自己的偏好 | 用两种独立来源做一致性检查，而不只看单源准确率 |
-| 评测是否只看最终答案 | BoN 会把“答案对过程错”算成成功，掩盖步骤判断的退化 | 加步骤级基准（ProcessBench、PRMBench 类） |
-| 是否与策略共同漂移 | PRM 的输入分布由策略生成，训练越久越偏离标签分布 | 训练中同时记录 PRM 奖励与真实正确率，看两者相关性 |
-| 奖励奖励了什么 | 风格扰动下奖励几乎不动、逻辑扰动下也检测不稳，说明它在奖励“顺畅” | 对比风格扰动与逻辑扰动下的奖励变化幅度 |
+<div class="table-scroll" role="region" aria-labelledby="tbl-1" tabindex="0">
+  <table>
+    <caption id="tbl-1">
+      表 1｜同一组评分器在挑答案与找错步上的表现
+      <span>八选一取七项基准的平均答对率，首错评测取 ProcessBench 四个子集的平均 F1。来源：文献 [3]、[4]。</span>
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">训练标签来源</th>
+        <th scope="col" class="num">训练样本（万）</th>
+        <th scope="col" class="num">八选一答对率（%）</th>
+        <th scope="col" class="num">首错评测 F1（分）</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">蒙特卡洛续写</th>
+        <td class="num">86.0</td>
+        <td class="num"><strong>65.9</strong></td>
+        <td class="num">40.1</td>
+      </tr>
+      <tr>
+        <th scope="row">语言模型逐步审阅</th>
+        <td class="num">86.0</td>
+        <td class="num">65.3</td>
+        <td class="num">46.5</td>
+      </tr>
+      <tr>
+        <th scope="row">人工标注（PRM800K）</th>
+        <td class="num">26.4</td>
+        <td class="num">64.9</td>
+        <td class="num"><strong>56.5</strong></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<p class="table-hint">左右滑动查看完整表格</p>
 
-## 局限与开放问题
+<p>表中前两行用的是同一批题目和解答，只换标注办法。改为直接审阅后，八选一少了 0.6 个百分点，首错评测反而高了 6.4 分。人工标注那一行使用另一批材料，可以看出它在首错评测中排第一，挑答案时排第三。若要从这张表估计每条人工标签值多少条自动标签，就缺少控制题目和解答来源的对照。<sup><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>
+<p>两种评测究竟会在哪些解答上分歧？ProcessBench 的 Omni-MATH 子集中，研究者收集了 500 份最终答案正确的解答，专家检查时发现其中 259 份仍有过程错误。八选一若挑中这样的解答，就给一次成功。首错评测还要看评分器能否指出推理最先断在哪里。<sup><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup></p>
+<p>逐步打分的记录还能揭示评分器在看哪一行。通义团队检查八选一实验的全部候选，发现包括 Math-Shepherd 和 Skywork 在内的四款评分器，各自都有超过四成的解答在最后一步拿到全篇最低分。答案通常就写在这一行。若想知道评分器是否真的读出了中间的错误，还得把它指认的位置与人标出的首错逐份对照。<sup><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>
 
-证据集中在数学推理：题目可判定、步骤可切分、答案唯一。代码与 agent 任务里“一步”是什么本身就有争议，工具调用的一次失败、一次重试是否算同一状态，没有共识；把这套结论直接搬到 agent 训练上，会高估过程奖励的可用性。
+## 评分器开始教模型做题，会发生什么
 
-攻击类结论也有边界。Reward Under Attack 的压力测试针对特定 PRM 家族与特定攻击，它证明的是“存在系统性可利用性”，不是“所有 PRM 都不可用”。ProcessBench 与 PRMBench 的题目分布同样有限，PRM 在新任务上的步骤判断能力不能由这两个基准外推。
+<p>强化学习会改变下一轮解答的写法。Math-Shepherd 用同一个已微调的 Mistral-7B 作起点，一组只在结尾接收结果评分，一组在每个步骤结尾接收过程评分。训练后让模型每题直接作答，MATH 全测试集的答对率分别为 31.3% 和 33.0%。这 1.7 个百分点是解题模型自身的收益，一道题只交一份答案也能测到。<sup><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup></p>
+<p>Tiwari 等人则在 AIME 2024 题上用两种评分器分别训练同一个小模型。用 Skywork 评分时，平均奖励从约 0.1 升到 0.8 以上，答对率最高也只有约 3% 至 4%。换用 Qwen 评分器，前一百个训练步内奖励一度达到 1.0，答对率却降到零。第二条曲线背后是一种固定的答题方式。模型写一句“我们来一步一步解这道题”就停笔，整份回答连一条可供判错的数学推导都没有。<sup><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup></p>
+<p>Skywork 的高分还有一种可以单独检验的解释。作者在留出的 AIME 2025 题上改写训练后生成的解答，保留数学内容，平均奖励就从 0.641 降到 0.472。相对训练前的 0.246，总增益有约 43% 会随措辞改变而消失。挑答案时，固定候选上的命中率就能衡量排序的收益。给解答纠错时，还要核对它标出的位置。轮到评分器教模型解题，每一次更新都会改变接下来送到它面前的解答。这时只有把奖励曲线同独立判分的答对率并排看，才能分清模型学会了做题，还是学会了得分。<sup><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup></p>
 
-最缺的是一个共同口径：目前没有“每单位标注成本换到的准确率”这种可比度量。人工标注、MC 估计、隐式奖励三条路线的成本结构完全不同，论文里各报各的分数，无法同尺比较。这也让“过程奖励值不值”停留在定性判断。
-
-我的判断是：这个过程的可信度问题本质是测量问题，不是模型能力问题。在测量对象被定义清楚之前，过程奖励最实际的用法是“在可验证的任务里做选择与筛选”，而不是“给策略提供稠密梯度”。把它当训练主信号，就要准备好在训练过程中持续证明奖励与真实正确率没有脱钩。
+<details class="supplement">
+  <summary>口径与范围（按需展开）</summary>
+  <p>Lightman 的主设置把中性标签并入正类，用各步概率的乘积排序。过程监督和结果监督在大规模实验中各用各的训练集。表 1 的 26.4 万是通义实验报告的训练样本数，八十万是原始训练集的步骤标签数。ProcessBench 共 3,400 份测试解答，各子集先分别算“有错时找准首错”和“全对时判为全对”的准确率，再取调和平均得到 F1。AIME 实验用 GRPO 更新 Qwen2.5-1.5B-Instruct。文中的 43% 是 Skywork 改写实验中的奖励差额比 (0.641 − 0.472) / (0.641 − 0.246)。<sup><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup><sup><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup><sup><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup><sup><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup></p>
+</details>
 
 ## 来源与阅读范围
 
-阅读日期 2026-10-29。
+<ol class="reference-list">
+  <li id="ref-1">
+    Lightman 等，<cite>Let’s Verify Step by Step</cite>。§2.1、§2.4、§2.6 说明生成、标注与聚合。§3 图 3 比较排序器。附录 B、C 给出标注量与留出题，附录 I.3 第 9 题是交换球例。
+    <a href="https://arxiv.org/html/2305.20050v1#S3.F3" target="_blank" rel="noopener">排序对照</a> ·
+    <a href="https://arxiv.org/html/2305.20050v1#A6.T4" target="_blank" rel="noopener">附录 F.2 表 4 的 78.2%</a> ·
+    <a href="https://arxiv.org/html/2305.20050v1#A9.SS3" target="_blank" rel="noopener">漏判实例</a>
+    <a class="reference-backlink" href="#cite-1" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-2">
+    Wang 等，<cite>Math-Shepherd: Verify and Reinforce LLMs Step-by-step without Human Annotations</cite>。§3.3.2 式 3、4 定义自动标签。§3.5、§4.1 表 2 报告逐步奖励和结果奖励的 PPO 对照，测试采用贪心解码。
+    <a href="https://arxiv.org/html/2312.08935#S3.E3" target="_blank" rel="noopener">标签定义</a> ·
+    <a href="https://arxiv.org/html/2312.08935#S4.T2" target="_blank" rel="noopener">训练对照</a>
+    <a class="reference-backlink" href="#cite-2" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-3">
+    Zhang 等，<cite>The Lessons of Developing Process Reward Models in Mathematical Reasoning</cite>。§2.1–2.2 给出续写和八选一设置。§3.1.2 表 3、4 对照三种标注，§3.1.3 核对错误位置，§3.2.3 图 8 统计末步最低分。
+    <a href="https://arxiv.org/html/2501.07301v2#S3.T3" target="_blank" rel="noopener">表 3</a> ·
+    <a href="https://arxiv.org/html/2501.07301v2#S3.T4" target="_blank" rel="noopener">表 4</a> ·
+    <a href="https://arxiv.org/html/2501.07301v2#S3.SS1.SSS3" target="_blank" rel="noopener">一致性筛选</a> ·
+    <a href="https://arxiv.org/html/2501.07301v2#S3.F9.fig1" target="_blank" rel="noopener">最低分位置</a>
+    <a class="reference-backlink" href="#cite-3" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-4">
+    Zheng 等，<cite>ProcessBench: Identifying Process Errors in Mathematical Reasoning</cite>。§3.1 定义首错，§3.3 表 2 按答案对错统计过程错误，§4.1 定义 F1。
+    <a href="https://arxiv.org/html/2412.06559v4#S3.T2" target="_blank" rel="noopener">样本口径</a> ·
+    <a href="https://arxiv.org/html/2412.06559v4#S4.SS1" target="_blank" rel="noopener">指标</a>
+    <a class="reference-backlink" href="#cite-4" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-5">
+    Tiwari 等，<cite>Reward Under Attack: Analyzing the Robustness and Hackability of Process Reward Models</cite>。§6.1–6.2 图 7 分列 Skywork 与 Qwen 的奖励和答对率。§6.3 图 8 是改写干预，§6.4 记录停止解题的输出。
+    <a href="https://arxiv.org/html/2603.06621v1#S6.F7" target="_blank" rel="noopener">训练曲线</a> ·
+    <a href="https://arxiv.org/html/2603.06621v1#S6.F8" target="_blank" rel="noopener">改写干预</a> ·
+    <a href="https://arxiv.org/html/2603.06621v1#S6.SS4" target="_blank" rel="noopener">输出退化</a>
+    <a class="reference-backlink" href="#cite-5" aria-label="返回正文引用">↩</a>
+  </li>
+</ol>
 
-- Let's Verify Step by Step，arXiv:2305.20050。摘要中的 78% 与 80 万条步骤标注、主动学习的作用。
-- The Lessons of Developing Process Reward Models in Mathematical Reasoning，arXiv:2501.07301v2。§1 的 MC 估计问题、BoN 偏差与最低分集中现象，§2 的数据构造（约 50 万 query、6–8 回答、每步 8 次补全），§4 的 consensus filtering 与自训 PRM 结果。
-- ProcessBench: Identifying Process Errors in Mathematical Reasoning，arXiv:2412.06559。3,400 题设置、Math-Shepherd-PRM-7B 的 47.9→23.8、critic 模型对比。
-- PRMBench: A Fine-grained and Challenging Benchmark for Process-Level Reward Models，arXiv:2501.03124。6,216 题、83,456 条步骤标签、25 个模型的细粒度评测。
-- Reward Under Attack: Analyzing the Robustness and Hackability of Process Reward Models，arXiv:2603.06621，2026-02-20。三层压力测试、奖励变化小于 0.1、>0.9 奖励与 <4% 准确率、43% 风格捷径贡献。
-- Process Reinforcement through Implicit Rewards（PRIME），arXiv:2502.01456v2。隐式过程奖励的在线更新方式、15.1% 平均提升与 10% 数据对比结论。
-- Math-Shepherd，arXiv:2312.08935。MC 自动步骤标注的起点。
-
-口径说明：Lightman 的 78% 是在 MATH 代表性子集上用 PRM 做重排序的结果，不是 RL 训练后的模型准确率；Lessons 的 50 万 query 与每步 8 次补全是其自建流程的规模，不是行业标准成本；ProcessBench 与 PRMBench 的分数不可互换（任务与评分协议不同）；Reward Under Attack 的数字来自其对特定 PRM 的对抗训练设置。文中把“选择问题与信用分配问题的区别”“噪声从结果层搬到步骤层”“可信度是测量问题”标为我的整理与推断，不是原作者结论。
+</div>

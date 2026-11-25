@@ -1,87 +1,322 @@
 ---
-title: "智能体沙箱：创建延迟、空闲驻留与状态恢复"
-description: "对照添茶的判断与四套创建路径，用 TrEnv-X、DSec、AgentSysBench、AgentCgroup 和 Aries 的实验条件说明空闲计费、内存尖峰和快照恢复何时抵消创建优化。"
+title: "智能体沙箱该优化哪段时间？从模型等待到训练批次就绪"
+description: "沿用同一工作区的编程会话，沙箱只需创建一次，却要反复等模型决定下一步。服务端要决定空闲多久值得让出内存，以及下一条命令到来时该恢复什么。"
 tags: ["每日调研", "Agent", "沙箱", "智能体基础设施"]
 date: "2026-10-20"
 ---
 
-# 智能体沙箱：创建延迟、空闲驻留与状态恢复
+# 智能体沙箱该优化哪段时间？从模型等待到训练批次就绪
 
-添茶在《Agent Sandbox前沿综述: 科技大厂在优化错误的目标》里把服务场景收成一个判断：工业实现沿用 serverless，公开指标集中在更快的创建，而智能体大部分时间在等模型，创建不是瓶颈。训练场景被他单独放下：DSec 处理了突发创建和镜像分发，利用率、暂停和状态仍开放。创建延迟、计费比例和内存占用来自不同系统和不同实验，不能合成一次测量。
+<div class="research-article">
 
-一次智能体循环是模型生成、工具执行、再把结果送回模型。隔离边界包住的是工具执行：命令、文件和网络落在这个环境里，而不是落在宿主机或其他用户上。创建时间只覆盖环境变成可执行之前。模型生成下一次调用的数秒到数百秒，以及工具真正跑起来之后的内存，都不在这个时间里。
+<p class="lead">沿用同一工作区的编程会话，沙箱只需创建一次，却要反复等模型决定下一步。服务端要决定空闲多久值得让出内存，以及下一条命令到来时该恢复什么。大批量训练时，上万个环境可能同时准备代码和工具，落后的实例会推迟一批任务与模型的首次交互。<sup id="cite-2"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup><sup id="cite-5"><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup></p>
 
-## 核心论点
+## 创建只发生一次，为什么整段会话都在计费？
 
-服务会话里，“创建不是瓶颈”指的是冷启动相对模型等待很短，继续把工程目标和宣传放在创建毫秒数上，没有打到墙钟主要花在哪里。它不表示沙箱不花钱。公有云函数通常按执行时间和分配资源计费。TrEnv-X 以 AWS Lambda 为例，单价是每毫秒每 GB $1.67\times 10^{-8}$ 美元；一次调用的沙箱费用是端到端时间、单位内存价格和分配内存的乘积。端到端时间包含等模型的时间。只要分配的内存还在，等待也会计入账单。
+<p>
+  智能体改代码时，沙箱给它一份能实际修改的工作目录。模型给出命令，沙箱运行命令，再把结果送回模型。创建计时在环境可执行时就结束了，用户的任务却可能刚刚开始。即使下一轮只需模型阅读测试结果，上一轮改过的文件仍要留给它。只观测从请求到环境就绪的时间，就会漏掉这段反复出现的资源占用。<sup id="cite-1"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup><sup id="cite-2-2"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup>
+</p>
+<p>
+  TrEnv-X 在恢复虚拟机时按需装入内存页。在论文的对照实验中，这套系统比 E2B 缩短了约 35%–49% 的智能体启动时间。这项改进对很快就结束的任务尤其有用。把计时延伸到任务结束，用浏览器整理博客的一次运行持续了三分多钟。<sup id="cite-1-2"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup>
+</p>
 
-在 Gemini 2.5 Flash 的价格下，他们测到的部分智能体里，沙箱费用最高占“模型费用加沙箱费用”的 42%，和模型调用同一量级。论文同时写明复杂智能体的沙箱费用更高：延迟分成等模型输出和使用浏览器等外部工具两部分；轻量智能体的墙钟大部分在等模型，复杂智能体把更多时间花在非模型操作上，从而累积更长的执行时间。42% 是这组负载里的高点。它依赖墙钟乘分配内存的计费，并且分子里既有等待也有工具执行。改成按 CPU 时间或按请求计费，这个比例就不成立。模型降价会抬高沙箱在总和中的份额，前提是分母里的模型费用下降，沙箱仍按原来的墙钟和内存计算。
+<div class="table-scroll" role="region" aria-labelledby="tbl-1" tabindex="0">
+  <table>
+    <caption id="tbl-1">
+      表 1｜TrEnv-X 在 Firecracker 上测得的任务耗时<sup id="cite-1-3"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup>
+      <span>原表 2 节选；同一任务的端到端耗时与实际 CPU 时间对比</span>
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">任务</th>
+        <th scope="col" class="num">端到端耗时（秒）</th>
+        <th scope="col" class="num">CPU 时间（秒）</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">修复给定代码</th>
+        <td class="num">36.5</td>
+        <td class="num">0.809</td>
+      </tr>
+      <tr>
+        <th scope="row">在网站上选购商品</th>
+        <td class="num">140.7</td>
+        <td class="num">10.3</td>
+      </tr>
+      <tr>
+        <th scope="row">搜集并摘要博客</th>
+        <td class="num">193.1</td>
+        <td class="num">56.8</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<p class="table-hint">左右滑动查看完整表格</p>
 
-添茶用 codex 驱动 DeepSeek V4-Flash，回放了 256 条编程轨迹，任务来自 SWE-bench 与 Multi-SWE-bench，沙箱成本中位数占总成本 32%。这是另一套模型、任务和单价下的中位数，和 TrEnv-X 的 42% 不是同一次实验。两者对齐的只有方向：模型价格下降之后，执行环境不再自动是可以忽略的一项。
+<p>
+  CPU 时间记录任务实际占用处理器的时长。要区分等模型、等网页和实际执行工具各用了多久，还得看调用轨迹。账单采用另一种计时方法。TrEnv-X 按 AWS Lambda 的方式，将分配内存乘以端到端时长和单位价格，再用输入、输出 token 计算模型费用。按论文采用的 Gemini 2.5 Flash 价格，博客摘要的执行环境费用约占两项之和的 42%。这个分子既含等待，也含浏览器实际工作。<sup id="cite-1-4"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup>
+</p>
 
-训练爆发是“创建不是瓶颈”的反例。DSec 记录一次任务最多请求 3.2 万个沙箱，而且这些请求在短窗口内到达，因为批次要等环境就绪才能开始和模型交互。此时放置、创建和镜像分发先于模型等待，成为关键路径。同一句“更快地创建”，在零散到达的服务会话里是次要项，在这种批次里是任务能不能开始。
+## 在两次调用之间，什么时候值得暂停？
 
-## 技术架构比较
+<p>
+  AgentSysBench 跟踪了 35,037 个生产编程会话。按会话分别计算，模型与工具实际执行时间占会话寿命的比例，中位数只有 20%。多数空闲间隔在一到十分钟，也有人隔夜才发来下一条指令。此时会话仍有效，读回上次修改的文件就能继续工作，但让这些会话一直占着内存，也会挤掉原本可以接纳的新任务。<sup id="cite-2-3"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup>
+</p>
 
-四个系统都要给执行环境一个隔离边界，但创建路径绕开的等待不同。普通容器和 gVisor 仍走或拦截宿主机内核；MicroVM 给每个沙箱单独的客户机内核，由 KVM 隔离。Kubernetes Agent Sandbox 选择的是 Pod 何时创建和暂停，不是 gVisor 与 Kata 哪一种更安全。
+<figure class="figure" id="fig-planning-paths">
+  <svg class="flow-wide" viewBox="0 0 840 300" role="img" aria-labelledby="fig-planning-wide-title">
+    <title id="fig-planning-wide-title">同一轮模型规划，沙箱的两条路径（宽屏版）</title>
+    <defs>
+      <pattern id="hatch-amber" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="8" stroke="#e3b878" stroke-width="2" />
+      </pattern>
+    </defs>
 
-| 系统 | 隔离与创建路径 | 创建优化绕开的成本 | 会话期间的状态 |
-| --- | --- | --- | --- |
-| CubeSandbox | 每沙箱一个 KVM MicroVM。CubeAPI 提供与 E2B 兼容的 REST，经 CubeMaster 到节点上的 Cubelet、containerd shim v2，再到底层 RustVMM | 模板预先做快照，恢复不重新引导。磁盘克隆用 CubeCoW，通过内核 `FICLONE` 做成不拷贝数据的克隆。架构说明把冷启动写成亚 100ms | 自动暂停和恢复是设计目标，暂停后保留现场，下次请求再恢复 |
-| OpenSandbox Fast Sandbox | `runtime.type` 仍是 `kubernetes`。带 `templateId` 的创建被送到 FastSandboxService，沙箱是预热 Fastlet Pod 里的 Firecracker | 热路径不再经过 Kubernetes 调度器、watch 传播和 kubelet。README 给出串行创建 P50 64ms，10 并发 P99 125.4ms | pause/resume 保留内存和磁盘。不带这种模板的镜像或快照请求仍走原来的 Kubernetes workload |
-| Kubernetes Agent Sandbox | 只做编排。隔离交给带 `RuntimeClass` 的 Pod，运行时可以是 gVisor 或 Kata | 控制器负责创建、定时删除、暂停和恢复。它自己不实现微虚拟机 | `Sandbox` 提供稳定主机名，存储可以跨重启保留 |
-| DSec | FnCall 复用预先创建的容器，承担短的无状态任务；软件工程和通用工具调用主要用普通容器；安全敏感任务用 Firecracker microVM；需要完整商业操作系统或图形界面时用 QEMU 等完整虚拟机。生产中的实例数和资源消耗以容器和 microVM 为主。一个生产单元约 160 个节点，每天约 300 万个沙箱；生产中超过 38 万并发，创建速率超过每秒 5000 次 | 镜像数据按需从 3FS 读取，而不是每个沙箱先把整份镜像写到节点上。单任务请求可以到约 3.2 万个实例 | 暂停保留执行状态，并与可抢占的 GPU 训练协调。触发点不是每一次模型解码 |
+    <rect data-kind="group" x="12" y="16" width="176" height="248" rx="8" />
+    <text data-kind="group-title" x="24" y="38">模型与沙箱交接</text>
 
-Cube 的亚 100ms 和 OpenSandbox 的 64ms、125.4ms 都是各自文档里的创建时间，没有在同一硬件和同一镜像上复测。它们也不包含镜像里用户代码的初始化，更不包括训练时整份工作区的分发。
+    <rect x="22" y="62" width="126" height="42" rx="6" />
+    <text x="85" y="88" text-anchor="middle">工具返回结果</text>
 
-## 关键系统机制
+    <path data-kind="arrow-main" d="M85 104 V152 M80 144 L85 152 L90 144" />
+    <text data-kind="sub" x="95" y="126">沙箱空闲，</text>
+    <text data-kind="sub" x="95" y="142">开始计时</text>
 
-服务侧的快照和预热池缩短的是引导。Cube 把一次冷启动提前做完，请求到达时映射已有内存快照，磁盘用写时复制分开。OpenSandbox 把空的 Fastlet Pod 先放在节点上，新沙箱不再排队等调度器和 kubelet。两条路都假定环境内容已经在节点附近。
+    <rect x="22" y="156" width="126" height="42" rx="6" />
+    <text x="85" y="182" text-anchor="middle">模型开始规划</text>
 
-训练侧多出来的是内容本身。DSec 观察到，生产一周的活跃产物合计超过 130TB，单节点放不下。容器镜像的 fanout 中位数是 3、p90 是 28，microVM 中位数是 1、p90 是 3，本地缓存很难被多次复用。若把工作区和工具包打成 tar.gz，沙箱必须先解压进本地可写层才能开始工具调用；论文里这条路径的任务完成时间是 79 分钟。改成直接挂载 EROFS 层之后是 45 分钟，约 1.76 倍。tar 路径的累计磁盘写入大约是 EROFS 的 5.5 倍，峰值写入吞吐大约是 3.4 倍。EROFS 的峰值 CPU 更高，是因为更多沙箱更早进入工具调用并同时执行，不是解压更贵。另一项消融里，预先拉取镜像把完成时间拉长 1.7 倍，按需加载把累计磁盘写入减少 57%。把虚拟机恢复压到几十毫秒，绕不开这一段写入。
+    <rect data-kind="group" x="204" y="16" width="488" height="248" rx="8" />
+    <text data-kind="group-title" x="216" y="38">等待期间的两种结果</text>
 
-暂停同样分成几种。DSec 的容器路径先 `docker pause`，打开 `memory.swap.max`，再用 `memory.reclaim` 收回匿名页和文件页，执行状态保留；恢复时对映射做 `MADV_WILLNEED`，然后 `docker unpause`。microVM 路径把内存和执行状态做成快照，结束 Firecracker 进程以归还运行时内存，下次请求再启动进程并恢复。论文把这套机制和 GPU 训练抢占放在一起：rollout 要留住已修改的文件、依赖和进程，空闲资源要能还回去。2026 年初一周的样本里，容器和 microVM 的生命周期中位数分别是 17.4 分钟和 15.5 分钟，p99 都超过 3 小时（3 万个容器、1 万个 microVM）。暂停要划算，空闲得长过这次恢复的成本。
+    <path data-kind="arrow-main" d="M148 171 H174 V83 H216 M208 78 L216 83 L208 88" />
+    <path data-kind="arrow-amber" d="M148 183 H174 V198 H216 M208 193 L216 198 L208 203" />
 
-Aries 用 AWS Lambda MicroVM 的价格把这个成本算进顾客账单。工具沙箱大部分时间利用率低，工具调用时出现尖峰。每次工具调用后都拆掉沙箱，实例费用下降 65%，反复的快照捕获和恢复却使总费用达到常驻基线的 4.9 倍。keepalive 拉长，恢复次数下降，空闲占用上升。他们据此估计，理想的状态机制相对常驻基线可以把总费用降到约三分之一；这是对照后的上界，不是已实现系统的成绩。DeepResearch 的工具 CPU 占用低，这张 keepalive 曲线不代表这类负载。4.9 倍来自快照捕获和恢复的账单；DSec 的容器暂停用 swap 和 `memory.reclaim`，成本结构不同，不能套用这个倍数。
+    <rect x="220" y="62" width="134" height="42" rx="6" />
+    <text x="287" y="88" text-anchor="middle">阈值前收到命令</text>
 
-要暂停，还得先分清哪些页必须留下。AgentSysBench 把会话状态分成可淘汰的性能缓存（如 KV cache）、必须保留的正确性状态（文件系统改动、已安装依赖、会话内的向量库），以及工具执行时的临时工作集。编码类会话的沙箱峰值内存中位数约 0.8GB，编译和单元测试时单会话工作集可达 28GB。这 28GB 里的编译页不必全部当成正确性状态，也不必在静止检查点里整份拷走。在编译高峰做检查点，保存的是临时页；在等模型的空隙只保留正确性状态，才是另一类机会。
+    <path data-kind="arrow-main" d="M354 83 H400 M392 78 L400 83 L392 88" />
 
-## 实验依据
+    <rect x="404" y="62" width="126" height="42" rx="6" />
+    <text x="467" y="88" text-anchor="middle">沙箱保持驻留</text>
 
-AgentSysBench 的卸载实验只覆盖步与步之间、规划调用已经足够长的那段空闲。生产轨迹里会话会空闲数分钟到数小时，论文把 Mini-SWE 实验写成组件间空闲的概念验证，而不是那段人类间隔的评估。每次 LLM 规划调用期间沙箱不活动。输出长度和新增输入都在变，所以不用上下文长度预测调用会持续多久，只看这次规划调用已经过去的时间；超过固定阈值就卸载沙箱，下一步工具执行前再恢复。该次运行中，并发沙箱进程的合计常驻内存，平均值降到约原来的 1/4.6，峰值降到约 1/2.1，延迟增加不超过 0.5%。这是合计常驻内存，不是每个会话的峰值，不能和 28GB 的单会话工作集比较。
+    <path data-kind="arrow-main" d="M530 83 H698 V134 H708 M700 129 L708 134 L700 139" />
 
-因此“等模型时卸掉沙箱几乎不增加延迟”有两个前提：空闲已经超过阈值，而且恢复不是发生在每一次工具调用之后。Aries 的 4.9 倍是后一个前提被打破时的账单。两个结果可以同时成立，因为恢复频率不同。
+    <rect x="220" y="177" width="156" height="42" rx="6" />
+    <text x="298" y="203" text-anchor="middle">越过阈值，规划仍在进行</text>
 
-CPU 平均值也不能直接换成内存超卖倍数。DSec 在 2026 年初一周的数据里看到，大约 90% 的容器和 microVM 平均只用到所申请 CPU 的 5% 以下。单节点已经稳定运行过至少 3200 个容器或 800 个 microVM；一天样本上的峰值较低，是 1048 个容器和 524 个 microVM。论文把这些数字写成观察到的运行点，不是容量上限。
+    <path data-kind="arrow-amber" d="M376 198 H398 M390 193 L398 198 L390 203" />
 
-只降低 best-effort 沙箱的调度优先级，挡不住它和延迟敏感任务跑在同一物理核的 SMT 兄弟线程上。DSec 把 best-effort 放进 `SCHED_IDLE`，再对延迟敏感沙箱打开 Linux core scheduling。这个组合把 SMT 造成的延迟膨胀从 45.2% 降到 17.3%。剩下的干扰没有被这项策略消掉。
+    <rect data-tone="offload" x="402" y="177" width="86" height="42" rx="6" />
+    <text x="445" y="203" text-anchor="middle">卸载沙箱</text>
 
-内存尖峰比 CPU 均值陡。AgentCgroup 用 Claude Code 跑 SWE-rebench：GLM-4.7-Flash 在本地 GPU 上 111 个任务，Claude Haiku 4.5 经云 API 跑其中 33 个，合计 144。机器是 24 核、128GB，每个任务一个 Podman 容器，镜像拉取不计入初始化。工具调用加上容器和智能体初始化占端到端延迟的 55%–60%，模型推理占 40%–45%。并发瓶颈是内存。峰值相对平均最高到 15.4 倍，突发持续约 1–2 秒；98.5% 的内存突发出现在工具调用期间，1 秒内内存变化最多 2.9GB。极端个例 pydicom#2022 的峰值内存是 4060MB。现有控制在三个地方对不上这种形状：策略粒度是容器，变化发生在一次工具调用；调控若留在用户态，就赶不上亚秒级突发；用历史预测对不上不可重复的有状态执行。Haiku 会拆出子任务和网页搜索，GLM 把计算集中在本地 Bash，同一次任务换模型，资源曲线也换。CPU 有九成沙箱平均低于 5%，推不出内存可以按同样倍数超卖。
+    <rect data-kind="hatch-bg" x="488" y="177" width="88" height="42" rx="4" />
+    <path data-kind="arrow-amber" d="M488 198 H572 M564 193 L572 198 L564 203" />
+    <rect data-kind="text-bg" x="492" y="187" width="80" height="22" rx="3" />
+    <text data-kind="sub" x="532" y="202" text-anchor="middle">让出驻留内存</text>
 
-## 开放问题与局限性
+    <rect data-tone="offload" x="576" y="175" width="104" height="46" rx="6" />
+    <text x="628" y="194" text-anchor="middle">收到命令，</text>
+    <text x="628" y="212" text-anchor="middle">恢复沙箱</text>
 
-添茶留下的三个设计问题是：模型等待时沙箱做什么，部署密度怎么做，本地状态和远端状态怎么放。实验给出的是边界。等待期间回收内存，只在空闲长过恢复成本时成立；按工具调用拆掉，在 Aries 的 MicroVM 账单下总费用变成常驻的 4.9 倍。密度有 CPU 超卖空间，但被工具调用的内存尖峰卡住。状态至少要分开性能缓存、正确性现场和临时工作集。训练抢占时还要在稍后恢复现场。DSec 在原节点用快照或 swap 保留执行状态，恢复由后续请求触发。
+    <path data-kind="arrow-amber" d="M680 198 H698 V146 H708 M700 141 L708 146 L700 151" />
 
-Cube 的亚 100ms 与 OpenSandbox 的 64ms、125.4ms 来自各自文档，硬件和镜像不同，不能横比。DSec 的每秒 5000 次创建和单节点密度是生产运行点，不是与服务产品对齐的基准。42% 绑定 Lambda 式计费和 Gemini 2.5 Flash。32% 是添茶在 DeepSeek V4-Flash 与编程轨迹上的中位数。55%–60% 来自 111 个 GLM 任务和其中 33 个 Haiku 任务的混合样本，不能单独当成某一个模型的延迟分解。AgentCgroup 按工具调用划分 cgroup 的控制器只有初步评估，还不是密度问题的生产解法。
+    <rect x="712" y="118" width="116" height="44" rx="6" />
+    <text x="770" y="145" text-anchor="middle">执行下一条命令</text>
+
+    <text data-kind="sub" x="420" y="286" text-anchor="middle">阈值按本轮规划已用时间判断，横向距离不代表时长</text>
+  </svg>
+
+  <svg class="flow-narrow" viewBox="0 0 360 540" role="img" aria-labelledby="fig-planning-narrow-title">
+    <title id="fig-planning-narrow-title">同一轮模型规划，沙箱的两条路径（窄屏版）</title>
+    <defs>
+      <pattern id="hatch-amber-narrow" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="8" stroke="#e3b878" stroke-width="2" />
+      </pattern>
+    </defs>
+
+    <rect data-kind="group" x="16" y="12" width="328" height="144" rx="8" />
+    <text data-kind="group-title" x="28" y="32">模型与沙箱交接</text>
+
+    <rect x="105" y="42" width="150" height="38" rx="6" />
+    <text x="180" y="66" text-anchor="middle">工具返回结果</text>
+
+    <path data-kind="arrow-main" d="M180 80 V106 M175 99 L180 106 L185 99" />
+    <rect data-kind="text-bg" x="114" y="83" width="132" height="19" rx="3" />
+    <text data-kind="sub" x="180" y="97" text-anchor="middle">沙箱空闲，开始计时</text>
+
+    <rect x="105" y="110" width="150" height="38" rx="6" />
+    <text x="180" y="134" text-anchor="middle">模型开始规划</text>
+
+    <rect data-kind="group" x="16" y="172" width="328" height="276" rx="8" />
+    <text data-kind="group-title" x="28" y="192">等待期间的两种结果</text>
+
+    <path data-kind="arrow-main" d="M180 148 V162 H96 V202 M91 195 L96 202 L101 195" />
+    <path data-kind="arrow-amber" d="M180 148 V162 H262 V202 M257 195 L262 202 L267 195" />
+
+    <rect x="28" y="206" width="136" height="38" rx="6" />
+    <text x="96" y="230" text-anchor="middle">阈值前收到命令</text>
+
+    <path data-kind="arrow-main" d="M96 244 V270 M91 263 L96 270 L101 263" />
+
+    <rect x="28" y="274" width="136" height="38" rx="6" />
+    <text x="96" y="298" text-anchor="middle">沙箱保持驻留</text>
+
+    <path data-kind="arrow-main" d="M96 312 V458 H168 V464 M163 458 L168 464 L173 458" />
+
+    <rect x="190" y="206" width="144" height="42" rx="6" />
+    <text x="262" y="224" text-anchor="middle">越过阈值，</text>
+    <text x="262" y="241" text-anchor="middle">规划仍在进行</text>
+
+    <path data-kind="arrow-amber" d="M262 248 V270 M257 263 L262 270 L267 263" />
+
+    <rect data-tone="offload" x="204" y="274" width="116" height="38" rx="6" />
+    <text x="262" y="298" text-anchor="middle">卸载沙箱</text>
+
+    <rect x="204" y="312" width="116" height="48" rx="4" style="fill: url(#hatch-amber-narrow); stroke: none;" />
+    <path data-kind="arrow-amber" d="M262 312 V356 M257 349 L262 356 L267 349" />
+    <rect data-kind="text-bg" x="214" y="325" width="96" height="20" rx="3" />
+    <text data-kind="sub" x="262" y="339" text-anchor="middle">让出驻留内存</text>
+
+    <rect data-tone="offload" x="196" y="360" width="132" height="42" rx="6" />
+    <text x="262" y="378" text-anchor="middle">收到命令，</text>
+    <text x="262" y="395" text-anchor="middle">恢复沙箱</text>
+
+    <path data-kind="arrow-amber" d="M262 402 V458 H192 V464 M187 458 L192 464 L197 458" />
+
+    <rect x="105" y="468" width="150" height="40" rx="6" />
+    <text x="180" y="493" text-anchor="middle">执行下一条命令</text>
+
+    <text data-kind="sub" x="180" y="528" text-anchor="middle">阈值按本轮规划已用时间判断，距离不代表时长</text>
+  </svg>
+
+  <figcaption>
+    <strong>图 1｜同一轮模型规划，沙箱的两条路径。</strong>
+    工具返回结果后沙箱进入空闲计时；在阈值前收到下一条命令则保持驻留，越过阈值则卸载并在收到命令后恢复。<sup id="cite-2-4"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup>
+  </figcaption>
+</figure>
+
+<p>
+  研究者选了一个更容易辨认的空档做实验。Mini-SWE 把工具结果交给模型后，沙箱会闲到模型完成下一步规划。模型每步新读入和生成的文字长短不一，靠上下文总长度很难预判要等多久。原型等到本轮规划用时越过固定阈值才卸载沙箱，执行下一步工具前再恢复。与保持驻留相比，这次运行中并发沙箱进程的合计常驻内存，平均值降到约 1/4.6，峰值降到约 1/2.1，延迟增幅在 0.5% 以内。<sup id="cite-2-5"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup>
+</p>
+<p>
+  如果工具调用接连到来，暂停可能更贵。Aries 按 AWS Lambda MicroVM 的价格回放工具调用轨迹，若每次调用结束就拆掉沙箱，实例费用会下降 65%，加上反复保存和恢复快照，沙箱总费用却达到常驻方案的 4.9 倍。对一段给定的等待，只有省下的驻留费盖过一次保存和恢复的费用，暂停才会降低这段会话的账单。下一条命令若要等快照读完才能运行，还得把用户多等的时间单独记下来。<sup id="cite-3"><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup>
+</p>
+
+## 编译时占用的内存，下一步还要保留多少？
+
+<p>
+  假设智能体刚改完源码，也装好了依赖。恢复后，测试必须看到这些改动，运行中的进程也可能要从中断处继续。模型侧的键值缓存则可由对话历史重新计算，代价是下一轮要多等。还有一类内存只在工具运行时有用，例如编译器的临时页。选在命令结束后的安静时段保存现场，可以避开已经释放的临时页，又能保留继续任务所需的状态。<sup id="cite-2-6"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup>
+</p>
+<p>
+  OpenSandbox 的 Fast Sandbox 有两条不同的路径。按模板创建环境时，平台在预热的 Fastlet Pod 内启动微虚拟机，省去为每个沙箱单独调度 Pod 的等待。要让已有会话换个宿主继续运行，平台还得把该会话的可写文件系统、客户机内存以及虚拟处理器和设备状态写入共享存储。检查点完整写入后，原来占用的容量才能交给其他会话。<sup id="cite-6"><a href="#ref-6" aria-label="参考文献 6">[6]</a></sup>
+</p>
+<p>
+  实际执行工具时，一台机器能容纳的会话数还受瞬时内存需求限制。AgentSysBench 测得单会话沙箱峰值内存的中位数约为 0.8 GB，编译与单元测试期间，个别会话可到 28 GB。做容量规划时，得给编译中的沙箱留足余量。估算检查点大小，则要看命令结束后还有多少状态留在现场。<sup id="cite-2-7"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup>
+</p>
+<p>
+  AgentCgroup 把内存采样对齐到每次工具调用。按同一阈值统计超过 300 MB 的内存突发，Haiku 的工具调用占采样时间的 28.5%，却集中了 98.5% 的突发；GLM 对应的是 35.8% 和 67.3%。突发可以只持续一两秒。同一台机器即便大部分时候空闲，几个会话同时跑测试，也可能一起争内存。提高部署密度时，需要同时看空档里能归还多少内存、工具重叠执行时又需要多少。<sup id="cite-4"><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup>
+</p>
+
+## 训练批次里，第一条工具命令要等什么？
+
+<p>
+  DSec 的生产记录里，单个训练或评测作业最多在短时间内请求约 3.2 万个沙箱。每个实例都得拿到任务指定的代码和工具才能参与交互。一周内用到的镜像等产物合计超过 130 TB，单节点装不下。单个任务对同一容器镜像的复用也有限，每个镜像服务的沙箱数中位数只有三个。即便提前启动了一批空环境，实例仍要等各自指定的工作区就绪。<sup id="cite-5-2"><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup>
+</p>
+<p>
+  DSec 把基础环境、工作区和工具包拆成可组合的层。容器直接挂载只读 EROFS 层，访问文件时才从共享存储读取所需数据，运行中对代码的修改写在节点本地。为测出准备工作区的代价，作者固定了代码、工具和调用顺序，用预先录好的工具调用替代模型生成，只改变工作区和工具包的交付方式。<sup id="cite-5-3"><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup>
+</p>
+
+<div class="table-scroll" role="region" aria-labelledby="tbl-2" tabindex="0">
+  <table>
+    <caption id="tbl-2">
+      表 2｜DSec 在同一评测任务上的工作区交付对照<sup id="cite-5-4"><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup>
+      <span>累计磁盘写入以 EROFS 为 1；固定代码、工具与调用顺序，仅改变交付方式</span>
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">交付方式</th>
+        <th scope="col" class="num">整项任务完成时间（分钟）</th>
+        <th scope="col" class="num">累计磁盘写入（相对量）</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">每个沙箱解压 tar.gz</th>
+        <td class="num">79</td>
+        <td class="num">约 5.5</td>
+      </tr>
+      <tr>
+        <th scope="row">直接挂载 EROFS 只读层</th>
+        <td class="num">45</td>
+        <td class="num">1</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<p class="table-hint">左右滑动查看完整表格</p>
+
+<p>
+  直接挂载后，许多实例更早开始执行工具，反而把 CPU 峰值推高了。原先有些实例还在往本地磁盘写文件，现在它们已经能和其他实例一起做评测了。这里判断准备工作省了多少，应看累计写入和整项任务用时。<sup id="cite-5-5"><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup>
+</p>
+<p>
+  训练作业遇到 GPU 抢占时，优化目标又会改变。训练框架明确发出暂停信号，DSec 随即冻结容器并回收内存页，或为微虚拟机保存快照，后续请求到达时恢复。服务端往往只能从调用间隔推测还要等多久，训练框架能直接告诉沙箱一整批任务何时需要暂停。<sup id="cite-2-8"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup><sup id="cite-5-6"><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup>
+</p>
+
+<details class="supplement">
+  <summary>补充口径与检索记录（按需展开）</summary>
+  <p>
+    TrEnv-X 的成本比例依赖论文采用的模型价格与计费方式。AgentSysBench 的生产会话包含等用户的空档，卸载实验只覆盖 Mini-SWE 等模型规划的间隔。Aries 的总费用合计实例和快照两项，未计模型费，图 10 排除了工具 CPU 用量较低的 DeepResearch。AgentCgroup 用 GLM 运行 111 个任务，Haiku 运行其中 33 个，两组比例取自各自样本。DSec 的 3.2 万来自生产记录，表 2 来自独立测试集群。<sup id="cite-1-5"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup><sup id="cite-2-9"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup><sup id="cite-3-2"><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup><sup id="cite-4-2"><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup><sup id="cite-5-7"><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup>
+  </p>
+  <p>
+    本轮已复核五篇论文的计费分母、卸载触发条件、快照回放基线、分模型内存突发与工作区交付实验，并核对 OpenSandbox 官方文档中的创建和恢复路径。添茶《Agent Sandbox 前沿综述》（<a href="https://zhuanlan.zhihu.com/p/2094034668836411382" target="_blank" rel="noopener">原专栏链接</a>）本轮未取得全文，旧稿转述的 256 条轨迹及 32% 中位数未纳入正文。
+  </p>
+</details>
 
 ## 来源与阅读范围
 
-阅读日期 2026-10-20。
+<ol class="reference-list">
+  <li id="ref-1">
+    <cite>TrEnv-X</cite>，定位：§3.1 表 2、§3.3 式（1）和（2）及图 4、§9.6.1 图 23。
+    <a href="https://arxiv.org/html/2509.09525v2#S3.T2" target="_blank" rel="noopener">任务耗时</a> ·
+    <a href="https://arxiv.org/html/2509.09525v2#S3.SS3" target="_blank" rel="noopener">计费推导与分项</a> ·
+    <a href="https://arxiv.org/html/2509.09525v2#S9.SS6.SSS1" target="_blank" rel="noopener">启动延迟对照</a>
+    <a class="reference-backlink" href="#cite-1" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-2">
+    <cite>AgentSysBench</cite>，定位：§4.3 图 6、§7.1 图 20、§8.3 与图 25(c,d)。
+    <a href="https://arxiv.org/html/2608.15127v1#S4.SS3" target="_blank" rel="noopener">状态分类与峰值</a> ·
+    <a href="https://arxiv.org/html/2608.15127v1#S7.SS1" target="_blank" rel="noopener">生产会话的空档</a> ·
+    <a href="https://arxiv.org/html/2608.15127v1#S8.SS3" target="_blank" rel="noopener">卸载条件与实测结果</a>
+    <a class="reference-backlink" href="#cite-2" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-3">
+    <cite>Aries</cite>，定位：§4.3 图 10，以常驻为基线回放不同保活时间的账单。
+    <a href="https://arxiv.org/html/2607.29069v1#S4.SS3" target="_blank" rel="noopener">实验与分项成本</a>
+    <a class="reference-backlink" href="#cite-3" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-4">
+    <cite>AgentCgroup</cite>，定位：§3.1 的两组任务与采样间隔，§3.3 图 4–7 及相邻正文的分模型突发统计。
+    <a href="https://arxiv.org/html/2602.09345v3#S3.SS1" target="_blank" rel="noopener">实验设置</a> ·
+    <a href="https://arxiv.org/html/2602.09345v3#S3.SS3" target="_blank" rel="noopener">资源动态</a>
+    <a class="reference-backlink" href="#cite-4" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-5">
+    <cite>DSec</cite>，定位：§4.1 图 2、§4.4 图 8，§5.1、§5.3，§6.3，§8.1、§8.3 图 11。
+    <a href="https://arxiv.org/html/2609.22978v1#S4.SS1" target="_blank" rel="noopener">突发创建</a> ·
+    <a href="https://arxiv.org/html/2609.22978v1#S4.SS4" target="_blank" rel="noopener">镜像复用</a> ·
+    <a href="https://arxiv.org/html/2609.22978v1#S5.SS1" target="_blank" rel="noopener">可组合层</a> ·
+    <a href="https://arxiv.org/html/2609.22978v1#S5.SS3" target="_blank" rel="noopener">按需读取</a> ·
+    <a href="https://arxiv.org/html/2609.22978v1#S6.SS3" target="_blank" rel="noopener">训练抢占</a> ·
+    <a href="https://arxiv.org/html/2609.22978v1#S8.SS3" target="_blank" rel="noopener">工作区交付对照</a>
+    <a class="reference-backlink" href="#cite-5" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-6">
+    <cite>OpenSandbox 官方文档</cite>，Fast Sandbox Integration 的 How it fits 与 Pause, Resume, and Snapshots 的 What a checkpoint contains、Pause and resume。
+    <a href="https://github.com/alibaba/OpenSandbox/blob/main/docs/architecture/fast-sandbox/index.md#how-it-fits" target="_blank" rel="noopener">预热池与创建路径</a> ·
+    <a href="https://github.com/alibaba/OpenSandbox/blob/main/docs/architecture/fast-sandbox/checkpoints.md#what-a-checkpoint-contains" target="_blank" rel="noopener">检查点内容与释放条件</a>
+    <a class="reference-backlink" href="#cite-6" aria-label="返回正文引用">↩</a>
+  </li>
+</ol>
 
-添茶，《Agent Sandbox前沿综述: 科技大厂在优化错误的目标》，https://zhuanlan.zhihu.com/p/2094034668836411382 。服务与训练的划分、创建不是瓶颈这一判断，以及 256 条轨迹和中位数 32%，出自该文。
-
-论文 HTML：
-
-- TrEnv-X，arXiv:2509.09525v2。计费公式，以及 Figure 4 附近关于 42% 和复杂智能体的段落。
-- DSec，arXiv:2609.22978v1，2026-09-19。摘要中的规模，第 4 节负载与镜像 fanout，第 5–6 节按需加载、CPU QoS 和暂停，第 8 节 EROFS 与 tar 的对照。
-- AgentSysBench，arXiv:2608.15127v1，2026-08-15。摘要，Figure 6 附近的状态分类，§7.1 与 §8.3 的卸载实验。
-- AgentCgroup，arXiv:2602.09345v3。摘要、实验设置和资源动态。
-- Aries，arXiv:2607.29069v1。Figure 10 附近的快照成本比较，含 65%、4.9 倍和理想情况下约 3 倍。
-
-仓库文档：
-
-- CubeSandbox 架构说明，https://github.com/TencentCloud/CubeSandbox/blob/master/docs/architecture/overview.md 。组件路径、亚 100ms 和 `FICLONE`。
-- OpenSandbox README 与 Fast Sandbox 说明，https://github.com/alibaba/OpenSandbox/blob/main/docs/architecture/fast-sandbox/index.md 。64ms、125.4ms，以及热路径如何绕开调度器和 kubelet。
-- Kubernetes Agent Sandbox README，https://github.com/kubernetes-sigs/agent-sandbox 。编排范围、`RuntimeClass` 和 `Sandbox` 的暂停与恢复。
-
-创建延迟、成本比例和密度来自不同系统与实验，不能当成同一次测量。EROFS 的对照只用了 DSec 里 tar 解压与层挂载的结果。
+</div>

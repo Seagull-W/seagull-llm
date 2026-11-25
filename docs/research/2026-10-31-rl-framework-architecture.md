@@ -1,139 +1,512 @@
 ---
-title: "主流 RL 框架的架构分歧：控制面、训练-推理耦合与环境边界"
-description: "九个框架各用一句话讲清理念与落地方式，再把三处结构决策摊开比较：谁表达算法流程、权重怎么过河、异步到什么程度、环境放在哪一侧。"
-date: "2026-10-31"
+title: "九种大模型强化学习框架如何组织一次策略更新"
+description: "把生成服务搬到另一组 GPU，训练仍可能等整批回答到齐。反过来，训练和生成共用一组 GPU，也可以让慢任务跨过一次更新。比较这九种框架，值得追问的是谁安排生成与打分，哪批数据到齐就能更新，以及一次多轮交互在训练时算几份样本。"
 tags: ["每日调研", "强化学习", "框架", "架构"]
+date: "2026-10-31"
 ---
 
-# 主流 RL 框架的架构分歧：控制面、训练-推理耦合与环境边界
+# 九种大模型强化学习框架如何组织一次策略更新
 
-这些框架跑的算法几乎是同一套：GRPO 或它的变体，加一点重要性修正与裁剪。差别在三处工程决策上——**算法流程由谁表达**，**训练与推理怎样共享设备、怎样交换权重**，**环境与 agent 的状态放在哪一侧**。三处各自独立，组合起来才决定一个框架的脾气：能扩到多大、换模型多贵、长尾生成时 GPU 空转多久、调试一次停顿时要看几个进程。
+<div class="research-article">
 
-九家按第一处决策分成三派。把 RL 当一个训练器：TRL。把 RL 当一件分布式作业、由一个控制器统管角色与设备：verl、ROLL、SkyRL、NeMo-RL，以及编排更薄的 slime。把训练挪到外面、让生成与更新各跑各的：OpenRLHF 的角色隔离、AReaL 的异步流、Agent Lightning 的网关。
+<p class="lead">把生成服务搬到另一组 GPU，训练仍可能等整批回答到齐。反过来，训练和生成共用一组 GPU，也可以让慢任务跨过一次更新。比较这九种框架，值得追问的是谁安排生成与打分，哪批数据到齐就能更新，以及一次多轮交互在训练时算几份样本。<sup id="cite-1"><a href="#ref-1">[1]</a></sup><sup id="cite-9"><a href="#ref-9">[9]</a></sup></p>
 
-下面先一家一段，说清理念、怎么落地、代价落在哪；再把三处决策横向摊开；最后回到几个真正的分歧。基础闭环（rollout、优势、权重交接的含义）见[站内 10 月 16 日的框架文章](./2026-10-16-post-training-rl-frameworks.md)，这里不重复。
+## 谁决定下一步做什么
 
-<figure><img loading="lazy" src="/research/2026-10-31-rl-framework-architecture/decision-map.svg" alt="以训练推理耦合为横轴、环境边界为纵轴、控制面为颜色的九框架位置图" /><figcaption>图 1｜本文自绘。三处结构决策彼此独立，所以同一框架落在主格、可选模式落在邻格；颜色只表示控制面，不是性能等级。</figcaption></figure>
+<p>
+  假设要训练模型解题，同一道题先生成几种解法，按最终答案打分，再用同题解法之间的得分差异更新策略。在 TRL 里，想改变判分规则，只需给 <code>GRPOTrainer</code> 换一个奖励函数。训练器负责生成一批回答、打分，再切成小批供训练使用。接入 vLLM 可以改变回答在哪里生成，何时拿这一批回答来训练，仍由训练器决定。<sup><a href="#ref-1">[1]</a></sup>
+</p>
+<p>
+  如果要改变的是整个算法顺序，例如先让当前策略作答，再让另一个模型评分，就要能直接表达两次调用之间的数据依赖。verl 把这个顺序写在单个控制器里，一次生成调用会分派给整组工作进程。在 HybridFlow 论文的图 5 中，控制器把结果的引用交给下一个模型，其工作进程再按各自负责的数据分片取回所需输出。算法作者可以在一处读懂流程，大批量的模型输出也能直接在工作进程间传递。<sup id="cite-2"><a href="#ref-2">[2]</a></sup>
+</p>
+<p>
+  同样要改一条采样流程，写代码的位置可以很不同。slime 把多轮工具调用和验分留给自定义生成函数，再由主循环把采样结果交给训练端，更新后把权重送回生成端。<sup id="cite-3"><a href="#ref-3">[3]</a></sup> OpenRLHF 则按角色组织工作进程，策略、参考策略、价值模型和奖励模型可按训练配方分别建立。<sup id="cite-4"><a href="#ref-4">[4]</a></sup> 前者给任务作者一个编写交互逻辑的入口，后者让维护者能沿着角色找到相应的模型与设备。
+</p>
 
-## 一、九家各自的理念
+## 设备分在哪里，训练在等谁
 
-**TRL｜把 RL 做成一个 Trainer。** 理念是让改奖励像改一个 Python 回调：模型、数据、参数、奖励函数都在 Transformers 的 `Trainer` 接口里，接第一个任务时不用先搭分布式。落地方式是 `GRPOTrainer` 走 Accelerate，生成默认用模型自己的 `generate`，vLLM 只是可选加速——1.17.1 里 `use_vllm` 默认关闭，启用后 `vllm_mode` 默认 `colocate`，`server` 模式靠 NCCL 把权重推进独立的 vLLM 服务。环境可以用奖励函数、`tools` 或 `environment_factory` 表达。代价是循环仍是单进程语义：生成端拆出去以后，主循环照样按批生成、按批更新，另一组卡在等。[TRL v1.17.1](#source-trl)
+<p>
+  生成时，模型逐个预测下一个词元。训练时，模型对已有回答计算梯度。两者使用同一份策略参数，适用的参数切分方式却可以不同。HybridFlow 即使让它们轮用同一批卡，也要在切换阶段时按下一阶段的布局重新组织权重。<sup><a href="#ref-2">[2]</a></sup> OpenRLHF 的源码还能看出设备布局对传输的影响：只有选用 NCCL、所有角色共置且关闭异步训练时，才通过 CUDA IPC 句柄在进程间交接权重。估算一次切换的时间，需要从训练完成算到生成端真正能接下一条请求。<sup><a href="#ref-4">[4]</a></sup>
+</p>
 
-**verl｜用单控制器表达算法，执行交给 worker 群。** 理念是把"先过滤、再算概率、最后更新"写在一张调用图里，把并行与通信藏进 WorkerGroup 内部的 SPMD。落地是单控制器 + Ray WorkerGroup：训练后端可选 FSDP（+SP）、Megatron（DP/TP/PP/EP/CP）或 VeOmni（FSDP+SP+EP），推理可选 vLLM 或 SGLang，权重交接由 CheckpointEngine 承担，提供 NCCL 广播与 NIXL 点对点两条传输路径，trainer 层再组合出 on-policy、一步延迟、完全异步三种管线。0.7 引入 TransferQueue 把控制流与数据流分开——仅实验，文档写明计划在 0.8 才设默认。代价是概念层数多：控制器、WorkerGroup、引擎、传输各一层，读一次配置要同时对上四处。[verl 0.7](#source-verl)
+<div class="table-scroll" role="region" aria-labelledby="tbl-1" tabindex="0">
+  <table>
+    <caption id="tbl-1">
+      表 1｜沿同一轮更新观察三种执行路径
+      <span>完整提示组指同一提示所需的多条独立轨迹都已返回；来源：TRL、Agent Lightning 与 AReaL 文档及论文。<sup><a href="#ref-1">[1]</a></sup><sup><a href="#ref-6">[6]</a></sup><sup><a href="#ref-9">[9]</a></sup></span>
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">执行路径</th>
+        <th scope="col">训练与生成用卡</th>
+        <th scope="col">何时开始更新</th>
+        <th scope="col">更新时的生成工作</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">TRL · GRPO 的 vLLM 服务模式</th>
+        <td>各用一组</td>
+        <td>本次生成批次完成并打分</td>
+        <td>常规训练循环等到下次生成调用</td>
+      </tr>
+      <tr>
+        <th scope="row">Agent Lightning · 共置异步</th>
+        <td>轮用同一组</td>
+        <td>收够完整提示组，排空在途模型请求</td>
+        <td>慢组保留，新的模型请求暂停</td>
+      </tr>
+      <tr>
+        <th scope="row">AReaL · 论文中的异步流水线</th>
+        <td>各用一组</td>
+        <td>缓冲区收够一个训练批次</td>
+        <td>继续解码，新权重到达时短暂停顿</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<p class="table-hint">表格可左右滑动查看。</p>
 
-**OpenRLHF｜把 RLHF 的四种角色拆成独立进程。** 理念是 actor、critic、reference、reward 各有设备和生命周期，想动谁就动谁。落地是 Ray 调度角色、HF 模型 + DeepSpeed ZeRO-3 承担训练分片（配 AutoTP、RingAttention），vLLM 生成，Hybrid Engine 用 sleep/offload 让训练与推理分时占用同一批显存。权重交接有一条捷径：CUDA IPC，但代码里的条件是 `backend == "nccl" and colocate_all and not async_enable` 三个同时成立，开异步这条路就关掉。代价是调试：一次停顿要同时看 driver、actor 日志、对象引用与 NCCL 进程组；官方口径是可扩到 70B+。[OpenRLHF](#source-openrlhf)
+<figure class="figure" id="fig-wait">
+  <svg class="flow-wide" viewBox="0 0 700 364" role="img" aria-labelledby="fig-wait-title">
+    <title id="fig-wait-title">两种“等齐”的时间线</title>
+    <!-- Group 1: TRL 服务模式 -->
+    <text x="12" y="24" data-kind="label">TRL 服务模式</text>
+    <text x="324" y="24" data-kind="sub" text-anchor="middle">开始更新</text>
+    <text x="12" y="68" data-kind="sub">生成 GPU</text>
+    <text x="12" y="126" data-kind="sub">训练 GPU</text>
 
-**slime｜薄编排，把难的部分还给用户。** 理念是主循环只负责"生成—训练"的依赖顺序，任务怎么组织、奖励怎么算，写在你自己的 rollout 函数里。落地是一个单主循环驱动 Megatron 训练与 SGLang 采样，训练与推理默认就分两组 GPU，要共置得显式加 `--colocate`；权重更新有三条路径——tensor（IPC 句柄）、distributed（NCCL 广播）、disk（写完整 HF checkpoint 再让 SGLang reload）。代价写在代码注释里：共置时 SGLang 返回只代表 GPU copy 已入队，生产者若立刻复用那块 buffer，会与消费者侧复制竞争而损坏权重；换模型也要先过 HF→Megatron 的 checkpoint 转换。[slime](#source-slime)
+    <rect x="116" y="42" width="140" height="42" rx="6" />
+    <rect x="330" y="42" width="160" height="42" rx="6" data-kind="wait" />
+    <rect x="536" y="42" width="150" height="42" rx="6" />
+    <rect x="116" y="100" width="140" height="42" rx="6" data-kind="wait" />
+    <rect x="330" y="100" width="160" height="42" rx="6" data-tone="training" />
 
-**AReaL｜让生成和更新同时跑，代价用重要性修正换回来。** 理念很直接：同步训练里 GPU 一半时间在等生成，那就别等。落地是独立的生成与训练调度（论文用 SLURM 管资源，SGLang 0.4.6 生成、Megatron-Core 0.11.0 训练，实验规模 512 张 H800），rollout worker 收到 `update_weights` 会打断在途生成、丢弃旧 KV cache 再用新权重重算前缀，算法侧用 decoupled PPO 对行为策略做重要性修正。代价可量化：1.5B 数学任务、250 步的消融里，最大陈旧度 η=4 时普通 PPO 的 AIME24 是 23.3，decoupled PPO 42.2，同步 oracle 42.0；η 放到无穷，decoupled 掉到 36.9——异步不是免费的，是"有限陈旧度 + 损失修正"才换回接近同步的结果。[AReaL](#source-areal)
+    <g text-anchor="middle">
+      <text x="186" y="69">整批生成</text>
+      <text x="410" y="69">等待</text>
+      <text x="611" y="69">下一批生成</text>
+      <text x="186" y="127">等待</text>
+      <text x="410" y="127">用已评分批次更新</text>
+    </g>
 
-**ROLL｜一个控制器统管角色，把环境并行当一等公民。** 理念是训练、推理、环境都由同一张资源图调度，环境不只是一次函数调用。落地是单控制器 + Ray worker，训练走 FSDP2 或 Megatron，推理走 vLLM 或 SGLang；环境侧每个 EnvManager 在 worker 里独立跑 `run_rollout_loop`，环境之间没有逐步 barrier，但 `get_batch()` 仍会阻塞到收够一个训练批次。异步是选项：`async_generation_ratio` 默认 0（同步流水），大于 0 才允许提前生成。[ROLL](#source-roll)
+    <path d="M324 32 V148" data-kind="sync" />
+    <path d="M256 63 H293 V121 H324" />
+    <polygon points="321,116 329,121 321,126" />
+    <rect x="261" y="81" width="64" height="20" rx="3" data-kind="mask" />
+    <text x="293" y="96" data-kind="edge" text-anchor="middle">评分完成</text>
 
-**SkyRL｜模块化全栈，环境写成 Gym 式接口。** 理念是每层都能单独换掉：训练、推理、环境、权重同步各有实现与配置。落地是控制器 + `PPORayActorGroup`，训练用 FSDP 或 Megatron，推理走 HTTP 服务（vLLM 路径），共置靠 `colocate_all=True`（默认值），共置时 NCCL 内部走 CUDA IPC；完全异步默认关闭，打开后由 `max_staleness_steps`（默认 4）约束"第 i 步调度、第 j 步训练"的 `j−i`。另有 delta 同步：只发权重差分，经共享存储（本地路径或 `gs://`、`s3://`）发布，限定在非共置的 vLLM 路径。[SkyRL](#source-skyrl)
+    <path d="M490 121 H513 V63 H530" />
+    <polygon points="527,58 535,63 527,68" />
+    <rect x="491" y="81" width="44" height="20" rx="3" data-kind="mask" />
+    <text x="513" y="96" data-kind="edge" text-anchor="middle">新权重</text>
 
-**NeMo-RL｜在 NVIDIA 栈里做单进程控制器，让训练与推理尽量同源。** 理念是控制器只一个进程、逻辑好读，后端与并行方式都可替换，模型能用同一套引擎训练和部署。落地是设计文档里明写的"Single-Process Controller using Ray"，配 `RayVirtualCluster` 与 `RayWorkerGroup`；训练可用 AutoModel/FSDP2 或 Megatron，推理可用 vLLM 或 Megatron-native，后者省掉格式转换。权重同步按拓扑分叉：共置 vLLM 走 IPC/ZMQ，非共置走 collective，而 SGLang 的非共置模式在工厂函数里直接 `NotImplementedError`。换异步要同时做三件事：关掉共置推理、打开重要性修正、设轨迹年龄（文档例子：v10 的轨迹可用于 v10、v11，到 v12 丢弃）。设计声明是从 1 到 1000 张 GPU，那是目标不是实测曲线。[NeMo-RL](#source-nemo)
+    <line x1="12" y1="166" x2="688" y2="166" data-kind="divider" />
 
-**Agent Lightning｜不动 agent 代码，把训练挂在它外面。** 理念是既有 coding agent 是产品资产，不该为了训练重写交互循环，那就把模型入口换成网关，让训练侧从旁边观察。落地是 Trainer + API Gateway + Rollout Controller：agent 把请求发到 OpenAI 兼容网关，网关转发到推理端并记录 prompt/response 的 token id 与所选 token 的 logprob；runner 默认在 Kubernetes Job 里跑，也可以本机子进程。异步按组：可同时挂 64 组，收到 32 组完整结果就开始更新，未完成组带到下一步，但组内 sibling 必须全齐；换权重前网关先暂停收新请求、排空在途请求。代价在轨迹重建：coding agent 的运行里只有 36% 的 rollout 保持单条训练样本，平均一条拆成 2.4 条，所以要配 rollout 级优势与分段归一化。[Agent Lightning](#source-lightning)
+    <!-- Group 2: Agent Lightning 共置异步 -->
+    <text x="12" y="194" data-kind="label">Agent Lightning 共置异步</text>
+    <text x="408" y="194" data-kind="sub" text-anchor="middle">开始更新</text>
+    <text x="12" y="240" data-kind="sub">提示组</text>
+    <text x="12" y="316" data-kind="sub">共享 GPU</text>
 
-## 二、三处决策的横向对照
+    <rect x="116" y="214" width="118" height="40" rx="6" />
+    <rect x="244" y="214" width="132" height="40" rx="6" data-kind="wait" />
+    <rect x="566" y="214" width="120" height="40" rx="6" />
 
-三张表按决策拆开，每格只放结论，机制在上文与后文。版本与出处见文末锚点；"未说明"表示没有找到能支撑统一上限的依据。
+    <rect x="116" y="288" width="92" height="44" rx="6" />
+    <rect x="226" y="284" width="166" height="52" rx="6" />
+    <rect x="414" y="288" width="130" height="44" rx="6" data-tone="training" />
+    <rect x="566" y="288" width="120" height="44" rx="6" />
 
-**执行栈：算法流程在哪，重活在哪。**
+    <g text-anchor="middle">
+      <text x="175" y="240">快组已齐</text>
+      <text x="310" y="240">慢组等工具</text>
+      <text x="626" y="240">下一轮继续</text>
+      <text x="162" y="316">生成</text>
+      <text x="309" y="305">暂停新请求、</text>
+      <text x="309" y="325">排空在途请求</text>
+      <text x="479" y="316">更新</text>
+      <text x="626" y="316">恢复生成</text>
+    </g>
 
-| 框架 | 控制面 | 训练引擎 | 推理引擎 |
-| --- | --- | --- | --- |
-| TRL | Trainer 循环 + Accelerate | Transformers / FSDP / DeepSpeed | 默认 `generate`，可选 vLLM |
-| verl | 单控制器 + Ray WorkerGroup | FSDP、Megatron、VeOmni | vLLM、SGLang |
-| OpenRLHF | Ray 角色 + 集中编排 | HF + DeepSpeed ZeRO-3 | vLLM |
-| slime | 薄主循环 + Ray rollout | Megatron | SGLang |
-| AReaL | 独立生成/训练调度 | Megatron-Core | SGLang |
-| ROLL | 单控制器 + Ray worker | FSDP2、Megatron | vLLM、SGLang |
-| SkyRL | 单控制器 + PPORayActorGroup | FSDP、Megatron | HTTP 推理服务（vLLM） |
-| NeMo-RL | 单进程控制器 + Ray | AutoModel/FSDP2、Megatron | vLLM、Megatron-native |
-| Agent Lightning | Trainer + 网关 + 控制器 | verl 后端 | vLLM 后端 |
+    <path d="M408 202 V342" data-kind="sync" />
+    <path d="M376 234 H560" data-kind="dashed" />
+    <polygon points="557,229 565,234 557,239" />
 
-**耦合与交接：同一批卡还是两批卡，权重怎么过河。**
+    <path d="M208 310 H220" />
+    <polygon points="217,305 225,310 217,315" />
+    <path d="M392 310 H408" />
+    <polygon points="405,305 413,310 405,315" />
+    <path d="M544 310 H560" />
+    <polygon points="557,305 565,310 557,315" />
 
-| 框架 | 默认耦合 | 权重交接 | 异步默认 |
-| --- | --- | --- | --- |
-| TRL | 单进程同卡，vLLM 可选 | server 走 NCCL，共置走 IPC | 关 |
-| verl | 可共置、可分离 | NCCL 广播 / NIXL 点对点 | 关（另有异步 trainer） |
-| OpenRLHF | 可共置（sleep/offload） | NCCL；共置且非异步时 IPC | 关 |
-| slime | 默认分离 | tensor IPC / NCCL / 落盘 | 关（另有 fully async 入口） |
-| AReaL | 分离、完全异步 | 版本化在线更新 | 开 |
-| ROLL | 可共置、可分离 | collective 广播 / bucket | 关（ratio=0） |
-| SkyRL | 默认共置 | NCCL + CUDA IPC；可选 delta | 关 |
-| NeMo-RL | 默认共置 | 共置 IPC/ZMQ，分离 collective | 关 |
-| Agent Lightning | 训练与 agent 分离 | 由后端决定，网关暂停排空 | 按组异步 |
+    <path d="M175 254 V270 H266 V278" />
+    <polygon points="261,275 266,283 271,275" />
+    <rect x="184" y="259" width="66" height="20" rx="3" data-kind="mask" />
+    <text x="217" y="274" data-kind="edge" text-anchor="middle">已收够组</text>
 
-**环境与规模：交互状态归谁，扩到多大。**
+    <text x="688" y="358" data-kind="sub" text-anchor="end">时间 →（块宽仅示先后）</text>
+  </svg>
 
-| 框架 | 环境接口 | 声明的规模 |
-| --- | --- | --- |
-| TRL | 奖励函数、`tools`、`environment_factory` | 未说明统一上限 |
-| verl | reward manager、agent loop | 文档将 128+ GPU 列为异步适用场景 |
-| OpenRLHF | reward function/server、自定义 agent | 声明 70B+ |
-| slime | 自定义 rollout 函数 | 未说明统一上限 |
-| AReaL | 独立 reward service | 论文实验至 512 H800 |
-| ROLL | EnvManager / 环境 worker | README 声明至数千 GPU |
-| SkyRL | SkyRL-Gym（init/step/close） | 未说明统一上限 |
-| NeMo-RL | EnvironmentInterface、环境 actor | 设计声明 1–1000 GPU |
-| Agent Lightning | 外部 agent 经网关，runner 本地或 K8s | 控制器可扩 rollout worker |
+  <svg class="flow-narrow" viewBox="0 0 340 582" role="img" aria-labelledby="fig-wait-narrow-title">
+    <title id="fig-wait-narrow-title">两种“等齐”的时间线（窄屏竖向版）</title>
+    <!-- Group 1: TRL 服务模式 -->
+    <text x="10" y="22" data-kind="label">TRL 服务模式</text>
+    <text x="86" y="44" data-kind="sub" text-anchor="middle">生成 GPU</text>
+    <text x="254" y="44" data-kind="sub" text-anchor="middle">训练 GPU</text>
 
-## 三、三个真正的分歧
+    <rect x="14" y="54" width="144" height="40" rx="6" />
+    <rect x="182" y="54" width="144" height="40" rx="6" data-kind="wait" />
+    <rect x="14" y="128" width="144" height="40" rx="6" data-kind="wait" />
+    <rect x="182" y="128" width="144" height="40" rx="6" data-tone="training" />
+    <rect x="14" y="202" width="144" height="40" rx="6" />
 
-### 同步屏障值多少钱，取决于长尾从哪来
+    <g text-anchor="middle">
+      <text x="86" y="79">整批生成</text>
+      <text x="254" y="79">等待</text>
+      <text x="86" y="153">等待</text>
+      <text x="254" y="153">已评分批次更新</text>
+      <text x="86" y="227">下一批生成</text>
+    </g>
 
-把同步训练换成异步，挣的是同一件事：让 GPU 在等生成时不空转。这笔账有多大，各家给的分母并不一样。
+    <path d="M14 118 H326" data-kind="sync" />
+    <path d="M86 94 V111 H254 V122" />
+    <polygon points="249,119 254,127 259,119" />
+    <rect x="136" y="101" width="68" height="20" rx="3" data-kind="mask" />
+    <text x="170" y="115" data-kind="edge" text-anchor="middle">评分完成</text>
 
-先看机制上的上限。假设八个容量相等的生成槽、每槽只跑一项任务，七项 20 秒、一项 100 秒，期间不能补新任务，槽位忙 240 秒、占用 800 秒，空闲 70%。这是合成的槽位示例，不是任何框架的利用率实测——真实数字还取决于批大小、TP、prefill/decode 混合与工具等待。
+    <path d="M254 168 V185 H86 V196" />
+    <polygon points="81,193 86,201 91,193" />
+    <rect x="144" y="175" width="52" height="20" rx="3" data-kind="mask" />
+    <text x="170" y="189" data-kind="edge" text-anchor="middle">新权重</text>
 
-再看实测。AsyncFlow 在 32–512 张 Ascend NPU 上对 7B/32B 报告平均吞吐 1.59 倍，7B/256 NPU 峰值 2.03 倍，基线是 2025-04-07 提交 `d13434f` 的 verl FSDP、同为 vLLM-Ascend 0.7.3——后端与历史版本都不同，这个倍数不能直接搬到今天的 NVIDIA 集群上。PipelineRL 用 128 张 H100（48 张生成、80 张训练），报告达到相同 reward 比 G=32 的 conventional 基线快约 2 倍；但它自己写明基线吞吐是用 2 节点加 8 倍校正估出来的，不是同一 128 卡上的直接对跑。
+    <line x1="10" y1="260" x2="330" y2="260" data-kind="divider" />
 
-所以"异步能省多少等待"没有统一答案，能比较的是三件具体事：陈旧度上限设多少、换权重时打断还是等轮末、丢弃过期样本的比例。AReaL 的 η=4 消融说明第一件最敏感——同样是 decoupled PPO，η 从 4 放到无穷，AIME24 从 42.2 掉到 36.9。
+    <!-- Group 2: Agent Lightning 共置异步 -->
+    <text x="10" y="284" data-kind="label">Agent Lightning 共置异步</text>
+    <text x="86" y="306" data-kind="sub" text-anchor="middle">提示组</text>
+    <text x="254" y="306" data-kind="sub" text-anchor="middle">共享 GPU</text>
 
-### 共置省的是设备预算，不是时间
+    <rect x="14" y="316" width="70" height="40" rx="6" />
+    <rect x="90" y="316" width="72" height="40" rx="6" data-kind="wait" />
+    <rect x="182" y="316" width="144" height="40" rx="6" />
 
-HybridFlow 讲得很清楚：训练和推理需要不同并行布局，却可以按阶段用同一批 GPU，省下的是另建推理池的设备预算，代价是阶段不能重叠。OpenRLHF 用 sleep/offload 把同一批显存分时让给 vLLM，但它的 IPC 路径要求共置、`nccl` 且非异步；开异步后 sleep 与共置规则同时改变，两种模式的优势不能相加。
+    <rect x="182" y="388" width="144" height="50" rx="6" />
+    <rect x="182" y="462" width="144" height="40" rx="6" data-tone="training" />
+    <rect x="14" y="524" width="144" height="40" rx="6" />
+    <rect x="182" y="524" width="144" height="40" rx="6" />
 
-反方向也有代价。slime 把"设备分离"设成普通配置的默认，就是为了让主循环的依赖关系不被共置的显存约束搞复杂；TRL 的 server 模式让推理侧独立调 TP 与显存，可主循环仍是按批的全局屏障——**设备分离不等于阶段重叠**，两侧各一组卡照样能互相等。
+    <g text-anchor="middle">
+      <text x="49" y="341">快组已齐</text>
+      <text x="126" y="341">慢组等工具</text>
+      <text x="254" y="341">生成</text>
+      <text x="254" y="408">暂停新请求、</text>
+      <text x="254" y="427">排空在途请求</text>
+      <text x="254" y="487">更新</text>
+      <text x="86" y="549">下一轮继续</text>
+      <text x="254" y="549">恢复生成</text>
+    </g>
 
-判断标准因此很具体：卡数紧张、生成长度较齐，先量一次共置切换的峰值显存与交接时延；长尾与工具等待占主导，共置救不了分时的时间空洞，解耦才有意义。
+    <path d="M176 452 H330" data-kind="sync" />
+    <path d="M254 356 V382" />
+    <polygon points="249,379 254,387 259,379" />
+    <path d="M254 438 V456" />
+    <polygon points="249,453 254,461 259,453" />
+    <path d="M254 502 V518" />
+    <polygon points="249,515 254,523 259,515" />
 
-交接本身的价格可以估个下界。7B 的 BF16 参数约 14 GB、70B 约 140 GB，若必须跨越的那条链路有效吞吐只有 25 GB/s，仅送一份全量参数就至少 0.56 秒或 5.6 秒；reshard 前的 all-gather、接收端的重排与复制还没算。每步只训练一两秒时，70B 的全量交接不是小常数；生成以分钟计时时，同样的开销可以接受。这是条件化带宽估算，不是框架 benchmark。
+    <path d="M126 356 V508 H86 V518" data-kind="dashed" />
+    <polygon points="81,515 86,523 91,515" />
 
-<figure><img loading="lazy" src="/research/2026-10-31-rl-framework-architecture/scheduling-timeline.svg" alt="共置同步、设备分离但同步、完全异步三类时间线" /><figcaption>图 2｜本文自绘。省掉的等待会变成留在轨迹里的策略版本问题；块宽只作机制示意，不表示实测利用率。</figcaption></figure>
+    <path d="M49 356 V372 H210 V382" />
+    <polygon points="205,379 210,387 215,379" />
+    <rect x="96" y="362" width="68" height="20" rx="3" data-kind="mask" />
+    <text x="130" y="376" data-kind="edge" text-anchor="middle">已收够组</text>
+  </svg>
+  <figcaption>
+    <strong>图 1｜两种“等齐”的时间线。</strong>橙色虚线标出各自开始更新的时刻；TRL 服务模式需等整批生成并评分完成，Agent Lightning 共置异步在收够完整提示组并排空在途请求后即可更新，慢组跨过更新区继续。<sup><a href="#ref-1">[1]</a></sup><sup><a href="#ref-9">[9]</a></sup>
+  </figcaption>
+</figure>
 
-### 把 agent 移出训练循环，代价在轨迹重建
+<p>
+  这里的“等”还可能发生在环境里。ROLL 为每个环境独立运行交互循环，一道题在等工具返回，另一道可以继续；但上层取批函数仍要等到收够指定数量的轨迹才返回。<sup id="cite-5"><a href="#ref-5">[5]</a></sup> Agent Lightning 按完整提示组取数，已经凑齐的组可以先训练，慢组留到下一轮，不过同一提示下用于比较奖励的几条回答仍须到齐。<sup><a href="#ref-9">[9]</a></sup> 诊断长尾时，应该先标出拖慢更新的是一次模型请求、一组回答，还是整个采样批次。
+</p>
 
-Agent Lightning 的取舍值得单说，因为它是唯一把"不改 agent 代码"当第一原则的。代价不在训练框架内部，而在边界上：一条 rollout 可能被拆成多条训练样本（36% 保持单条、平均 2.4 条），于是优势要按 rollout 级算、损失要分段归一化，否则"拆得多的任务"会白拿权重。它的异步也没取消组内屏障——同组 sibling 要全齐，只是不再等所有活跃组。
+## 让生成领先几步，旧回答还能不能用
 
-对比之下，SkyRL 的 Gym 式 `init/step/close` 与 ROLL 的 EnvManager 把交互状态留在训练侧。好处是 observation、mask、reward 当场对齐，调试训练数据路径最短；坏处是环境阻塞、依赖冲突与异常处理都进了训练任务的故障域。独立 environment server（NeMo-RL 的环境 actor、Lightning 的外部 runner）把执行资源搬到便宜的 CPU 机器上，代价是会话标识、超时取消、重放协议都要显式设计——尤其要回答"重试一个 step"与"重跑整个 episode"的区别，否则服务化只是把阻塞换成状态不一致。
+<p>
+  在 AReaL 的生成池里，一条长答案可能写到一半，训练池已经完成更新。新权重送达后，生成端保留已写出的词元，丢弃用旧权重计算的键值缓存（KV cache），用新权重重算前缀后续写；同一答案的前后两段于是可能由不同版本生成。为限制版本差，控制器会暂缓可能超过陈旧度上限的新请求，训练时优先取较早的轨迹。<sup id="cite-6"><a href="#ref-6">[6]</a></sup> NeMo-RL 的异步 GRPO 则在缓冲区检查轨迹的年龄：若最多允许落后一个训练步，版本 v10 生成的轨迹在训练步 v11 仍能用，到 v12 就会被丢弃。<sup id="cite-7"><a href="#ref-7">[7]</a></sup>
+</p>
+<p>
+  版本差也改变了优化目标。AReaL 为每个词元保留采样时的概率，用它修正旧策略采样带来的偏差，同时以本训练步更新前的策略为基准，裁剪新策略的变化幅度。这样，一条旧回答仍能提供学习信号，约束更新幅度的基准也能跟随最近的策略。表 2 中，上限同为四步时，换用解耦目标，分数由 23.3 升至 42.2，接近同步参照的 42.0；取消上限后，即使用解耦目标也只得到 36.9。<sup><a href="#ref-6">[6]</a></sup>
+</p>
 
-## 四、按约束选，而不是按排名选
+<div class="table-scroll" role="region" aria-labelledby="tbl-2" tabindex="0">
+  <table>
+    <caption id="tbl-2">
+      表 2｜同一 1.5B 模型数学消融，训练 250 步后的 AIME 2024 评测分数
+      <span>同步参照只报告一个值（42.0），异步两列逐行对应论文表 2 的同一陈旧度上限。<sup><a href="#ref-6">[6]</a></sup></span>
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">最大陈旧度（训练步）</th>
+        <th scope="col" class="num">常规 PPO</th>
+        <th scope="col" class="num">解耦 PPO</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">1</th>
+        <td class="num">41.8</td>
+        <td class="num">42.1</td>
+      </tr>
+      <tr>
+        <th scope="row">2</th>
+        <td class="num">40.0</td>
+        <td class="num">41.8</td>
+      </tr>
+      <tr>
+        <th scope="row">4</th>
+        <td class="num">23.3</td>
+        <td class="num">42.2</td>
+      </tr>
+      <tr>
+        <th scope="row">8</th>
+        <td class="num">35.7</td>
+        <td class="num">41.0</td>
+      </tr>
+      <tr>
+        <th scope="row">16</th>
+        <td class="num">35.8</td>
+        <td class="num">38.7</td>
+      </tr>
+      <tr>
+        <th scope="row">无上限</th>
+        <td class="num">34.0</td>
+        <td class="num">36.9</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<p class="table-hint">表格可左右滑动查看。</p>
 
-- **单机或少量节点、短答案验证、频繁换 HF 模型**：TRL 的直接循环就够，先别引入 Ray 和第二种推理栈。
-- **要改分布式数据流、要在多个训练后端间比较**：从 verl 的 WorkerGroup 与 backend 边界入手，代价是概念多。
-- **已有 Megatron 资产、想自己掌握 rollout 组织**：slime 的薄编排更合手，但任务调度与 HF→Megatron 转换的责任归你。
-- **卡数紧张、生成长度整齐**：先量共置切换的峰值显存与交接时延，再决定要不要另建推理池。
-- **长尾与工具等待占主导**：先试 ROLL 的环境并发或 SkyRL 的有限预生成，它们可能已经吃掉主要等待；不够再上 AReaL 式在途换权重，并准备好重要性修正与 KV 重算的成本。
-- **agent harness 是产品资产**：Agent Lightning 的网关边界比重写循环划算，上线前先验轨迹重建、分段归一化与失败重放。
-- **大 MoE + 既有 NVIDIA 栈**：NeMo-RL / Megatron 路线优先验证，但训练、并行、推理三者能否组合要逐项落到固定版本——SGLang 的非共置模式在该版就是明确不支持的。
+## 一次交互切成三段，奖励应该算几次
 
-所有选择的最终指标只有一个：固定设备预算下到达目标质量的时间。它同时计入吞吐、因陈旧丢弃的样本、额外概率计算、重算 KV，以及失败后的恢复代价；只看生成 token/s 涨了，还回答不了这套架构是否适合眼前的任务。
+<p>
+  在 SkyRL 的 Gym 接口里，环境收到动作就返回下一条观察、奖励和结束标记，训练系统可以逐步收集这些量。<sup id="cite-8"><a href="#ref-8">[8]</a></sup> 如果已有一个会查文件、运行测试、压缩对话历史的编程智能体，交互顺序已经写在应用里。Agent Lightning 让应用把模型请求发往网关，网关按任务执行编号记录提示和回答的词元编号，以及回答中每个词元被采到的对数概率；训练端拿到这些调用后，还要判断哪些可以接成同一条样本。<sup><a href="#ref-9">[9]</a></sup>
+</p>
+<p>
+  拼接要求前一次调用的提示和回答，在词元层面恰好构成下一次提示的前缀。即使屏幕上的文字相同，重新分词也可能改变词元边界；如果智能体压缩了对话历史，连文字前缀也会改变。Agent Lightning 遇到前缀不匹配就另起一段，保留模型当时真正看到的上下文。在论文图 10 的编程智能体实验中，平均只有 36% 的完整轨迹能合成一条训练样本，每条轨迹平均产生 2.41 条样本。<sup><a href="#ref-9">[9]</a></sup>
+</p>
+<p>
+  分段会改变奖励的分母。设同题两次尝试一次成功、一次失败，奖励分别为 1 和 0。如果成功轨迹切成三段，失败轨迹只有一段，按样本行求平均就会把组内平均奖励从 ½ 推到 ¾，尽管解出题的仍只有一次。Agent Lightning 先把每次尝试的奖励与组内其他尝试比较，算出各自的优势，再让同一尝试的各个片段继承这个值；算损失时，先在每条轨迹内对所有回答词元求平均，再对轨迹等权平均。这样，训练时多占了两行的那次成功，仍只占一次尝试的份额。<sup><a href="#ref-9">[9]</a></sup>
+</p>
+
+<figure class="figure" id="fig-segment">
+  <svg class="flow-wide" viewBox="0 0 700 338" role="img" aria-labelledby="fig-segment-title">
+    <title id="fig-segment-title">切分样本怎样改变组内平均奖励</title>
+    <!-- Left column: 同一道题 -->
+    <rect x="14" y="24" width="148" height="236" rx="8" data-kind="group" />
+    <text x="88" y="48" data-kind="label" text-anchor="middle">同一道题</text>
+    <rect x="28" y="70" width="120" height="46" rx="6" />
+    <rect x="28" y="192" width="120" height="46" rx="6" />
+    <g text-anchor="middle">
+      <text x="88" y="99">成功 · 1</text>
+      <text x="88" y="221">失败 · 0</text>
+    </g>
+
+    <!-- Middle column: 按轨迹分组 -->
+    <rect x="220" y="16" width="186" height="162" rx="8" data-kind="group" />
+    <rect x="236" y="28" width="104" height="36" rx="6" />
+    <rect x="236" y="72" width="104" height="36" rx="6" />
+    <rect x="236" y="116" width="104" height="36" rx="6" />
+    <g text-anchor="middle">
+      <text x="288" y="52">片段 A1</text>
+      <text x="288" y="96">片段 A2</text>
+      <text x="288" y="140">片段 A3</text>
+    </g>
+    <text x="364" y="52" text-anchor="middle">1</text>
+    <text x="364" y="96" text-anchor="middle">1</text>
+    <text x="364" y="140" text-anchor="middle">1</text>
+    <text x="313" y="170" data-kind="edge" text-anchor="middle">继承本轨迹的优势</text>
+
+    <rect x="220" y="190" width="186" height="78" rx="8" data-kind="group" />
+    <rect x="236" y="200" width="104" height="36" rx="6" />
+    <text x="288" y="224" text-anchor="middle">片段 B1</text>
+    <text x="364" y="224" text-anchor="middle">0</text>
+    <text x="313" y="258" data-kind="edge" text-anchor="middle">继承本轨迹的优势</text>
+
+    <!-- Arrows Left -> Middle -->
+    <path d="M148 93 L230 46" />
+    <polygon points="225,43 235,43 230,51" />
+    <path d="M148 93 H230" />
+    <polygon points="227,88 235,93 227,98" />
+    <path d="M148 93 L230 134" />
+    <polygon points="229,129 235,136 225,138" />
+    <path d="M148 215 H230" />
+    <polygon points="227,210 235,215 227,220" />
+
+    <!-- Right column: 两个结果框 -->
+    <rect x="462" y="52" width="224" height="76" rx="8" />
+    <rect x="462" y="192" width="224" height="76" rx="8" data-tone="training" />
+    <g text-anchor="middle">
+      <text x="574" y="81" data-kind="bold">按片段计</text>
+      <text x="574" y="110">(1 + 1 + 1 + 0) / 4 = ¾</text>
+      <text x="574" y="221" data-kind="bold">按任务尝试计</text>
+      <text x="574" y="250">(1 + 0) / 2 = ½</text>
+    </g>
+
+    <!-- Thin lines Middle -> Upper Result -->
+    <path d="M380 46 H426 V90 H456" />
+    <path d="M380 90 H456" />
+    <path d="M380 134 H426 V90" />
+    <path d="M380 218 H426 V90" />
+    <polygon points="453,85 461,90 453,95" />
+
+    <!-- Thick bypass lines Left -> Lower Result -->
+    <path d="M148 106 H184 V288 H444 V230 H456" data-kind="thick" />
+    <path d="M88 238 V288 H184" data-kind="thick" />
+    <polygon points="452,224 461,230 452,236" data-kind="thick" />
+
+    <text x="686" y="326" data-kind="sub" text-anchor="end">两条路线只比较奖励基线</text>
+  </svg>
+
+  <svg class="flow-narrow" viewBox="0 0 340 528" role="img" aria-labelledby="fig-segment-narrow-title">
+    <title id="fig-segment-narrow-title">切分样本怎样改变组内平均奖励（窄屏竖向版）</title>
+    <!-- Top: 同一道题 -->
+    <rect x="16" y="10" width="308" height="86" rx="8" data-kind="group" />
+    <text x="170" y="30" data-kind="label" text-anchor="middle">同一道题</text>
+    <rect x="28" y="42" width="132" height="40" rx="6" />
+    <rect x="180" y="42" width="132" height="40" rx="6" />
+    <g text-anchor="middle">
+      <text x="94" y="67">成功 · 1</text>
+      <text x="246" y="67">失败 · 0</text>
+    </g>
+
+    <!-- Middle: 分段 -->
+    <rect x="16" y="124" width="160" height="188" rx="8" data-kind="group" />
+    <rect x="28" y="136" width="136" height="34" rx="6" />
+    <rect x="28" y="180" width="136" height="34" rx="6" />
+    <rect x="28" y="224" width="136" height="34" rx="6" />
+    <g text-anchor="middle">
+      <text x="96" y="159">片段 A1 · 1</text>
+      <text x="96" y="203">片段 A2 · 1</text>
+      <text x="96" y="247">片段 A3 · 1</text>
+    </g>
+    <text x="96" y="286" data-kind="edge" text-anchor="middle">继承本轨迹的优势</text>
+
+    <rect x="186" y="124" width="138" height="100" rx="8" data-kind="group" />
+    <rect x="198" y="136" width="114" height="34" rx="6" />
+    <text x="255" y="159" text-anchor="middle">片段 B1 · 0</text>
+    <text x="255" y="198" data-kind="edge" text-anchor="middle">继承本轨迹的优势</text>
+
+    <!-- Arrows Top -> Middle -->
+    <path d="M94 82 V130" />
+    <polygon points="89,127 94,135 99,127" />
+    <path d="M246 82 V130" />
+    <polygon points="241,127 246,135 251,127" />
+
+    <!-- Bottom: 两个结果框 -->
+    <rect x="16" y="344" width="308" height="64" rx="8" />
+    <rect x="16" y="432" width="308" height="66" rx="8" data-tone="training" />
+    <g text-anchor="middle">
+      <text x="170" y="370" data-kind="bold">按片段计</text>
+      <text x="170" y="395">(1 + 1 + 1 + 0) / 4 = ¾</text>
+      <text x="170" y="458" data-kind="bold">按任务尝试计</text>
+      <text x="170" y="484">(1 + 0) / 2 = ½</text>
+    </g>
+
+    <!-- Thin lines Middle -> Upper Result -->
+    <path d="M96 312 V338" />
+    <polygon points="91,335 96,343 101,335" />
+    <path d="M255 224 V338" />
+    <polygon points="250,335 255,343 260,335" />
+
+    <!-- Thick bypass lines Top -> Lower Result -->
+    <path d="M28 62 H6 V465 H10" data-kind="thick" />
+    <polygon points="7,459 15,465 7,471" data-kind="thick" />
+    <path d="M312 62 H334 V465 H330" data-kind="thick" />
+    <polygon points="333,459 325,465 333,471" data-kind="thick" />
+
+    <text x="170" y="520" data-kind="sub" text-anchor="middle">两条路线只比较奖励基线</text>
+  </svg>
+  <figcaption>
+    <strong>图 2｜切分样本怎样改变组内平均奖励。</strong>按片段直接平均会抬高成功尝试的权重；先按轨迹计算优势再由片段继承、按轨迹等权平均损失，可保持与任务尝试一致的奖励基线。<sup><a href="#ref-9">[9]</a></sup>
+  </figcaption>
+</figure>
+
+<p>
+  选择架构时，可以拿一条真实的慢任务走完这个闭环。记录它何时交回模型请求、何时凑齐可训练的数据、以哪个策略版本被使用，以及最终对更新贡献几份权重。若要比较改造的收益，就在相同设备预算下看多久能达到同一评测分数；这样既能计入少等一批回答省下的时间，也能计入重算前缀、丢弃过期轨迹和重新组织样本花掉的时间。
+</p>
+
+<details class="supplement">
+  <summary>统计口径与版本</summary>
+  <p>
+    表 1 比较明确列出的执行路径。Agent Lightning 的共置异步是可选模式，完整组数达到更新门槛后，网关仍须等在途模型请求结束。表 2 的陈旧度按整批训练步计，一个训练步内可有多次小批更新。图 10 的 36% 与 2.41 均为作者在“按轨迹算优势并按轨迹归一化”这一次编程智能体训练过程中取的均值。实现细节按下列标签或提交定位，数值取自原论文。<sup><a href="#ref-6">[6]</a></sup><sup><a href="#ref-9">[9]</a></sup>
+  </p>
+</details>
 
 ## 来源与阅读范围
 
-以下为表格与正文的版本锚点；代码用于核对默认值与实现路径，论文结果均为原作者报告，本篇未运行训练。动态文档以 2026-10-31 为阅读日。
+<ol class="reference-list">
+  <li id="ref-1">
+    Hugging Face TRL v1.17.1，奖励函数、生成批次的拆分与缓存、vLLM 更新后再采样。
+    <a href="https://github.com/huggingface/trl/blob/v1.17.1/trl/trainer/grpo_trainer.py#L179-L193" target="_blank" rel="noopener">GRPOTrainer 源码（第 179 行起）</a> ·
+    <a href="https://github.com/huggingface/trl/blob/v1.17.1/trl/trainer/grpo_trainer.py#L1591-L1622" target="_blank" rel="noopener">取批（第 1591–1622 行）</a> ·
+    <a href="https://github.com/huggingface/trl/blob/v1.17.1/trl/trainer/grpo_trainer.py#L1832-L1852" target="_blank" rel="noopener">生成（第 1832–1852 行）</a> ·
+    <a href="https://github.com/huggingface/trl/blob/v1.17.1/docs/source/vllm_integration.md#server-mode" target="_blank" rel="noopener">vLLM 集成（Server Mode）</a>
+    <a class="reference-backlink" href="#cite-1" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-2">
+    Sheng 等，<cite>HybridFlow</cite>，§4.1 图 5b（引用与实际数据路径）、§5.2 图 7（权重布局切换）；verl 官方文档给出了生成调用示例。
+    <a href="https://arxiv.org/html/2409.19256v2#S4.F5" target="_blank" rel="noopener">论文图 5</a> ·
+    <a href="https://arxiv.org/html/2409.19256v2#S5.SS2" target="_blank" rel="noopener">§5.2</a> ·
+    <a href="https://verl.readthedocs.io/en/latest/single_controller.html" target="_blank" rel="noopener">The Design of verl.single_controller</a>
+    <a class="reference-backlink" href="#cite-2" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-3">
+    slime，提交 <code>540ea91</code>，自定义生成函数与普通训练入口的生成、更新、权重交接。
+    <a href="https://github.com/THUDM/slime/blob/540ea919e45b8b929198abce008a103be9cfc779/README.md#L65-L71" target="_blank" rel="noopener">架构说明（第 65–71 行）</a> ·
+    <a href="https://github.com/THUDM/slime/blob/540ea919e45b8b929198abce008a103be9cfc779/train.py#L47-L96" target="_blank" rel="noopener">train.py（第 47–96 行）</a>
+    <a class="reference-backlink" href="#cite-3" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-4">
+    OpenRLHF，提交 <code>dc2a7ad</code>，角色进程组的构造与权重同步分支。
+    <a href="https://github.com/OpenRLHF/OpenRLHF/blob/dc2a7ad326f619fc5a47737ea47d1920ce2c0b53/openrlhf/cli/train_ppo_ray.py#L84-L142" target="_blank" rel="noopener">train_ppo_ray.py（第 84–142 行）</a> ·
+    <a href="https://github.com/OpenRLHF/OpenRLHF/blob/dc2a7ad326f619fc5a47737ea47d1920ce2c0b53/openrlhf/trainer/ray/ppo_actor.py#L99-L105" target="_blank" rel="noopener">ppo_actor.py（第 99–105 行）</a>
+    <a class="reference-backlink" href="#cite-4" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-5">
+    ROLL，环境各自推进与训练端按批取数。
+    <a href="https://alibaba.github.io/ROLL/docs/User%20Guides/Advanced%20Features/async_parallel_rollout/#implementation-principle" target="_blank" rel="noopener">Agentic Asynchronous Parallel Rollout（Implementation Principle）</a>
+    <a class="reference-backlink" href="#cite-5" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-6">
+    AReaL，v5，§4.1 图 3 的在途更新，§5.1–5.2 的限流与式（5），§7.4 图 5、表 2 的数学消融。
+    <a href="https://arxiv.org/html/2505.24298v5#S4.SS1" target="_blank" rel="noopener">系统流程</a> ·
+    <a href="https://arxiv.org/html/2505.24298v5#S5" target="_blank" rel="noopener">陈旧度与解耦目标</a> ·
+    <a href="https://arxiv.org/html/2505.24298v5#S7.T2" target="_blank" rel="noopener">表 2 原始列头与分数</a>
+    <a class="reference-backlink" href="#cite-6" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-7">
+    NeMo-RL v0.7.0，异步 GRPO 缓冲区的生成版本、目标训练步与年龄上限。
+    <a href="https://github.com/NVIDIA-NeMo/RL/blob/v0.7.0/docs/guides/async-grpo.md#L100-L113" target="_blank" rel="noopener">Async GRPO（Weight Version Tracking）</a>
+    <a class="reference-backlink" href="#cite-7" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-8">
+    SkyRL，提交 <code>50cfa01</code>，环境动作与返回值。
+    <a href="https://github.com/NovaSky-AI/SkyRL/blob/50cfa014aff1c42292fdd7811f24ff96d4aa3600/skyrl-gym/skyrl_gym/core.py#L35-L71" target="_blank" rel="noopener">SkyRL-Gym（Env.step 与 Env.init）</a>
+    <a class="reference-backlink" href="#cite-8" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-9">
+    He 等，<cite>Agent Lightning</cite> v1.0，§2.1–2.3 图 3–5 与式（16），§3.1 图 6，§4.3.3 图 10，附录 A.1 网关事件；官方文档给出了整组收集与排空顺序。
+    <a href="https://arxiv.org/html/2608.17528v1#S2" target="_blank" rel="noopener">样本拼接、优势与归一化</a> ·
+    <a href="https://arxiv.org/html/2608.17528v1#S3.SS1" target="_blank" rel="noopener">共置调度</a> ·
+    <a href="https://arxiv.org/html/2608.17528v1#S4.F10" target="_blank" rel="noopener">图 10</a> ·
+    <a href="https://arxiv.org/html/2608.17528v1#A1.SS1" target="_blank" rel="noopener">网关记录</a> ·
+    <a href="https://microsoft.github.io/agent-lightning/stable/35-asynchronous-training/#how-it-works" target="_blank" rel="noopener">异步训练（How it works）</a>
+    <a class="reference-backlink" href="#cite-9" aria-label="返回正文引用">↩</a>
+  </li>
+</ol>
 
-- <a id="source-verl"></a>**verl / HybridFlow**：[论文 2409.19256](https://arxiv.org/abs/2409.19256)；[v0.7.0 标签](https://github.com/verl-project/verl/releases/tag/v0.7.0)、[0.7 博客](https://verl.readthedocs.io/en/latest/blog/v0.7.html)、[Single Controller](https://verl.readthedocs.io/en/latest/single_controller.html)。范围：控制器与 WorkerGroup、三种训练后端、CheckpointEngine 的 NCCL/NIXL、TransferQueue 的实验状态与 0.8 计划、128+ GPU 的异步适用场景。
-- <a id="source-openrlhf"></a>**OpenRLHF**：[0.10.2 架构文档](https://openrlhf.readthedocs.io/en/latest/architecture.html)、固定提交 [dc2a7ad](https://github.com/OpenRLHF/OpenRLHF/tree/dc2a7ad326f619fc5a47737ea47d1920ce2c0b53)。范围：Ray 角色、ZeRO-3、Hybrid Engine、70B+ 声明，`ppo_actor.py` 中 `use_cuda_ipc` 的三个前提。
-- <a id="source-trl"></a>**TRL**：[v1.17.1](https://github.com/huggingface/trl/releases/tag/v1.17.1)、[vLLM 集成文档](https://github.com/huggingface/trl/blob/v1.17.1/docs/source/vllm_integration.md)、[GRPOConfig](https://github.com/huggingface/trl/blob/v1.17.1/trl/trainer/grpo_config.py)、[GRPOTrainer](https://github.com/huggingface/trl/blob/v1.17.1/trl/trainer/grpo_trainer.py)。范围：`use_vllm` 与 `vllm_mode` 默认值、server 模式的 NCCL 权重传输、`tools` 与 `environment_factory`。
-- <a id="source-slime"></a>**slime**：固定 [540ea91](https://github.com/THUDM/slime/tree/540ea919e45b8b929198abce008a103be9cfc779)、[设计博客](https://thudm.github.io/slime/blogs/introducing_slime.html)、[Usage](https://thudm.github.io/slime/get_started/usage.html)。范围：默认分离与 `--colocate`、三条权重更新路径、`update_weight_from_tensor.py` 关于 IPC buffer 复用的注释、HF→`torch_dist` 转换方法。
-- <a id="source-areal"></a>**AReaL**：[论文 v5](https://arxiv.org/html/2505.24298v5) §4–6 实现、§7.4 表 2；[现行异步文档](https://areal-ai.io/docs/en/algorithms/async.html)。范围：SLURM + SGLang 0.4.6 + Megatron-Core 0.11.0、512 张 H800、打断生成并丢弃旧 KV、η 消融的 23.3/42.2/42.0/36.9。
-- <a id="source-roll"></a>**ROLL**：[固定 README d3506ea](https://github.com/alibaba/ROLL/blob/d3506ea9e280ae720fb74df9f82db6efac1c72d5/README.md)、[异步训练](https://alibaba.github.io/ROLL/docs/User%20Guides/Advanced%20Features/async_training/)、[环境并行](https://alibaba.github.io/ROLL/docs/User%20Guides/Advanced%20Features/async_parallel_rollout/)。范围：单控制器、FSDP2/Megatron、`async_generation_ratio` 默认 0、EnvManager 无 barrier 但 `get_batch()` 收批阻塞。
-- <a id="source-skyrl"></a>**SkyRL**：固定 [50cfa01](https://github.com/NovaSky-AI/SkyRL/tree/50cfa014aff1c42292fdd7811f24ff96d4aa3600)、[Overview](https://docs.skyrl.ai/docs/getting-started/overview)、[Inference](https://docs.skyrl.ai/docs/getting-started/inference_architecture)。范围：`config.py` 的 `colocate_all`、`FullyAsyncConfig.enabled` 与 `max_staleness_steps`、delta 仅限非共置 vLLM、`skyrl_gym/core.py` 的 init/step/close。
-- <a id="source-nemo"></a>**NeMo-RL**：[v0.7.0](https://github.com/NVIDIA-NeMo/RL/releases/tag/v0.7.0) 的 `design-and-philosophy.md`、`backends.md`、`async-grpo.md`、`examples/configs/grpo_math_1B.yaml`、`nemo_rl/weight_sync/factory.py`。范围：单进程控制器、1–1000 GPU 设计声明、async 三项前置、v10/v11/v12 的轨迹年龄例子、SGLang 非共置不支持。
-- <a id="source-lightning"></a>**Agent Lightning**：[v1.0 论文 2608.17528](https://arxiv.org/html/2608.17528v1) §2–3、固定 [05c7fe1](https://github.com/microsoft/agent-lightning/tree/05c7fe133175653e48c990546a3509e52dc56512)、[Basics](https://microsoft.github.io/agent-lightning/stable/05-basics/)、[异步训练](https://microsoft.github.io/agent-lightning/stable/35-asynchronous-training/)、[Controller](https://microsoft.github.io/agent-lightning/stable/30-controller-configuration/)。范围：网关记录的 token 与 logprob、64/32 的组配置、组内屏障、暂停排空、36% 与 2.4 条、k8s 与 local 两种 runner。
-- **异步补充证据**：[AsyncFlow v2](https://arxiv.org/html/2507.01663v2) §7（32–512 NPU、1.59 均值、2.03 峰值、基线 `d13434f`）；[PipelineRL v2](https://arxiv.org/html/2509.19128v2) §5（128 H100、48/80 分卡、约 2 倍、基线为 2 节点校正估计）。
+</div>

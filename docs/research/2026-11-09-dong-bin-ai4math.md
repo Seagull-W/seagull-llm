@@ -1,185 +1,318 @@
 ---
-title: "董彬及合作者的形式化数学工作：从陈述形式化到证明搜索与轨迹训练"
-description: "依据董彬及合作者的论文，梳理从 Lean 陈述翻译、库引理检索、证明状态转换到搜索与轨迹训练的工作线，说明各段的实验依据，以及文献陈述接入形式库的缺口。"
-date: 2026-11-09
+title: "从题意到证明，董彬及合作者怎样用 Lean 核验数学推理"
+description: "原题要证明某个伽罗瓦群与八阶四元数群同构，模型却把目标群写成了四阶循环群。这样的陈述可以通过 Lean 编译，即使后来证明成功，得到的也是另一个定理。"
 tags: ["每日调研", "形式化数学", "Lean", "RAG", "智能体", "强化学习", "模型评估"]
+date: 2026-11-09
 ---
 
-# 董彬及合作者的形式化数学工作：从陈述形式化到证明搜索与轨迹训练
+# 从题意到证明，董彬及合作者怎样用 Lean 核验数学推理
 
-把自然语言中的数学问题变成 Lean 能检查的证明，首先要得到忠实的形式陈述：编译通过只说明代码能被接受，概念与条件是否译对还要做语义检验。目标确定后，前提检索寻找库中可调用的引理；命中一条相关声明，仍可能缺少完成路线所需的其他前提。因此，检索既要检查单条声明的相关性，也要检查前提集合能否覆盖一条证明路线。
+<div class="research-article">
 
-有了目标和前提，推理还要落实为真实证明状态之间的转换。局部 tactic 能执行，只验收了当前这一步；完整证明要完成所有证明义务。搜索负责探索这些转换，找到的轨迹还须从原始状态重放并通过 Lean 的最终检查，才能作为成功证明和训练样本。北京大学董彬（Bin Dong）及合作者的工作分别处理**陈述形式化、前提检索、状态转换、搜索与轨迹训练**这四个接口。Matlas 则提供文献侧的入口：它检索到的非形式陈述，要经过形式版本匹配或补定义、补证明，才能成为这条链中可调用的库引理。
+<p class="lead">原题要证明某个伽罗瓦群与八阶四元数群同构，模型却把目标群写成了四阶循环群。这样的陈述可以通过 Lean 编译，即使后来证明成功，得到的也是另一个定理。在董彬及合作者的研究中，Aria 核对形式陈述是否忠于题意，LeanSearch 寻找支撑证明路线的库引理，Reap 则从起点重放指令，让 Lean 检查整份证明。<sup id="cite-1"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup><sup id="cite-4"><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup><sup id="cite-7"><a href="#ref-7" aria-label="参考文献 7">[7]</a></sup></p>
 
-本文按这些接口解释各段解决的问题及其验收口径，材料覆盖 2024 年 3 月至 2026 年 11 月公开的工作，依据是末尾列出的八篇固定版本及其方法、实验表格和附录。这是对局部工作的关系梳理；串联后的效果仍需在共同任务与预算下检验。[Aria §3–4](https://arxiv.org/pdf/2510.04520v1#page=3)，[LeanSearch v2 §4.3](https://arxiv.org/pdf/2605.13137v2#page=9)，[Reap §3.1、§4.4](https://arxiv.org/pdf/2611.02678v1#page=3)，[Matlas §3](https://arxiv.org/pdf/2604.17484v1#page=3)
+## 写下定理之前，先认准定义
 
-<figure>
-  <img loading="lazy" src="/research/2026-11-09-dong-bin-ai4math/fig-1-pipeline.svg" alt="按接口排列的工作图：语料与检索包括 Matlas、LeanSearch v1 和 v2；Aria 借助 LeanSearch 检索概念并生成定义与陈述，AriaScorer 查询 Mathlib 中的术语信息；Chain of States 把非形式化证明转成中间状态链；Reap 接收形式目标，由独立前提选择器 PS-2 提供库声明，再搜索并重放验证证明。评测分别检查检索相关性、陈述语义和证明成功。虚线表示可连接的接口，不代表论文已联合运行这些系统。" />
-  <figcaption>图 1｜自绘。先检查目标陈述与定义，再检查可调用的库声明，最后检查证明状态的转换；每个接口都需要自己的验收。实线表示论文中明确使用的组件关系；虚线表示本文归纳的可连接接口，不表示已完成联合实验。依据 LeanSearch v1 §3、v2 §3–4，Matlas §3，Aria §3–4，Chain of States §4–5，Reap §3–4 与 FATE §3–4。</figcaption>
+<p>Lean 是证明助手，Mathlib 是它的数学库。把题目交给 Lean，第一件事是写清讨论的对象、假设和结论。Aria 做到这里就可以停下，证明正文允许用 <code>sorry</code> 占位。编译器能发现参数类型不合；要发现一个同样合法的参数已经换掉了研究对象，还得拿代码和原题对照。<sup><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
+<p>四元数群的例子里，<code>QuaternionGroup 1</code> 与四阶循环群同构，原题中的八阶群要写成 <code>QuaternionGroup 2</code>。只把代码翻回自然语言，“四元数群”几个字仍可能让评阅者放行。AriaScorer 从代码实际用到的术语查回类型和定义，再让模型逐项核对原题的假设与结论。这样一来，评阅者手里有了判断那个参数的依据。<sup><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
+<p>有时连现成的定义也找不到。遇到 Cohen–Macaulay 模这样的概念，Aria 先用 LeanSearch 查 Mathlib，找不到合适的定义，就继续追查它依赖哪些概念。等底层定义有了着落，再从下往上合成缺失的定义，将编译错误交回模型修改。研究者用这一方法处理了十四条交换代数同调猜想，人工确认其中六条陈述译对了。这六条猜想由此有了可以交给证明器的形式陈述。<sup><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
+<p>FATE-X 的 100 道题中，Aria 有 69 条陈述通过编译，判别器在其中接受 44 条。专家复核同一批输出，发现获准的有 2 条译错，被拒的有 10 条其实译对。按专家标签计，忠实表达原题的是 52 条；论文主表的 44% 记录的是编译与自动判读均通过的比例。<sup><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
+
+## 找到一个定理名之后，还缺哪些引理？
+
+<p>数学家记得“柯西中值定理”，库里对应的声明却叫 <code>exists_ratio_deriv_eq_ratio_slope</code>。早期 LeanSearch 给库声明配上自然语言名称和说明，让人可以按数学含义找代码。Matlas 面向论文和教材，从文献里抽取约 807 万条陈述，并沿同一文档里的依赖补回定义。读者可以循着检索结果回到文献；要在 Lean 里调用其中一条结果，还得匹配库中已有的声明，或把缺少的定义和证明补进来。<sup id="cite-2"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup><sup id="cite-3"><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>
+<p>找齐一条证明路线更难。要证素数 <i>p</i> 对应的 (<i>x</i><sup><i>p</i></sup> − 1)/(<i>x</i> − 1) 在整数系数多项式环中不可约，题面没有出现“分圆”二字。若认出商式就是第 <i>p</i> 个分圆多项式，就可以分别去找几何和恒等式、素数阶分圆多项式的表达式，以及分圆多项式的不可约性定理。只搜到最后一条，仍缺少把原式改写成引理所需形式的理由。<sup><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup></p>
+
+<figure class="figure" id="fig-cyclotomic">
+  <svg class="flow-wide cyclotomic-svg" viewBox="0 0 880 298" role="img" aria-labelledby="fig-cyclotomic-wide-title">
+    <title id="fig-cyclotomic-wide-title">三条引理如何接起一个不可约性证明（宽屏示意图）</title>
+    <!-- 分组标题 -->
+    <text class="group-title" x="14" y="24" text-anchor="start">纸上的推理</text>
+    <text class="group-title" x="14" y="204" text-anchor="start">Mathlib 中的依据</text>
+
+    <!-- 节点上方条件与高亮旁注 -->
+    <text class="cond-label" x="86" y="52" text-anchor="middle">p 为素数</text>
+    <text class="note-highlight" x="558" y="52" text-anchor="middle">题面没有出现的概念</text>
+
+    <!-- 上行四个推理节点 -->
+    <rect class="node-box" x="14" y="66" width="144" height="68" rx="8" />
+    <rect class="node-box" x="250" y="66" width="144" height="68" rx="8" />
+    <rect class="node-highlight" x="486" y="66" width="144" height="68" rx="8" />
+    <rect class="node-box" x="722" y="66" width="144" height="68" rx="8" />
+
+    <g text-anchor="middle">
+      <text class="node-title" x="86" y="94">商式</text>
+      <text class="node-math" x="86" y="118">(x<tspan dy="-5" font-size="10.5">p</tspan><tspan dy="5"> − 1)/(x − 1)</tspan></text>
+
+      <text class="node-title" x="322" y="94">几何和</text>
+      <text class="node-math" x="322" y="118">1 + x + … + x<tspan dy="-5" font-size="10.5">p−1</tspan></text>
+
+      <text class="node-title" x="558" y="94">分圆多项式</text>
+      <text class="node-math" x="558" y="118">Φ<tspan dy="4" font-size="10.5">p</tspan><tspan dy="-4">(x)</tspan></text>
+
+      <text class="node-title" x="794" y="94">在 ℤ[x] 中</text>
+      <text class="node-title" x="794" y="118">不可约</text>
+    </g>
+
+    <!-- 横向推理箭头 A → B → C → D -->
+    <path class="arrow-main" d="M158 100 H246 M239 95 L247 100 L239 105" />
+    <path class="arrow-main" d="M394 100 H482 M475 95 L483 100 L475 105" />
+    <path class="arrow-main" d="M630 100 H718 M711 95 L719 100 L711 105" />
+
+    <!-- 纵向支撑箭头（卡片指向各自支撑的连线） -->
+    <path class="arrow-support" d="M204 220 V110 M199 117 L204 109 L209 117" />
+    <path class="arrow-highlight" d="M440 220 V110 M435 117 L440 109 L445 117" />
+    <path class="arrow-support" d="M676 220 V110 M671 117 L676 109 L681 117" />
+
+    <!-- 连线文字垫不透明底色，防止箭头穿字 -->
+    <rect class="label-mask" x="158" y="152" width="92" height="24" rx="4" />
+    <rect class="label-mask" x="398" y="152" width="84" height="24" rx="4" />
+    <rect class="label-mask" x="640" y="152" width="72" height="24" rx="4" />
+
+    <g text-anchor="middle">
+      <text class="edge-label" x="204" y="169">几何和恒等式</text>
+      <text class="edge-label" x="440" y="169">素数阶公式</text>
+      <text class="edge-label" x="676" y="169">不可约性</text>
+    </g>
+
+    <!-- 下行三张 Mathlib 引理卡片 -->
+    <rect class="card-lemma" x="111" y="220" width="186" height="58" rx="8" />
+    <rect class="card-lemma card-highlight" x="336" y="220" width="208" height="58" rx="8" />
+    <rect class="card-lemma" x="568" y="220" width="216" height="58" rx="8" />
+
+    <g text-anchor="middle">
+      <text class="lemma-code" x="204" y="254">geom_sum_mul</text>
+
+      <text class="lemma-code" x="440" y="244">Polynomial.</text>
+      <text class="lemma-code" x="440" y="264">cyclotomic_prime</text>
+
+      <text class="lemma-code" x="676" y="244">Polynomial.</text>
+      <text class="lemma-code" x="676" y="264">cyclotomic.irreducible</text>
+    </g>
+  </svg>
+
+  <svg class="flow-narrow cyclotomic-svg" viewBox="0 0 380 562" role="img" aria-labelledby="fig-cyclotomic-narrow-title">
+    <title id="fig-cyclotomic-narrow-title">三条引理如何接起一个不可约性证明（窄屏示意图）</title>
+    <!-- 分组标题 -->
+    <text class="group-title" x="10" y="22" text-anchor="start">纸上的推理</text>
+    <text class="group-title" x="202" y="22" text-anchor="start">Mathlib 中的依据</text>
+
+    <!-- 节点 A 上方条件 -->
+    <text class="cond-label" x="93" y="46" text-anchor="middle">p 为素数</text>
+
+    <!-- 左列四个推理节点 -->
+    <rect class="node-box" x="10" y="56" width="166" height="58" rx="8" />
+    <rect class="node-box" x="10" y="194" width="166" height="58" rx="8" />
+    <rect class="node-highlight" x="10" y="338" width="166" height="62" rx="8" />
+    <rect class="node-box" x="10" y="488" width="166" height="58" rx="8" />
+
+    <g text-anchor="middle">
+      <text class="node-title" x="93" y="80">商式</text>
+      <text class="node-math" x="93" y="102">(x<tspan dy="-4" font-size="9.5">p</tspan><tspan dy="4"> − 1)/(x − 1)</tspan></text>
+
+      <text class="node-title" x="93" y="218">几何和</text>
+      <text class="node-math" x="93" y="240">1 + x + … + x<tspan dy="-4" font-size="9.5">p−1</tspan></text>
+
+      <text class="node-title" x="93" y="364">分圆多项式</text>
+      <text class="node-math" x="93" y="387">Φ<tspan dy="3.5" font-size="9.5">p</tspan><tspan dy="-3.5">(x)</tspan></text>
+
+      <text class="node-title" x="93" y="512">在 ℤ[x] 中</text>
+      <text class="node-title" x="93" y="534">不可约</text>
+    </g>
+
+    <!-- 高亮旁注（位于节点 C 右侧空隙） -->
+    <text class="note-highlight" x="286" y="373" text-anchor="middle">题面没有出现的概念</text>
+
+    <!-- 纵向推理箭头 A → B → C → D -->
+    <path class="arrow-main" d="M93 114 V190 M88 183 L93 191 L98 183" />
+    <path class="arrow-main" d="M93 252 V334 M88 327 L93 335 L98 327" />
+    <path class="arrow-main" d="M93 400 V484 M88 477 L93 485 L98 477" />
+
+    <!-- 横向支撑箭头（引理卡片指向对应连线） -->
+    <path class="arrow-support" d="M202 154 H147 M154 149 L146 154 L154 159" />
+    <path class="arrow-highlight" d="M202 295 H142 M149 290 L141 295 L149 300" />
+    <path class="arrow-support" d="M202 444 H134 M141 439 L133 444 L141 449" />
+
+    <!-- 连线文字垫不透明底色，防止竖线穿字 -->
+    <rect class="label-mask" x="45" y="142" width="96" height="24" rx="4" />
+    <rect class="label-mask" x="51" y="283" width="84" height="24" rx="4" />
+    <rect class="label-mask" x="59" y="432" width="68" height="24" rx="4" />
+
+    <g text-anchor="middle">
+      <text class="edge-label" x="93" y="159">几何和恒等式</text>
+      <text class="edge-label" x="93" y="300">素数阶公式</text>
+      <text class="edge-label" x="93" y="449">不可约性</text>
+    </g>
+
+    <!-- 右列三张 Mathlib 引理卡片 -->
+    <rect class="card-lemma" x="202" y="131" width="168" height="46" rx="8" />
+    <rect class="card-lemma card-highlight" x="202" y="267" width="168" height="56" rx="8" />
+    <rect class="card-lemma" x="202" y="416" width="168" height="56" rx="8" />
+
+    <g text-anchor="middle">
+      <text class="lemma-code" x="286" y="158">geom_sum_mul</text>
+
+      <text class="lemma-code" x="286" y="289">Polynomial.</text>
+      <text class="lemma-code" x="286" y="309">cyclotomic_prime</text>
+
+      <text class="lemma-code" x="286" y="438">Polynomial.</text>
+      <text class="lemma-code" x="286" y="458">cyclotomic.irreducible</text>
+    </g>
+  </svg>
+
+  <figcaption><strong>图 1｜三条引理如何接起一个不可约性证明。</strong>横向（窄屏为左列）是数学推导，纵向（窄屏为右列）是每一步所用的库引理。改绘自 LeanSearch v2 图 1。<sup><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup></figcaption>
 </figure>
 
-## 把题目译成 Lean 陈述，编译与语义正确是两层检验
+<p>LeanSearch v2 的推理模式先写草图，为每一步分别查询。过滤后某一步可以一条引理都不留，这个空结果会提醒系统修改草图。在 MathlibMPR 的六十九条定理上，每题取前十个候选，平均命中所需前提组的 46.1%，组内找到任一可替代引理就算命中。把要求改为找齐至少一条已标注路线的所有组，达标的题目占 30.4%。要知道这些候选能否帮忙证完，还要让证明模型实际使用它们。<sup><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup></p>
 
-这条链的起点是**定理陈述的自动形式化**，Aria 处理的正是这个接口：把题目写成 Lean 陈述，证明正文可以仍是 `sorry`，完整证明留给后续 prover。Lean 是检查形式化证明的语言与证明助手，Mathlib 是它的数学库。但一个类型正确、概念选错的陈述仍可以通过编译；后续即使证明成功，得到的也可能是另一个命题。陈述形式化与后续证明因此承担不同的任务。[Aria §1、§3](https://arxiv.org/pdf/2510.04520v1#page=1)
+<p class="table-hint">左右滑动查看完整表格</p>
+<div class="table-scroll" role="region" aria-labelledby="tbl-1" tabindex="0">
+  <table>
+    <caption id="tbl-1">
+      表 1｜同一证明模型在最多八轮修正内交出的完整证明
+      <span>固定 Claude Sonnet 4.5 与最多 8 轮修正；来源：LeanSearch v2 表 3、附录 B.4。<sup><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup></span>
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">检索配置</th>
+        <th scope="col">首轮及出错后如何取材</th>
+        <th scope="col" class="num">FATE-H（100 题）</th>
+        <th scope="col" class="num">MathlibMPR-Prop（50 题）</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">无检索</th>
+        <td>首轮读题，出错后读 Lean 反馈</td>
+        <td class="num">4/100</td>
+        <td class="num">2/50</td>
+      </tr>
+      <tr>
+        <th scope="row">v2 标准模式</th>
+        <td>出错后按当前尝试查引理</td>
+        <td class="num">14/100</td>
+        <td class="num">5/50</td>
+      </tr>
+      <tr>
+        <th scope="row">v2 推理模式</th>
+        <td>首轮给草图和引理，出错后用标准模式</td>
+        <td class="num">20/100</td>
+        <td class="num">7/50</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
-Aria 的 Graph-of-Thought 是概念依赖图。系统自顶向下拆解目标，用 LeanSearch 为每个概念找规范定义；如果找不到，就继续拆成前置概念。叶节点能落到 Mathlib 后，系统自底向上生成缺失定义，再生成最终陈述，每个节点都可利用编译错误反复修正。论文以 Cohen–Macaulay 模为例说明为何必须补定义：仅检索几个相似名字，无法代替构造目标概念所需的层层依赖。[Aria §3.1，图 1](https://arxiv.org/pdf/2510.04520v1#page=4)
+<p>两组题上，先给路线和引理的配置都解出了最多题。这里固定了证明与修正所用的 Claude Sonnet 4.5，以及允许修正的轮数。推理模式同时改变了第一次看到引理的时机，也给出了使用引理的顺序，因此表中增益应归给这套检索配置。<sup><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup></p>
 
-AriaScorer 检查另一层问题。它将原陈述分解成假设与结论，用 Jixia 提取生成代码实际引用的 Lean 术语，再查回这些术语的类型、定义体与自然语言解释，交给 LLM 逐项判别。一个具体错误是把八阶四元数群写成 `QuaternionGroup 1`：论文所用定义下，这对应四阶循环群，八阶四元数群应为 `QuaternionGroup 2`。表面名字非常接近，查定义才能识别参数含义。[Aria §3.2、附录 B.3](https://arxiv.org/pdf/2510.04520v1#page=6)
+## 把纸上的一步变成 Lean 里的一步
 
-| 任务 | Aria 编译成功率 | Aria 最终正确率 | 对照与判定条件 |
-| --- | ---: | ---: | --- |
-| ProofNet 陈述形式化 | 91.6% | 68.5% | 最终指标还需通过 AriaScorer |
-| FATE-X 陈述形式化 | 69.0% | 44.0% | 最佳基线 Goedel-V2 在 pass@128 下为 24.0% |
-| 14 条交换代数同调猜想的陈述形式化 | 未单列 | 6/14（42.9%） | 结果人工核验；表中其他模型均为 0 |
+<p>有了正确的数学论证，仍可能写不出 Lean 能执行的证明。FATE 的专家检查了 DeepSeek-R1 在 FATE-H 上首次尝试时写下的自然语言证明，100 题里有 71 题思路正确；放宽到每题 64 次尝试，完整形式证明依然是零题。细看这 71 份答卷，有 70 份引用了不存在的库声明，或误用了已有声明。哪怕读者能看懂纸上的推理，Lean 仍需要一个适用于当前假设与目标的具体操作。<sup id="cite-5"><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup></p>
+<p>Chain of States 把这项翻译拆开。给定题目和一份文字证明，模型先列出一串预期的证明状态，每个状态列明此时有哪些假设、还欠哪些结论。接着在相邻两个状态之间试跑证明指令（tactic），对照 Lean 实际返回的状态。一条指令可以合法执行却把证明带到另一处；知道要到达哪里，系统便能针对偏差改写指令，也能放弃难以复现的中间状态，从当前位置直接尝试证完。<sup id="cite-6"><a href="#ref-6" aria-label="参考文献 6">[6]</a></sup></p>
+<p>在版本兼容的 227 道 miniF2F-test 题上，作者报告的完整证明成功率为 69.2%。实验给了模型已有的文字证明，其中一部分还经过人工修订。这个结果回答的是手中已有一份论证时，有多少题能沿着它写出可执行的证明。<sup><a href="#ref-6" aria-label="参考文献 6">[6]</a></sup></p>
 
-来源：[Aria §4.1–4.3，表 1](https://arxiv.org/pdf/2510.04520v1#page=7)。常规实验的语义判定阈值为 **α=0.9**：AriaScorer 将假设与结论的逐项判别通过模糊积分汇总为 0 到 1 的语义一致性分数，再与 α 比较，作出接受或拒绝的二值决定。[Aria §3.2，图 2](https://arxiv.org/pdf/2510.04520v1#page=6)
+## 从起点重放，才知道搜索找到了证明
 
-Aria 在 FATE-X 上平均调用模型 **17.7 次／题**，每个生成节点的反思循环允许 16 次修正；这是多次调用的系统结果，与 Goedel-V2 的比较也没有控制为等 token、等费用。[§4.2、§4.3.2、附录 C.1](https://arxiv.org/pdf/2510.04520v1#page=7)
+<p>Reap 面对的是一个形式目标，下一步往哪走也交给搜索。模型提出指令，Lean 执行后给出新状态。同一目标可以尝试不同指令，任选一条成功路线即可；一条指令若拆出几个独立子目标，就必须全部证完。个别指令可能引入辅助声明或推迟证明义务，因此搜索树把根标为完成后，Reap 还要恢复初始状态，重放选中的指令，再把重建的证明交给 Lean 做声明检查。<sup><a href="#ref-7" aria-label="参考文献 7">[7]</a></sup></p>
+<p>这些经重放的轨迹又成为训练材料。策略学习在给定状态与库引理时选择哪条指令，价值模型学习估计余下的搜索成本，每个有效的顶层指令按一步计。最终的 Reaper-1 用 17 亿参数的策略与价值模型，另配独立前提选择器 PS-2。在 miniF2F-test 上，每题最多进行三十二次独立搜索，每次上限 8,192 次模拟，这套系统解出 195/244 题（79.9%）。<sup><a href="#ref-7" aria-label="参考文献 7">[7]</a></sup></p>
 
-91.6% 与 68.5% 的落差说明，编译检查遗漏了大量语义问题；而“最终正确率”仍含语义判别器的误差。在 FATE-X 的 69 条可编译输出上，两名专家构建的标签用来检验 AriaScorer。α=0.9 时，它给出 42 个真阳性、15 个真阴性、2 个假阳性和 10 个假阴性。按表 2 的计数，判别器接受了 42+2=44 条，占全部 100 题的 44.0%；其中 2 条是误收，另有 10 条专家认可的输出被拒绝。专家在这 69 条可编译输出中认可的是 42+10=52 条。因此，表中的 44.0% 是“编译通过且被判别器接受”的比例，不是人工核验的正确率。[Aria §4.3，表 2](https://arxiv.org/pdf/2510.04520v1#page=8)
+<p class="table-hint">左右滑动查看完整表格</p>
+<div class="table-scroll" role="region" aria-labelledby="tbl-2" tabindex="0">
+  <table>
+    <caption id="tbl-2">
+      表 2｜三个训练阶段都能证明的同一批 151 题
+      <span>来源：Reap v1 表 5、附录 C.1–C.3。<sup><a href="#ref-7" aria-label="参考文献 7">[7]</a></sup></span>
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">每题代表证明或对应搜索树的统计量</th>
+        <th scope="col" class="num">监督训练后</th>
+        <th scope="col" class="num">强化学习第 4 阶段</th>
+        <th scope="col" class="num">强化学习第 5 阶段</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">顶层指令数，均值</th>
+        <td class="num">21.7</td>
+        <td class="num">11.2</td>
+        <td class="num">5.2</td>
+      </tr>
+      <tr>
+        <th scope="row">成功搜索树节点数，均值</th>
+        <td class="num">2,368</td>
+        <td class="num">162</td>
+        <td class="num">119</td>
+      </tr>
+      <tr>
+        <th scope="row">每条顶层指令的字符数，中位数</th>
+        <td class="num">19</td>
+        <td class="num">23</td>
+        <td class="num">66</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
-定义合成和检索在不同概念复杂度的题目上，呈现出不同的消融结果：
+<p>以“前 <i>n</i> 个非负整数的立方和等于它们总和的平方”为例，两个后期模型都用归纳法。第四阶段模型在等式上多次化简，又做了一次归纳。第五阶段模型很快用上归纳假设和求和公式，最后按奇偶分情形，用一条组合指令对两个分支做算术推理。模型既少走了一些弯路，也把更多操作写进了同一步。全搜索日志中，单次指令执行的中位耗时从监督训练后的 12.0 毫秒升到第五阶段的 43.2 毫秒。要估计总成本，既要数搜索走了多少步，也要看 Lean 在每一步里做了多少工作。<sup><a href="#ref-7" aria-label="参考文献 7">[7]</a></sup></p>
+<p>Haocheng Ju 与董彬在综述中提出，证明的数学价值还在于揭示结构，给下一道题留下可用的方法。立方和的两份证明都通过了 Lean 检查，把它们并排读，才看得见第二次归纳原来可以省掉。分圆多项式的例子也给读者留下了一条线索：下次遇到几何和的不可约性问题，可以先试着辨认它是哪一个多项式。<sup><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup><sup><a href="#ref-7" aria-label="参考文献 7">[7]</a></sup><sup id="cite-8"><a href="#ref-8" aria-label="参考文献 8">[8]</a></sup></p>
 
-| Aria 配置 | FATE-X 最终正确率 | 同调猜想最终正确率 |
-| --- | ---: | ---: |
-| 完整系统 | 44.0% | 42.9%（6/14） |
-| 去掉编译反馈反思 | 14.0% | 0 |
-| 去掉递归 GoT 分解 | 38.0% | 7.1%（1/14） |
-| 去掉在线检索 RAG | 43.0% | 0 |
-
-来源：[Aria 附录 C，表 3–4](https://arxiv.org/pdf/2510.04520v1#page=23)。FATE-X 上，反思的消融损失最大，去掉 RAG 的最终指标只降一个百分点；到了 14 条猜想，去掉 RAG 则没有成功样本，去掉递归分解也只剩一条。这些结果显示，复杂概念更依赖检索与定义合成，编译反馈反思则在 FATE-X 上带来最大的消融差异。这里六条成功结果仍是猜想的陈述形式化，猜想的证明尚待完成。
-
-## 从形式目标找到库引理，检索由单条声明扩展到整条路线
-
-形式陈述给出待证目标，前提检索则寻找证明它所需的库引理。声明需要包含能被代码调用的准确名称、参数和类型。LeanSearch v1 解决的入口问题很具体：数学家输入熟悉的定理名字或自然语言描述，库里的名字却未必相同。论文以柯西中值定理为例，对应声明名是 `exists_ratio_deriv_eq_ratio_slope`，直接搜索常用数学名称未必命中。[LeanSearch v1 §1](https://arxiv.org/pdf/2403.13310v2#page=1)
-
-v1 把正式声明、文档字符串和相关定义交给 LLM，生成自然语言名称与描述，再把形式／非形式文本配对建索引；查询端也可扩写成相同的双语结构。它的基准包含 **50 条查询、18 组搜索意图**，查询形式覆盖自然语言、LaTeX、定理名称与 Lean 表达式。评测关心的是返回声明是否匹配目标或有助于找到目标，尚未要求一组结果能拼成完整证明。[LeanSearch v1 §3–4，表 1–2](https://arxiv.org/pdf/2403.13310v2#page=3)
-
-### 声明的含义补全后，重排仍是增益的重要来源
-
-在单条声明的检索接口上，LeanSearch v2 的标准模式仍然接收自然语言查询，但语料准备更依赖库的结构。Jixia 静态分析器抽取 Mathlib 声明及引用关系；系统按依赖图的拓扑顺序，自底向上生成自然语言描述，使上层声明的解释能够引用已经解释过的下层定义。索引覆盖 Mathlib **v4.28.0-rc1** 中可抽取的定理、定义、类型类、实例等声明。对定义等对象，编码内容包含定义体；对定理则不把证明项当作同一种语义信息处理。[LeanSearch v2 §3.1](https://arxiv.org/pdf/2605.13137v2#page=4)
-
-检索使用 Qwen3-Embedding-8B，先取 50 个候选，再用 Qwen3-Reranker-8B 重排。两个模型都没有针对 Mathlib 做专项微调；数学知识通过依赖感知的语料和按声明种类设计的提示进入系统。[LeanSearch v2 §3.1](https://arxiv.org/pdf/2605.13137v2#page=5)
-
-这里的 **nDCG@10 为 0.623，LeanFinder 为 0.533**，测的是单条目标声明在前十名中的位置与命中情况。主表实际使用 MathlibQR 的 **810 条查询、171 个目标声明**，它们的目标声明在各系统的 Mathlib 快照中都存在；完整 MathlibQR 则有 946 条查询、200 个声明。去掉重排后，v2 的 nDCG@10 为 0.494。这个对照支持“重排是当前增益的重要来源”；依赖图的独立贡献还需要单独分离。[LeanSearch v2 §4.1，表 1](https://arxiv.org/pdf/2605.13137v2#page=7)
-
-### 路线不受库支持时，检索需要反过来修改计划
-
-从单条声明走向证明路线，全局前提检索要找齐各步骤所需的引理。论文中的例子是证明素数 $p$ 对应的多项式 $(x^p-1)/(x-1)$ 在整数系数下不可约。直接沿题目词面搜索，很难想到“分圆多项式”。若先认出这条路线，就能分别寻找几何级数恒等式、素数阶分圆多项式的表达式、分圆多项式的不可约性，利用散落在不同模块中的引理完成证明。这里需要恢复的是**一条路线所需的前提集合**。[LeanSearch v2 §1，图 1](https://arxiv.org/pdf/2605.13137v2#page=2)
-
-推理模式先写证明草图，为每一步生成查询，再调用标准模式。过滤器可以明确返回空集；判别器检查整条草图能否被这些结果支撑，失败时指出缺失前提或类型约束问题，要求改写路线。初始草图之后最多再修订三轮。允许“这一段没有找到可用结果”很关键：强行保留 top-k 总能给出一些名字，却会掩盖计划根本不受库支持的情况。[LeanSearch v2 §3.2](https://arxiv.org/pdf/2605.13137v2#page=5)
-
-MathlibMPR 从已合并的 Mathlib PR 中选取 **69 条定理**。每条定理有 1–8 个真值前提组，组内引理在对应步骤上可以替代；部分定理还标注了替代证明路线。两个指标分别回答“找到了多少需要的组”和“有没有找齐一条路线”：
-
-| 系统与输入 | 前提组 Recall@10 | 完整路线 Covered@10 |
-| --- | ---: | ---: |
-| LeanSearch v2 推理模式；非形式描述＋形式陈述 | 46.1% | 30.4% |
-| DIVER 完整流水线；相同类型输入 | 38.0% | 24.6% |
-| DIVER 的 retriever＋GroupRank 变体 | 38.5% | 24.6% |
-| LeanStateSearch；形式证明状态 | 9.3% | 2.9% |
-
-来源：[LeanSearch v2 §4.2，表 2](https://arxiv.org/pdf/2605.13137v2#page=8)。Recall 先计算每条定理命中的前提组比例，再对定理做宏平均；组内任一可替代引理命中即可。Covered 则要求原路线或某条已标注替代路线的全部前提组都被命中。因此，在这 69 条定理上，46.1% 衡量前提组召回，30.4% 衡量完整路线覆盖；两者都在检查候选前提集合，完整证明的成功数要看下游实验。
-
-表中逐状态检索的 9.3% 对应另一种输入条件：LeanStateSearch 接收当前证明状态，服务于下一步 tactic；全局检索接收整条定理及描述，试图覆盖整条路线。这两种接口分别对应下一步的前提与整条证明的工具。
-
-### 固定证明模型后，检索配置仍会改变成功率
-
-候选前提能否帮助完成证明，还要接入实际的证明循环；LeanSearch v2 为此做了固定 prover loop 的实验：证明与反思模型均为 Claude Sonnet 4.5，最多八轮反思，以通过 Lean 检查且没有有效 `sorry` 占位的证明计成功。结果是：
-
-| 接入的检索配置 | FATE-H，100 题 | MathlibMPR-Prop，50 题 |
-| --- | ---: | ---: |
-| 无检索 | 4/100（4%） | 2/50（4%） |
-| INF-X-Retriever | 16/100（16%） | 5/50（10%） |
-| LeanSearch v2 标准模式 | 14/100（14%） | 5/50（10%） |
-| LeanSearch v2 推理模式 | 20/100（20%） | 7/50（14%） |
-
-来源：[LeanSearch v2 表 3、附录 B.4](https://arxiv.org/pdf/2605.13137v2#page=9)。MathlibMPR-Prop 是可统一写成 tactic 证明占位形式的 50 题子集。表中成功率均按上述证明与反思协议统计。
-
-这个实验的检索配置还包含不同的触发时机：标准模式只在编译失败后的反思阶段触发；推理模式在首轮提供草图和前提集合，后续反思退回标准模式检索，不会每轮重新规划全局路线。这里固定了证明模型和反思轮数，比较同时包含查询方式、触发时机和草图信息，API 调用量并未配平。[LeanSearch v2 附录 B.4，表 7](https://arxiv.org/pdf/2605.13137v2#page=20)
-
-## 从库引理走向完整证明，推理还要落实到真实状态转换
-
-找到前提只是具备了工具，模型还要给出正确推理，并把它落实为 Lean 能执行的步骤。证明状态记录当前假设和待证目标，tactic 是改变这个状态的 Lean 程序。FATE 在抽象代数与交换代数上的分阶段分析，区分了这两处失败。v4 的 FATE-M 有 150 题，FATE-H 与 FATE-X 各 100 题；FATE-X 中 **38% 的题需要 Mathlib 原先没有的定义**，这些定义已经写入题目文件。这里的 prover 需要使用给定定义完成证明，而 Aria 的陈述形式化任务还要把概念译对，两者即使使用同名数据集，也不在做同一项工作。[FATE §3](https://arxiv.org/pdf/2511.02872v4#page=4)
-
-FATE v4 的 whole-proof 基线在每题 **64 次独立尝试、单次最多 64k token** 下，FATE-H 最好为 **3/100**，FATE-X 全部为 **0/100**。这些是当时表列模型及生成方式的结果，与 LeanSearch v2 后来的 Claude Sonnet 4.5＋检索＋八轮反思实验协议不同，不能把 3%→20% 归为检索的净增益。[FATE §4.1–4.2，表 1](https://arxiv.org/pdf/2511.02872v4#page=6)
-
-分阶段分析揭示了更尖锐的差异。FATE-H 上，专家判定 DeepSeek-R1 的自然语言证明 pass@1 正确率为 **71%**，DeepSeek-Prover-V2 为 **39%**；最终形式证明 pass@64 却分别为 **0% 和 3%**。在自然语言正确、形式证明失败的样本中，Mathlib 幻觉分别出现在 70/71 与 35/39 条尝试，Lean 熟练度错误出现在 70/71 与 36/39 条；这些错误类型可以重叠。形式化仍是突出障碍，但专门优化形式证明，也没有自动保住前端数学推理能力。[FATE §4.3–4.4，表 2–3](https://arxiv.org/pdf/2511.02872v4#page=7)
-
-论文对同源模型推理过程的定性比较还发现：DeepSeek-Prover-V2 的某些“反思”只是重启论述或改变措辞，未定位和修复逻辑缺口；DeepSeek-R1 更常完成有效修正。在这些特定模型和样本中，专项形式证明能力与自然语言纠错能力表现出了差异。这项观察区分了前端推理中的逻辑修复与后端形式证明的执行成功。[FATE §4.5](https://arxiv.org/pdf/2511.02872v4#page=9)
-
-### 已有非形式证明时，可以显式检查相邻状态的转换
-
-自然语言证明已经给出后，形式化仍可能卡在“自然语言的一步，在 Lean 里究竟要改变什么”。Chain of States 将非形式证明先译成一串中间证明状态，再为相邻状态生成 tactic。系统先尝试常见自动化 tactic，再用 DeepSeek-R1 生成局部转换；若执行后的状态与预期不符，利用错误反馈重写，必要时放弃那个中间目标，直接尝试完成剩余证明。[Chain of States §4–5](https://arxiv.org/pdf/2512.10317v2#page=12)
-
-它说明“陈述正确”与“完整证明成功”之间还有可显式建模的接口。其 miniF2F-test 的 **69.2%** 使用因兼容性保留下来的 **227 题**，且输入已有非形式证明，部分证明经过人工修正；表中预算上界写作 **20×15×32 次 DeepSeek-R1 调用／题**。这个成绩对应带非形式证明输入的翻译任务；与完整 244 题上的 pass@32 证明搜索相比，输入、题集和预算都不同。[Chain of States §6.1.2、§6.3，表 3](https://arxiv.org/pdf/2512.10317v2#page=21)
-
-## 在 Lean 内部搜索证明，验证后的轨迹用于策略与价值训练
-
-状态转换提供了可执行的步骤，接下来的搜索要选择并组合这些步骤，直到完成证明。Reap 从形式目标出发，把策略—价值引导的蒙特卡洛树搜索直接实现在 Lean 内部，让训练和推理使用同一套执行与验证逻辑。模型提出 tactic，Lean 执行并返回新状态；可替代的 tactic 构成 OR 分支，必须全部完成的独立子目标构成 AND 分支。子目标若仍共享未解决的元变量，就保留耦合状态，不贸然拆开。价值头估计剩余证明搜索成本，与策略先验共同指导搜索。[Reap §3.1](https://arxiv.org/pdf/2611.02678v1#page=3)
-
-这个实现选择让训练 rollout 与推理共用状态转移、搜索和验证逻辑。搜索树把根节点标为完成后，系统还会恢复原始状态、重放所选 tactic，再走 Lean 的声明检查流程：动作可能引入辅助声明或推迟证明义务，树内的“完成”不能替代最终验证。对熟悉 agent 系统的读者，这里的关键是环境反馈和训练轨迹来自同一套执行语义。[Reap §3.1](https://arxiv.org/pdf/2611.02678v1#page=5)
-
-Reaper-1 的策略—价值主干是 **Qwen3-1.7B-Base**，经过 Lean／数学语料的继续预训练、状态—前提—tactic 的监督学习，再做搜索驱动的强化学习。这里的 RL 采用 expert iteration：搜索产生通过重放验证的成功轨迹，用其动作训练策略，并用 AND–OR 树回传的成本训练价值头。[Reap §3.2](https://arxiv.org/pdf/2611.02678v1#page=5)
-
-具体地，每条有效 tactic 转换计单位成本，拆分独立子目标的辅助 focus 边计零成本；回传以剩余成本的负值表示价值，OR 节点维护按访问平均的估计，AND 节点取已评估、未解决子节点价值的最小值，已解决或尚未评估的子节点默认取零。训练时再将回传的剩余成本离散为 32 档，为轨迹中的状态配上目标类别 y；价值头预测各档的概率，以目标档的负对数概率为损失，与成功 tactic 的自回归损失加权联合训练。这样，树中的成本估计才变成下一轮搜索可用的价值预测。[Reap §3.1–3.2，式 4](https://arxiv.org/pdf/2611.02678v1#page=5)
-
-五阶段 RL 使用约 **2.5 万道 AoPS 训练问题**；RL5 每题最多 8,192 次模拟、pass@8，进一步筛选成功轨迹。这 2.5 万题是 RL 阶段的训练问题规模，预训练与监督学习另有数据。[Reap §3.2、附录 A](https://arxiv.org/pdf/2611.02678v1#page=5)
-
-它还依赖一个单独训练的 **PS-2 前提选择器**：基于 Qwen3-Embedding-8B，在 Mathlib v4.28.0-rc1 上以状态—前提配对数据训练，去重后有 897,414 对，其中 896,902 对用于训练。它在 prover 的 RL 中保持固定，每个状态返回八条声明。**“1.7B prover”描述的是生成与价值主干，并不涵盖默认系统的全部神经模型。** PS-2 沿用 LeanSearch-PS 的训练思路，与 LeanSearch v2 的无专项微调、全局路线检索是不同组件。[Reap §4.1、附录 B](https://arxiv.org/pdf/2611.02678v1#page=7)
-
-### 79.9% 是带检索与搜索预算的系统结果
-
-最终系统在 **244 道 miniF2F-test 上解决 195 道，即 79.9%**。pass@32 指每题最多 32 次独立搜索中至少成功一次；每次搜索上限为 **8,192 次 MCTS 模拟**，策略每次评估采样六个 tactic，生成长度上限 1,024 token、温度 0.99。论文报告这次完整评测使用 **32 张 A100 与 800 个 CPU 核，约三小时**。这一系统结果同时依赖上述搜索预算、硬件配置和模型组件。[Reap §4.1、表 1、附录 A 表 6](https://arxiv.org/pdf/2611.02678v1#page=6)
-
-固定最终 RL5 模型和搜索配置，只替换前提选择器，结果发生变化：
-
-| 前提选择器 | miniF2F-test，pass@32 |
-| --- | ---: |
-| PS-2，独立神经检索器 | 195/244（79.9%） |
-| SineQuoNon，规则式选择器 | 185/244（75.8%） |
-| MePo，规则式选择器 | 165/244（67.6%） |
-
-来源：[Reap §4.4，表 3](https://arxiv.org/pdf/2611.02678v1#page=8)。SineQuoNon 的结果说明这个 prover 可以在不重训的情况下更换前提组件，但其默认 79.9% 仍应连同 PS-2 报告。搜索预算也有边际收益递减：同为 pass@32，每次 512 次模拟已解出 188/244，增加到 8,192 次为 195/244。[Reap §4.5，表 4](https://arxiv.org/pdf/2611.02678v1#page=8)
-
-### 顶层动作减少时，单个动作承载了更多计算
-
-Reap 最有解释价值的分析，是将 SFT、RL4、RL5 都能解决的 **151 题**固定下来，观察训练怎样改变搜索。每题取最早成功轮次的验证证明，同轮并列时取顶层动作较少的，作为代表证明：
-
-| 同题比较的量 | SFT | RL5 |
-| --- | ---: | ---: |
-| 代表证明的平均顶层动作数 | 21.7 | 5.2 |
-| 成功搜索树的平均节点数 | 2,368 | 119 |
-| 代表证明中动作字符数中位数 | 19 | 66 |
-| 代表证明中每动作的 tactic 标识符数 | 1.38 | 2.80 |
-
-来源：[Reap §4.6、附录 C.1–C.3，表 5、8–9](https://arxiv.org/pdf/2611.02678v1#page=9)。与此同时，搜索级 tactic 执行日志中的评估延迟中位数从 **12.0 ms 升至 43.2 ms**；该统计覆盖三次运行的已完成执行记录，不限于 151 题的代表证明。[Reap 附录 C.4，表 10](https://arxiv.org/pdf/2611.02678v1#page=17)
-
-后期策略更常用中间断言、组合 tactic 和嵌套证明，把多个内部操作包装成一个外部动作。单位 tactic 动作计费的价值目标因此同时奖励了有用的证明组织，也可能奖励把计算藏进更大的动作。实验支持“顶层搜索交互被压缩”；是否降低总成本，还要同时看模型调用、生成 token 和 Lean 执行时间。作者也据此提出，把执行时间或动作复杂度纳入未来成本目标。[Reap §4.6–5](https://arxiv.org/pdf/2611.02678v1#page=9)
-
-## 文献中的非形式陈述尚未接入可调用的形式库
-
-上述四个接口主要围绕形式库展开；文献侧还需要一个发现非形式结果的入口。Matlas 将相似的依赖展开思路用于数学文献：从 **43.5 万篇论文与约 1,900 本教材**抽取 **807 万条数学陈述**。论文语料来自按 ICM 引用准则筛出的 180 本期刊，覆盖 1826–2025 年。系统先定位陈述，再抽取局部依赖，构建每份文档内部的依赖图，逐层展开定义与上下文，然后建立语义索引。[Matlas §3.1–3.3](https://arxiv.org/pdf/2604.17484v1#page=3)
-
-前面的检索与搜索依托形式库，Matlas 补充的是“数学文献中有什么可用结果”。LeanSearch 返回可在 Mathlib 中调用的声明，Matlas 返回经过 OCR、抽取和展开的非形式陈述；后者进入 Lean 证明前还需要匹配已有形式版本，或补定义、补证明。807 万衡量的是文献陈述规模；从这些陈述到可调用库引理的接口仍待完成。
-
-董彬与 Ju 的 AI4Math review 将这类工作放在通用数学建模中的推理、检索与 agent 工作流一侧，并将证明带来的理解和可复用工具视为比形式正确性更远的目标。检索是否找到可复用的库引理、形式化是否忠实表达新概念、搜索是否产生可检查的中间结构，都是可落到接口上的检验。当前论文提供了这些局部证据；串联后的研究级端到端成功率，仍需在共同任务和共同预算下测量。[AI4Math review §1、§4](https://arxiv.org/pdf/2601.13209v5#page=2)
+<details class="supplement">
+  <summary>版本、样本与判定口径</summary>
+  <p>沿用旧稿列明的论文版本。Aria v1 的判别阈值为 0.9，专家复核的是全部 69 条可编译输出。表 1 的成功要求 Lean 检查通过且没有有效的 <code>sorry</code> 占位。表 2 每题选首次成功轮次的已验证证明，同轮并列时取顶层指令较少者；执行延迟另取三阶段搜索的已完成指令记录。各项任务由各论文独立评测，尚无从文献输入一路到重放证明的联合成功率。</p>
+</details>
 
 ## 来源与阅读范围
 
-以下列出固定版本及其支撑的主张，支撑检索、陈述形式化、证明执行与成本判断；未复现实验。作者身份依据[董彬的北京大学主页](https://faculty.bicmr.pku.edu.cn/~dongbin/)及论文作者栏，八篇中的 Bin Dong 均对应本文对象。
+<ol class="reference-list">
+  <li id="ref-1">
+    <cite>Aria v1</cite>。§3.1–3.2、图 1 给出定义合成与语义判读方法，§4 表 1–2 给出两种验收计数，附录 B.3 核对群参数。
+    <a href="https://arxiv.org/pdf/2510.04520v1#page=4" target="_blank" rel="noopener">方法</a> ·
+    <a href="https://arxiv.org/pdf/2510.04520v1#page=8" target="_blank" rel="noopener">专家复核</a> ·
+    <a href="https://arxiv.org/pdf/2510.04520v1#page=22" target="_blank" rel="noopener">四元数群例</a>
+    <a class="reference-backlink" href="#cite-1" aria-label="返回正文引用 1">↩</a>
+  </li>
+  <li id="ref-2">
+    <cite>A Semantic Search Engine for Mathlib4</cite>。§1 的柯西中值定理与 §3.1 的库声明索引。
+    <a href="https://arxiv.org/pdf/2403.13310v2#page=1" target="_blank" rel="noopener">原文</a>
+    <a class="reference-backlink" href="#cite-2" aria-label="返回正文引用 2">↩</a>
+  </li>
+  <li id="ref-3">
+    <cite>Matlas</cite>。§3、图 2–4 的语料规模、文档内依赖与陈述展开。
+    <a href="https://arxiv.org/pdf/2604.17484v1#page=3" target="_blank" rel="noopener">原文</a>
+    <a class="reference-backlink" href="#cite-3" aria-label="返回正文引用 3">↩</a>
+  </li>
+  <li id="ref-4">
+    <cite>LeanSearch v2</cite>。图 1 的分圆多项式例，§3.2 的路线修订，§4.2–4.3 表 2–3 的路线覆盖与完整证明，附录 B.4 表 7 的检索时机。
+    <a href="https://arxiv.org/pdf/2605.13137v2#page=2" target="_blank" rel="noopener">示例</a> ·
+    <a href="https://arxiv.org/pdf/2605.13137v2#page=8" target="_blank" rel="noopener">评测</a> ·
+    <a href="https://arxiv.org/pdf/2605.13137v2#page=20" target="_blank" rel="noopener">证明配置</a>
+    <a class="reference-backlink" href="#cite-4" aria-label="返回正文引用 4">↩</a>
+  </li>
+  <li id="ref-5">
+    <cite>FATE v4</cite>。§4.3–4.4 表 2–3 的文字证明判读、形式证明成功率与错误分类。
+    <a href="https://arxiv.org/pdf/2511.02872v4#page=7" target="_blank" rel="noopener">原文</a>
+    <a class="reference-backlink" href="#cite-5" aria-label="返回正文引用 5">↩</a>
+  </li>
+  <li id="ref-6">
+    <cite>Translating Informal Proofs into Formal Proofs Using a Chain of States</cite>。§4–5、算法 1 的状态修正，§6.1.2、§6.3 表 3 的题集与输入。
+    <a href="https://arxiv.org/pdf/2512.10317v2#page=19" target="_blank" rel="noopener">算法</a> ·
+    <a href="https://arxiv.org/pdf/2512.10317v2#page=21" target="_blank" rel="noopener">评测</a>
+    <a class="reference-backlink" href="#cite-6" aria-label="返回正文引用 6">↩</a>
+  </li>
+  <li id="ref-7">
+    <cite>Reap v1</cite>。§3.1–3.2 的重放与训练，§4 表 1、3、5 的解题与同题比较，附录 C 表 8–10 的样本口径，附录 D 代码清单 1–2 的立方和证明。
+    <a href="https://arxiv.org/pdf/2611.02678v1#page=5" target="_blank" rel="noopener">方法</a> ·
+    <a href="https://arxiv.org/pdf/2611.02678v1#page=9" target="_blank" rel="noopener">同题比较</a> ·
+    <a href="https://arxiv.org/pdf/2611.02678v1#page=17" target="_blank" rel="noopener">执行延迟</a> ·
+    <a href="https://arxiv.org/pdf/2611.02678v1#page=19" target="_blank" rel="noopener">证明原例</a>
+    <a class="reference-backlink" href="#cite-7" aria-label="返回正文引用 7">↩</a>
+  </li>
+  <li id="ref-8">
+    <cite>AI for Mathematics: Progress, Challenges, and Prospects</cite>。§4 对语义核验及证明如何产生可复用方法的讨论。
+    <a href="https://arxiv.org/pdf/2601.13209v5#page=19" target="_blank" rel="noopener">原文</a>
+    <a class="reference-backlink" href="#cite-8" aria-label="返回正文引用 8">↩</a>
+  </li>
+</ol>
 
-1. **LeanSearch v1 — A Semantic Search Engine for Mathlib4**：[arXiv:2403.13310v2](https://arxiv.org/abs/2403.13310v2)，2025-02-04 修订；正式发表记录为 [EMNLP 2024 Findings](https://aclanthology.org/2024.findings-emnlp.470/)。§1、§3–4、§5.1–5.2，表 1–2：非形式化语料、查询扩写与 50 查询／18 意图组。
-
-2. **LeanSearch v2 — Global Premise Retrieval for Lean 4 Theorem Proving**：[arXiv:2605.13137v2](https://arxiv.org/abs/2605.13137v2)，2026-05-14 修订。§1、§3–5，表 1–3；附录 B.4／表 7：跨快照查询子集、前提组与完整路线指标、prover loop 的触发方式。D.3 表格与部分文字有数值冲突，该消融结论未纳入。
-
-3. **Aria — An Agent For Retrieval and Iterative Auto-Formalization via Dependency Graph**：[arXiv:2510.04520v1](https://arxiv.org/abs/2510.04520v1)，2025-10-06。§1、§3–4，表 1–2；附录 B.2–B.3、C 表 3–5：定义误读、语义判定与消融。ProofNet 比例对应该 v1 的测试设置；测试条数／切分未明确，不反推分母。2026-07-02 的 v2 结果未合并；附录 C 与表格不一致的文字未采用。
-
-4. **Reap — Uncovering Monte Carlo proof search with a lightweight model**：[arXiv:2611.02678v1](https://arxiv.org/abs/2611.02678v1)，2026-11-02。§3–5，表 1–5；附录 A–B／表 6–7、C.1–C.4／表 8–10：195/244、搜索预算、PS-2、RL 数据与动作成本。所引训练规模仅覆盖 RL 问题及前提选择器数据，不覆盖 CPT 总 token 数与 SFT 总样本数。
-
-5. **Matlas — A Semantic Search Engine for Mathematics**：[arXiv:2604.17484v1](https://arxiv.org/abs/2604.17484v1)，2026-04-19。§1–4，图 2–4及语料筛选说明：43.5 万论文、1,900 教材、807 万陈述与文档内部依赖展开。语料规模未附独立检索效果实验，也未作 OCR、依赖抽取或数学正确性的抽样审计。
-
-6. **FATE — A Formal Benchmark Series for Frontier Algebra of Multiple Difficulty Levels**：[arXiv:2511.02872v4](https://arxiv.org/abs/2511.02872v4)，2026-03-08 修订。§1、§3–4.6，表 1–3：M/H/X 规模、新定义比例、两种证明口径与错误分母；反思差异限于主文的定性分析。
-
-7. **Translating Informal Proofs into Formal Proofs Using a Chain of States**：[arXiv:2512.10317v2](https://arxiv.org/abs/2512.10317v2)，2025-12-12 修订。§1、§4–5、算法 1、§6.1–6.3／表 2–3：中间状态、错误修正、227 题子集及调用预算。按预印本引用；PDF 的 CSIAM Trans. Appl. Math. 模板卷期仍是占位符。
-
-8. **AI for Mathematics: Progress, Challenges, and Prospects**：[arXiv:2601.13209v5](https://arxiv.org/abs/2601.13209v5)，2026-05-02 修订。摘要、§1、§4：语义一致性、证明价值与工作流定位；不用于其他团队的性能比较。
+</div>

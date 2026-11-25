@@ -1,102 +1,309 @@
 ---
-title: "Agentic RL 相对于一般大模型 RL，核心差异在哪里？"
-description: "用同一个多跳问答对照固定输入和交互式训练，解释环境观察如何改变后续行动，以及奖励、信用分配和采样系统各自承担什么。"
-date: "2026-11-20"
+title: "在 Agentic RL 中，模型的动作会改变下一轮看到的证据"
+description: "在固定输入的大模型强化学习中，模型拿到题目和给定材料，生成一份供评分的回答。在 Agentic RL 的训练中，模型还可以先做一个动作，读到环境返回的新信息，再决定下一步。"
 tags: ["每日调研", "强化学习", "Agentic RL", "信用分配", "后训练"]
+date: "2026-11-20"
 ---
 
-# Agentic RL 相对于一般大模型 RL，核心差异在哪里？
+# 在 Agentic RL 中，模型的动作会改变下一轮看到的证据
 
-**核心差异在于训练轨迹如何生成。交互式训练中，策略选的动作决定它能看到什么，返回的观察又进入下一次决策。** 模型因此可以学习怎样取证、怎样利用信息，以及何时结束交互。[Search-R1，§§3.1–3.4](https://arxiv.org/html/2503.09516v5#S3)
+<div class="research-article">
 
-本文以在线采样对照两种后训练设置，并将“一般大模型 RL”限定为下文的固定输入设置。
+<p class="lead">在固定输入的大模型强化学习中，模型拿到题目和给定材料，生成一份供评分的回答。在 Agentic RL 的训练中，模型还可以先做一个动作，读到环境返回的新信息，再决定下一步。哪怕两者都只按最终答案给分，交互中的模型也有机会学会此刻值得查什么，以及证据够了该何时收手。</p>
 
-- **固定输入。** 生成途中没有外部观察。输入可以包含预取资料，也可以因样本而异。综述把整条回复视为一个任务级动作。“单轮”按外部交互数来理解，回复仍可包含很长的自回归推理。
-- **交互式（本文所指的 Agentic RL）。** 训练数据来自策略与外部环境的交互轨迹，环境观察能影响同一任务中的后续动作。综述把它描述为多步决策过程。
+## 一次检索怎样改变下一问
 
-两种设置都可以把生成拆到 token 级，也都可以只在终局按答案是否正确给分，并使用 PPO 或 GRPO。[综述，§§2.1–2.4](https://arxiv.org/html/2509.02547v5#S2) · [Turn-PPO，§§2.1–2.3](https://aclanthology.org/2026.findings-eacl.328.pdf)
+<p>“推出 Curious 女士香水的歌手出生在哪座城市、哪个州？”面对 Search-R1 附录里的这道题，无检索的 R1 把歌手认成碧昂丝，答了休斯敦。Search-R1 先查香水，返回的段落提到布兰妮·斯皮尔斯。这个姓名随即成了第二次查询的关键词，检索器返回密西西比州麦库姆市。模型又查了一次麦库姆的位置，才提交答案。<sup id="cite-1"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
+<p>把两段资料预先放进题面，模型也有机会答对，此时训练考查的是它怎样使用给定证据。换成 Search-R1 的采样方式，模型必须自己决定从香水入手，还是先猜一位歌手去查。即使检索器和索引始终固定，第一问选得不同，第二轮可用的证据也可能不同。这样一来，写出能找到线索的查询，本身就成了策略可以通过奖励学会的动作。<sup id="cite-1-2"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
 
-## 一次查询如何改变训练轨迹
+<div class="table-scroll" role="region" aria-labelledby="tbl-sampling" tabindex="0">
+  <table>
+    <caption id="tbl-sampling">
+      表 1｜固定输入与交互式采样的机制差异
+      <span>同一道问答，均按最终答案评分</span>
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">阶段</th>
+        <th scope="col">固定输入</th>
+        <th scope="col">交互式采样</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">开始生成时</th>
+        <td>题目，可附预取资料</td>
+        <td>题目，可附预取资料</td>
+      </tr>
+      <tr>
+        <th scope="row">写出查询后</th>
+        <td>作为回复的一部分继续生成</td>
+        <td>执行查询，把返回段落交给模型</td>
+      </tr>
+      <tr>
+        <th scope="row">下一次决策的依据</th>
+        <td>初始输入和自己的生成前缀</td>
+        <td>初始输入、此前动作和已返回的观察</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
-<figure style="max-width: 408px; margin: 24px auto">
-  <img src="/research/2026-11-20-agentic-rl-core-differences/rollout-paths.svg" width="408" height="552" alt="同问小说作者出生在哪个省。固定输入用题目和预取资料生成完整回复。交互式路径先查询作者，把返回的姓名用于下一次查询，再用返回的出生地线索作答。两条路径都在提交后按最终答案给任务奖励。" />
-  <figcaption>图 1｜同一问答的两条训练轨迹。固定输入用题目和预取资料作答。交互式路径先查作者，再用返回的姓名查出生地。虚线框里的姓名和出生地线索是给模型做下一次决策的观察。两条路径都在提交后按答案正确性给任务奖励。本文自绘。</figcaption>
+<figure class="figure" id="fig-trajectory">
+  <svg class="flow-wide" viewBox="0 0 800 664" role="img" aria-labelledby="fig-traj-wide-title">
+    <title id="fig-traj-wide-title">一个名字怎样进入下一次查询（宽屏版）</title>
+    <!-- 顶端题目节点 -->
+    <rect x="130" y="14" width="540" height="44" rx="8" />
+    <text x="400" y="42" text-anchor="middle">Q：Curious 香水的歌手出生在哪座城市、哪个州？</text>
+
+    <!-- 题目分岔连线 -->
+    <path d="M270 58 V70 H180 V106 M174 98 L180 106 L186 98" />
+    <path d="M530 58 V70 H475 V106 M469 98 L475 106 L481 98" />
+
+    <!-- 列标题（垫底色防穿线） -->
+    <rect data-kind="label-bg" x="80" y="68" width="200" height="24" rx="4" />
+    <text data-kind="label" x="180" y="85" text-anchor="middle">固定输入 · 论文 R1 样例</text>
+    <rect data-kind="label-bg" x="385" y="68" width="180" height="24" rx="4" />
+    <text data-kind="label" x="475" y="85" text-anchor="middle">交互式 · Search-R1</text>
+
+    <!-- 左列：固定输入 -->
+    <rect x="60" y="108" width="240" height="40" rx="8" />
+    <text x="180" y="133" text-anchor="middle">L1：猜测歌手是碧昂丝</text>
+    <path d="M180 148 V176 M174 168 L180 176 L186 168" />
+
+    <rect x="60" y="178" width="240" height="40" rx="8" />
+    <text x="180" y="203" text-anchor="middle">L2：提交：休斯敦</text>
+    <path d="M180 218 V248 M174 240 L180 248 L186 240" />
+
+    <polygon points="180,250 268,278 180,306 92,278" />
+    <text x="180" y="283" text-anchor="middle">L3：答案不匹配</text>
+
+    <!-- 右列：交互式 Search-R1 -->
+    <rect x="355" y="108" width="240" height="40" rx="8" />
+    <text x="475" y="133" text-anchor="middle">A1：查 Curious 香水</text>
+    <path d="M475 148 V164 M469 156 L475 164 L481 156" />
+
+    <rect data-kind="obs" data-tone="highlight" x="355" y="166" width="240" height="40" rx="8" />
+    <text x="475" y="191" text-anchor="middle">O1：歌手：布兰妮</text>
+
+    <!-- 加粗 O1 -> A2 连线与旁注 -->
+    <path data-tone="strong" d="M475 206 V232 M468 223 L475 232 L482 223" />
+    <path data-kind="guide" d="M478 218 H612" />
+    <rect data-kind="label-bg" x="614" y="198" width="168" height="42" rx="4" />
+    <text data-kind="note" x="618" y="215">返回的姓名</text>
+    <text data-kind="note" x="618" y="233">成为新查询词</text>
+
+    <rect data-tone="highlight" x="355" y="234" width="240" height="40" rx="8" />
+    <text x="475" y="259" text-anchor="middle">A2：查布兰妮的出生地</text>
+    <path d="M475 274 V290 M469 282 L475 290 L481 282" />
+
+    <rect data-kind="obs" x="355" y="292" width="240" height="40" rx="8" />
+    <text x="475" y="317" text-anchor="middle">O2：密西西比州麦库姆市</text>
+    <path data-kind="guide" d="M595 312 H612" />
+    <rect data-kind="label-bg" x="614" y="292" width="168" height="42" rx="4" />
+    <text data-kind="note" x="618" y="309">此处已有完整答案</text>
+    <text data-kind="note" x="618" y="327">（仍继续第三次检索）</text>
+
+    <path d="M475 332 V348 M469 340 L475 348 L481 340" />
+    <rect x="355" y="350" width="240" height="40" rx="8" />
+    <text x="475" y="375" text-anchor="middle">A3：查麦库姆的位置</text>
+    <path d="M475 390 V406 M469 398 L475 406 L481 398" />
+
+    <rect data-kind="obs" x="355" y="408" width="240" height="40" rx="8" />
+    <text x="475" y="433" text-anchor="middle">O3：确认城市和州</text>
+    <path d="M475 448 V464 M469 456 L475 464 L481 456" />
+
+    <rect x="355" y="466" width="240" height="40" rx="8" />
+    <text x="475" y="491" text-anchor="middle">A4：提交：密西西比州麦库姆市</text>
+    <path d="M475 506 V524 M469 516 L475 524 L481 516" />
+
+    <polygon points="475,526 563,554 475,582 387,554" />
+    <text x="475" y="559" text-anchor="middle">R：答案匹配</text>
+
+    <!-- 底部图例 -->
+    <path data-kind="guide" d="M60 606 H740" />
+    <rect x="140" y="622" width="28" height="18" rx="4" />
+    <text data-kind="note" x="176" y="636">模型动作</text>
+
+    <rect data-kind="obs" x="320" y="622" width="28" height="18" rx="4" />
+    <text data-kind="note" x="356" y="636">环境观察</text>
+
+    <polygon points="514,621 530,631 514,641 498,631" />
+    <text data-kind="note" x="538" y="636">终局评分</text>
+  </svg>
+
+  <svg class="flow-narrow" viewBox="0 0 340 806" role="img" aria-labelledby="fig-traj-narrow-title">
+    <title id="fig-traj-narrow-title">一个名字怎样进入下一次查询（窄屏版）</title>
+    <!-- 题目节点 -->
+    <rect x="14" y="10" width="312" height="48" rx="8" />
+    <text x="170" y="30" text-anchor="middle">Q：Curious 香水的歌手出生在</text>
+    <text x="170" y="49" text-anchor="middle">哪座城市、哪个州？</text>
+
+    <!-- 左列：固定输入 -->
+    <text data-kind="label" x="170" y="82" text-anchor="middle">固定输入 · 论文 R1 样例</text>
+    <rect x="35" y="94" width="270" height="36" rx="8" />
+    <text x="170" y="117" text-anchor="middle">L1：猜测歌手是碧昂丝</text>
+    <path d="M170 130 V144 M165 137 L170 144 L175 137" />
+
+    <rect x="35" y="146" width="270" height="36" rx="8" />
+    <text x="170" y="169" text-anchor="middle">L2：提交：休斯敦</text>
+    <path d="M170 182 V196 M165 189 L170 196 L175 189" />
+
+    <polygon points="170,198 252,220 170,242 88,220" />
+    <text x="170" y="225" text-anchor="middle">L3：答案不匹配</text>
+
+    <path data-kind="guide" d="M24 260 H316" />
+
+    <!-- 右列：交互式 Search-R1 -->
+    <text data-kind="label" x="170" y="282" text-anchor="middle">交互式 · Search-R1</text>
+    <rect x="35" y="294" width="270" height="36" rx="8" />
+    <text x="170" y="317" text-anchor="middle">A1：查 Curious 香水</text>
+    <path d="M170 330 V344 M165 337 L170 344 L175 337" />
+
+    <rect data-kind="obs" data-tone="highlight" x="35" y="346" width="270" height="36" rx="8" />
+    <text x="170" y="369" text-anchor="middle">O1：歌手：布兰妮</text>
+
+    <!-- 加粗 O1 -> A2 并垫底色防穿线 -->
+    <path data-tone="strong" d="M170 382 V416 M164 408 L170 416 L176 408" />
+    <rect data-kind="label-bg" x="72" y="388" width="196" height="20" rx="4" />
+    <text data-kind="note" x="170" y="403" text-anchor="middle">返回的姓名成为新查询词</text>
+
+    <rect data-tone="highlight" x="35" y="418" width="270" height="36" rx="8" />
+    <text x="170" y="441" text-anchor="middle">A2：查布兰妮的出生地</text>
+    <path d="M170 454 V468 M165 461 L170 468 L175 461" />
+
+    <rect data-kind="obs" x="35" y="470" width="270" height="36" rx="8" />
+    <text x="170" y="493" text-anchor="middle">O2：密西西比州麦库姆市</text>
+
+    <path d="M170 506 V540 M165 533 L170 540 L175 533" />
+    <rect data-kind="label-bg" x="48" y="512" width="244" height="20" rx="4" />
+    <text data-kind="note" x="170" y="527" text-anchor="middle">此处已有完整答案（仍再查一次）</text>
+
+    <rect x="35" y="542" width="270" height="36" rx="8" />
+    <text x="170" y="565" text-anchor="middle">A3：查麦库姆的位置</text>
+    <path d="M170 578 V592 M165 585 L170 592 L175 585" />
+
+    <rect data-kind="obs" x="35" y="594" width="270" height="36" rx="8" />
+    <text x="170" y="617" text-anchor="middle">O3：确认城市和州</text>
+    <path d="M170 630 V644 M165 637 L170 644 L175 637" />
+
+    <rect x="35" y="646" width="270" height="36" rx="8" />
+    <text x="170" y="669" text-anchor="middle">A4：提交：密西西比州麦库姆市</text>
+    <path d="M170 682 V696 M165 689 L170 696 L175 689" />
+
+    <polygon points="170,698 252,720 170,742 88,720" />
+    <text x="170" y="725" text-anchor="middle">R：答案匹配</text>
+
+    <!-- 底部图例 -->
+    <path data-kind="guide" d="M24 758 H316" />
+    <rect x="20" y="772" width="20" height="14" rx="3" />
+    <text data-kind="note" x="46" y="784">模型动作</text>
+
+    <rect data-kind="obs" x="126" y="772" width="20" height="14" rx="3" />
+    <text data-kind="note" x="152" y="784">环境观察</text>
+
+    <polygon points="242,771 254,779 242,787 230,779" />
+    <text data-kind="note" x="260" y="784">终局评分</text>
+  </svg>
+  <figcaption><strong>图 1｜一个名字怎样进入下一次查询。</strong>图据 Search-R1 附录 I 表 9 同题样例绘制。<sup id="cite-1-3"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></figcaption>
 </figure>
 
-**查询在什么时候执行？** 固定输入下，模型即使在回复中写出查询，训练环境也不会执行它。Search-R1 则在训练时执行查询，把检索段落插回上下文，再恢复生成，直到模型提交答案或触及动作预算。[Search-R1，§3.2 算法 1、§4.3](https://arxiv.org/html/2503.09516v5#S3.SS2)
+<p>判断一条轨迹是否属于这种交互，可以沿时间顺序做个检验。假设模型把第一个查询换成另一位歌手的名字，接下来交给它的资料会跟着变吗？若系统只是重放预先写好的两段检索记录，模型仍能学会引用资料，却没有机会在这道题里试出改写查询会带来什么后果。</p>
 
-**观察怎样改变下一步？** 若查到同名作品，模型可以改查出版年份。即使索引固定、同一查询总是返回相同结果，换一个查询也会改变后续观察。
+## 检索段落给模型读，哪些词要算进策略损失？
 
-记 $h_t$ 为模型本轮实际看到的上下文，$a_t$ 为本轮动作。策略按 $\pi_\theta(a_t\mid h_t)$ 采样。若动作触发工具，运行时用环境返回的观察 $o_{t+1}$ 构造下一轮上下文 $h_{t+1}$。运行时可以拼接、重组或压缩历史，模型看到的片段也可能只覆盖环境状态的一部分。固定输入下，上下文的新增内容来自模型自身的生成前缀。[综述，§§2.2–2.4](https://arxiv.org/html/2509.02547v5#S2) · [Agent Lightning，§§3.2.2、3.3.2](https://arxiv.org/html/2508.03680v1#S3)
+<p>沿着布兰妮这条线索看，同一个姓名在轨迹里出现了两次：第一次是检索器送来的，第二次是模型把它写进新查询。前者是一次<strong>观察</strong>，后者是模型选择的<strong>动作</strong>。Search-R1 把两段文字都保留在上下文里，并用掩码标出来源。计算策略损失时，只在模型生成的位置计算它选中这些词的概率。如此一来，训练能强化“读到姓名后用它追问”的行为，同时保留促成这次追问的原始证据。<sup id="cite-1-4"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
+<p>Search-R1 用 Qwen2.5-7B-Base 和 PPO 做了一个对照，两组都允许模型检索，也都把返回的段落交给模型阅读。把检索器返回的词元计入损失时，七个问答集的平均精确匹配率是 34.3%。屏蔽这些位置后是 43.1%，高出 8.8 个百分点。这个差值衡量的是交互已经存在时，改变外部文字的损失掩码对答题表现的影响。<sup id="cite-1-5"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
+<p>观察和奖励也要按用途区分。Search-R1 把每次查到的段落送回模型，任务评分器直到最后才核对答案。反过来，DeepSeekMath 的过程监督做法是先从一道固定数学题采样完整解答，再给各推理步骤评分：开头的词元可以用到本步和后续各步的归一化分数，写到末步时只用末步分数。评分精细到步骤，模型在写这份解答时用到的材料却始终来自题面和自己的前文。<sup id="cite-1-6"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup><sup id="cite-2"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup></p>
 
-**哪些 token 参与策略更新？** 轨迹概率由模型动作和环境转移共同决定。若环境响应机制固定，同一条轨迹的新旧策略概率比中，环境项相消，剩下由模型生成 token 给出的动作概率比。
+## 答对以后，第三次查询该分多少功劳？
 
-Search-R1 的 PPO 和 GRPO 把检索文本保留为后续生成的条件，只对查询、作答等模型生成的 token 直接计算策略损失。查询策略改变后，下一批轨迹也可能看到不同的文档。[Search-R1，§3.1 式（2）–（3）、附录 A](https://arxiv.org/html/2503.09516v5#S3.SS1)
+<p>香水题在第二次检索后已经有了城市和州。如果模型当时提交相同答案，按 Search-R1 的评分规则，它会和实际多查一次的轨迹得到相同任务分。训练若只看到最后的对错，就要从许多次尝试中推断哪些早期选择值得重复，这就是多轮交互里的信用分配问题。<sup id="cite-1-7"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
+<p>结果监督版 GRPO 在同一道题下采样多条轨迹，用每条轨迹相对组内其他轨迹的得分作为优势，即更新时鼓励或抑制这次选择的信号。一条轨迹中，第一次找歌手、第三次核验和最后作答的生成词元共用这个优势。如果全组都答错，单凭最终对错就区分不了“已经找对歌手”和“一开始就认错人”。跨许多组采样，有用查询仍可能因更常出现在高回报轨迹中而得到强化。<sup id="cite-2-2"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup><sup id="cite-3"><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>
+<p>Turn-PPO 给每轮回答前的上下文估一个值，表示模型从这里继续行动预计能拿到多少回报。读到正确姓名后，预期回报可能上升；等城市和州都已知时，再查一次可能只带来很小的变化。即使中间没有任务分，算法仍能用下一轮的折扣估值减去本轮估值，再按权重汇入后续各轮的差值和终局得分，给两次查询算出不同的优势，同一轮回复共享该轮优势。检索偶然命中，以及价值模型本身的误差，也会影响这个估计。<sup id="cite-3-2"><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>
+<p>论文在 WebShop 购物任务上比较了下面两种推理设置。横向看同一行，三种方法都从商品搜索、选项选择到下单的多轮交互中学习。Turn-PPO 除了按回合估值，也把 PPO 对新旧策略概率比的裁剪从单个词元改到整轮回复，因此表里的平均奖励衡量的是整套改动的表现。<sup id="cite-3-3"><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>
 
-## 观察给模型看，奖励给优化器用
+<div class="table-scroll" role="region" aria-labelledby="tbl-webshop" tabindex="0">
+  <table>
+    <caption id="tbl-webshop">
+      表 2｜WebShop 多轮购物任务平均奖励对比（Qwen3-1.7B）
+      <span>来源：Turn-PPO 原文 §3.3 表 2；“训练失败”对应原表 Crash</span>
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">推理设置</th>
+        <th scope="col">结果监督 GRPO</th>
+        <th scope="col">Token-PPO</th>
+        <th scope="col">Turn-PPO</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">关闭长推理</th>
+        <td>0.78</td>
+        <td>0.77</td>
+        <td>0.80</td>
+      </tr>
+      <tr>
+        <th scope="row">开启长推理</th>
+        <td>训练失败</td>
+        <td>0.54</td>
+        <td>0.55</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
-- **观察**进入模型的上下文。返回的作者姓名会影响下一步查什么。
-- **任务奖励**进入训练目标。答案是否正确可以作为终局奖励。若系统还给第一轮找到的作者打分并用该分数优化，就增加了过程奖励。
+## 采样系统要把当时的上下文交给训练器
 
-同一事件可以同时提供观察和奖励，也可以只提供其中一种。**是否有中途观察**与**任务奖励落在哪些位置**是两个设计维度。
+<p>同一条轨迹有明确的先后：发出香水查询，等段落返回，才能生成带歌手姓名的下一问。不同轨迹则可以各自推进。AgentFly 让正在等工具的轨迹暂挂，其他已经拿到观察的轨迹继续生成。如果工具有状态，例如模拟商店里的购物会话，后续动作还要送回同一个环境实例，才能接上此前操作造成的变化。<sup id="cite-4"><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup></p>
+<p>保存轨迹也有两种实际做法。Search-R1 留下一条连续序列，用掩码标出哪些词来自检索器。若运行时会压缩历史或切换角色，Agent Lightning 则逐次保存模型实际收到的输入和生成的输出。譬如某轮只读到上轮的摘要，就应当用那份摘要还原决策条件；把事后整理的完整对话交给训练器，会让它在计算动作概率时看见模型当时没有的线索。<sup id="cite-1-8"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup><sup id="cite-5"><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup></p>
+<p>Agent Lightning 论文中的实现把同一条轨迹的终局回报分给每次调用，再交由单轮算法处理各次输出。放回香水题，三次查询都可以单列成样本，三者仍可领到同一个分数。<sup id="cite-5-2"><a href="#ref-5" aria-label="参考文献 5">[5]</a></sup></p>
+<p>若还希望模型学会节省调用，可以把每次查询的成本从回报中扣除。这样，在两条路径都能答对时，第二次检索后就提交答案的那条会因省下一次调用而获得更高回报。</p>
 
-- **Search-R1 · 中途有观察，终局给分。** 每次检索都把结果返回给模型，整条轨迹的任务奖励只看最终答案的精确匹配。论文用 PPO 和 GRPO 分别做了多轮训练。[Search-R1，§§3.1–3.4、§5.1](https://arxiv.org/html/2503.09516v5#S3)
-- **DeepSeekMath · 固定输入，逐步给分。** 过程监督 GRPO 从固定数学题采样多份完整解答，再用过程奖励模型给推理步骤评分。每个 token 的优势是位置不早于它的步骤分数之和，步骤分数先做归一化。训练信号随 token 位置变化，生成仍由固定题目和自身前缀驱动。这里的“过程”指分数对应解答的位置，评分可以在采样完成后进行。[DeepSeekMath，§§4.1.2–4.1.3](https://arxiv.org/html/2402.03300v3#S4.SS1)
-
-## 同一个终局分数，怎样传给前面的动作？
-
-设一条轨迹查对作者，多查一次后仍答对。另一条轨迹认错作者，最后答错。终局分数能比较两条轨迹的表现。能否分辨同一条轨迹中哪次查询有用，取决于优势估计用到了什么信息。
-
-**整条轨迹共用一个优势。** 结果监督版 GRPO 对同题的多条轨迹计算组内相对分数，再给一条轨迹中所有参与更新的生成 token 分配同一个优势。有效查询、多余查询和答案共享同一系数，各 token 的实际更新仍取决于各自的概率比和梯度。
-
-多次采样后，好查询可以因更常出现在高回报轨迹中而获得强化。若整组都答错，即使某条轨迹已经找对作者，终局分数也无法区分组内尝试。[DeepSeekMath，§4.1.2](https://arxiv.org/html/2402.03300v3#S4.SS1.SSS2) · [Turn-PPO，§2.4、图 1](https://aclanthology.org/2026.findings-eacl.328.pdf#page=3)
-
-**用 critic 比较动作前后的情境。** 按回合估值时，$V(h_t)$ 是从本轮上下文出发、继续执行策略的预期回报估计。令 $r_t$ 为即时奖励，$\gamma$ 为折扣因子，则 TD 残差为
-
-$$
-\delta_t = r_t + \gamma V(h_{t+1}) - V(h_t)
-$$
-
-只给终局奖励且不加 KL 塑形时，中途 $r_t=0$，TD 残差仍可非零。比如检索澄清了作者身份，下一轮预计回报可能上升，这一变化会进入本轮优势估计。
-
-GAE 按 $\gamma\lambda$ 衰减汇入后续残差，$\lambda$ 控制后续残差的权重。终局的后继价值取零。价值差依赖实际发生的转移和 critic 的估计，其中也可能包含检索运气和估计误差。[Turn-PPO，§§2.3–2.4](https://aclanthology.org/2026.findings-eacl.328.pdf#page=4)
-
-PPO 可以在 token 或回合上估计优势。Turn-PPO 还改变了策略裁剪的单位。
-
-- **Token-PPO。** 在生成前缀上估值，一次推进可能只增加一个模型 token，也可能在回合交界接入整段工具观察。
-- **Turn-PPO。** 把整段模型回复视为一个动作，在读入本轮提示或观察后、生成回复前估值。同轮生成 token 共享该轮优势。论文将一轮内的 token 概率比相乘，再对整轮的概率比做 PPO 裁剪。
-
-若采用相同的逐步折扣，按 token 与按回合计时会产生不同的奖励衰减，因为较长回复在 token 时间轴上跨过更多步。[Turn-PPO，§§2.2–2.4、表 1](https://aclanthology.org/2026.findings-eacl.328.pdf#page=5)
-
-**原论文中的结果。** 在 WebShop 和 Sokoban 的五种任务与模型组合中，表 2 的 Turn-PPO 平均奖励均高于 Token-PPO。使用轨迹级组相对优势的 GRPO 在两种 WebShop 配置上完成训练，在启用长推理的 Qwen3-1.7B WebShop 配置和两种 Sokoban 配置上训练失败。
-
-两种 PPO 同时改变了价值估计、优势和裁剪的粒度，表 2 衡量的是整套改动的表现。[Turn-PPO，§§3.1–3.4、表 2、图 3](https://aclanthology.org/2026.findings-eacl.328.pdf#page=7)
-
-**样本也可以按调用拆分。** Agent Lightning 记录每次调用的实际输入、输出和分配所得的分数，再交给单轮优化器。对重写提示或压缩上下文的工作流，按次记录能保留模型当时实际看到的上下文。
-
-按调用组织样本仍可以共用终局分数。论文中的 LightningRL 就把同一终局回报分给该轨迹的每次调用，再由单轮算法处理调用里的 token。[Agent Lightning，§§3.2.2、3.3.2、图 3](https://arxiv.org/html/2508.03680v1#S3.SS3)
-
-## Rollout 怎样采到这样的轨迹？
-
-模型生成查询后，运行时解析并发出请求。这条轨迹必须等到结果才能继续。**轨迹之间怎样等待工具**和**采样能否与参数更新同时进行**，是两个调度层次。
-
-- **采样内部。** 若整批每轮统一等待，慢请求会拖住已经拿到结果的轨迹。AgentFly 用非阻塞的工具调用，让等待中的轨迹暂挂、拿到观察的轨迹继续。整批仍可使用同一版策略。有状态环境的后续行动需要回到对应实例。[AgentFly，§§2.1–2.4](https://arxiv.org/html/2507.14897v1#S2)
-- **采样与更新之间。** 若训练器可在采样尚未结束时发布权重，训练批可能混入旧策略数据，单条轨迹也可能由不同版本生成。AReaL 在单步数学和代码任务中已遇到这个问题。它限制采样数据的陈旧程度，并在 PPO 目标中区分负责采样的行为策略和用于裁剪的近端策略。
-
-AReaL 也用外部执行器运行单元测试，为已经生成的代码打分。测试结果只用于奖励，这个例子同时说明固定输入训练也可以使用外部执行器和异步采样。[AReaL，§§4.1–5.2、附录 E](https://arxiv.org/html/2505.24298v5#S4)
-
-**训练端需要哪种记录？** 按 token 更新要识别动作位置，按回合估值要找回动作前模型实际看到的上下文。Search-R1 的连续序列加掩码和 Agent Lightning 的逐调用记录是两种具体表示。[Search-R1，§§3.1–3.2](https://arxiv.org/html/2503.09516v5#S3) · [Agent Lightning，§§3.2.2、3.4](https://arxiv.org/html/2508.03680v1#S3)
-
-回到这道问答题，交互式训练还会优化**怎样选择下一次取证动作，以及怎样根据结果调整行为**。在终局分数相同的设置下，信用估计决定学习信号怎样传给查询动作，rollout 系统负责提供对应的条件与动作记录。
-
-图中的同题对照用于解释机制。Search-R1 的实际问答实验比较了检索能力和训练方式均有差异的系统。要估计交互本身对效果的独立贡献，还需要控制信息访问和预算。[Search-R1，§§4.2–4.4、表 2](https://arxiv.org/html/2503.09516v5#S4)
+<details class="supplement">
+  <summary>口径与阅读范围（按需展开）</summary>
+  <p>本文对照在线采样中的两种信息条件。“固定输入”以单道任务为单位，允许预取资料和任意多步的内部推理。香水题是论文展示的一组模型输出；估计交互本身的收益，还需对齐两组可获得的资料和检索预算。</p>
+  <p>Search-R1 表 4 的百分数取原表 Avg. 列乘以 100。WebShop 表中的数是任务平均奖励，原表的 Crash 表示该配置下训练失败。价值估计的说明沿用 Turn-PPO 图 1 的简化设置，只讨论终局任务分。</p>
+</details>
 
 ## 来源与阅读范围
 
-- **《The Landscape of Agentic Reinforcement Learning for LLMs》**，arXiv:2509.02547v5。读 §2.1–2.7 的形式化对照，§4.1.1 查 Search-R1，§5.2 表 11 查训练框架。本文从这些位置追原论文。[综述原文](https://arxiv.org/html/2509.02547v5) · [站内中文 PDF](https://seagull-llm.pages.dev/papers/agentic-rl-survey/)
-- **Search-R1**，COLM 2025，arXiv:2503.09516v5。先读 §3.2 算法 1 和 §3.4 式（4），再对照 §3.1 式（2）–（3）和附录 A。§§4.2–4.4 给出对照配置，§5.4 表 4 是检索 token 掩码的消融。[论文原文](https://arxiv.org/html/2503.09516v5)
-- **DeepSeekMath**，arXiv:2402.03300v3。并读 §4.1.2 和 §4.1.3，看整条输出给分与逐步骤给分怎样产生不同的优势。[论文原文](https://arxiv.org/html/2402.03300v3#S4.SS1)
-- **Turn-PPO**，Findings of EACL 2026，pp. 6227–6243。§2.1 图 1 标出两种 critic 的输入位置，§§2.2–2.4 和表 1 比较优势与裁剪粒度，§3 表 2 和图 3 给出多轮实验。[会议论文](https://aclanthology.org/2026.findings-eacl.328.pdf)
-- **Agent Lightning**，arXiv:2508.03680v1。§3.2.2 看如何提取每次调用，§3.3.2 和图 3 看终局回报如何分配，§3.4 看运行时如何收集轨迹。[论文原文](https://arxiv.org/html/2508.03680v1#S3)
-- **AgentFly**，arXiv:2507.14897v1。§2.1 看每条采样链如何独立推进，§§2.3–2.4 看工具状态和环境实例的管理。[论文原文](https://arxiv.org/html/2507.14897v1#S2)
-- **AReaL**，arXiv:2505.24298v5。§3.2 与 §§4.1–5.2 解释输出长度、并行调度和策略版本差，附录 E 界定该论文的实验范围。[论文原文](https://arxiv.org/html/2505.24298v5)
+<ol class="reference-list">
+  <li id="ref-1">
+    Jin 等，<cite>Search-R1</cite>（arXiv v5），定位：
+    <a href="https://arxiv.org/html/2503.09516v5#S3.SS2" target="_blank" rel="noopener">§3.2 算法 1</a>、
+    <a href="https://arxiv.org/html/2503.09516v5#S3.SS1" target="_blank" rel="noopener">§3.1 策略损失</a>、
+    <a href="https://arxiv.org/html/2503.09516v5#S3.SS4" target="_blank" rel="noopener">§3.4 任务奖励</a>、
+    <a href="https://arxiv.org/html/2503.09516v5#S5.T4" target="_blank" rel="noopener">§5.4 表 4 掩码消融</a>、
+    <a href="https://arxiv.org/html/2503.09516v5#A9.T9" target="_blank" rel="noopener">附录 I 表 9 同题轨迹</a>。
+    <a class="reference-backlink" href="#cite-1" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-2">
+    Shao 等，<cite>DeepSeekMath</cite>（arXiv v3），定位：
+    <a href="https://arxiv.org/html/2402.03300v3#S4.SS1.SSS2" target="_blank" rel="noopener">§4.1.2 结果监督</a>、
+    <a href="https://arxiv.org/html/2402.03300v3#S4.SS1.SSS3" target="_blank" rel="noopener">§4.1.3 过程监督</a>。
+    <a class="reference-backlink" href="#cite-2" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-3">
+    Li 等，<cite>Turn-PPO</cite>（Findings of EACL 2026），定位：
+    <a href="https://aclanthology.org/2026.findings-eacl.328.pdf#page=3" target="_blank" rel="noopener">图 1 优势分配示意</a>、
+    <a href="https://aclanthology.org/2026.findings-eacl.328.pdf#page=5" target="_blank" rel="noopener">§§2.3–2.4、表 1 估值和裁剪</a>、
+    <a href="https://aclanthology.org/2026.findings-eacl.328.pdf#page=7" target="_blank" rel="noopener">§3.3 表 2 平均奖励</a>。
+    <a class="reference-backlink" href="#cite-3" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-4">
+    Wang 等，<cite>AgentFly</cite>（arXiv v1），定位：
+    <a href="https://arxiv.org/html/2507.14897v1#S2.SS1" target="_blank" rel="noopener">§2.1 异步采样</a>、
+    <a href="https://arxiv.org/html/2507.14897v1#S2.SS4" target="_blank" rel="noopener">§2.4 环境实例绑定</a>。
+    <a class="reference-backlink" href="#cite-4" aria-label="返回正文引用">↩</a>
+  </li>
+  <li id="ref-5">
+    Luo 等，<cite>Agent Lightning</cite>（arXiv v1），定位：
+    <a href="https://arxiv.org/html/2508.03680v1#S3.SS2.SSS2" target="_blank" rel="noopener">§3.2.2 式（6）逐调用记录</a>、
+    <a href="https://arxiv.org/html/2508.03680v1#S3.SS3.SSS2" target="_blank" rel="noopener">§3.3.2 图 3 回报分配</a>。
+    <a class="reference-backlink" href="#cite-5" aria-label="返回正文引用">↩</a>
+  </li>
+</ol>
+
+</div>
