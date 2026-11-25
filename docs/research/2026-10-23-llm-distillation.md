@@ -68,114 +68,15 @@ date: "2026-10-23"
 </p>
 
 <figure class="figure" id="fig-prefix-feedback">
-  <svg class="flow-wide" viewBox="0 0 920 390" role="img" aria-labelledby="fig-prefix-wide-title">
-    <title id="fig-prefix-wide-title">同一道折扣题，固定示范与在策略蒸馏在前缀和反馈上的差异</title>
-    <g text-anchor="middle">
-      <text data-kind="tag" x="295" y="26">已有前缀</text>
-      <text data-kind="tag" x="597.5" y="26">教师给出的下一步</text>
-      <text data-kind="tag" x="821" y="26">学生更新</text>
-    </g>
+  
 
-    <rect x="12" y="138" width="152" height="110" rx="10" />
-    <g text-anchor="middle">
-      <text x="88" y="185">80 元打七五折</text>
-      <text x="88" y="213">应付多少？</text>
-    </g>
+  
 
-    <text data-kind="label" x="200" y="60">固定示范</text>
-    <rect x="200" y="72" width="190" height="76" rx="8" />
-    <rect x="500" y="72" width="195" height="76" rx="8" />
-    <rect x="735" y="72" width="172" height="76" rx="8" />
-    <g text-anchor="middle">
-      <text x="295" y="103">教师写：</text>
-      <text x="295" y="131">直接算应付金额</text>
-      <text x="597.5" y="103">按原价的 3/4</text>
-      <text x="597.5" y="131">计算</text>
-      <text x="821" y="103">学习示范的</text>
-      <text x="821" y="131">下一步</text>
-    </g>
-    <path d="M164 175 H182 V110 H197 M189 104 L197 110 L189 116" />
-    <path d="M390 110 H497 M489 104 L497 110 L489 116" />
-    <path d="M695 110 H732 M724 104 L732 110 L724 116" />
-
-    <text data-kind="label" x="200" y="210">在策略蒸馏</text>
-    <rect data-tone="highlight" x="200" y="222" width="190" height="76" rx="8" />
-    <rect data-tone="highlight" x="500" y="222" width="195" height="76" rx="8" />
-    <rect x="735" y="222" width="172" height="76" rx="8" />
-    <g text-anchor="middle">
-      <text x="295" y="253">学生写：</text>
-      <text x="295" y="281">先算省下的钱</text>
-      <text x="597.5" y="253">教师在此前缀上</text>
-      <text x="597.5" y="281">给候选分布</text>
-      <text x="821" y="253">匹配下一步</text>
-      <text x="821" y="281">概率</text>
-    </g>
-    <path d="M164 211 H182 V260 H197 M189 254 L197 260 L189 266" />
-    <path d="M390 260 H497 M489 254 L497 260 L489 266" />
-    <path d="M695 260 H732 M724 254 L732 260 L724 266" />
-    <path data-kind="loop" d="M821 298 V360 H295 V301" />
-    <path d="M289 309 L295 301 L301 309" />
-
-    <rect data-kind="bg" x="403" y="246" width="84" height="26" rx="4" />
-    <text data-kind="edge-label" x="445" y="264" text-anchor="middle">读学生原话</text>
-
-    <text data-kind="note" x="597.5" y="323" text-anchor="middle">合理续写：先算 80 × 1/4</text>
-
-    <rect data-kind="bg" x="458" y="346" width="200" height="26" rx="4" />
-    <text data-kind="edge-label" x="558" y="364" text-anchor="middle">用更新后的学生再次采样</text>
-  </svg>
-
-  <svg class="flow-narrow" viewBox="0 0 360 645" role="img" aria-labelledby="fig-prefix-narrow-title">
-    <title id="fig-prefix-narrow-title">同一道折扣题，固定示范与在策略蒸馏在前缀和反馈上的差异（窄屏竖排版）</title>
-    <rect x="28" y="10" width="236" height="54" rx="8" />
-    <text x="146" y="43" text-anchor="middle">80 元打七五折，应付多少？</text>
-
-    <text data-kind="label" x="28" y="92">固定示范</text>
-    <path d="M146 64 V101 M140 93 L146 101 L152 93" />
-    <rect x="28" y="104" width="236" height="54" rx="8" />
-    <text data-kind="tag" x="146" y="123" text-anchor="middle">已有前缀</text>
-    <text x="146" y="146" text-anchor="middle">教师写：直接算应付金额</text>
-    <path d="M146 158 V179 M140 171 L146 179 L152 171" />
-
-    <rect x="28" y="182" width="236" height="54" rx="8" />
-    <text data-kind="tag" x="146" y="201" text-anchor="middle">教师给出的下一步</text>
-    <text x="146" y="224" text-anchor="middle">按原价的 3/4 计算</text>
-    <path d="M146 236 V257 M140 249 L146 257 L152 249" />
-
-    <rect x="28" y="260" width="236" height="54" rx="8" />
-    <text data-kind="tag" x="146" y="279" text-anchor="middle">学生更新</text>
-    <text x="146" y="302" text-anchor="middle">学习示范的下一步</text>
-
-    <text data-kind="label" x="28" y="352">在策略蒸馏</text>
-    <path d="M28 37 H12 V393 H25 M17 387 L25 393 L17 399" />
-
-    <rect data-tone="highlight" x="28" y="366" width="236" height="54" rx="8" />
-    <text data-kind="tag" x="146" y="385" text-anchor="middle">已有前缀</text>
-    <text x="146" y="408" text-anchor="middle">学生写：先算省下的钱</text>
-
-    <path d="M146 420 V465 M140 457 L146 465 L152 457" />
-    <rect data-kind="bg" x="96" y="430" width="100" height="22" rx="4" />
-    <text data-kind="edge-label" x="146" y="446" text-anchor="middle">读学生原话</text>
-
-    <rect data-tone="highlight" x="28" y="468" width="236" height="54" rx="8" />
-    <text data-kind="tag" x="146" y="487" text-anchor="middle">教师给出的下一步</text>
-    <text x="146" y="510" text-anchor="middle">在此前缀上给候选分布</text>
-
-    <path d="M72 522 V567 M66 559 L72 567 L78 559" />
-    <text data-kind="note" x="176" y="550" text-anchor="middle">合理续写：先算 80 × 1/4</text>
-
-    <rect x="28" y="570" width="236" height="54" rx="8" />
-    <text data-kind="tag" x="146" y="589" text-anchor="middle">学生更新</text>
-    <text x="146" y="612" text-anchor="middle">匹配下一步概率</text>
-
-    <path data-kind="loop" d="M264 597 H310 V393 H267" />
-    <path d="M275 387 L267 393 L275 399" />
-    <rect data-kind="bg" x="268" y="472" width="84" height="44" rx="4" />
-    <text data-kind="edge-label" x="310" y="490" text-anchor="middle">用更新后的</text>
-    <text data-kind="edge-label" x="310" y="508" text-anchor="middle">学生再采样</text>
-  </svg>
-
-  <figcaption>
+  <picture>
+<source media="(max-width: 720px)" srcset="/research/llm-distillation/fig-prefix-feedback-narrow.svg">
+<img loading="lazy" decoding="async" src="/research/llm-distillation/fig-prefix-feedback-wide.svg" alt="同一道折扣题，固定示范与在策略蒸馏在前缀和反馈上的差异">
+</picture>
+<figcaption>
     <strong>图 1｜同一道折扣题，两种前缀会收到什么反馈。</strong>两条路都能算出 60 元，教师要看的前缀决定此处该教哪一步。<sup id="cite-1-3"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup><sup id="cite-4-7"><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup>
   </figcaption>
 </figure>

@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="flow-narrow flow-narrow" viewBox="0 0 340 536" role="img" aria-labelledby="fig-pipeline-narrow-title">
+<style>
+  text { font-family: "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+  svg { font-size: 17px; }
+  :is(.flow-wide, .flow-narrow) text { fill: #26364a;
+  font: 400 17px "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+:is(.flow-wide, .flow-narrow) text[data-kind="label"] { fill: #426e63;
+  font-weight: 550; }
+:is(.flow-wide, .flow-narrow) rect { fill: #fbf9f5;
+  stroke: #bfc8c4;
+  stroke-width: 1; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="training"] { fill: #edf3ef;
+  stroke: #79a99b; }
+:is(.flow-wide, .flow-narrow) path { fill: none;
+  stroke: #79a99b;
+  stroke-width: 1.6; }
+:is(.flow-wide, .flow-narrow) rect[data-kind="bg-label"] { fill: #f6f1e7;
+      stroke: none; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="hatch-wide"] { fill: url(#wait-hatch-wide);
+      stroke: #bfc8c4;
+      stroke-dasharray: 4 3; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="hatch-narrow"] { fill: url(#wait-hatch-narrow);
+      stroke: #bfc8c4;
+      stroke-dasharray: 4 3; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="v0"] { fill: #fbf9f5;
+      stroke: none; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="v1"] { fill: #dceae4;
+      stroke: none; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="outline"] { fill: none;
+      stroke: #7b8994;
+      stroke-width: 1.2; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="split-glow"] { fill: #f2c690;
+      stroke: none;
+      opacity: .5; }
+:is(.flow-wide, .flow-narrow) path[data-kind="guide"] { stroke: #c9cec9;
+      stroke-width: 1.2;
+      stroke-dasharray: 4 4; }
+:is(.flow-wide, .flow-narrow) path[data-kind="answer"] { stroke: #426e63;
+      stroke-width: 1.8; }
+:is(.flow-wide, .flow-narrow) path[data-kind="weight"] { stroke: #b86f1f;
+      stroke-width: 1.8;
+      stroke-dasharray: 5 4; }
+:is(.flow-wide, .flow-narrow) path[data-kind="split"] { stroke: #b86f1f;
+      stroke-width: 2.2; }
+:is(.flow-wide, .flow-narrow) text[data-size="md"] { font-size: 16px; }
+:is(.flow-wide, .flow-narrow) text[data-size="sm"] { font-size: 14px; }
+:is(.flow-wide, .flow-narrow) text[data-size="xs"] { font-size: 13px; }
+:is(.flow-wide, .flow-narrow) text[data-kind="muted"] { fill: #5c6874; }
+:is(.flow-wide, .flow-narrow) text[data-kind="weight"] { fill: #9a5d14;
+      font-weight: 550; }
+</style>
+
+    <title id="fig-pipeline-narrow-title">同步训练与 PipelineRL 流水线生成—训练时序对比（窄屏版）</title>
+    <defs>
+      <pattern id="wait-hatch-narrow" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="8" stroke="#c7cdc9" stroke-width="2" />
+      </pattern>
+    </defs>
+
+    <!-- 三条共用竖向时标 -->
+    <path data-kind="guide" d="M112 52 V478" />
+    <path data-kind="guide" d="M188 52 V478" />
+    <path data-kind="guide" d="M266 52 V478" />
+
+    <rect data-kind="bg-label" x="74" y="8" width="76" height="36" rx="4" />
+    <rect data-kind="bg-label" x="150" y="8" width="76" height="36" rx="4" />
+    <rect data-kind="bg-label" x="228" y="8" width="76" height="36" rx="4" />
+    <g text-anchor="middle">
+      <text x="112" y="23" data-size="xs" data-kind="muted">短答案</text>
+      <text x="112" y="39" data-size="xs" data-kind="muted">完成</text>
+      <text x="188" y="23" data-size="xs" data-kind="muted">可更新一批</text>
+      <text x="188" y="39" data-size="xs" data-kind="muted">已凑齐</text>
+      <text x="266" y="23" data-size="xs" data-kind="muted">长答案</text>
+      <text x="266" y="39" data-size="xs" data-kind="muted">完成</text>
+    </g>
+
+    <!-- 组 1：同步 -->
+    <text x="10" y="74" data-kind="label" data-size="md">同步</text>
+    <text x="10" y="114" data-size="xs" data-kind="muted">生成</text>
+    <text x="10" y="182" data-size="xs" data-kind="muted">训练</text>
+
+    <rect x="46" y="86" width="66" height="20" rx="4" />
+    <text x="79" y="100" text-anchor="middle" data-size="xs">权重 v0</text>
+
+    <rect x="46" y="114" width="220" height="32" rx="5" />
+    <text x="156" y="135" text-anchor="middle" data-size="sm">权重 v0</text>
+
+    <rect data-tone="hatch-narrow" x="46" y="162" width="220" height="28" rx="4" />
+    <rect data-kind="bg-label" x="114" y="166" width="84" height="20" rx="3" />
+    <text x="156" y="181" text-anchor="middle" data-size="xs" data-kind="muted">等最后一条</text>
+
+    <rect data-tone="training" x="274" y="162" width="58" height="28" rx="4" />
+    <text x="303" y="181" text-anchor="middle" data-size="xs">开始更新</text>
+
+    <path data-kind="answer" d="M266 130 H303 V160 M298 153 L303 160 L308 153" />
+
+    <!-- 分隔线 -->
+    <path data-kind="guide" d="M10 218 H330" />
+
+    <!-- 组 2：流水线 -->
+    <text x="10" y="246" data-kind="label" data-size="md">流水线</text>
+    <text x="10" y="294" data-size="xs" data-kind="muted">生成</text>
+    <text x="10" y="424" data-size="xs" data-kind="muted">训练</text>
+
+    <rect x="46" y="260" width="66" height="20" rx="4" />
+    <text x="79" y="274" text-anchor="middle" data-size="xs">权重 v0</text>
+
+    <!-- 流水线长答案：v0 前缀 + v1 后缀 -->
+    <rect data-tone="v0" x="46" y="290" width="160" height="34" />
+    <rect data-tone="v1" x="206" y="290" width="60" height="34" />
+    <rect data-tone="split-glow" x="201" y="286" width="10" height="42" rx="2" />
+    <path data-kind="split" d="M206 286 V328" />
+    <rect data-tone="outline" x="46" y="290" width="220" height="34" rx="5" />
+
+    <text x="126" y="312" text-anchor="middle" data-size="sm">v0 前缀</text>
+    <text x="236" y="312" text-anchor="middle" data-size="xs">v1 后缀</text>
+
+    <!-- 完成队列 与 更新到 v1 -->
+    <rect x="112" y="406" width="68" height="28" rx="4" />
+    <text x="146" y="425" text-anchor="middle" data-size="xs">完成队列</text>
+
+    <rect data-tone="training" x="190" y="406" width="76" height="28" rx="4" />
+    <text x="228" y="425" text-anchor="middle" data-size="xs">更新到 v1</text>
+
+    <!-- 实线箭头 -->
+    <path data-kind="answer" d="M112 270 H134 V404 M129 397 L134 404 L139 397" />
+    <path data-kind="answer" d="M180 420 H188 M183 416 L188 420 L183 424" />
+
+    <!-- 虚线箭头：送回新权重 -->
+    <path data-kind="weight" d="M206 406 V326 M201 333 L206 326 L211 333" />
+    <rect data-kind="bg-label" x="212" y="354" width="74" height="20" rx="3" />
+    <text x="249" y="369" text-anchor="middle" data-size="xs" data-kind="weight">送回新权重</text>
+
+    <!-- 图例 -->
+    <path data-kind="answer" d="M48 506 H82 M76 502 L82 506 L76 510" />
+    <text x="90" y="511" data-size="xs" data-kind="muted">实线传答案</text>
+    <path data-kind="weight" d="M188 506 H222 M216 502 L222 506 L216 510" />
+    <text x="230" y="511" data-size="xs" data-kind="muted">虚线传权重</text>
+  </svg>

@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="flow-narrow flow-narrow" viewBox="0 0 340 806" role="img" aria-labelledby="fig-traj-narrow-title">
+<style>
+  text { font-family: "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+  svg { font-size: 17px; }
+  :is(.flow-wide, .flow-narrow) text { fill: #26364a;
+  font: 400 17px "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+:is(.flow-wide, .flow-narrow) text[data-kind="label"] { fill: #426e63;
+  font-weight: 550; }
+:is(.flow-wide, .flow-narrow) rect { fill: #fbf9f5;
+  stroke: #bfc8c4;
+  stroke-width: 1; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="training"] { fill: #edf3ef;
+  stroke: #79a99b; }
+:is(.flow-wide, .flow-narrow) path { fill: none;
+  stroke: #79a99b;
+  stroke-width: 1.6; }
+:is(.flow-wide, .flow-narrow) text { font-size: 15px; }
+:is(.flow-wide, .flow-narrow) text[data-kind="note"] { fill: #5c6874;
+      font-size: 13.5px; }
+:is(.flow-wide, .flow-narrow) rect[data-kind="obs"] { fill: #fbf9f5;
+      stroke: #79a99b;
+      stroke-dasharray: 5 4; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="highlight"] { fill: #fdf3e3;
+      stroke: #d49646;
+      stroke-width: 1.6; }
+:is(.flow-wide, .flow-narrow) rect[data-kind="label-bg"] { fill: #f6f1e7;
+      stroke: none; }
+:is(.flow-wide, .flow-narrow) polygon { fill: #edf3ef;
+      stroke: #79a99b;
+      stroke-width: 1.2; }
+:is(.flow-wide, .flow-narrow) path[data-tone="strong"] { stroke: #426e63;
+      stroke-width: 2.6; }
+:is(.flow-wide, .flow-narrow) path[data-kind="guide"] { stroke: #bfc8c4;
+      stroke-width: 1.2;
+      stroke-dasharray: 4 3; }
+</style>
+
+    <title id="fig-traj-narrow-title">一个名字怎样进入下一次查询（窄屏版）</title>
+    <!-- 题目节点 -->
+    <rect x="14" y="10" width="312" height="48" rx="8" />
+    <text x="170" y="30" text-anchor="middle">Q：Curious 香水的歌手出生在</text>
+    <text x="170" y="49" text-anchor="middle">哪座城市、哪个州？</text>
+
+    <!-- 左列：固定输入 -->
+    <text data-kind="label" x="170" y="82" text-anchor="middle">固定输入 · 论文 R1 样例</text>
+    <rect x="35" y="94" width="270" height="36" rx="8" />
+    <text x="170" y="117" text-anchor="middle">L1：猜测歌手是碧昂丝</text>
+    <path d="M170 130 V144 M165 137 L170 144 L175 137" />
+
+    <rect x="35" y="146" width="270" height="36" rx="8" />
+    <text x="170" y="169" text-anchor="middle">L2：提交：休斯敦</text>
+    <path d="M170 182 V196 M165 189 L170 196 L175 189" />
+
+    <polygon points="170,198 252,220 170,242 88,220" />
+    <text x="170" y="225" text-anchor="middle">L3：答案不匹配</text>
+
+    <path data-kind="guide" d="M24 260 H316" />
+
+    <!-- 右列：交互式 Search-R1 -->
+    <text data-kind="label" x="170" y="282" text-anchor="middle">交互式 · Search-R1</text>
+    <rect x="35" y="294" width="270" height="36" rx="8" />
+    <text x="170" y="317" text-anchor="middle">A1：查 Curious 香水</text>
+    <path d="M170 330 V344 M165 337 L170 344 L175 337" />
+
+    <rect data-kind="obs" data-tone="highlight" x="35" y="346" width="270" height="36" rx="8" />
+    <text x="170" y="369" text-anchor="middle">O1：歌手：布兰妮</text>
+
+    <!-- 加粗 O1 -> A2 并垫底色防穿线 -->
+    <path data-tone="strong" d="M170 382 V416 M164 408 L170 416 L176 408" />
+    <rect data-kind="label-bg" x="72" y="388" width="196" height="20" rx="4" />
+    <text data-kind="note" x="170" y="403" text-anchor="middle">返回的姓名成为新查询词</text>
+
+    <rect data-tone="highlight" x="35" y="418" width="270" height="36" rx="8" />
+    <text x="170" y="441" text-anchor="middle">A2：查布兰妮的出生地</text>
+    <path d="M170 454 V468 M165 461 L170 468 L175 461" />
+
+    <rect data-kind="obs" x="35" y="470" width="270" height="36" rx="8" />
+    <text x="170" y="493" text-anchor="middle">O2：密西西比州麦库姆市</text>
+
+    <path d="M170 506 V540 M165 533 L170 540 L175 533" />
+    <rect data-kind="label-bg" x="48" y="512" width="244" height="20" rx="4" />
+    <text data-kind="note" x="170" y="527" text-anchor="middle">此处已有完整答案（仍再查一次）</text>
+
+    <rect x="35" y="542" width="270" height="36" rx="8" />
+    <text x="170" y="565" text-anchor="middle">A3：查麦库姆的位置</text>
+    <path d="M170 578 V592 M165 585 L170 592 L175 585" />
+
+    <rect data-kind="obs" x="35" y="594" width="270" height="36" rx="8" />
+    <text x="170" y="617" text-anchor="middle">O3：确认城市和州</text>
+    <path d="M170 630 V644 M165 637 L170 644 L175 637" />
+
+    <rect x="35" y="646" width="270" height="36" rx="8" />
+    <text x="170" y="669" text-anchor="middle">A4：提交：密西西比州麦库姆市</text>
+    <path d="M170 682 V696 M165 689 L170 696 L175 689" />
+
+    <polygon points="170,698 252,720 170,742 88,720" />
+    <text x="170" y="725" text-anchor="middle">R：答案匹配</text>
+
+    <!-- 底部图例 -->
+    <path data-kind="guide" d="M24 758 H316" />
+    <rect x="20" y="772" width="20" height="14" rx="3" />
+    <text data-kind="note" x="46" y="784">模型动作</text>
+
+    <rect data-kind="obs" x="126" y="772" width="20" height="14" rx="3" />
+    <text data-kind="note" x="152" y="784">环境观察</text>
+
+    <polygon points="242,771 254,779 242,787 230,779" />
+    <text data-kind="note" x="260" y="784">终局评分</text>
+  </svg>

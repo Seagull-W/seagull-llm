@@ -70,117 +70,14 @@ date: 2026-11-08
 <p>企业客服的麻烦往往出在读取资料上。EnvOpt 的附录给出一个有 11 条客服对话的任务环境。按原来的走法，智能体先查哪个接口能列出对话，再调用它，最后从嵌套记录里找工单编号和客户原话。改造后，一个程序在任务开始时通过原接口读取当次记录，每条排成一行，并附上写内部备注的接口。换一批客户记录，程序就重新生成清单，实际写备注仍由智能体发起。<sup id="cite-3-2"><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>
 
 <figure class="figure" id="fig-envopt-paths">
-  <svg class="flow-wide" viewBox="0 0 980 340" role="img" aria-labelledby="fig-envopt-wide-title">
-    <title id="fig-envopt-wide-title">同一条客服记录的两条读取路径（宽屏版）</title>
-    <!-- 共用起点 -->
-    <rect x="10" y="130" width="128" height="90" rx="8" />
-    <!-- 上组：原环境（三步均占模型交互） -->
-    <text x="196" y="28" text-anchor="start" data-kind="label">原环境（三步均占模型交互）</text>
-    <rect x="196" y="46" width="150" height="80" rx="8" />
-    <rect x="386" y="46" width="150" height="80" rx="8" />
-    <rect x="632" y="46" width="160" height="80" rx="8" />
-    <!-- 下组：重组后（前两步由程序预读分组） -->
-    <rect x="184" y="182" width="364" height="132" rx="10" data-kind="group" />
-    <text x="196" y="206" text-anchor="start" data-kind="label">重组后 · 每个任务开始时生成</text>
-    <rect x="196" y="222" width="150" height="76" rx="8" />
-    <rect x="386" y="222" width="150" height="76" rx="8" />
-    <rect x="632" y="222" width="160" height="76" rx="8" />
-    <!-- 共用终点 -->
-    <rect x="832" y="130" width="138" height="90" rx="8" />
+  
 
-    <!-- 连线 -->
-    <g>
-      <path d="M138 175 H166 V86 H190 M182 80 L190 86 L182 92" />
-      <path d="M138 175 H166 V260 H190 M182 254 L190 260 L182 266" />
-      <path d="M346 86 H380 M372 80 L380 86 L372 92" />
-      <path d="M536 86 H626 M618 80 L626 86 L618 92" />
-      <path d="M346 260 H380 M372 254 L380 260 L372 266" />
-      <path d="M536 260 H626 M618 254 L626 260 L618 266" data-kind="highlight" />
-      <path d="M792 86 H812 V175 H826 M818 169 L826 175 L818 181" />
-      <path d="M792 260 H812 V175 H826" />
-    </g>
-
-    <!-- 穿线文字垫底 -->
-    <rect x="546" y="247" width="76" height="26" rx="4" data-kind="mask" />
-    <text x="584" y="265" text-anchor="middle" data-kind="label">随任务交付</text>
-
-    <!-- 节点文字 -->
-    <g text-anchor="middle">
-      <text x="74" y="168">本次任务的</text>
-      <text x="74" y="194">11 条客服对话</text>
-
-      <text x="271" y="80">模型查找</text>
-      <text x="271" y="106">列表接口</text>
-      <text x="461" y="80">模型调用</text>
-      <text x="461" y="106">列表接口</text>
-      <text x="712" y="80">从嵌套记录找</text>
-      <text x="712" y="106">编号与原话</text>
-
-      <text x="271" y="254">程序通过</text>
-      <text x="271" y="280">原接口预读</text>
-      <text x="461" y="254">每行列出编号、</text>
-      <text x="461" y="280">主题、客户原话</text>
-      <text x="712" y="254">模型读取清单</text>
-      <text x="712" y="280">及写入接口</text>
-
-      <text x="901" y="168">智能体调用</text>
-      <text x="901" y="194">原接口写备注</text>
-    </g>
-  </svg>
-
-  <svg class="flow-narrow" viewBox="0 0 340 516" role="img" aria-labelledby="fig-envopt-narrow-title">
-    <title id="fig-envopt-narrow-title">同一条客服记录的两条读取路径（窄屏版）</title>
-    <!-- 共用起点 -->
-    <rect x="50" y="12" width="240" height="56" rx="8" />
-    <!-- 左列：原环境 -->
-    <text x="86" y="106" text-anchor="middle" data-kind="label">原环境</text>
-    <rect x="12" y="118" width="148" height="58" rx="8" />
-    <rect x="12" y="198" width="148" height="58" rx="8" />
-    <rect x="12" y="278" width="148" height="66" rx="8" />
-    <!-- 右列：重组后 -->
-    <rect x="172" y="88" width="164" height="190" rx="10" data-kind="group" />
-    <text x="254" y="108" text-anchor="middle" data-kind="label">重组后 · 任务开始生成</text>
-    <rect x="180" y="118" width="148" height="58" rx="8" />
-    <rect x="180" y="198" width="148" height="66" rx="8" />
-    <rect x="180" y="330" width="148" height="66" rx="8" />
-    <!-- 共用终点 -->
-    <rect x="50" y="446" width="240" height="56" rx="8" />
-
-    <!-- 连线 -->
-    <g>
-      <path d="M170 68 V84 H86 V112 M80 104 L86 112 L92 104" />
-      <path d="M170 84 H254 V112 M248 104 L254 112 L260 104" />
-      <path d="M86 176 V192 M80 184 L86 192 L92 184" />
-      <path d="M86 256 V272 M80 264 L86 272 L92 264" />
-      <path d="M254 176 V192 M248 184 L254 192 L260 184" />
-      <path d="M254 264 V324 M248 316 L254 324 L260 316" data-kind="highlight" />
-      <path d="M86 344 V420 H170 V440 M164 432 L170 440 L176 432" />
-      <path d="M254 396 V420 H170" />
-    </g>
-
-    <!-- 穿线文字垫底 -->
-    <rect x="208" y="284" width="92" height="22" rx="4" data-kind="mask" />
-    <text x="254" y="299" text-anchor="middle" data-kind="label">随任务交付</text>
-
-    <!-- 节点文字 -->
-    <g text-anchor="middle">
-      <text x="170" y="45">本次任务的 11 条客服对话</text>
-
-      <text x="86" y="152">模型查找列表接口</text>
-      <text x="86" y="232">模型调用列表接口</text>
-      <text x="86" y="305">从嵌套记录找</text>
-      <text x="86" y="327">编号与原话</text>
-
-      <text x="254" y="152">程序通过原接口预读</text>
-      <text x="254" y="225">每行列出编号、</text>
-      <text x="254" y="247">主题、客户原话</text>
-      <text x="254" y="357">模型读取清单</text>
-      <text x="254" y="379">及写入接口</text>
-
-      <text x="170" y="479">智能体调用原接口写备注</text>
-    </g>
-  </svg>
-  <figcaption><strong>图 1｜同一条客服记录，两条读取路径。</strong>两条路径访问当次任务的同一批记录，预读只整理信息，写入由智能体执行（依据 EnvOpt 附录 B.3）。</figcaption>
+  
+  <picture>
+<source media="(max-width: 720px)" srcset="/research/agent-harness-cost/fig-envopt-paths-narrow.svg">
+<img loading="lazy" decoding="async" src="/research/agent-harness-cost/fig-envopt-paths-wide.svg" alt="同一条客服记录的两条读取路径（宽屏版）">
+</picture>
+<figcaption><strong>图 1｜同一条客服记录，两条读取路径。</strong>两条路径访问当次任务的同一批记录，预读只整理信息，写入由智能体执行（依据 EnvOpt 附录 B.3）。</figcaption>
 </figure>
 
 <p>这段程序是另一个智能体根据目标模型的调用记录改出来的。它能在训练任务上比较不同读法花多少钱，但看不到标准答案。每一步改完，都要用带评分器的验证任务检查。费用上升，或通过率降幅超出容忍范围，就退回前一版。对测试任务拆账，输入端省得最多的是工具返回给模型的内容，尤其是查询接口产生的结果。程序仍要读取资料，省下的是模型一轮轮找接口、阅读返回记录的工作。<sup id="cite-3-3"><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>

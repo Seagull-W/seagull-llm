@@ -46,6 +46,16 @@
   overflow: visible;
 }
 
+.research-article .figure picture {
+  display: block;
+}
+
+.research-article .figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .research-article :is(.flow-wide, .flow-narrow) text {
   fill: var(--ink);
   font: 400 20px var(--font-sans);

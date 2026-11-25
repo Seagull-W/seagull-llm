@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="flow-narrow sc-fig flow-narrow" viewBox="0 0 340 490" role="img" aria-labelledby="fig-sc-narrow-title">
+<style>
+  text { font-family: "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+  svg { font-size: 17px; }
+  :is(.flow-wide, .flow-narrow) text { fill: #26364a;
+  font: 400 17px "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+:is(.flow-wide, .flow-narrow) text[data-kind="label"] { fill: #426e63;
+  font-weight: 550; }
+:is(.flow-wide, .flow-narrow) rect { fill: #fbf9f5;
+  stroke: #bfc8c4;
+  stroke-width: 1; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="training"] { fill: #edf3ef;
+  stroke: #79a99b; }
+:is(.flow-wide, .flow-narrow) path { fill: none;
+  stroke: #79a99b;
+  stroke-width: 1.6; }
+.sc-fig text { font-size: 16px; }
+.sc-fig text[data-kind="label"] { font-size: 15px; }
+.sc-fig text[data-kind="note"] { fill: #5c6874;
+      font-size: 14px; }
+.sc-fig rect.node-orig { fill: #fdf6ec;
+      stroke: #d9a76a; }
+.sc-fig rect.node-sc { fill: #edf3ef;
+      stroke: #79a99b; }
+.sc-fig path.line-orig { fill: none;
+      stroke: #c97a2b;
+      stroke-width: 2; }
+.sc-fig path.line-sc { fill: none;
+      stroke: #3b73a8;
+      stroke-width: 2;
+      stroke-dasharray: 5 4; }
+.sc-fig path.arrow-orig { fill: #c97a2b;
+      stroke: none; }
+.sc-fig path.arrow-sc { fill: #3b73a8;
+      stroke: none; }
+.sc-fig path.arrow-neutral { fill: #79a99b;
+      stroke: none; }
+</style>
+
+    <title id="fig-sc-narrow-title">同一前缀、同样满分，修正前后更新方向对比示意图（窄屏版）</title>
+    <!-- 顶部说明 -->
+    <text x="170" y="22" text-anchor="middle" data-kind="note">所有回答的奖励均为 +1</text>
+    <!-- 第一层：采样器抽取 -->
+    <text x="170" y="50" text-anchor="middle" data-kind="label">采样器抽取</text>
+    <rect x="20" y="62" width="140" height="38" rx="8" />
+    <rect x="180" y="62" width="140" height="38" rx="8" />
+    <g text-anchor="middle">
+      <text x="90" y="86">甲 · 90%</text>
+      <text x="250" y="86">乙 · 10%</text>
+    </g>
+    <!-- 第一层到第二层连线 -->
+    <path d="M90 100 V116 H16 V168 H24 M16 168 V216 H24" />
+    <path d="M250 100 V116 H324 V168 H316 M324 168 V216 H316" />
+    <!-- 第二层：训练器的 score -->
+    <text x="170" y="138" text-anchor="middle" data-kind="label">训练器的 score</text>
+    <rect class="node-orig" x="24" y="150" width="140" height="36" rx="6" />
+    <rect class="node-sc" x="24" y="198" width="140" height="36" rx="6" />
+    <rect class="node-orig" x="176" y="150" width="140" height="36" rx="6" />
+    <rect class="node-sc" x="176" y="198" width="140" height="36" rx="6" />
+    <g text-anchor="middle">
+      <text x="94" y="173">原值 +0.5</text>
+      <text x="94" y="221">减去 0.4 后 +0.1</text>
+      <text x="246" y="173">原值 −0.5</text>
+      <text x="246" y="221">减去 0.4 后 −0.9</text>
+    </g>
+    <!-- 第二层到第三层：独立通道 -->
+    <!-- 通道 1：原值（橙色实线）从内侧向下汇合至上框 -->
+    <path class="line-orig" d="M126 186 V266 H170 V308 M214 186 V266 H170" />
+    <path class="arrow-orig" d="M165 306 L170 315 L175 306 Z" />
+    <!-- 通道 2：修正（蓝色虚线）沿外侧向下汇合至下框 -->
+    <path class="line-sc" d="M58 234 V434 H43 M282 234 V434 H297" />
+    <path class="arrow-sc" d="M41 429 L50 434 L41 439 Z" />
+    <path class="arrow-sc" d="M299 429 L290 434 L299 439 Z" />
+    <!-- 第三层：按九比一取平均 -->
+    <text x="170" y="294" text-anchor="middle" data-kind="label">按九比一取平均</text>
+    <rect class="node-orig" x="50" y="315" width="240" height="48" rx="8" />
+    <rect class="node-sc" x="50" y="410" width="240" height="48" rx="8" />
+    <g text-anchor="middle">
+      <text x="170" y="344">原更新 <tspan font-weight="700">+0.4</tspan> → 偏向甲</text>
+      <text x="170" y="439">SC 更新 <tspan font-weight="700">0</tspan> → 漂移消失</text>
+    </g>
+  </svg>

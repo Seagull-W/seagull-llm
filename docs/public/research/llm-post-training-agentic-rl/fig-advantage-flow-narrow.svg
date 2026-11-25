@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="flow-narrow flow-narrow" viewBox="0 0 348 820" role="img" aria-labelledby="fig-narrow-title">
+<style>
+  text { font-family: "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+  svg { font-size: 17px; }
+  :is(.flow-wide, .flow-narrow) text { fill: #26364a;
+  font: 400 17px "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+:is(.flow-wide, .flow-narrow) text[data-kind="label"] { fill: #426e63;
+  font-weight: 550; }
+:is(.flow-wide, .flow-narrow) rect { fill: #fbf9f5;
+  stroke: #bfc8c4;
+  stroke-width: 1; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="training"] { fill: #edf3ef;
+  stroke: #79a99b; }
+:is(.flow-wide, .flow-narrow) path { fill: none;
+  stroke: #79a99b;
+  stroke-width: 1.6; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="blue-group"] { fill: #eef4f9;
+      stroke: #9ab9d1; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="blue-node"] { fill: #f7fafd;
+      stroke: #85abc9; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="blue-highlight"] { fill: #d8eaf7;
+      stroke: #3f759e;
+      stroke-width: 1.8; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="green-group"] { fill: #eff5f1;
+      stroke: #94b8aa; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="green-node"] { fill: #f7fbf8;
+      stroke: #79a99b; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="green-highlight"] { fill: #d7ebe2;
+      stroke: #426e63;
+      stroke-width: 1.8; }
+:is(.flow-wide, .flow-narrow) rect[data-kind="text-bg-green"] { fill: #eff5f1;
+      stroke: none; }
+:is(.flow-wide, .flow-narrow) path[data-tone="blue"] { stroke: #4c80a8; }
+:is(.flow-wide, .flow-narrow) path[data-tone="green"] { stroke: #4a7e70; }
+:is(.flow-wide, .flow-narrow) path[data-tone="neutral"] { stroke: #7f8c96; }
+:is(.flow-wide, .flow-narrow) path[data-dash="true"] { stroke-dasharray: 5 4; }
+:is(.flow-wide, .flow-narrow) text[data-kind="blue-label"] { fill: #2f5b7e;
+      font-size: 16px;
+      font-weight: 600; }
+:is(.flow-wide, .flow-narrow) text[data-kind="green-label"] { fill: #2e594e;
+      font-size: 16px;
+      font-weight: 600; }
+.flow-wide text { font-size: 15px; }
+.flow-wide text[data-size="sm"],
+    .flow-narrow text[data-size="sm"] { font-size: 13px;
+      fill: #5c6874; }
+.flow-narrow text { font-size: 14px; }
+</style>
+
+    <title id="fig-narrow-title">同一个终局优势怎样分到每一步（窄屏示意图）</title>
+    <!-- 顶部共用节点 -->
+    <rect x="44" y="8" width="252" height="36" rx="7" />
+    <rect x="44" y="54" width="252" height="36" rx="7" />
+    <rect x="95" y="100" width="150" height="34" rx="7" />
+    <g text-anchor="middle">
+      <text x="170" y="31">同一任务的多条尝试</text>
+      <text x="170" y="77">终局奖励与组内比较</text>
+      <text x="170" y="122">轨迹优势 A</text>
+    </g>
+    <path data-tone="neutral" d="M170 44 V54 M166 49 L170 54 L174 49" />
+    <path data-tone="neutral" d="M170 90 V100 M166 95 L170 100 L174 95" />
+
+    <!-- 轨迹优势 A 沿右侧干线分流 -->
+    <path data-tone="neutral" d="M245 117 H338 V564 H320 M326 559 L320 564 L326 569" />
+    <path data-tone="neutral" d="M338 315 H320 M326 310 L320 315 L326 320" />
+
+    <!-- 中段上：DeltaTTG -->
+    <rect data-tone="blue-group" x="10" y="152" width="320" height="218" rx="8" />
+    <text data-kind="blue-label" x="22" y="174">DeltaTTG</text>
+    <rect data-tone="blue-node" x="20" y="186" width="146" height="44" rx="6" />
+    <rect data-tone="blue-node" x="174" y="186" width="146" height="44" rx="6" />
+    <rect data-tone="blue-node" x="66" y="244" width="208" height="36" rx="6" />
+    <rect data-tone="blue-highlight" x="20" y="296" width="122" height="38" rx="6" />
+    <rect data-tone="blue-node" x="172" y="296" width="148" height="38" rx="6" />
+    <g text-anchor="middle">
+      <text x="93" y="204">历史轨迹前缀与</text>
+      <text x="93" y="222">剩余 token 标签</text>
+      <text x="247" y="213">本步前后两段历史</text>
+      <text x="170" y="267">冻结的进度估计器</text>
+      <text x="81" y="320">剩余量变化</text>
+      <text x="246" y="320">按 A 的正负分配</text>
+      <text data-size="sm" x="170" y="355">正优势侧重推进 · 负优势侧重倒退</text>
+    </g>
+    <path data-tone="blue" d="M93 230 V244 M89 239 L93 244 L97 239" />
+    <path data-tone="blue" d="M247 230 V244 M243 239 L247 244 L251 239" />
+    <path data-tone="blue" d="M120 280 V288 H81 V296 M77 291 L81 296 L85 291" />
+    <path data-tone="blue" d="M142 315 H172 M166 310 L172 315 L166 320" />
+
+    <!-- 中段下：ProAS -->
+    <rect data-tone="green-group" x="10" y="384" width="320" height="296" rx="8" />
+    <text data-kind="green-label" x="22" y="406">ProAS</text>
+    <rect data-tone="green-node" x="20" y="418" width="106" height="36" rx="6" />
+    <rect data-tone="green-node" x="164" y="418" width="106" height="36" rx="6" />
+    <rect data-tone="green-node" x="20" y="478" width="156" height="44" rx="6" />
+    <rect data-tone="green-node" x="208" y="478" width="112" height="44" rx="6" />
+    <rect data-tone="green-highlight" x="20" y="542" width="144" height="46" rx="6" />
+    <rect data-tone="green-node" x="184" y="546" width="136" height="38" rx="6" />
+
+    <path data-tone="green" d="M126 436 H164 M158 431 L164 436 L158 441" />
+    <path data-tone="green" data-dash="true" d="M98 478 V464 H217 V454 M213 459 L217 454 L221 459" />
+    <path data-tone="green" d="M264 522 V532 H112 V542 M108 537 L112 542 L116 537" />
+    <path data-tone="green" d="M196 454 V468 H92 V542 M88 537 L92 542 L96 537" />
+    <path data-tone="green" d="M164 565 H184 M178 560 L184 565 L178 570" />
+
+    <!-- 虚线文字垫底色防穿线 -->
+    <rect data-kind="text-bg-green" x="128" y="454" width="64" height="18" rx="3" />
+    <g text-anchor="middle">
+      <text x="73" y="441">成功示范</text>
+      <text x="217" y="441">参考图</text>
+      <text x="98" y="497">经验证的</text>
+      <text x="98" y="514">新成功路径</text>
+      <text data-size="sm" x="160" y="468">下轮并入</text>
+      <text x="264" y="505">当前轨迹</text>
+      <text x="92" y="561">图上有依据？</text>
+      <text x="92" y="579">首次抵达？</text>
+      <text x="252" y="570">按 A 的正负分配</text>
+      <text data-size="sm" x="170" y="616">正优势屏蔽无依据动作</text>
+      <text data-size="sm" x="170" y="636">负优势按后续未推进步数加权（含本步）</text>
+    </g>
+
+    <!-- 底部共用节点 -->
+    <rect x="66" y="706" width="208" height="38" rx="7" />
+    <rect x="96" y="766" width="148" height="38" rx="7" />
+    <g text-anchor="middle">
+      <text x="170" y="730">各动作的训练优势</text>
+      <text x="170" y="790">更新策略</text>
+    </g>
+    <path data-tone="blue" d="M246 334 V376 H333 V692 H194 V706 M190 701 L194 706 L198 701" />
+    <path data-tone="green" d="M300 584 V662 H170 V706 M166 701 L170 706 L174 701" />
+    <path data-tone="neutral" d="M170 744 V766 M166 761 L170 766 L174 761" />
+  </svg>

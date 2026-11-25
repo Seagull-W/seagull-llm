@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="diagram-wide flow-wide" viewBox="0 0 680 556" role="img" aria-labelledby="fig-lifecycle-wide-title">
+<style>
+  text { font-family: "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+  svg { font-size: 20px; }
+  :is(.flow-wide, .flow-narrow) text { fill: #26364a;
+  font: 400 20px "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+:is(.flow-wide, .flow-narrow) text[data-kind="label"] { fill: #426e63;
+  font-weight: 550; }
+:is(.flow-wide, .flow-narrow) rect { fill: #fbf9f5;
+  stroke: #bfc8c4;
+  stroke-width: 1; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="training"] { fill: #edf3ef;
+  stroke: #79a99b; }
+:is(.flow-wide, .flow-narrow) path { fill: none;
+  stroke: #79a99b;
+  stroke-width: 1.6; }
+:is(.diagram-wide, .diagram-narrow) text { fill: #26364a;
+      font-family: "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+:is(.diagram-wide, .diagram-narrow) .stage-box { fill: none;
+      stroke: #cfd5d1;
+      stroke-width: 1.2;
+      stroke-dasharray: 4 4; }
+:is(.diagram-wide, .diagram-narrow) .stage-tag { fill: #426e63;
+      font-size: 12.5px;
+      font-weight: 600; }
+:is(.diagram-wide, .diagram-narrow) .node-box { fill: #fbf9f5;
+      stroke: #aeb8b4;
+      stroke-width: 1.4; }
+:is(.diagram-wide, .diagram-narrow) .node-approval { fill: #fdf5eb;
+      stroke: #c87a28;
+      stroke-width: 2.5; }
+:is(.diagram-wide, .diagram-narrow) .node-text { font-size: 14px;
+      font-weight: 500;
+      text-anchor: middle; }
+:is(.diagram-wide, .diagram-narrow) .node-text-strong { font-size: 14px;
+      font-weight: 650;
+      text-anchor: middle; }
+:is(.diagram-wide, .diagram-narrow) .note-approval { fill: #9b5916;
+      font-size: 12px;
+      font-weight: 500; }
+:is(.diagram-wide, .diagram-narrow) .edge-solid { fill: none;
+      stroke: #5c6e78;
+      stroke-width: 1.6; }
+:is(.diagram-wide, .diagram-narrow) .edge-dashed { fill: none;
+      stroke: #6e7f88;
+      stroke-width: 1.5;
+      stroke-dasharray: 5 4; }
+:is(.diagram-wide, .diagram-narrow) .edge-rollback { fill: none;
+      stroke: #c87a28;
+      stroke-width: 2;
+      stroke-dasharray: 6 4; }
+:is(.diagram-wide, .diagram-narrow) .label-bg { fill: #f6f1e7;
+      stroke: none; }
+:is(.diagram-wide, .diagram-narrow) .edge-label { fill: #5c6874;
+      font-size: 12px;
+      text-anchor: middle; }
+:is(.diagram-wide, .diagram-narrow) .edge-label-alert { fill: #9b5916;
+      font-size: 12px;
+      font-weight: 600;
+      text-anchor: middle; }
+.diagram-narrow .node-text,
+    .diagram-narrow .node-text-strong { font-size: 13px; }
+.diagram-narrow .edge-label,
+    .diagram-narrow .edge-label-alert,
+    .diagram-narrow .note-approval { font-size: 11.5px; }
+</style>
+
+    <title id="fig-lifecycle-wide-title">一份改动从本地验证到故障撤回的七层流程示意图（宽屏版）</title>
+    <defs>
+      <marker id="arrow-solid-w" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+        <path d="M1 1.5 L8.5 5 L1 8.5" fill="none" stroke="#5c6e78" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      </marker>
+      <marker id="arrow-dashed-w" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+        <path d="M1 1.5 L8.5 5 L1 8.5" fill="none" stroke="#6e7f88" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      </marker>
+      <marker id="arrow-alert-w" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M1 1.5 L8.5 5 L1 8.5" fill="none" stroke="#c87a28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </marker>
+    </defs>
+
+    <!-- 分组外框 -->
+    <rect class="stage-box" x="8" y="8" width="664" height="72" rx="8" />
+    <text class="stage-tag" x="22" y="30">① 提交前</text>
+
+    <rect class="stage-box" x="8" y="96" width="664" height="248" rx="8" />
+    <text class="stage-tag" x="22" y="118">② 合并前</text>
+
+    <rect class="stage-box" x="8" y="362" width="664" height="186" rx="8" />
+    <text class="stage-tag" x="22" y="384">③ 合并后</text>
+
+    <!-- 连线层（位于节点和文字底色下方） -->
+    <!-- 提交前 -> 合并前三项检查 -->
+    <path class="edge-solid" d="M340 64 V88 M168 88 H512" />
+    <path class="edge-solid" d="M168 88 V112" marker-end="url(#arrow-solid-w)" />
+    <path class="edge-solid" d="M340 88 V112" marker-end="url(#arrow-solid-w)" />
+    <path class="edge-solid" d="M512 88 V112" marker-end="url(#arrow-solid-w)" />
+
+    <!-- 三项检查 -> 按风险审批 -->
+    <path class="edge-solid" d="M168 154 V194 H300 V204" marker-end="url(#arrow-solid-w)" />
+    <path class="edge-solid" d="M340 154 V204" marker-end="url(#arrow-solid-w)" />
+    <path class="edge-solid" d="M512 154 V194 H380 V204" marker-end="url(#arrow-solid-w)" />
+
+    <!-- 按风险审批 -> 合并队列重跑 -> 开关内测 -> latest -> stable -->
+    <path class="edge-solid" d="M340 250 V284" marker-end="url(#arrow-solid-w)" />
+    <path class="edge-solid" d="M340 326 V353 H112 V392" marker-end="url(#arrow-solid-w)" />
+    <path class="edge-solid" d="M164 414 H194" marker-end="url(#arrow-solid-w)" />
+    <path class="edge-solid" d="M300 414 H330" marker-end="url(#arrow-solid-w)" />
+
+    <!-- 三个发布阶段 -> 作者与值班工程师观察（虚线） -->
+    <path class="edge-dashed" d="M112 434 V488" marker-end="url(#arrow-dashed-w)" />
+    <path class="edge-dashed" d="M248 434 V488" marker-end="url(#arrow-dashed-w)" />
+    <path class="edge-dashed" d="M384 434 V488" marker-end="url(#arrow-dashed-w)" />
+
+    <!-- 观察 -> 关闭开关或回滚（橙色虚线） -->
+    <path class="edge-rollback" d="M436 512 H530" marker-end="url(#arrow-alert-w)" />
+
+    <!-- 连线文字与不透明底色 -->
+    <rect class="label-bg" x="131" y="165" width="74" height="18" rx="3" />
+    <text class="edge-label" x="168" y="178">发现已处置</text>
+
+    <rect class="label-bg" x="303" y="165" width="74" height="18" rx="3" />
+    <text class="edge-label" x="340" y="178">发现已处置</text>
+
+    <rect class="label-bg" x="492" y="165" width="40" height="18" rx="3" />
+    <text class="edge-label" x="512" y="178">通过</text>
+
+    <rect class="label-bg" x="453" y="502" width="60" height="20" rx="3" />
+    <text class="edge-label-alert" x="483" y="516">发现异常</text>
+
+    <!-- 节点层 -->
+    <!-- ① 提交前 -->
+    <rect class="node-box" x="235" y="24" width="210" height="40" rx="6" />
+    <text class="node-text" x="340" y="49">运行验证，出示结果</text>
+
+    <!-- ② 合并前 -->
+    <rect class="node-box" x="100" y="114" width="136" height="40" rx="6" />
+    <text class="node-text" x="168" y="139">AI 审查</text>
+
+    <rect class="node-box" x="272" y="114" width="136" height="40" rx="6" />
+    <text class="node-text" x="340" y="139">安全审查</text>
+
+    <rect class="node-box" x="444" y="114" width="136" height="40" rx="6" />
+    <text class="node-text" x="512" y="139">必需 CI</text>
+
+    <rect class="node-approval" x="265" y="206" width="150" height="44" rx="7" />
+    <text class="node-text-strong" x="340" y="233">按风险审批</text>
+    <text class="note-approval" x="428" y="232" text-anchor="start">0／1／2 人，敏感路径必需人工</text>
+
+    <rect class="node-box" x="265" y="286" width="150" height="40" rx="6" />
+    <text class="node-text" x="340" y="311">合并队列重跑</text>
+
+    <!-- ③ 合并后 -->
+    <rect class="node-box" x="60" y="394" width="104" height="40" rx="6" />
+    <text class="node-text" x="112" y="419">开关内测</text>
+
+    <rect class="node-box" x="196" y="394" width="104" height="40" rx="6" />
+    <text class="node-text" x="248" y="419">latest</text>
+
+    <rect class="node-box" x="332" y="394" width="104" height="40" rx="6" />
+    <text class="node-text" x="384" y="419">stable</text>
+
+    <rect class="node-box" x="60" y="490" width="376" height="44" rx="6" />
+    <text class="node-text" x="248" y="517">作者与值班工程师观察</text>
+
+    <rect class="node-box" x="532" y="490" width="126" height="44" rx="6" />
+    <text class="node-text" x="595" y="517">关闭开关或回滚</text>
+  </svg>

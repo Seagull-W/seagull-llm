@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="flow-narrow flow-narrow" viewBox="0 0 340 594" role="img" aria-labelledby="fig-labeling-narrow-title">
+<style>
+  text { font-family: "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+  svg { font-size: 17px; }
+  :is(.flow-wide, .flow-narrow) text { fill: #26364a;
+  font: 400 17px "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+:is(.flow-wide, .flow-narrow) text[data-kind="label"] { fill: #426e63;
+  font-weight: 550; }
+:is(.flow-wide, .flow-narrow) rect { fill: #fbf9f5;
+  stroke: #bfc8c4;
+  stroke-width: 1; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="training"] { fill: #edf3ef;
+  stroke: #79a99b; }
+:is(.flow-wide, .flow-narrow) path { fill: none;
+  stroke: #79a99b;
+  stroke-width: 1.6; }
+:is(.flow-wide, .flow-narrow) rect.label-bg { fill: #f6f1e7;
+      stroke: none; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="caution"] { fill: #fcf3e6;
+      stroke: #c98a3c; }
+:is(.flow-wide, .flow-narrow) rect[data-emphasis="strong"] { stroke-width: 2.2; }
+:is(.flow-wide, .flow-narrow) text[data-kind="caution"],
+    :is(.flow-wide, .flow-narrow) text[data-kind="caution-sub"] { fill: #9a5b13;
+      font-weight: 550; }
+:is(.flow-wide, .flow-narrow) text[data-kind="sub"],
+    :is(.flow-wide, .flow-narrow) text[data-kind="caution-sub"] { font-size: 15px; }
+.flow-narrow text[data-kind="sub"],
+    .flow-narrow text[data-kind="caution-sub"] { font-size: 14px; }
+</style>
+
+    <title id="fig-labeling-narrow-title">为什么同一个错步会得到正标签（窄屏版）</title>
+    <!-- 连线 -->
+    <path d="M 170 70 V 96 M 164 89 L 170 96 L 176 89" />
+    <!-- 分支 -->
+    <path d="M 170 176 V 194 H 82 V 242 M 76 235 L 82 242 L 88 235" />
+    <path d="M 170 194 H 250 V 242 M 244 235 L 250 242 L 256 235" />
+    <!-- 左支 C -> D -->
+    <path d="M 82 304 V 338 M 76 331 L 82 338 L 88 331" />
+    <!-- 右支 E -> F -->
+    <path d="M 250 302 V 334 M 244 327 L 250 334 L 256 327" />
+    <!-- 右支 E -> G（绕右侧） -->
+    <path d="M 320 273 H 332 V 443 H 322 M 328 437 L 322 443 L 328 449" />
+    <!-- 右支 F -> H（绕左侧）与 G -> H -->
+    <path d="M 180 368 H 168 V 540 H 178 M 172 534 L 178 540 L 172 546" />
+    <path d="M 250 470 V 502 M 244 495 L 250 502 L 256 495" />
+
+    <!-- 连线文字垫不透明底色 -->
+    <rect class="label-bg" x="42" y="205" width="80" height="24" rx="4" />
+    <rect class="label-bg" x="210" y="205" width="80" height="24" rx="4" />
+
+    <!-- 节点框 -->
+    <rect x="40" y="12" width="260" height="58" rx="8" />
+    <rect x="30" y="98" width="280" height="78" rx="8" />
+    <rect x="12" y="244" width="140" height="60" rx="8" />
+    <rect x="12" y="340" width="140" height="64" rx="8" data-tone="caution" data-emphasis="strong" />
+    <rect x="180" y="244" width="140" height="58" rx="8" />
+    <rect x="180" y="336" width="140" height="64" rx="8" />
+    <rect x="180" y="416" width="140" height="54" rx="8" />
+    <rect x="180" y="504" width="140" height="72" rx="8" data-tone="training" data-emphasis="strong" />
+
+    <!-- 文字 -->
+    <g text-anchor="middle">
+      <text x="82" y="222" data-kind="label">逐步审阅</text>
+      <text x="250" y="222" data-kind="label">续写核验</text>
+
+      <text x="170" y="47">原题：2(x + 1) = 8</text>
+
+      <text x="170" y="130">当前步：2x + 1 = 8</text>
+      <text x="190" y="158" data-kind="caution-sub">↑ 常数项 1 漏乘 2</text>
+
+      <text x="82" y="280">核对分配律</text>
+      <text x="82" y="378" data-kind="caution">✗ 本步错误</text>
+
+      <text x="250" y="279">假设八次续写</text>
+      <text x="250" y="362" data-kind="sub">一次回到原式</text>
+      <text x="250" y="387">答 3</text>
+      <text x="250" y="449">七次答错</text>
+
+      <text x="250" y="534" data-kind="label">硬标签：正</text>
+      <text x="250" y="560" data-kind="label">软标签：1/8</text>
+    </g>
+  </svg>

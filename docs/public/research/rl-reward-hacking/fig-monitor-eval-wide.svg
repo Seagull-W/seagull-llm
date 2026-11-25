@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="flow-wide flow-wide" viewBox="0 0 980 448" role="img" aria-labelledby="fig-monitor-wide-title">
+<style>
+  text { font-family: "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+  svg { font-size: 20px; }
+  :is(.flow-wide, .flow-narrow) text { fill: #26364a;
+  font: 400 20px "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+:is(.flow-wide, .flow-narrow) text[data-kind="label"] { fill: #426e63;
+  font-weight: 550; }
+:is(.flow-wide, .flow-narrow) rect { fill: #fbf9f5;
+  stroke: #bfc8c4;
+  stroke-width: 1; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="training"] { fill: #edf3ef;
+  stroke: #79a99b; }
+:is(.flow-wide, .flow-narrow) path { fill: none;
+  stroke: #79a99b;
+  stroke-width: 1.6; }
+:is(.flow-wide, .flow-narrow) rect[data-kind="label-bg"] { fill: #f6f1e7;
+      stroke: none; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="muted"] { fill: #f3f1ec;
+      stroke: #c5c9c4; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="amber"] { fill: #fdf3e4;
+      stroke: #d49442;
+      stroke-width: 1.4; }
+:is(.flow-wide, .flow-narrow) text[data-kind="amber"] { fill: #7d4a10;
+      font-weight: 600; }
+:is(.flow-wide, .flow-narrow) path[data-tone="gray"] { stroke: #9aa3a8;
+      stroke-width: 1.5; }
+:is(.flow-wide, .flow-narrow) path[data-tone="amber-dashed"] { stroke: #c87d28;
+      stroke-width: 2;
+      stroke-dasharray: 6 4; }
+</style>
+
+    <title id="fig-monitor-wide-title">同一次提交中区分违规减少与监控漏报的流程示意图</title>
+    <g text-anchor="middle">
+      <text x="120" y="26" data-kind="label">共同输入</text>
+      <text x="435" y="26" data-kind="label">训练评分 vs. 独立复测</text>
+      <text x="800" y="26" data-kind="label">各自判断与漏检</text>
+    </g>
+
+    <rect x="20" y="130" width="200" height="96" rx="8" />
+    <rect x="300" y="54" width="270" height="64" rx="8" data-tone="training" />
+    <rect x="300" y="146" width="270" height="64" rx="8" data-tone="training" />
+    <rect x="660" y="54" width="280" height="64" rx="8" data-tone="training" />
+    <rect x="660" y="146" width="280" height="64" rx="8" data-tone="training" />
+    <rect x="300" y="284" width="270" height="72" rx="8" />
+    <rect x="300" y="384" width="270" height="44" rx="8" data-tone="muted" />
+    <rect x="660" y="284" width="280" height="72" rx="8" />
+    <rect x="660" y="378" width="280" height="52" rx="8" data-tone="amber" />
+
+    <g>
+      <path d="M220 156 H256 V86 H294 M286 80 L294 86 L286 92" />
+      <path d="M220 178 H294 M286 172 L294 178 L286 184" />
+      <path d="M570 86 H654 M646 80 L654 86 L646 92" />
+      <path d="M570 178 H654 M646 172 L654 178 L646 184" />
+      <path d="M800 118 V140 M794 132 L800 140 L806 132" />
+      <path d="M435 210 V278 M429 270 L435 278 L441 270" />
+      <path d="M570 320 H654 M646 314 L654 320 L646 326" />
+      <path d="M435 356 V378 M429 370 L435 378 L441 370" data-tone="gray" />
+      <path d="M800 356 V372 M794 364 L800 372 L806 364" data-tone="amber-dashed" />
+      <path d="M940 86 H962 V404 H946 M954 398 L946 404 L954 410" data-tone="amber-dashed" />
+    </g>
+
+    <rect x="372" y="232" width="126" height="28" rx="4" data-kind="label-bg" />
+
+    <g text-anchor="middle">
+      <text x="120" y="160">一次任务的</text>
+      <text x="120" y="185">推理文本、代码</text>
+      <text x="120" y="210">和测试结果</text>
+      <text x="435" y="92">监控器只读推理文本</text>
+      <text x="435" y="184">当前测试通过</text>
+      <text x="800" y="92">未告警</text>
+      <text x="800" y="184">两项都满足才给奖励</text>
+      <text x="435" y="252" data-kind="label">通过后复测</text>
+      <text x="435" y="313">撤销测试改动，</text>
+      <text x="435" y="339">重跑原始测试</text>
+      <text x="435" y="412">复测通过</text>
+      <text x="800" y="313">复测失败，</text>
+      <text x="800" y="339">确认本类违规</text>
+      <text x="800" y="410" data-kind="amber">未告警且复测失败＝漏检</text>
+    </g>
+  </svg>

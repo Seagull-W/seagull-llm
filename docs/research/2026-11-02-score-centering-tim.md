@@ -55,102 +55,14 @@ date: "2026-11-02"
 </p>
 
 <figure class="figure" id="fig-sc-drift">
-  <svg class="flow-wide sc-fig" viewBox="0 0 760 300" role="img" aria-labelledby="fig-sc-wide-title">
-    <title id="fig-sc-wide-title">同一前缀、同样满分，修正前后更新方向对比示意图（宽屏版）</title>
-    <!-- 列标题 -->
-    <g text-anchor="middle">
-      <text x="115" y="34" data-kind="label">采样器抽取</text>
-      <text x="375" y="34" data-kind="label">训练器的 score</text>
-      <text x="645" y="34" data-kind="label">按九比一取平均</text>
-    </g>
-    <!-- 左列：采样器抽取 -->
-    <rect x="50" y="83" width="130" height="44" rx="8" />
-    <rect x="50" y="188" width="130" height="44" rx="8" />
-    <g text-anchor="middle">
-      <text x="115" y="111">甲 · 90%</text>
-      <text x="115" y="216">乙 · 10%</text>
-    </g>
-    <!-- 左列到中列连线 -->
-    <path d="M180 105 H226 V81 H270 M226 105 V129 H270" />
-    <path d="M180 210 H226 V186 H270 M226 210 V234 H270" />
-    <path class="arrow-neutral" d="M268 76 L277 81 L268 86 Z" />
-    <path class="arrow-neutral" d="M268 124 L277 129 L268 134 Z" />
-    <path class="arrow-neutral" d="M268 181 L277 186 L268 191 Z" />
-    <path class="arrow-neutral" d="M268 229 L277 234 L268 239 Z" />
-    <!-- 中列：训练器的 score -->
-    <rect class="node-orig" x="277" y="63" width="196" height="36" rx="6" />
-    <rect class="node-sc" x="277" y="111" width="196" height="36" rx="6" />
-    <rect class="node-orig" x="277" y="168" width="196" height="36" rx="6" />
-    <rect class="node-sc" x="277" y="216" width="196" height="36" rx="6" />
-    <g text-anchor="middle">
-      <text x="375" y="87">原值 +0.5</text>
-      <text x="375" y="135">减去 0.4 后 +0.1</text>
-      <text x="375" y="192">原值 −0.5</text>
-      <text x="375" y="240">减去 0.4 后 −0.9</text>
-    </g>
-    <!-- 中列到右列：两条独立通道 -->
-    <!-- 通道 1：原值（橙色实线）汇合至上框 -->
-    <path class="line-orig" d="M473 81 H502 V102 H533 M473 186 H502 V102" />
-    <path class="arrow-orig" d="M531 97 L540 102 L531 107 Z" />
-    <!-- 通道 2：修正（蓝色虚线）汇合至下框 -->
-    <path class="line-sc" d="M473 129 H520 V212 H533 M473 234 H520 V212" />
-    <path class="arrow-sc" d="M531 207 L540 212 L531 217 Z" />
-    <!-- 右列：九比一平均结果 -->
-    <rect class="node-orig" x="540" y="75" width="210" height="54" rx="8" />
-    <rect class="node-sc" x="540" y="185" width="210" height="54" rx="8" />
-    <g text-anchor="middle">
-      <text x="645" y="108">原更新 <tspan font-weight="700">+0.4</tspan> → 偏向甲</text>
-      <text x="645" y="218">SC 更新 <tspan font-weight="700">0</tspan> → 漂移消失</text>
-    </g>
-    <!-- 底部说明 -->
-    <text x="380" y="282" text-anchor="middle" data-kind="note">所有回答的奖励均为 +1</text>
-  </svg>
+  
 
-  <svg class="flow-narrow sc-fig" viewBox="0 0 340 490" role="img" aria-labelledby="fig-sc-narrow-title">
-    <title id="fig-sc-narrow-title">同一前缀、同样满分，修正前后更新方向对比示意图（窄屏版）</title>
-    <!-- 顶部说明 -->
-    <text x="170" y="22" text-anchor="middle" data-kind="note">所有回答的奖励均为 +1</text>
-    <!-- 第一层：采样器抽取 -->
-    <text x="170" y="50" text-anchor="middle" data-kind="label">采样器抽取</text>
-    <rect x="20" y="62" width="140" height="38" rx="8" />
-    <rect x="180" y="62" width="140" height="38" rx="8" />
-    <g text-anchor="middle">
-      <text x="90" y="86">甲 · 90%</text>
-      <text x="250" y="86">乙 · 10%</text>
-    </g>
-    <!-- 第一层到第二层连线 -->
-    <path d="M90 100 V116 H16 V168 H24 M16 168 V216 H24" />
-    <path d="M250 100 V116 H324 V168 H316 M324 168 V216 H316" />
-    <!-- 第二层：训练器的 score -->
-    <text x="170" y="138" text-anchor="middle" data-kind="label">训练器的 score</text>
-    <rect class="node-orig" x="24" y="150" width="140" height="36" rx="6" />
-    <rect class="node-sc" x="24" y="198" width="140" height="36" rx="6" />
-    <rect class="node-orig" x="176" y="150" width="140" height="36" rx="6" />
-    <rect class="node-sc" x="176" y="198" width="140" height="36" rx="6" />
-    <g text-anchor="middle">
-      <text x="94" y="173">原值 +0.5</text>
-      <text x="94" y="221">减去 0.4 后 +0.1</text>
-      <text x="246" y="173">原值 −0.5</text>
-      <text x="246" y="221">减去 0.4 后 −0.9</text>
-    </g>
-    <!-- 第二层到第三层：独立通道 -->
-    <!-- 通道 1：原值（橙色实线）从内侧向下汇合至上框 -->
-    <path class="line-orig" d="M126 186 V266 H170 V308 M214 186 V266 H170" />
-    <path class="arrow-orig" d="M165 306 L170 315 L175 306 Z" />
-    <!-- 通道 2：修正（蓝色虚线）沿外侧向下汇合至下框 -->
-    <path class="line-sc" d="M58 234 V434 H43 M282 234 V434 H297" />
-    <path class="arrow-sc" d="M41 429 L50 434 L41 439 Z" />
-    <path class="arrow-sc" d="M299 429 L290 434 L299 439 Z" />
-    <!-- 第三层：按九比一取平均 -->
-    <text x="170" y="294" text-anchor="middle" data-kind="label">按九比一取平均</text>
-    <rect class="node-orig" x="50" y="315" width="240" height="48" rx="8" />
-    <rect class="node-sc" x="50" y="410" width="240" height="48" rx="8" />
-    <g text-anchor="middle">
-      <text x="170" y="344">原更新 <tspan font-weight="700">+0.4</tspan> → 偏向甲</text>
-      <text x="170" y="439">SC 更新 <tspan font-weight="700">0</tspan> → 漂移消失</text>
-    </g>
-  </svg>
-  <figcaption>
+  
+  <picture>
+<source media="(max-width: 720px)" srcset="/research/score-centering-tim/fig-sc-drift-narrow.svg">
+<img loading="lazy" decoding="async" src="/research/score-centering-tim/fig-sc-drift-wide.svg" alt="同一前缀、同样满分，修正前后更新方向对比示意图（宽屏版）">
+</picture>
+<figcaption>
     <strong>图 1｜同一前缀、同样满分，为什么修正前后方向不同。</strong>橙色实线汇合原始 score，蓝色虚线汇合 SC 修正后的 score；图据第一节教学算例。<sup id="cite-1-9"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup>
   </figcaption>
 </figure>

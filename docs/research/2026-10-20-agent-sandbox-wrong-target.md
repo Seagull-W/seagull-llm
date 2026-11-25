@@ -65,132 +65,15 @@ date: "2026-10-20"
 </p>
 
 <figure class="figure" id="fig-planning-paths">
-  <svg class="flow-wide" viewBox="0 0 840 300" role="img" aria-labelledby="fig-planning-wide-title">
-    <title id="fig-planning-wide-title">同一轮模型规划，沙箱的两条路径（宽屏版）</title>
-    <defs>
-      <pattern id="hatch-amber" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <line x1="0" y1="0" x2="0" y2="8" stroke="#e3b878" stroke-width="2" />
-      </pattern>
-    </defs>
+  
 
-    <rect data-kind="group" x="12" y="16" width="176" height="248" rx="8" />
-    <text data-kind="group-title" x="24" y="38">模型与沙箱交接</text>
+  
 
-    <rect x="22" y="62" width="126" height="42" rx="6" />
-    <text x="85" y="88" text-anchor="middle">工具返回结果</text>
-
-    <path data-kind="arrow-main" d="M85 104 V152 M80 144 L85 152 L90 144" />
-    <text data-kind="sub" x="95" y="126">沙箱空闲，</text>
-    <text data-kind="sub" x="95" y="142">开始计时</text>
-
-    <rect x="22" y="156" width="126" height="42" rx="6" />
-    <text x="85" y="182" text-anchor="middle">模型开始规划</text>
-
-    <rect data-kind="group" x="204" y="16" width="488" height="248" rx="8" />
-    <text data-kind="group-title" x="216" y="38">等待期间的两种结果</text>
-
-    <path data-kind="arrow-main" d="M148 171 H174 V83 H216 M208 78 L216 83 L208 88" />
-    <path data-kind="arrow-amber" d="M148 183 H174 V198 H216 M208 193 L216 198 L208 203" />
-
-    <rect x="220" y="62" width="134" height="42" rx="6" />
-    <text x="287" y="88" text-anchor="middle">阈值前收到命令</text>
-
-    <path data-kind="arrow-main" d="M354 83 H400 M392 78 L400 83 L392 88" />
-
-    <rect x="404" y="62" width="126" height="42" rx="6" />
-    <text x="467" y="88" text-anchor="middle">沙箱保持驻留</text>
-
-    <path data-kind="arrow-main" d="M530 83 H698 V134 H708 M700 129 L708 134 L700 139" />
-
-    <rect x="220" y="177" width="156" height="42" rx="6" />
-    <text x="298" y="203" text-anchor="middle">越过阈值，规划仍在进行</text>
-
-    <path data-kind="arrow-amber" d="M376 198 H398 M390 193 L398 198 L390 203" />
-
-    <rect data-tone="offload" x="402" y="177" width="86" height="42" rx="6" />
-    <text x="445" y="203" text-anchor="middle">卸载沙箱</text>
-
-    <rect data-kind="hatch-bg" x="488" y="177" width="88" height="42" rx="4" />
-    <path data-kind="arrow-amber" d="M488 198 H572 M564 193 L572 198 L564 203" />
-    <rect data-kind="text-bg" x="492" y="187" width="80" height="22" rx="3" />
-    <text data-kind="sub" x="532" y="202" text-anchor="middle">让出驻留内存</text>
-
-    <rect data-tone="offload" x="576" y="175" width="104" height="46" rx="6" />
-    <text x="628" y="194" text-anchor="middle">收到命令，</text>
-    <text x="628" y="212" text-anchor="middle">恢复沙箱</text>
-
-    <path data-kind="arrow-amber" d="M680 198 H698 V146 H708 M700 141 L708 146 L700 151" />
-
-    <rect x="712" y="118" width="116" height="44" rx="6" />
-    <text x="770" y="145" text-anchor="middle">执行下一条命令</text>
-
-    <text data-kind="sub" x="420" y="286" text-anchor="middle">阈值按本轮规划已用时间判断，横向距离不代表时长</text>
-  </svg>
-
-  <svg class="flow-narrow" viewBox="0 0 360 540" role="img" aria-labelledby="fig-planning-narrow-title">
-    <title id="fig-planning-narrow-title">同一轮模型规划，沙箱的两条路径（窄屏版）</title>
-    <defs>
-      <pattern id="hatch-amber-narrow" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <line x1="0" y1="0" x2="0" y2="8" stroke="#e3b878" stroke-width="2" />
-      </pattern>
-    </defs>
-
-    <rect data-kind="group" x="16" y="12" width="328" height="144" rx="8" />
-    <text data-kind="group-title" x="28" y="32">模型与沙箱交接</text>
-
-    <rect x="105" y="42" width="150" height="38" rx="6" />
-    <text x="180" y="66" text-anchor="middle">工具返回结果</text>
-
-    <path data-kind="arrow-main" d="M180 80 V106 M175 99 L180 106 L185 99" />
-    <rect data-kind="text-bg" x="114" y="83" width="132" height="19" rx="3" />
-    <text data-kind="sub" x="180" y="97" text-anchor="middle">沙箱空闲，开始计时</text>
-
-    <rect x="105" y="110" width="150" height="38" rx="6" />
-    <text x="180" y="134" text-anchor="middle">模型开始规划</text>
-
-    <rect data-kind="group" x="16" y="172" width="328" height="276" rx="8" />
-    <text data-kind="group-title" x="28" y="192">等待期间的两种结果</text>
-
-    <path data-kind="arrow-main" d="M180 148 V162 H96 V202 M91 195 L96 202 L101 195" />
-    <path data-kind="arrow-amber" d="M180 148 V162 H262 V202 M257 195 L262 202 L267 195" />
-
-    <rect x="28" y="206" width="136" height="38" rx="6" />
-    <text x="96" y="230" text-anchor="middle">阈值前收到命令</text>
-
-    <path data-kind="arrow-main" d="M96 244 V270 M91 263 L96 270 L101 263" />
-
-    <rect x="28" y="274" width="136" height="38" rx="6" />
-    <text x="96" y="298" text-anchor="middle">沙箱保持驻留</text>
-
-    <path data-kind="arrow-main" d="M96 312 V458 H168 V464 M163 458 L168 464 L173 458" />
-
-    <rect x="190" y="206" width="144" height="42" rx="6" />
-    <text x="262" y="224" text-anchor="middle">越过阈值，</text>
-    <text x="262" y="241" text-anchor="middle">规划仍在进行</text>
-
-    <path data-kind="arrow-amber" d="M262 248 V270 M257 263 L262 270 L267 263" />
-
-    <rect data-tone="offload" x="204" y="274" width="116" height="38" rx="6" />
-    <text x="262" y="298" text-anchor="middle">卸载沙箱</text>
-
-    <rect x="204" y="312" width="116" height="48" rx="4" style="fill: url(#hatch-amber-narrow); stroke: none;" />
-    <path data-kind="arrow-amber" d="M262 312 V356 M257 349 L262 356 L267 349" />
-    <rect data-kind="text-bg" x="214" y="325" width="96" height="20" rx="3" />
-    <text data-kind="sub" x="262" y="339" text-anchor="middle">让出驻留内存</text>
-
-    <rect data-tone="offload" x="196" y="360" width="132" height="42" rx="6" />
-    <text x="262" y="378" text-anchor="middle">收到命令，</text>
-    <text x="262" y="395" text-anchor="middle">恢复沙箱</text>
-
-    <path data-kind="arrow-amber" d="M262 402 V458 H192 V464 M187 458 L192 464 L197 458" />
-
-    <rect x="105" y="468" width="150" height="40" rx="6" />
-    <text x="180" y="493" text-anchor="middle">执行下一条命令</text>
-
-    <text data-kind="sub" x="180" y="528" text-anchor="middle">阈值按本轮规划已用时间判断，距离不代表时长</text>
-  </svg>
-
-  <figcaption>
+  <picture>
+<source media="(max-width: 720px)" srcset="/research/agent-sandbox-wrong-target/fig-planning-paths-narrow.svg">
+<img loading="lazy" decoding="async" src="/research/agent-sandbox-wrong-target/fig-planning-paths-wide.svg" alt="同一轮模型规划，沙箱的两条路径（宽屏版）">
+</picture>
+<figcaption>
     <strong>图 1｜同一轮模型规划，沙箱的两条路径。</strong>
     工具返回结果后沙箱进入空闲计时；在阈值前收到下一条命令则保持驻留，越过阈值则卸载并在收到命令后恢复。<sup id="cite-2-4"><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup>
   </figcaption>

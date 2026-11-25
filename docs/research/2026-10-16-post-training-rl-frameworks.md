@@ -19,98 +19,14 @@ date: "2026-10-16"
 <p>训练器用优势调整生成回答的词元（token）概率。对已经生成的某个词元，给定相同前文，训练器比较更新中的策略与采样策略各自给它的概率。正优势鼓励提高概率，负优势鼓励降低。概率比沿有利方向越过裁剪阈值后，继续调整带来的目标收益受限。采样策略给出了计算概率比的分母。配方若另加 KL 惩罚，还需要一份参考策略，衡量更新中的模型偏离它有多远。<sup id="cite-1c"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup></p>
 
 <figure class="figure" id="fig-loop">
-  <svg class="flow-wide" viewBox="0 0 860 288" role="img" aria-labelledby="fig-loop-wide-title">
-    <title id="fig-loop-wide-title">从一道题到下一版策略的训练闭环示意图</title>
-    <rect data-role="group" x="12" y="44" width="136" height="172" rx="10" />
-    <rect data-role="group" x="176" y="44" width="268" height="92" rx="10" />
-    <rect data-role="group" x="472" y="44" width="376" height="92" rx="10" />
+  
 
-    <rect x="28" y="70" width="104" height="46" rx="8" />
-    <rect x="28" y="156" width="104" height="46" rx="8" />
-    <rect x="192" y="70" width="104" height="46" rx="8" />
-    <rect x="324" y="70" width="104" height="46" rx="8" />
-    <rect data-tone="highlight" x="488" y="70" width="104" height="46" rx="8" />
-    <rect data-tone="training" x="608" y="70" width="104" height="46" rx="8" />
-    <rect data-tone="training" x="728" y="70" width="104" height="46" rx="8" />
-
-    <g text-anchor="middle">
-      <text data-kind="group-title" x="80" y="62">数据</text>
-      <text data-kind="group-title" x="310" y="62">生成与判分</text>
-      <text data-kind="group-title" x="660" y="62">训练</text>
-
-      <text x="80" y="99">题面</text>
-      <text x="80" y="185">标准答案</text>
-      <text x="244" y="99">同题采样</text>
-      <text x="376" y="99">逐份评分</text>
-      <text x="540" y="99">组内优势</text>
-      <text x="660" y="99">策略损失</text>
-      <text x="780" y="99">更新权重</text>
-    </g>
-
-    <g>
-      <path d="M132 93 H190 M183 88 L190 93 L183 98" />
-      <path d="M296 93 H322 M315 88 L322 93 L315 98" />
-      <path d="M132 179 H376 V118 M371 125 L376 118 L381 125" />
-      <path d="M428 93 H486 M479 88 L486 93 L479 98" />
-      <path d="M592 93 H606 M599 88 L606 93 L599 98" />
-      <path d="M712 93 H726 M719 88 L726 93 L719 98" />
-      <path d="M244 70 V20 H660 V68 M655 61 L660 68 L665 61" />
-      <path data-tone="feedback" d="M780 116 V256 H244 V118 M239 125 L244 118 L249 125" />
-    </g>
-
-    <rect data-role="label-bg" x="372" y="8" width="160" height="24" rx="4" />
-    <text data-kind="edge-label" x="452" y="25" text-anchor="middle">回答词元与采样概率</text>
-
-    <rect data-role="label-bg" x="412" y="244" width="200" height="24" rx="4" />
-    <text data-kind="edge-label" x="512" y="261" text-anchor="middle">交给生成侧，供后续采样</text>
-  </svg>
-
-  <svg class="flow-narrow" viewBox="0 0 340 540" role="img" aria-labelledby="fig-loop-narrow-title">
-    <title id="fig-loop-narrow-title">从一道题到下一版策略的训练闭环示意图（窄屏版）</title>
-    <rect data-role="group" x="36" y="12" width="292" height="82" rx="10" />
-    <rect data-role="group" x="36" y="114" width="292" height="148" rx="10" />
-    <rect data-role="group" x="36" y="282" width="292" height="218" rx="10" />
-
-    <rect x="64" y="40" width="112" height="42" rx="8" />
-    <rect x="196" y="40" width="112" height="42" rx="8" />
-    <rect x="64" y="144" width="112" height="42" rx="8" />
-    <rect x="196" y="206" width="112" height="42" rx="8" />
-    <rect data-tone="highlight" x="196" y="312" width="112" height="42" rx="8" />
-    <rect data-tone="training" x="196" y="376" width="112" height="42" rx="8" />
-    <rect data-tone="training" x="196" y="440" width="112" height="42" rx="8" />
-
-    <text data-kind="group-title" x="48" y="31">数据</text>
-    <text data-kind="group-title" x="48" y="133">生成与判分</text>
-    <text data-kind="group-title" x="48" y="301">训练</text>
-
-    <g text-anchor="middle">
-      <text x="120" y="67">题面</text>
-      <text x="252" y="67">标准答案</text>
-      <text x="120" y="171">同题采样</text>
-      <text x="252" y="233">逐份评分</text>
-      <text x="252" y="339">组内优势</text>
-      <text x="252" y="403">策略损失</text>
-      <text x="252" y="467">更新权重</text>
-    </g>
-
-    <g>
-      <path d="M120 82 V142 M115 135 L120 142 L125 135" />
-      <path d="M252 82 V204 M247 197 L252 204 L257 197" />
-      <path d="M120 186 V227 H194 M187 222 L194 227 L187 232" />
-      <path d="M252 248 V310 M247 303 L252 310 L257 303" />
-      <path d="M252 354 V374 M247 367 L252 374 L257 367" />
-      <path d="M252 418 V438 M247 431 L252 438 L257 431" />
-      <path d="M92 186 V397 H194 M187 392 L194 397 L187 402" />
-      <path data-tone="feedback" d="M252 482 V518 H18 V165 H62 M55 160 L62 165 L55 170" />
-    </g>
-
-    <rect data-role="label-bg" x="34" y="318" width="144" height="24" rx="4" />
-    <text data-kind="edge-label" x="106" y="335" text-anchor="middle">回答词元与采样概率</text>
-
-    <rect data-role="label-bg" x="76" y="506" width="188" height="24" rx="4" />
-    <text data-kind="edge-label" x="170" y="523" text-anchor="middle">交给生成侧，供后续采样</text>
-  </svg>
-  <figcaption><strong>图 1｜从一道题到下一版策略。</strong>虚线框区分数据、生成与判分、训练三段职责；高亮节点「组内优势」把同题得分差转成词元更新方向，加粗回边决定下一批采样使用哪版权重。</figcaption>
+  
+  <picture>
+<source media="(max-width: 720px)" srcset="/research/post-training-rl-frameworks/fig-loop-narrow.svg">
+<img loading="lazy" decoding="async" src="/research/post-training-rl-frameworks/fig-loop-wide.svg" alt="从一道题到下一版策略的训练闭环示意图">
+</picture>
+<figcaption><strong>图 1｜从一道题到下一版策略。</strong>虚线框区分数据、生成与判分、训练三段职责；高亮节点「组内优势」把同题得分差转成词元更新方向，加粗回边决定下一批采样使用哪版权重。</figcaption>
 </figure>
 
 ## 同一个正确答案，五份示例怎样判分

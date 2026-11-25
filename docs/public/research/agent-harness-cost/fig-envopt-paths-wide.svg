@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="flow-wide flow-wide" viewBox="0 0 980 340" role="img" aria-labelledby="fig-envopt-wide-title">
+<style>
+  text { font-family: "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+  svg { font-size: 20px; }
+  :is(.flow-wide, .flow-narrow) text { fill: #26364a;
+  font: 400 20px "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+:is(.flow-wide, .flow-narrow) text[data-kind="label"] { fill: #426e63;
+  font-weight: 550; }
+:is(.flow-wide, .flow-narrow) rect { fill: #fbf9f5;
+  stroke: #bfc8c4;
+  stroke-width: 1; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="training"] { fill: #edf3ef;
+  stroke: #79a99b; }
+:is(.flow-wide, .flow-narrow) path { fill: none;
+  stroke: #79a99b;
+  stroke-width: 1.6; }
+th[data-num],
+    td[data-num] { text-align: right;
+      font-variant-numeric: tabular-nums; }
+:is(.flow-wide, .flow-narrow) rect[data-kind="group"] { fill: #edf3ef;
+      stroke: #79a99b;
+      stroke-dasharray: 5 4; }
+:is(.flow-wide, .flow-narrow) rect[data-kind="mask"] { fill: #f6f1e7;
+      stroke: none; }
+:is(.flow-wide, .flow-narrow) path[data-kind="highlight"] { stroke: #426e63;
+      stroke-width: 2.2; }
+.flow-wide text { font-size: 18px; }
+.flow-wide text[data-kind="label"] { font-size: 16px; }
+.flow-narrow text { font-size: 14px; }
+.flow-narrow text[data-kind="label"] { font-size: 13px; }
+</style>
+
+    <title id="fig-envopt-wide-title">同一条客服记录的两条读取路径（宽屏版）</title>
+    <!-- 共用起点 -->
+    <rect x="10" y="130" width="128" height="90" rx="8" />
+    <!-- 上组：原环境（三步均占模型交互） -->
+    <text x="196" y="28" text-anchor="start" data-kind="label">原环境（三步均占模型交互）</text>
+    <rect x="196" y="46" width="150" height="80" rx="8" />
+    <rect x="386" y="46" width="150" height="80" rx="8" />
+    <rect x="632" y="46" width="160" height="80" rx="8" />
+    <!-- 下组：重组后（前两步由程序预读分组） -->
+    <rect x="184" y="182" width="364" height="132" rx="10" data-kind="group" />
+    <text x="196" y="206" text-anchor="start" data-kind="label">重组后 · 每个任务开始时生成</text>
+    <rect x="196" y="222" width="150" height="76" rx="8" />
+    <rect x="386" y="222" width="150" height="76" rx="8" />
+    <rect x="632" y="222" width="160" height="76" rx="8" />
+    <!-- 共用终点 -->
+    <rect x="832" y="130" width="138" height="90" rx="8" />
+
+    <!-- 连线 -->
+    <g>
+      <path d="M138 175 H166 V86 H190 M182 80 L190 86 L182 92" />
+      <path d="M138 175 H166 V260 H190 M182 254 L190 260 L182 266" />
+      <path d="M346 86 H380 M372 80 L380 86 L372 92" />
+      <path d="M536 86 H626 M618 80 L626 86 L618 92" />
+      <path d="M346 260 H380 M372 254 L380 260 L372 266" />
+      <path d="M536 260 H626 M618 254 L626 260 L618 266" data-kind="highlight" />
+      <path d="M792 86 H812 V175 H826 M818 169 L826 175 L818 181" />
+      <path d="M792 260 H812 V175 H826" />
+    </g>
+
+    <!-- 穿线文字垫底 -->
+    <rect x="546" y="247" width="76" height="26" rx="4" data-kind="mask" />
+    <text x="584" y="265" text-anchor="middle" data-kind="label">随任务交付</text>
+
+    <!-- 节点文字 -->
+    <g text-anchor="middle">
+      <text x="74" y="168">本次任务的</text>
+      <text x="74" y="194">11 条客服对话</text>
+
+      <text x="271" y="80">模型查找</text>
+      <text x="271" y="106">列表接口</text>
+      <text x="461" y="80">模型调用</text>
+      <text x="461" y="106">列表接口</text>
+      <text x="712" y="80">从嵌套记录找</text>
+      <text x="712" y="106">编号与原话</text>
+
+      <text x="271" y="254">程序通过</text>
+      <text x="271" y="280">原接口预读</text>
+      <text x="461" y="254">每行列出编号、</text>
+      <text x="461" y="280">主题、客户原话</text>
+      <text x="712" y="254">模型读取清单</text>
+      <text x="712" y="280">及写入接口</text>
+
+      <text x="901" y="168">智能体调用</text>
+      <text x="901" y="194">原接口写备注</text>
+    </g>
+  </svg>

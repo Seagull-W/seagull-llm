@@ -24,143 +24,15 @@ date: 2026-11-09
 <p>找齐一条证明路线更难。要证素数 <i>p</i> 对应的 (<i>x</i><sup><i>p</i></sup> − 1)/(<i>x</i> − 1) 在整数系数多项式环中不可约，题面没有出现“分圆”二字。若认出商式就是第 <i>p</i> 个分圆多项式，就可以分别去找几何和恒等式、素数阶分圆多项式的表达式，以及分圆多项式的不可约性定理。只搜到最后一条，仍缺少把原式改写成引理所需形式的理由。<sup><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup></p>
 
 <figure class="figure" id="fig-cyclotomic">
-  <svg class="flow-wide cyclotomic-svg" viewBox="0 0 880 298" role="img" aria-labelledby="fig-cyclotomic-wide-title">
-    <title id="fig-cyclotomic-wide-title">三条引理如何接起一个不可约性证明（宽屏示意图）</title>
-    <!-- 分组标题 -->
-    <text class="group-title" x="14" y="24" text-anchor="start">纸上的推理</text>
-    <text class="group-title" x="14" y="204" text-anchor="start">Mathlib 中的依据</text>
+  
 
-    <!-- 节点上方条件与高亮旁注 -->
-    <text class="cond-label" x="86" y="52" text-anchor="middle">p 为素数</text>
-    <text class="note-highlight" x="558" y="52" text-anchor="middle">题面没有出现的概念</text>
+  
 
-    <!-- 上行四个推理节点 -->
-    <rect class="node-box" x="14" y="66" width="144" height="68" rx="8" />
-    <rect class="node-box" x="250" y="66" width="144" height="68" rx="8" />
-    <rect class="node-highlight" x="486" y="66" width="144" height="68" rx="8" />
-    <rect class="node-box" x="722" y="66" width="144" height="68" rx="8" />
-
-    <g text-anchor="middle">
-      <text class="node-title" x="86" y="94">商式</text>
-      <text class="node-math" x="86" y="118">(x<tspan dy="-5" font-size="10.5">p</tspan><tspan dy="5"> − 1)/(x − 1)</tspan></text>
-
-      <text class="node-title" x="322" y="94">几何和</text>
-      <text class="node-math" x="322" y="118">1 + x + … + x<tspan dy="-5" font-size="10.5">p−1</tspan></text>
-
-      <text class="node-title" x="558" y="94">分圆多项式</text>
-      <text class="node-math" x="558" y="118">Φ<tspan dy="4" font-size="10.5">p</tspan><tspan dy="-4">(x)</tspan></text>
-
-      <text class="node-title" x="794" y="94">在 ℤ[x] 中</text>
-      <text class="node-title" x="794" y="118">不可约</text>
-    </g>
-
-    <!-- 横向推理箭头 A → B → C → D -->
-    <path class="arrow-main" d="M158 100 H246 M239 95 L247 100 L239 105" />
-    <path class="arrow-main" d="M394 100 H482 M475 95 L483 100 L475 105" />
-    <path class="arrow-main" d="M630 100 H718 M711 95 L719 100 L711 105" />
-
-    <!-- 纵向支撑箭头（卡片指向各自支撑的连线） -->
-    <path class="arrow-support" d="M204 220 V110 M199 117 L204 109 L209 117" />
-    <path class="arrow-highlight" d="M440 220 V110 M435 117 L440 109 L445 117" />
-    <path class="arrow-support" d="M676 220 V110 M671 117 L676 109 L681 117" />
-
-    <!-- 连线文字垫不透明底色，防止箭头穿字 -->
-    <rect class="label-mask" x="158" y="152" width="92" height="24" rx="4" />
-    <rect class="label-mask" x="398" y="152" width="84" height="24" rx="4" />
-    <rect class="label-mask" x="640" y="152" width="72" height="24" rx="4" />
-
-    <g text-anchor="middle">
-      <text class="edge-label" x="204" y="169">几何和恒等式</text>
-      <text class="edge-label" x="440" y="169">素数阶公式</text>
-      <text class="edge-label" x="676" y="169">不可约性</text>
-    </g>
-
-    <!-- 下行三张 Mathlib 引理卡片 -->
-    <rect class="card-lemma" x="111" y="220" width="186" height="58" rx="8" />
-    <rect class="card-lemma card-highlight" x="336" y="220" width="208" height="58" rx="8" />
-    <rect class="card-lemma" x="568" y="220" width="216" height="58" rx="8" />
-
-    <g text-anchor="middle">
-      <text class="lemma-code" x="204" y="254">geom_sum_mul</text>
-
-      <text class="lemma-code" x="440" y="244">Polynomial.</text>
-      <text class="lemma-code" x="440" y="264">cyclotomic_prime</text>
-
-      <text class="lemma-code" x="676" y="244">Polynomial.</text>
-      <text class="lemma-code" x="676" y="264">cyclotomic.irreducible</text>
-    </g>
-  </svg>
-
-  <svg class="flow-narrow cyclotomic-svg" viewBox="0 0 380 562" role="img" aria-labelledby="fig-cyclotomic-narrow-title">
-    <title id="fig-cyclotomic-narrow-title">三条引理如何接起一个不可约性证明（窄屏示意图）</title>
-    <!-- 分组标题 -->
-    <text class="group-title" x="10" y="22" text-anchor="start">纸上的推理</text>
-    <text class="group-title" x="202" y="22" text-anchor="start">Mathlib 中的依据</text>
-
-    <!-- 节点 A 上方条件 -->
-    <text class="cond-label" x="93" y="46" text-anchor="middle">p 为素数</text>
-
-    <!-- 左列四个推理节点 -->
-    <rect class="node-box" x="10" y="56" width="166" height="58" rx="8" />
-    <rect class="node-box" x="10" y="194" width="166" height="58" rx="8" />
-    <rect class="node-highlight" x="10" y="338" width="166" height="62" rx="8" />
-    <rect class="node-box" x="10" y="488" width="166" height="58" rx="8" />
-
-    <g text-anchor="middle">
-      <text class="node-title" x="93" y="80">商式</text>
-      <text class="node-math" x="93" y="102">(x<tspan dy="-4" font-size="9.5">p</tspan><tspan dy="4"> − 1)/(x − 1)</tspan></text>
-
-      <text class="node-title" x="93" y="218">几何和</text>
-      <text class="node-math" x="93" y="240">1 + x + … + x<tspan dy="-4" font-size="9.5">p−1</tspan></text>
-
-      <text class="node-title" x="93" y="364">分圆多项式</text>
-      <text class="node-math" x="93" y="387">Φ<tspan dy="3.5" font-size="9.5">p</tspan><tspan dy="-3.5">(x)</tspan></text>
-
-      <text class="node-title" x="93" y="512">在 ℤ[x] 中</text>
-      <text class="node-title" x="93" y="534">不可约</text>
-    </g>
-
-    <!-- 高亮旁注（位于节点 C 右侧空隙） -->
-    <text class="note-highlight" x="286" y="373" text-anchor="middle">题面没有出现的概念</text>
-
-    <!-- 纵向推理箭头 A → B → C → D -->
-    <path class="arrow-main" d="M93 114 V190 M88 183 L93 191 L98 183" />
-    <path class="arrow-main" d="M93 252 V334 M88 327 L93 335 L98 327" />
-    <path class="arrow-main" d="M93 400 V484 M88 477 L93 485 L98 477" />
-
-    <!-- 横向支撑箭头（引理卡片指向对应连线） -->
-    <path class="arrow-support" d="M202 154 H147 M154 149 L146 154 L154 159" />
-    <path class="arrow-highlight" d="M202 295 H142 M149 290 L141 295 L149 300" />
-    <path class="arrow-support" d="M202 444 H134 M141 439 L133 444 L141 449" />
-
-    <!-- 连线文字垫不透明底色，防止竖线穿字 -->
-    <rect class="label-mask" x="45" y="142" width="96" height="24" rx="4" />
-    <rect class="label-mask" x="51" y="283" width="84" height="24" rx="4" />
-    <rect class="label-mask" x="59" y="432" width="68" height="24" rx="4" />
-
-    <g text-anchor="middle">
-      <text class="edge-label" x="93" y="159">几何和恒等式</text>
-      <text class="edge-label" x="93" y="300">素数阶公式</text>
-      <text class="edge-label" x="93" y="449">不可约性</text>
-    </g>
-
-    <!-- 右列三张 Mathlib 引理卡片 -->
-    <rect class="card-lemma" x="202" y="131" width="168" height="46" rx="8" />
-    <rect class="card-lemma card-highlight" x="202" y="267" width="168" height="56" rx="8" />
-    <rect class="card-lemma" x="202" y="416" width="168" height="56" rx="8" />
-
-    <g text-anchor="middle">
-      <text class="lemma-code" x="286" y="158">geom_sum_mul</text>
-
-      <text class="lemma-code" x="286" y="289">Polynomial.</text>
-      <text class="lemma-code" x="286" y="309">cyclotomic_prime</text>
-
-      <text class="lemma-code" x="286" y="438">Polynomial.</text>
-      <text class="lemma-code" x="286" y="458">cyclotomic.irreducible</text>
-    </g>
-  </svg>
-
-  <figcaption><strong>图 1｜三条引理如何接起一个不可约性证明。</strong>横向（窄屏为左列）是数学推导，纵向（窄屏为右列）是每一步所用的库引理。改绘自 LeanSearch v2 图 1。<sup><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup></figcaption>
+  <picture>
+<source media="(max-width: 720px)" srcset="/research/dong-bin-ai4math/fig-cyclotomic-narrow.svg">
+<img loading="lazy" decoding="async" src="/research/dong-bin-ai4math/fig-cyclotomic-wide.svg" alt="三条引理如何接起一个不可约性证明（宽屏示意图）">
+</picture>
+<figcaption><strong>图 1｜三条引理如何接起一个不可约性证明。</strong>横向（窄屏为左列）是数学推导，纵向（窄屏为右列）是每一步所用的库引理。改绘自 LeanSearch v2 图 1。<sup><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup></figcaption>
 </figure>
 
 <p>LeanSearch v2 的推理模式先写草图，为每一步分别查询。过滤后某一步可以一条引理都不留，这个空结果会提醒系统修改草图。在 MathlibMPR 的六十九条定理上，每题取前十个候选，平均命中所需前提组的 46.1%，组内找到任一可替代引理就算命中。把要求改为找齐至少一条已标注路线的所有组，达标的题目占 30.4%。要知道这些候选能否帮忙证完，还要让证明模型实际使用它们。<sup><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup></p>

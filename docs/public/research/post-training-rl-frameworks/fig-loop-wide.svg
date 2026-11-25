@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="flow-wide flow-wide" viewBox="0 0 860 288" role="img" aria-labelledby="fig-loop-wide-title">
+<style>
+  text { font-family: "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+  svg { font-size: 20px; }
+  :is(.flow-wide, .flow-narrow) text { fill: #26364a;
+  font: 400 20px "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+:is(.flow-wide, .flow-narrow) text[data-kind="label"] { fill: #426e63;
+  font-weight: 550; }
+:is(.flow-wide, .flow-narrow) rect { fill: #fbf9f5;
+  stroke: #bfc8c4;
+  stroke-width: 1; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="training"] { fill: #edf3ef;
+  stroke: #79a99b; }
+:is(.flow-wide, .flow-narrow) path { fill: none;
+  stroke: #79a99b;
+  stroke-width: 1.6; }
+:is(.flow-wide, .flow-narrow) text { font-size: 16px; }
+:is(.flow-wide, .flow-narrow) text[data-kind="group-title"] { fill: #5c6874;
+      font-size: 14px;
+      font-weight: 550; }
+:is(.flow-wide, .flow-narrow) text[data-kind="edge-label"] { fill: #426e63;
+      font-size: 14px;
+      font-weight: 550; }
+:is(.flow-wide, .flow-narrow) rect[data-role="group"] { fill: none;
+      stroke: #bfc8c4;
+      stroke-dasharray: 5 4; }
+:is(.flow-wide, .flow-narrow) rect[data-role="label-bg"] { fill: #f6f1e7;
+      stroke: none; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="highlight"] { fill: #edf3ef;
+      stroke: #426e63;
+      stroke-width: 1.8; }
+:is(.flow-wide, .flow-narrow) path[data-tone="feedback"] { stroke: #426e63;
+      stroke-width: 2.4; }
+</style>
+
+    <title id="fig-loop-wide-title">从一道题到下一版策略的训练闭环示意图</title>
+    <rect data-role="group" x="12" y="44" width="136" height="172" rx="10" />
+    <rect data-role="group" x="176" y="44" width="268" height="92" rx="10" />
+    <rect data-role="group" x="472" y="44" width="376" height="92" rx="10" />
+
+    <rect x="28" y="70" width="104" height="46" rx="8" />
+    <rect x="28" y="156" width="104" height="46" rx="8" />
+    <rect x="192" y="70" width="104" height="46" rx="8" />
+    <rect x="324" y="70" width="104" height="46" rx="8" />
+    <rect data-tone="highlight" x="488" y="70" width="104" height="46" rx="8" />
+    <rect data-tone="training" x="608" y="70" width="104" height="46" rx="8" />
+    <rect data-tone="training" x="728" y="70" width="104" height="46" rx="8" />
+
+    <g text-anchor="middle">
+      <text data-kind="group-title" x="80" y="62">数据</text>
+      <text data-kind="group-title" x="310" y="62">生成与判分</text>
+      <text data-kind="group-title" x="660" y="62">训练</text>
+
+      <text x="80" y="99">题面</text>
+      <text x="80" y="185">标准答案</text>
+      <text x="244" y="99">同题采样</text>
+      <text x="376" y="99">逐份评分</text>
+      <text x="540" y="99">组内优势</text>
+      <text x="660" y="99">策略损失</text>
+      <text x="780" y="99">更新权重</text>
+    </g>
+
+    <g>
+      <path d="M132 93 H190 M183 88 L190 93 L183 98" />
+      <path d="M296 93 H322 M315 88 L322 93 L315 98" />
+      <path d="M132 179 H376 V118 M371 125 L376 118 L381 125" />
+      <path d="M428 93 H486 M479 88 L486 93 L479 98" />
+      <path d="M592 93 H606 M599 88 L606 93 L599 98" />
+      <path d="M712 93 H726 M719 88 L726 93 L719 98" />
+      <path d="M244 70 V20 H660 V68 M655 61 L660 68 L665 61" />
+      <path data-tone="feedback" d="M780 116 V256 H244 V118 M239 125 L244 118 L249 125" />
+    </g>
+
+    <rect data-role="label-bg" x="372" y="8" width="160" height="24" rx="4" />
+    <text data-kind="edge-label" x="452" y="25" text-anchor="middle">回答词元与采样概率</text>
+
+    <rect data-role="label-bg" x="412" y="244" width="200" height="24" rx="4" />
+    <text data-kind="edge-label" x="512" y="261" text-anchor="middle">交给生成侧，供后续采样</text>
+  </svg>

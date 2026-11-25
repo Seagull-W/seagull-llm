@@ -23,120 +23,15 @@ date: "2026-10-29"
 <p>以展开括号为例。即使上一步漏乘了一项，续写模型也可能回到题干重算，交出正确答案。反过来，一步变形完全合法，后面还有一道难解的方程，八次都算错也很容易理解。换一个更强的续写模型，或者多给几次机会，前缀原封不动，标签却可能改变。这样的分数可以帮搜索程序决定把计算花在哪条路径上。若要据此告诉学生是哪一行用了错的规则，就得直接检查那一行。<sup><a href="#ref-2" aria-label="参考文献 2">[2]</a></sup><sup><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>
 
 <figure class="figure" id="fig-labeling">
-  <svg class="flow-wide" viewBox="0 0 960 356" role="img" aria-labelledby="fig-labeling-wide-title">
-    <title id="fig-labeling-wide-title">为什么同一个错步会得到正标签（宽屏版）</title>
-    <!-- 连线 -->
-    <path d="M 164 166 H 190 M 183 160 L 190 166 L 183 172" />
-    <!-- B -> C（逐步审阅） -->
-    <path d="M 368 146 H 396 V 62 H 480 M 473 56 L 480 62 L 473 68" />
-    <!-- C -> D -->
-    <path d="M 622 62 H 778 M 771 56 L 778 62 L 771 68" />
-    <!-- B -> E（续写核验） -->
-    <path d="M 368 186 H 396 V 248 H 480 M 473 242 L 480 248 L 473 254" />
-    <!-- E -> F / G -->
-    <path d="M 594 248 H 607 V 190 H 618 M 611 184 L 618 190 L 611 196" />
-    <path d="M 607 248 V 302 H 618 M 611 296 L 618 302 L 611 308" />
-    <!-- F / G -> H -->
-    <path d="M 754 190 H 766 V 248 H 778 M 771 242 L 778 248 L 771 254" />
-    <path d="M 754 302 H 766 V 248" />
+  
 
-    <!-- 连线文字垫不透明底色 -->
-    <rect class="label-bg" x="398" y="48" width="76" height="26" rx="4" />
-    <rect class="label-bg" x="398" y="234" width="76" height="26" rx="4" />
+  
 
-    <!-- 节点框 -->
-    <rect x="12" y="130" width="152" height="72" rx="8" />
-    <rect x="192" y="116" width="176" height="100" rx="8" />
-    <rect x="482" y="28" width="140" height="68" rx="8" />
-    <rect x="780" y="28" width="166" height="68" rx="8" data-tone="caution" data-emphasis="strong" />
-    <rect x="482" y="214" width="112" height="68" rx="8" />
-    <rect x="620" y="152" width="134" height="74" rx="8" />
-    <rect x="620" y="268" width="134" height="68" rx="8" />
-    <rect x="780" y="206" width="166" height="84" rx="8" data-tone="training" data-emphasis="strong" />
-
-    <!-- 文字 -->
-    <g text-anchor="middle">
-      <text x="436" y="67" data-kind="label">逐步审阅</text>
-      <text x="436" y="253" data-kind="label">续写核验</text>
-
-      <text x="88" y="156" data-kind="label">原题</text>
-      <text x="88" y="185">2(x + 1) = 8</text>
-
-      <text x="280" y="144" data-kind="label">当前步</text>
-      <text x="280" y="173">2x + 1 = 8</text>
-      <text x="292" y="199" data-kind="caution-sub">↑ 漏乘 2</text>
-
-      <text x="552" y="68">核对分配律</text>
-      <text x="863" y="68" data-kind="caution">✗ 本步错误</text>
-
-      <text x="538" y="242">假设八次</text>
-      <text x="538" y="268">续写</text>
-
-      <text x="687" y="182" data-kind="sub">一次回到原式</text>
-      <text x="687" y="209">答 3</text>
-
-      <text x="687" y="308">七次答错</text>
-
-      <text x="863" y="240" data-kind="label">硬标签：正</text>
-      <text x="863" y="269" data-kind="label">软标签：1/8</text>
-    </g>
-  </svg>
-
-  <svg class="flow-narrow" viewBox="0 0 340 594" role="img" aria-labelledby="fig-labeling-narrow-title">
-    <title id="fig-labeling-narrow-title">为什么同一个错步会得到正标签（窄屏版）</title>
-    <!-- 连线 -->
-    <path d="M 170 70 V 96 M 164 89 L 170 96 L 176 89" />
-    <!-- 分支 -->
-    <path d="M 170 176 V 194 H 82 V 242 M 76 235 L 82 242 L 88 235" />
-    <path d="M 170 194 H 250 V 242 M 244 235 L 250 242 L 256 235" />
-    <!-- 左支 C -> D -->
-    <path d="M 82 304 V 338 M 76 331 L 82 338 L 88 331" />
-    <!-- 右支 E -> F -->
-    <path d="M 250 302 V 334 M 244 327 L 250 334 L 256 327" />
-    <!-- 右支 E -> G（绕右侧） -->
-    <path d="M 320 273 H 332 V 443 H 322 M 328 437 L 322 443 L 328 449" />
-    <!-- 右支 F -> H（绕左侧）与 G -> H -->
-    <path d="M 180 368 H 168 V 540 H 178 M 172 534 L 178 540 L 172 546" />
-    <path d="M 250 470 V 502 M 244 495 L 250 502 L 256 495" />
-
-    <!-- 连线文字垫不透明底色 -->
-    <rect class="label-bg" x="42" y="205" width="80" height="24" rx="4" />
-    <rect class="label-bg" x="210" y="205" width="80" height="24" rx="4" />
-
-    <!-- 节点框 -->
-    <rect x="40" y="12" width="260" height="58" rx="8" />
-    <rect x="30" y="98" width="280" height="78" rx="8" />
-    <rect x="12" y="244" width="140" height="60" rx="8" />
-    <rect x="12" y="340" width="140" height="64" rx="8" data-tone="caution" data-emphasis="strong" />
-    <rect x="180" y="244" width="140" height="58" rx="8" />
-    <rect x="180" y="336" width="140" height="64" rx="8" />
-    <rect x="180" y="416" width="140" height="54" rx="8" />
-    <rect x="180" y="504" width="140" height="72" rx="8" data-tone="training" data-emphasis="strong" />
-
-    <!-- 文字 -->
-    <g text-anchor="middle">
-      <text x="82" y="222" data-kind="label">逐步审阅</text>
-      <text x="250" y="222" data-kind="label">续写核验</text>
-
-      <text x="170" y="47">原题：2(x + 1) = 8</text>
-
-      <text x="170" y="130">当前步：2x + 1 = 8</text>
-      <text x="190" y="158" data-kind="caution-sub">↑ 常数项 1 漏乘 2</text>
-
-      <text x="82" y="280">核对分配律</text>
-      <text x="82" y="378" data-kind="caution">✗ 本步错误</text>
-
-      <text x="250" y="279">假设八次续写</text>
-      <text x="250" y="362" data-kind="sub">一次回到原式</text>
-      <text x="250" y="387">答 3</text>
-      <text x="250" y="449">七次答错</text>
-
-      <text x="250" y="534" data-kind="label">硬标签：正</text>
-      <text x="250" y="560" data-kind="label">软标签：1/8</text>
-    </g>
-  </svg>
-
-  <figcaption><strong>图 1｜为什么同一个错步会得到正标签。</strong>续写可以修正前面的错误。次数为示意，标签规则见文献 [2]、[3]。</figcaption>
+  <picture>
+<source media="(max-width: 720px)" srcset="/research/prm-process-reward/fig-labeling-narrow.svg">
+<img loading="lazy" decoding="async" src="/research/prm-process-reward/fig-labeling-wide.svg" alt="为什么同一个错步会得到正标签（宽屏版）">
+</picture>
+<figcaption><strong>图 1｜为什么同一个错步会得到正标签。</strong>续写可以修正前面的错误。次数为示意，标签规则见文献 [2]、[3]。</figcaption>
 </figure>
 
 <p>通义团队请语言模型逐步审阅同一份解答，再和续写结果推断出的首错位置对照。两者指出的错误位置一致才保留样本。在这组对照里，筛完约剩四成数据，训练出的评分器在找错任务上已经接近用全量审阅标签训练的模型。这里省下的是进入训练的样本，续写和审阅仍然都要做。<sup><a href="#ref-3" aria-label="参考文献 3">[3]</a></sup></p>

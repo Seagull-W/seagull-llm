@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="flow-narrow cyclotomic-svg flow-narrow" viewBox="0 0 380 562" role="img" aria-labelledby="fig-cyclotomic-narrow-title">
+<style>
+  text { font-family: "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+  svg { font-size: 17px; }
+  :is(.flow-wide, .flow-narrow) text { fill: #26364a;
+  font: 400 17px "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+:is(.flow-wide, .flow-narrow) text[data-kind="label"] { fill: #426e63;
+  font-weight: 550; }
+:is(.flow-wide, .flow-narrow) rect { fill: #fbf9f5;
+  stroke: #bfc8c4;
+  stroke-width: 1; }
+:is(.flow-wide, .flow-narrow) rect[data-tone="training"] { fill: #edf3ef;
+  stroke: #79a99b; }
+:is(.flow-wide, .flow-narrow) path { fill: none;
+  stroke: #79a99b;
+  stroke-width: 1.6; }
+.cyclotomic-svg rect.node-box { fill: #fbf9f5;
+      stroke: #bfc8c4;
+      stroke-width: 1.2; }
+.cyclotomic-svg rect.node-highlight { fill: #fdf4e5;
+      stroke: #c98a3e;
+      stroke-width: 1.8; }
+.cyclotomic-svg rect.card-lemma { fill: #edf3ef;
+      stroke: #79a99b;
+      stroke-width: 1.2; }
+.cyclotomic-svg rect.card-highlight { fill: #fdf4e5;
+      stroke: #c98a3e;
+      stroke-width: 1.8; }
+.cyclotomic-svg rect.label-mask { fill: #f6f1e7;
+      stroke: none; }
+.cyclotomic-svg path.arrow-main { fill: none;
+      stroke: #536773;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round; }
+.cyclotomic-svg path.arrow-support { fill: none;
+      stroke: #79a99b;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round; }
+.cyclotomic-svg path.arrow-highlight { fill: none;
+      stroke: #c98a3e;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round; }
+.cyclotomic-svg text.group-title { fill: #426e63;
+      font: 600 15px "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+.cyclotomic-svg text.node-title { fill: #26364a;
+      font: 600 15px "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+.cyclotomic-svg text.node-math { fill: #26364a;
+      font: 400 14.5px "Noto Serif CJK SC","Songti SC",serif; }
+.cyclotomic-svg text.cond-label { fill: #5c6874;
+      font: 500 13.5px "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+.cyclotomic-svg text.edge-label { fill: #3d525c;
+      font: 500 13px "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+.cyclotomic-svg text.lemma-code { fill: #26364a;
+      font: 400 12.5px #26364a; }
+.cyclotomic-svg text.note-highlight { fill: #9a5d17;
+      font: 600 13.5px "Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+</style>
+
+    <title id="fig-cyclotomic-narrow-title">三条引理如何接起一个不可约性证明（窄屏示意图）</title>
+    <!-- 分组标题 -->
+    <text class="group-title" x="10" y="22" text-anchor="start">纸上的推理</text>
+    <text class="group-title" x="202" y="22" text-anchor="start">Mathlib 中的依据</text>
+
+    <!-- 节点 A 上方条件 -->
+    <text class="cond-label" x="93" y="46" text-anchor="middle">p 为素数</text>
+
+    <!-- 左列四个推理节点 -->
+    <rect class="node-box" x="10" y="56" width="166" height="58" rx="8" />
+    <rect class="node-box" x="10" y="194" width="166" height="58" rx="8" />
+    <rect class="node-highlight" x="10" y="338" width="166" height="62" rx="8" />
+    <rect class="node-box" x="10" y="488" width="166" height="58" rx="8" />
+
+    <g text-anchor="middle">
+      <text class="node-title" x="93" y="80">商式</text>
+      <text class="node-math" x="93" y="102">(x<tspan dy="-4" font-size="9.5">p</tspan><tspan dy="4"> − 1)/(x − 1)</tspan></text>
+
+      <text class="node-title" x="93" y="218">几何和</text>
+      <text class="node-math" x="93" y="240">1 + x + … + x<tspan dy="-4" font-size="9.5">p−1</tspan></text>
+
+      <text class="node-title" x="93" y="364">分圆多项式</text>
+      <text class="node-math" x="93" y="387">Φ<tspan dy="3.5" font-size="9.5">p</tspan><tspan dy="-3.5">(x)</tspan></text>
+
+      <text class="node-title" x="93" y="512">在 ℤ[x] 中</text>
+      <text class="node-title" x="93" y="534">不可约</text>
+    </g>
+
+    <!-- 高亮旁注（位于节点 C 右侧空隙） -->
+    <text class="note-highlight" x="286" y="373" text-anchor="middle">题面没有出现的概念</text>
+
+    <!-- 纵向推理箭头 A → B → C → D -->
+    <path class="arrow-main" d="M93 114 V190 M88 183 L93 191 L98 183" />
+    <path class="arrow-main" d="M93 252 V334 M88 327 L93 335 L98 327" />
+    <path class="arrow-main" d="M93 400 V484 M88 477 L93 485 L98 477" />
+
+    <!-- 横向支撑箭头（引理卡片指向对应连线） -->
+    <path class="arrow-support" d="M202 154 H147 M154 149 L146 154 L154 159" />
+    <path class="arrow-highlight" d="M202 295 H142 M149 290 L141 295 L149 300" />
+    <path class="arrow-support" d="M202 444 H134 M141 439 L133 444 L141 449" />
+
+    <!-- 连线文字垫不透明底色，防止竖线穿字 -->
+    <rect class="label-mask" x="45" y="142" width="96" height="24" rx="4" />
+    <rect class="label-mask" x="51" y="283" width="84" height="24" rx="4" />
+    <rect class="label-mask" x="59" y="432" width="68" height="24" rx="4" />
+
+    <g text-anchor="middle">
+      <text class="edge-label" x="93" y="159">几何和恒等式</text>
+      <text class="edge-label" x="93" y="300">素数阶公式</text>
+      <text class="edge-label" x="93" y="449">不可约性</text>
+    </g>
+
+    <!-- 右列三张 Mathlib 引理卡片 -->
+    <rect class="card-lemma" x="202" y="131" width="168" height="46" rx="8" />
+    <rect class="card-lemma card-highlight" x="202" y="267" width="168" height="56" rx="8" />
+    <rect class="card-lemma" x="202" y="416" width="168" height="56" rx="8" />
+
+    <g text-anchor="middle">
+      <text class="lemma-code" x="286" y="158">geom_sum_mul</text>
+
+      <text class="lemma-code" x="286" y="289">Polynomial.</text>
+      <text class="lemma-code" x="286" y="309">cyclotomic_prime</text>
+
+      <text class="lemma-code" x="286" y="438">Polynomial.</text>
+      <text class="lemma-code" x="286" y="458">cyclotomic.irreducible</text>
+    </g>
+  </svg>

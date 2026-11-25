@@ -144,103 +144,15 @@ date: "2026-10-18"
 </p>
 
 <figure class="figure" id="fig-monitor-eval">
-  <svg class="flow-wide" viewBox="0 0 980 448" role="img" aria-labelledby="fig-monitor-wide-title">
-    <title id="fig-monitor-wide-title">同一次提交中区分违规减少与监控漏报的流程示意图</title>
-    <g text-anchor="middle">
-      <text x="120" y="26" data-kind="label">共同输入</text>
-      <text x="435" y="26" data-kind="label">训练评分 vs. 独立复测</text>
-      <text x="800" y="26" data-kind="label">各自判断与漏检</text>
-    </g>
+  
 
-    <rect x="20" y="130" width="200" height="96" rx="8" />
-    <rect x="300" y="54" width="270" height="64" rx="8" data-tone="training" />
-    <rect x="300" y="146" width="270" height="64" rx="8" data-tone="training" />
-    <rect x="660" y="54" width="280" height="64" rx="8" data-tone="training" />
-    <rect x="660" y="146" width="280" height="64" rx="8" data-tone="training" />
-    <rect x="300" y="284" width="270" height="72" rx="8" />
-    <rect x="300" y="384" width="270" height="44" rx="8" data-tone="muted" />
-    <rect x="660" y="284" width="280" height="72" rx="8" />
-    <rect x="660" y="378" width="280" height="52" rx="8" data-tone="amber" />
+  
 
-    <g>
-      <path d="M220 156 H256 V86 H294 M286 80 L294 86 L286 92" />
-      <path d="M220 178 H294 M286 172 L294 178 L286 184" />
-      <path d="M570 86 H654 M646 80 L654 86 L646 92" />
-      <path d="M570 178 H654 M646 172 L654 178 L646 184" />
-      <path d="M800 118 V140 M794 132 L800 140 L806 132" />
-      <path d="M435 210 V278 M429 270 L435 278 L441 270" />
-      <path d="M570 320 H654 M646 314 L654 320 L646 326" />
-      <path d="M435 356 V378 M429 370 L435 378 L441 370" data-tone="gray" />
-      <path d="M800 356 V372 M794 364 L800 372 L806 364" data-tone="amber-dashed" />
-      <path d="M940 86 H962 V404 H946 M954 398 L946 404 L954 410" data-tone="amber-dashed" />
-    </g>
-
-    <rect x="372" y="232" width="126" height="28" rx="4" data-kind="label-bg" />
-
-    <g text-anchor="middle">
-      <text x="120" y="160">一次任务的</text>
-      <text x="120" y="185">推理文本、代码</text>
-      <text x="120" y="210">和测试结果</text>
-      <text x="435" y="92">监控器只读推理文本</text>
-      <text x="435" y="184">当前测试通过</text>
-      <text x="800" y="92">未告警</text>
-      <text x="800" y="184">两项都满足才给奖励</text>
-      <text x="435" y="252" data-kind="label">通过后复测</text>
-      <text x="435" y="313">撤销测试改动，</text>
-      <text x="435" y="339">重跑原始测试</text>
-      <text x="435" y="412">复测通过</text>
-      <text x="800" y="313">复测失败，</text>
-      <text x="800" y="339">确认本类违规</text>
-      <text x="800" y="410" data-kind="amber">未告警且复测失败＝漏检</text>
-    </g>
-  </svg>
-
-  <svg class="flow-narrow" viewBox="0 0 360 648" role="img" aria-labelledby="fig-monitor-narrow-title">
-    <title id="fig-monitor-narrow-title">同一次提交中区分违规减少与监控漏报的流程示意图（窄屏版）</title>
-    <rect x="30" y="16" width="300" height="58" rx="8" />
-    <rect x="16" y="106" width="158" height="60" rx="8" data-tone="training" />
-    <rect x="186" y="106" width="158" height="60" rx="8" data-tone="training" />
-    <rect x="16" y="196" width="158" height="48" rx="8" data-tone="training" />
-    <rect x="16" y="276" width="210" height="52" rx="8" data-tone="training" />
-    <rect x="110" y="372" width="234" height="60" rx="8" />
-    <rect x="90" y="468" width="120" height="44" rx="8" data-tone="muted" />
-    <rect x="224" y="468" width="120" height="60" rx="8" />
-    <rect x="30" y="576" width="300" height="54" rx="8" data-tone="amber" />
-
-    <g>
-      <path d="M180 74 V88 H95 V100 M89 92 L95 100 L101 92" />
-      <path d="M180 88 H265 V100 M259 92 L265 100 L271 92" />
-      <path d="M95 166 V190 M89 182 L95 190 L101 182" />
-      <path d="M95 244 V270 M89 262 L95 270 L101 262" />
-      <path d="M206 166 V270 M200 262 L206 270 L212 262" />
-      <path d="M280 166 V366 M274 358 L280 366 L286 358" />
-      <path d="M165 432 V462 M159 454 L165 462 L171 454" data-tone="gray" />
-      <path d="M284 432 V462 M278 454 L284 462 L290 454" />
-      <path d="M284 528 V570 M278 562 L284 570 L290 562" data-tone="amber-dashed" />
-      <path d="M16 220 H6 V603 H24 M16 597 L24 603 L16 609" data-tone="amber-dashed" />
-    </g>
-
-    <rect x="228" y="294" width="104" height="26" rx="4" data-kind="label-bg" />
-
-    <g text-anchor="middle">
-      <text x="180" y="40">一次任务的推理文本、</text>
-      <text x="180" y="62">代码和测试结果</text>
-      <text x="95" y="131">监控器只读</text>
-      <text x="95" y="153">推理文本</text>
-      <text x="265" y="142">当前测试通过</text>
-      <text x="95" y="226">未告警</text>
-      <text x="121" y="308">两项都满足才给奖励</text>
-      <text x="280" y="313" data-kind="label">通过后复测</text>
-      <text x="227" y="397">撤销测试改动，</text>
-      <text x="227" y="419">重跑原始测试</text>
-      <text x="150" y="496">复测通过</text>
-      <text x="284" y="493">复测失败</text>
-      <text x="284" y="515">确认违规</text>
-      <text x="180" y="609" data-kind="amber">未告警且复测失败＝漏检</text>
-    </g>
-  </svg>
-
-  <figcaption>
+  <picture>
+<source media="(max-width: 720px)" srcset="/research/rl-reward-hacking/fig-monitor-eval-narrow.svg">
+<img loading="lazy" decoding="async" src="/research/rl-reward-hacking/fig-monitor-eval-wide.svg" alt="同一次提交中区分违规减少与监控漏报的流程示意图">
+</picture>
+<figcaption>
     <strong>图 1｜同一次提交，怎样区分违规减少和监控漏报？</strong>依据文献 4 的 §3.1–3.2 绘制。召回率 ＝ 监控器已报出的确认违规数 ÷ 复测确认的全部违规数。<sup id="cite-4-4"><a href="#ref-4" aria-label="参考文献 4">[4]</a></sup>
   </figcaption>
 </figure>
