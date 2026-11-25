@@ -163,7 +163,7 @@ advantage = reward - group_mean</code></pre>
 
 ### 4.4 折叠次要细节与双向引用
 
-次要实验口径、检索范围或补充细节放进 `<details class="supplement">`，保持正文干净：
+次要实验口径、检索范围或补充细节放进 `<details class="supplement">`，保持正文干净。正文引用统一使用 `<sup id="cite-N"><a href="#ref-N">[N]</a></sup>`，并确保文末每条 `.reference-backlink` 的 `href` 都对应实际存在的正文 `id`：
 
 ```html
 <p>

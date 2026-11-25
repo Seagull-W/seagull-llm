@@ -23,10 +23,14 @@
 
 本节是交互节奏的唯一维护位置，适用于独立调研、长文及实质改写；即时答疑或小改动无需套用。
 
-1. **默认直接出精简初稿（不强制“先报方案”）**：常规调研无需 Hermes 提前盲猜方案，串行跑完“Codex 调研 → `agy` 写作”后直接交付精简可读的初稿；仅当用户明确要求先看选材清单时，只跑阶段一并回传清单。
-2. **初稿回传后等待反馈**：沿原消息渠道返回**可读正文、HTML 附件或可访问预览**（不能只发服务器路径或执行摘要），随后停在等待状态，不自动定稿、不覆盖旧版、不擅自发布。
-3. **按反馈定向修订**：
-   - 仅改表达、结构、篇幅或图表 → 直接把**用户反馈原话**交给 `agy` 修订（生成 `draft-v2.html`）；
+1. **关键节点主动报进度（默认发简明完成情况）**：
+   - **Codex 进程结束时**：立刻发一句简短进度（退出码、耗时、是否落盘、单行用量），告知即将进入阶段二；失败则立即报错停止。
+   - **`agy` 进程结束时**：立刻发一句简短进度（退出码、耗时、单行用量），告知正在校验成稿。
+   - **任务全部完成时（必发最终结果）**：**严禁静默结束或只报“已跑完”**，必须沿原渠道发回**最终交付结果**——默认发简明完成情况（字数/图表概况、校验结果、本轮总用量）+ 最终产物附件或可访问预览（如 `draft-v1.html`）；多篇批量任务逐篇简报、收尾发总表与全部最终文件。除非用户明确要求，不必刷屏贴出中间过程日志。
+2. **默认直接出精简初稿（不强制“先报方案”）**：常规调研无需 Hermes 提前盲猜方案，串行跑完“Codex → `agy`”后直接交付精简初稿；仅当用户明确要求先看选材清单时，只跑阶段一并回传清单。
+3. **初稿回传后等待反馈**：**回传后必须停在等待状态**，不自动定稿、不覆盖旧版、不擅自提交或发布。后台退出或检查通过不等于用户已批准。
+4. **按反馈定向修订**：
+   - 仅改表达、结构、篇幅或图表 → 直接把**用户反馈原话**交给 `agy` 修订（生成 `draft-v2.html`，轻量修订可用 `gemini-4-hydrogen-medium`）；
    - 需补新论文或新证据 → 先串行调 Codex 补充 `research-notes.md`，退出后再调 `agy` 修订。
    - 获得用户明确授权后，再按 [发布流程](../writing/publishing.md) 上站并核验。
 
@@ -63,8 +67,11 @@ python3 "$project_root/scripts/log-usage.py" \
   --model "$codex_model" --effort medium --exit-code "$codex_rc" \
   --input "$run_dir/codex-events.jsonl"
 
-# 确认 codex_rc=0 且 research-notes.md 已生成后，再启动阶段二：
-# 阶段二：Antigravity CLI 读用户原话 + research-notes.md，产出 draft-v1.html
+# 确认 codex_rc=0 且调研笔记已生成后，先向用户发一句阶段一完成进度；
+# 由 Hermes 预先复制 HTML 底稿，避免 agy 无头模式下调 cp 触发 Bash 权限拒绝空跑：
+cp "$project_root/.agents/skills/paper-research/assets/article.html" "$run_dir/draft-v1.html"
+
+# 阶段二：Antigravity CLI 独立写作，零 Bash 局部编辑 draft-v1.html（仅改 <title>、少量样式与 <article>）
 agy_model="${AGY_WRITE_MODEL:-gemini-4-neon-medium}"
 (
   cd "$project_root" && \
@@ -80,6 +87,7 @@ python3 "$project_root/scripts/log-usage.py" \
   --tool agy --stage write --task "$task_name" \
   --model "$agy_model" --exit-code "$agy_rc" \
   --input "$run_dir/agy-result.json"
+# 发送阶段二完成进度 → 校验 draft-v1.html 完整与窄屏无溢出 → 发送最终完成情况与附件
 ```
 
 - 沿用现有安全沙箱配置，不修改全局设置；失败时如实报告命令、错误和已产生的消耗记录。
