@@ -51,7 +51,7 @@ const related = computed(() => {
   </nav>
 </template>
 <style scoped>
-.related-reading { max-width:720px; margin:48px auto 0; border-top:1px solid var(--vp-c-divider); padding-top:24px; font-family:var(--vp-font-family-base); }
+.related-reading { max-width:var(--reading-measure); margin:48px auto 0; border-top:1px solid var(--vp-c-divider); padding-top:24px; font-family:var(--vp-font-family-base); }
 h2 { font-size:17px; font-weight:600; margin-bottom:8px; }
 .related-link { display:flex; justify-content:space-between; gap:16px; padding:12px 0; border-bottom:1px solid var(--vp-c-divider); font-size:14px; line-height:1.7; }
 small { color:var(--vp-c-text-2); font-size:11px; }

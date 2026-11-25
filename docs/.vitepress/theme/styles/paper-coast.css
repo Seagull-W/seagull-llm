@@ -1,5 +1,11 @@
 /* Paper Coast v1: decoration stays outside scientific figures and reading text. */
-[data-visual-style='paper-coast'] {
+:root[data-visual-style='paper-coast'],
+:root:not([data-visual-style]) .Layout[data-visual-style='paper-coast'] {
+  --vp-c-bg:#f5f8f9; --vp-c-bg-alt:#fff; --vp-c-bg-soft:#e8f0f1;
+  --vp-c-text-1:#153a47; --vp-c-text-2:#536a73; --vp-c-text-3:#647c84;
+  --vp-c-brand-1:#126b78; --vp-c-brand-2:#105a66; --vp-c-brand-3:#267d89;
+  --vp-c-divider:#cfdddf; --vp-c-border:var(--vp-c-divider); --vp-c-border-hover:#8bafb6;
+  --vp-button-brand-text:#fff; --vp-button-brand-hover-text:var(--vp-button-brand-text);
   --illustration-paper:#d3e3e6;
   --illustration-mist:#e9eff0;
   --illustration-ink:#397580;
@@ -7,7 +13,13 @@
   --illustration-shade:#8db4bc;
   --illustration-accent:#c18b62;
 }
-.dark [data-visual-style='paper-coast'] {
+:root.dark[data-visual-style='paper-coast'],
+:root.dark:not([data-visual-style]) .Layout[data-visual-style='paper-coast'] {
+  --vp-c-bg:#14262d; --vp-c-bg-alt:#1a3038; --vp-c-bg-soft:#223c45;
+  --vp-c-text-1:#e4eff0; --vp-c-text-2:#b0c4c9; --vp-c-text-3:#9bb3ba;
+  --vp-c-brand-1:#85cbd1; --vp-c-brand-2:#a0dce1; --vp-c-brand-3:#64aeb8;
+  --vp-c-divider:#37525c; --vp-c-border-hover:#668e99;
+  --vp-button-brand-text:var(--vp-c-bg);
   --illustration-paper:#31535e;
   --illustration-mist:#203b44;
   --illustration-ink:#9acbd0;

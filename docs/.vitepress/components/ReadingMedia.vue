@@ -71,7 +71,11 @@ function enhance() {
     const existing = table.closest<HTMLElement>('.reader-table')
     if (existing) { observer?.observe(existing); return }
     let wrap = table.parentElement!
-    if (!wrap.classList.contains('note-table')) { wrap = document.createElement('div'); table.before(wrap); wrap.append(table) }
+    if (!wrap.matches('.note-table, .table-scroll, .survey-table')) {
+      wrap = document.createElement('div')
+      table.before(wrap)
+      wrap.append(table)
+    }
     wrap.classList.add('reader-table'); wrap.setAttribute('role', 'region'); wrap.setAttribute('aria-label', '表格，宽表可左右滚动')
     const hint = document.createElement('p'); hint.className = 'table-scroll-hint'; hint.textContent = '左右滑动查看完整表格 →'; hint.hidden = true; wrap.before(hint)
     observer?.observe(wrap)
@@ -111,22 +115,17 @@ onUnmounted(() => { close(); observer?.disconnect(); document.removeEventListene
 .image-viewport.original { display:block; }
 .image-viewport.original img { max-width:none; max-height:none; height:auto; margin:0 auto; }
 .image-viewer > p { flex:none; max-height:20dvh; overflow:auto; margin:0; padding:12px 20px; border-top:1px solid var(--vp-c-divider); color:var(--vp-c-text-2); font-size:13px; line-height:1.8; }
-.Layout .vp-doc .reader-table { max-width:100%; overflow:auto; margin:12px 0 28px; border-radius:0; }
 .Layout .vp-doc .reader-table table { display:table; width:max-content; min-width:100%; max-width:none; margin:0; overflow:visible; }
 .Layout .vp-doc .reader-table :is(th,td) { min-width:110px; max-width:360px; white-space:normal; }
 .Layout.Layout .VPDoc .vp-doc .reader-table :is(th,td):not(:first-child) { min-width:160px; }
 .Layout .vp-doc .reader-table :is(th,td):first-child { max-width:150px; }
-.Layout .vp-doc .reader-table.is-scrollable th:first-child, .Layout .vp-doc .reader-table.is-scrollable td:first-child { position:sticky; left:0; z-index:1; background:var(--vp-c-bg-alt); box-shadow:1px 0 var(--vp-c-divider); }
-.Layout.academic-reading .vp-doc .table-scroll-hint { font:12px/1.6 var(--vp-font-family-base); color:var(--vp-c-text-2); margin:20px 0 6px; }
-.Layout .VPDoc .vp-doc .plain-code {
-  position:relative; max-width:var(--reading-measure, 100%); min-width:0; margin:24px auto;
-  border:1px solid var(--vp-c-divider); border-radius:6px; background:var(--vp-code-block-bg);
-}
+.Layout .vp-doc .reader-table.is-scrollable th:first-child, .Layout .vp-doc .reader-table.is-scrollable td:first-child { position:sticky; left:0; z-index:1; background:var(--vp-c-bg-alt); }
+.plain-code { position:relative; }
 .Layout .VPDoc .vp-doc .plain-code pre {
-  margin:0; padding:44px 20px 20px; max-width:100%; overflow-x:auto;
+  padding:44px 20px 20px;
   text-align:left; white-space:pre; overflow-wrap:normal; tab-size:4;
 }
-.Layout .VPDoc .vp-doc .plain-code pre code { padding:0; background:transparent; }
+.Layout .VPDoc .vp-doc .plain-code pre code { padding:0; }
 .plain-code-copy { position:absolute; top:6px; right:8px; padding:4px 10px; min-height:30px; font:12px var(--vp-font-family-base); border:1px solid var(--vp-c-divider); border-radius:4px; background:var(--vp-c-bg); color:var(--vp-c-text-2); }
 @media print { .table-scroll-hint,.plain-code-copy { display:none; } }
 </style>

@@ -131,13 +131,13 @@ onUnmounted(() => { close(); cancelAnimationFrame(frame); window.removeEventList
         </button>
       </div>
       <div v-show="outlineOpen" :id="outlineId" class="reader-toc-content">
-        <ReadingPosition v-if="hasPosition" :stops="stops" :index="positionIndex" :section="section?.id || ''" @jump="jump" />
+        <ReadingPosition v-if="hasPosition" :stops="stops" :index="positionIndex" @jump="jump" />
         <ContentsList :groups="groups" :active="active" :expanded="expanded" @jump="jump" @toggle="toggle" />
       </div>
     </aside>
     <dialog ref="drawer" class="reader-drawer" aria-labelledby="reader-drawer-title" @close="restore" @click="($event.target === drawer) && close()">
       <header><h2 id="reader-drawer-title">{{ mode === 'toc' ? '本页目录' : section?.title }}</h2><button autofocus aria-label="关闭目录" @click="close">关闭</button></header>
-      <ReadingPosition v-if="mode === 'toc' && hasPosition" :stops="stops" :index="positionIndex" :section="section?.id || ''" @jump="jump" />
+      <ReadingPosition v-if="mode === 'toc' && hasPosition" :stops="stops" :index="positionIndex" @jump="jump" />
       <ContentsList v-if="mode === 'toc'" :groups="groups" :active="active" :expanded="expanded" @jump="jump" @toggle="toggle" />
       <nav v-else class="reader-collection-list" aria-label="栏目文章"><a class="collection-home" :href="withBase('/' + section?.id + '/')" @click="close">查看栏目首页 →</a><a v-for="entry in collection" :key="entry.url" :href="withBase(entry.url)" :aria-current="normalizeContentPath('/' + page.relativePath) === normalizeContentPath(entry.url) ? 'page' : undefined" @click="close"><small>{{ entry.kind }}</small>{{ entry.title }}</a></nav>
     </dialog>

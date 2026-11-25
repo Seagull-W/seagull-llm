@@ -1,44 +1,8 @@
-/* 每日调研长文的排版补丁：正文由 Hermes 从独立 HTML 稿迁入，
-   仅保留该稿自带的阅读模块（导语、图、表、折叠口径、参考文献）。
-   所有规则限定在 .research-article 内，不影响其他页面。 */
-
-.research-article {
-  --paper: #fbf9f5;
-  --ink: #26364a;
-  --muted: #5c6874;
-  --sage: #79a99b;
-  --accent: #426e63;
-  --gold: #f2c690;
-  --wash: #f6f1e7;
-  --line: #dddeda;
-  --font-sans: var(--vp-font-family-base);
-}
-
-.research-article p,
-.research-article figure,
-.research-article details {
-  margin-block: 0;
-}
-
-.research-article p + p {
-  margin-top: 1.1em;
-}
-
-.research-article .lead {
-  margin-bottom: 1.6em;
-  color: var(--ink);
-  font-size: 1.06em;
-  line-height: 1.9;
-}
-
+/* Responsive artwork and controls for imported daily research articles. */
 .research-article .figure {
-  margin-block: 26px;
-  padding: 24px;
-  background: var(--wash);
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  padding: clamp(12px, 3vw, 24px);
+  background: var(--vp-c-bg-soft);
 }
-
 .research-article .figure svg {
   display: block;
   width: 100%;
@@ -48,6 +12,9 @@
 
 .research-article .figure picture {
   display: block;
+  /* External diagrams carry their own dark ink on a transparent canvas. */
+  color-scheme: light;
+  background-color: Canvas;
 }
 
 .research-article .figure img {
@@ -56,142 +23,73 @@
   height: auto;
 }
 
-.research-article :is(.flow-wide, .flow-narrow) text {
-  fill: var(--ink);
-  font: 400 20px var(--font-sans);
+.research-article :is(.flow-wide, .flow-narrow) text:not([fill]) {
+  fill: var(--vp-c-text-1);
+  font: 400 20px var(--vp-font-family-base);
 }
-
-.research-article :is(.flow-wide, .flow-narrow) text[data-kind="label"] {
-  fill: var(--accent);
-  font-weight: 550;
+.research-article :is(.flow-wide, .flow-narrow) text[data-kind='label']:not([fill]) {
+  fill: var(--vp-c-brand-1);
+  font-weight: 600;
 }
-
-.research-article :is(.flow-wide, .flow-narrow) rect {
-  fill: var(--paper);
-  stroke: #bfc8c4;
+.research-article :is(.flow-wide, .flow-narrow) rect:not([fill], [stroke]) {
+  fill: var(--vp-c-bg);
+  stroke: var(--vp-c-divider);
   stroke-width: 1;
 }
-
-.research-article :is(.flow-wide, .flow-narrow) rect[data-tone="training"] {
-  fill: #edf3ef;
-  stroke: var(--sage);
+.research-article :is(.flow-wide, .flow-narrow) rect[data-tone='training']:not([fill], [stroke]) {
+  fill: color-mix(in srgb, var(--vp-c-brand-1) 12%, var(--vp-c-bg));
+  stroke: var(--vp-c-brand-1);
 }
-
-.research-article :is(.flow-wide, .flow-narrow) path {
+.research-article :is(.flow-wide, .flow-narrow) path:not([fill], [stroke]) {
   fill: none;
-  stroke: var(--sage);
+  stroke: var(--vp-c-brand-1);
   stroke-width: 1.6;
 }
+.research-article :is(.flow-wide, .flow-narrow) polygon:not([fill]) { fill: var(--vp-c-brand-1); }
 
-.research-article .figure .flow-narrow {
-  display: none;
-}
-
-.research-article figcaption {
-  margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px solid #d9ded7;
-  color: var(--muted);
-  font-size: 16px;
-  line-height: 1.8;
-}
-
-.research-article figcaption strong {
-  color: var(--ink);
-}
+.research-article .figure .flow-narrow { display: none; }
+.research-article .figure figcaption strong { color: var(--vp-c-text-1); }
 
 .research-article .table-scroll {
   max-width: 100%;
   overflow-x: auto;
-  margin-block: 24px;
-  scrollbar-color: var(--sage) var(--wash);
+  scrollbar-color: var(--vp-c-divider) transparent;
 }
-
-.research-article .table-hint {
-  display: none;
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.research-article table {
+.research-article .table-scroll table {
   display: table;
   width: 100%;
   min-width: 630px;
-  border-collapse: collapse;
-  font-size: 16px;
-  line-height: 1.75;
 }
-
-.research-article caption {
+.research-article .table-scroll caption {
   caption-side: bottom;
-  padding-top: 12px;
-  color: var(--muted);
-  font-size: 15px;
+  padding-top: 0.75em;
+  color: var(--vp-c-text-2);
   text-align: left;
 }
+.research-article .table-hint { display: none; }
 
 .research-article .supplement {
-  margin-block: 26px;
-  padding-block: 18px;
-  border-block: 1px solid var(--line);
-  font-size: 16px;
+  padding-block: 0.75em;
+  border-top: 1px solid var(--vp-c-divider);
 }
-
 .research-article .supplement summary {
   cursor: pointer;
-  color: var(--accent);
-  font-weight: 550;
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
 }
-
-.research-article .supplement p {
-  margin-top: 16px;
-  padding-left: 20px;
-}
-
-.research-article .reference-list {
-  margin-top: 20px;
-  padding-left: 1.4em;
-  font-size: 16px;
-  line-height: 1.9;
-}
-
-.research-article .reference-list li + li {
-  margin-top: 16px;
-}
-
 .research-article .reference-backlink {
-  margin-left: .35em;
+  margin-inline-start: 0.35em;
   white-space: nowrap;
 }
-
-.research-article sup a {
-  text-decoration: none;
-}
+.research-article sup a { text-decoration: none; }
 
 @media (max-width: 720px) {
-  .research-article .figure .flow-wide {
-    display: none;
-  }
-
+  .research-article .figure .flow-wide { display: none; }
   .research-article .figure .flow-narrow {
     display: block;
     max-width: 340px;
     margin-inline: auto;
   }
-
-  .research-article .figure .flow-narrow text {
-    font-size: 17px;
-  }
-
-  .research-article .figure {
-    padding: 20px 12px;
-  }
-
-  .research-article figcaption {
-    margin-top: 14px;
-  }
-
-  .research-article table {
-    min-width: 560px;
-  }
+  .research-article .flow-narrow text:not([fill]) { font-size: 17px; }
+  .research-article .table-scroll table { min-width: 560px; }
 }

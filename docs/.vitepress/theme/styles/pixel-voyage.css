@@ -20,6 +20,20 @@
   --pixel-panel:#1b304a; --pixel-edge:#829fc1; --pixel-shadow:#0d1b2e; --pixel-signal:#f2c588; --pixel-paper:#e4effd;
   --pixel-frame:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath d='M4 .5H8V2H10V4H11.5V8H10V10H8V11.5H4V10H2V8H.5V4H2V2H4Z' fill='none' stroke='%23829fc1'/%3E%3C/svg%3E");
 }
+/* The mountain homepage uses light text over the landscape. */
+.pixel-mountain-home :is(.VPHome, .VPFooter, .VPNav) {
+  --vp-c-text-1: #f6f9ff; --vp-c-text-2: #d9e8fa; --vp-c-text-3: #c3d8f1;
+  --vp-c-brand-1: #bedfff; --vp-c-brand-2: #e5f3ff;
+  --vp-c-divider: rgb(183 212 244 / .38); --vp-c-border: var(--vp-c-divider);
+  --pixel-edge: rgb(183 212 244 / .52); --pixel-signal: #f2c588;
+  color: var(--vp-c-text-1);
+}
+.pixel-mountain-home .VPNav {
+  --vp-c-bg: #132239; --vp-c-bg-alt: #192b43; --vp-c-bg-elv: #1d314c;
+  --vp-c-bg-soft: #203650; --vp-nav-screen-bg-color: var(--vp-c-bg);
+  /* Opaque: the left column scrolls beneath the bar. */
+  --vp-nav-bg-color: rgb(19 34 57);
+}
 .Layout[data-visual-style='pixel-voyage'] { --pixel-art-filter:url('#pixel-daylight'); }
 .dark .Layout[data-visual-style='pixel-voyage'] { --pixel-art-filter:url('#pixel-night'); }
 .Layout[data-visual-style='pixel-voyage'] :is(.pixel-banner img,.pixel-icon) { filter:var(--pixel-art-filter); }
@@ -72,8 +86,8 @@ html[data-visual-style='pixel-voyage'] .Layout[data-visual-style='paper-coast'] 
 /* Section boundaries share a square landmark and a stepped rule. */
 .Layout[data-visual-style='pixel-voyage'] .gallery-header { padding-top:12px; border-top:2px solid var(--pixel-edge); }
 .Layout[data-visual-style='pixel-voyage'] .gallery-header :is(h1,h2) { margin:0; padding:0; border:0; }
-.Layout[data-visual-style='pixel-voyage'] :is(.gallery-header h2,.reader-toc-header h2) { display:flex; align-items:center; gap:12px; }
-.Layout[data-visual-style='pixel-voyage'] :is(.gallery-header h2,.reader-toc-header h2)::before {
+.Layout[data-visual-style='pixel-voyage'] .gallery-header h2 { display:flex; align-items:center; gap:12px; }
+.Layout[data-visual-style='pixel-voyage'] .gallery-header h2::before {
   content:''; flex:none; width:8px; height:8px; background:var(--pixel-signal); box-shadow:4px 4px 0 var(--pixel-shadow);
 }
 .Layout[data-visual-style='pixel-voyage'] .section-grid { border-top:0; gap:12px 24px; }
@@ -176,23 +190,7 @@ html[data-visual-style='pixel-voyage'] .Layout[data-visual-style='paper-coast'] 
 .Layout[data-visual-style='pixel-voyage'] .play-icon svg { width:16px; height:16px; }
 .Layout[data-visual-style='pixel-voyage'] .play-icon svg path { d:path('M4 2h4v2h4v2h4v2h4v4h-4v2h-4v2H8v2H4Z'); }
 
-/* Reading atmosphere stays in the margins, navigation, and topic labels. */
-.Layout[data-visual-style='pixel-voyage'] .article-context {
-  gap:14px; padding:4px 0 14px; border-bottom:1px solid var(--vp-c-divider);
-  font-size:13px; line-height:1.65;
-}
-.Layout[data-visual-style='pixel-voyage'] .article-context .reader-imprint { width:clamp(45px,10vw,60px); }
-.Layout[data-visual-style='pixel-voyage'] .reader-imprint .section-artwork {
-  width:100%; height:auto; aspect-ratio:60/44;
-}
-.Layout[data-visual-style='pixel-voyage'] .article-topics { gap:6px; margin-top:6px; }
-.Layout[data-visual-style='pixel-voyage'] .article-topics a {
-  display:inline-flex; align-items:center; min-height:28px; padding:2px 8px;
-  border:1px solid var(--vp-c-divider); border-radius:0; background:var(--vp-c-bg-soft);
-  color:var(--vp-c-brand-1); overflow-wrap:anywhere; max-width:100%;
-}
-.Layout[data-visual-style='pixel-voyage'] .article-topics a:is(:hover,:focus-visible) { border-color:currentColor; text-decoration:underline; }
-.Layout[data-visual-style='pixel-voyage'] .reader-toc { padding-top:14px; border-top:2px solid var(--pixel-edge); }
+/* A few pixels mark the active entry and reading progress. */
 .Layout[data-visual-style='pixel-voyage'] .reader-toc-list a[aria-current] { position:relative; border-left-color:transparent; }
 .Layout[data-visual-style='pixel-voyage'] .reader-toc-list a[aria-current]::before {
   content:''; position:absolute; left:-2px; top:14px; width:4px; height:8px; background:var(--pixel-signal);
@@ -230,5 +228,4 @@ html[data-visual-style='pixel-voyage'] .Layout[data-visual-style='paper-coast'] 
 }
 @media print {
   .Layout[data-visual-style='pixel-voyage']::before,.Layout[data-visual-style='pixel-voyage']::after { display:none; }
-  .Layout[data-visual-style='pixel-voyage'] .article-context { border-color:var(--vp-c-divider); }
 }

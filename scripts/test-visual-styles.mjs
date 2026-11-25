@@ -16,6 +16,15 @@ import { huntSheetPath, sheets } from '../docs/.vitepress/components/pixel-hunt/
 import { createThemeImageBuild } from '../docs/.vitepress/versioned-theme-images.mts'
 import { writeImageCacheHeaders } from '../docs/.vitepress/image-cache-headers.mts'
 
+test('reading styles inherit the selected palette, including on Westlake lecture pages', async () => {
+  const styles = new URL('../docs/.vitepress/theme/styles/', import.meta.url)
+  const paletteDeclaration = /--vp-c-(?:bg(?:-alt|-soft)?|text-[123]|brand-[123]|divider)\s*:/
+  for (const file of ['custom.css', 'academic-reading.css', 'notebook-design.css', 'note-flow.css',
+    'research-article.css', '../../../westlake-rl/lecture-academic.css']) {
+    assert.doesNotMatch(await readFile(new URL(file, styles), 'utf8'), paletteDeclaration, file)
+  }
+})
+
 test('Pages cache rules give public figures a short lifetime and leave reader pages alone', async t => {
   const publicDir = fileURLToPath(new URL('../docs/public/', import.meta.url))
   const outDir = await mkdtemp(join(tmpdir(), 'seagull-header-test-'))

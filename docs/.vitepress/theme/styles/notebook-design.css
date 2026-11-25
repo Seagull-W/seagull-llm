@@ -1,93 +1,69 @@
-/* Linux notebook: blue opening, white sections and meaningful mechanism maps. */
-[data-design='linux-notebook'] { --note-paper: var(--vp-c-bg-alt); --note-line: var(--vp-c-divider); --note-blue: var(--vp-c-brand-1); --note-green: #07856d; --note-orange: #b86a12; --note-tint: var(--vp-c-bg-soft); --note-shadow: none; font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
-.VPDoc .vp-doc [data-design] .note-hero { margin: 0 0 24px; padding: 36px 40px 32px; border: 0; border-radius: 20px; background: linear-gradient(120deg,#132642,#234778); color: #fff; overflow: hidden; }
-.VPDoc .vp-doc [data-design] .note-kicker { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; color: #bcd2ef; margin: 0 0 18px; font-size: 13px; line-height: 1.6; }
-.note-kicker > span { border-left: 1px solid #567599; padding-left: 16px; }
-.VPDoc .vp-doc [data-design] .note-hero h1 { color: #fff; -webkit-text-fill-color: #fff; background: none; font-size: clamp(27px,3vw,37px); line-height: 1.4; letter-spacing: -.025em; margin: 0 0 18px; padding: 0; border: 0; text-wrap: pretty; overflow-wrap: anywhere; }
-.VPDoc .vp-doc [data-design] .note-hero h1 .header-anchor { color: #bcd2ef; }
-.VPDoc .vp-doc [data-design] .note-hero .note-deck { color: #d8e5f7; margin: 0; font-size: 16px; line-height: 1.9; max-width: 46em; }
-.note-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 24px; }
-.note-chips > span { padding: 3px 12px; border: 1px solid #ffffff55; border-radius: 30px; color: #e9f2ff; font-size: 12px; line-height: 1.8; }
-.note-jump { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin: 0 0 28px; }
-.VPDoc .vp-doc [data-design] .note-jump a, .note-jump > details > summary { display: flex; align-items: baseline; gap: 8px; padding: 8px 12px; border: 1px solid var(--note-line); border-radius: 9px; background: var(--note-paper); color: var(--vp-c-text-1); font-size: 13px; line-height: 1.5; text-decoration: none; background-image: none; }
-.note-jump a > span { color: var(--note-blue); font-size: 11px; font-variant-numeric: tabular-nums; }
-.VPDoc .vp-doc [data-design] .note-jump a:hover { color: var(--note-blue); border-color: var(--note-blue); }
-.VPDoc .vp-doc [data-design] .note-jump details { position: relative; margin: 0; padding: 0; border: 0; background: none; }
-.note-jump summary { cursor: pointer; list-style: none; }
-.note-jump summary::after { content: '+'; margin-left: 8px; color: var(--note-blue); }
-.note-jump details[open] summary::after { content: '−'; }
-.note-jump details > div { display: grid; gap: 6px; margin-top: 8px; }
-.note-context-details { margin: 20px 0; border: 1px solid var(--note-line); border-radius: 10px; background: var(--note-paper); }
-.note-context-details > summary { padding: 12px 18px; cursor: pointer; font-size: 14px; color: var(--vp-c-text-2); }
-.note-context-details > div { padding: 0 18px 14px; }
-.VPDoc .vp-doc [data-design] .note-context-details p { font-size: 14px; line-height: 1.85; }
-.VPDoc .vp-doc [data-design] .note-panel { margin: 24px 0; padding: 30px 36px; border: 1px solid var(--note-line); border-radius: 16px; background: var(--note-paper); box-shadow: var(--note-shadow); min-width: 0; }
-.VPDoc .vp-doc [data-design] .note-panel > h2 { margin: 0 0 22px; padding: 0 0 16px; border: 0; border-bottom: 1px solid var(--note-line); font-size: 24px; line-height: 1.5; color: var(--vp-c-text-1); }
-.VPDoc .vp-doc [data-design] .note-panel h3 { margin: 32px 0 14px; padding: 0; border: 0; font-size: 20px; line-height: 1.6; color: var(--vp-c-text-1); }
-.VPDoc .vp-doc [data-design] .note-panel h4 { margin: 26px 0 12px; font-size: 17px; color: var(--note-green); }
-.VPDoc .vp-doc [data-design] .note-panel p { margin: 14px 0; line-height: 1.9; font-size: 16px; }
-.VPDoc .vp-doc [data-design] .note-panel > :last-child { margin-bottom: 0; }
-.VPDoc .vp-doc [data-design] .note-panel li { line-height: 1.85; }
-.VPDoc .vp-doc [data-design] .note-panel li + li { margin-top: 6px; }
-.VPDoc .vp-doc [data-design] .note-panel blockquote { margin: 22px 0; padding: 12px 18px; border-left: 4px solid var(--note-blue); border-radius: 0 9px 9px 0; background: var(--note-tint); color: var(--vp-c-text-1); }
-.VPDoc .vp-doc [data-design] .note-panel blockquote p { font-size: 15px; margin: 4px 0; }
-.VPDoc .vp-doc [data-design] .note-panel .custom-block { border-radius: 10px; padding: 16px 20px; border: 0; border-left: 4px solid var(--note-blue); background: var(--note-tint); }
-.VPDoc .vp-doc [data-design] .note-panel .custom-block.warning { border-left-color: var(--note-orange); background: #fff6e9; }
-.VPDoc .vp-doc [data-design] .note-panel .custom-block.tip { border-left-color: var(--note-green); background: #e8f7f0; }
-.VPDoc .vp-doc [data-design] .note-diagram { margin: 26px 0; padding: 24px 28px 20px; border: 1px solid var(--note-line); border-radius: 14px; background: #f0f5fc; }
-.VPDoc .vp-doc [data-design] .note-diagram-title { color: var(--vp-c-text-1); font-size: 17px; font-weight: 650; margin: 0 0 18px; }
-.VPDoc .vp-doc [data-design] figcaption { margin: 14px 0 0; color: var(--vp-c-text-2); font-size: 13px; line-height: 1.8; text-align: center; }
-.VPDoc .vp-doc [data-design] .note-figure { margin: 24px 0; padding: 16px; background: #f8fafd; border: 1px solid var(--note-line); border-radius: 12px; }
-.VPDoc .vp-doc [data-design] .note-figure img { display: block; max-width: 100%; height: auto; margin: 0 auto; border-radius: 4px; }
-.note-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 22px 0; }
-.note-compare { border: 1px solid #b7dbce; border-radius: 10px; padding: 20px; background: #edf9f3; }
-.note-compare.neutral { border-color: #bfd0ea; background: #f0f5fc; }
-.note-compare-label { color: #096954; font-size: 14px; font-weight: 650; }
-.neutral .note-compare-label { color: #1f51a1; }
-.note-compare small { color: var(--vp-c-text-2); line-height: 1.8; display: block; }
-.thread-diagram svg { display: block; width: 100%; height: auto; }
-.thread-label { fill: var(--vp-c-text-1); font-size: 14px; }
-.note-table { max-width: 100%; overflow-x: auto; margin: 24px 0; border: 1px solid var(--note-line); border-radius: 10px; }
-.VPDoc .vp-doc [data-design] .note-table table { display: table; width: 100%; max-width: none; margin: 0; border: 0; border-collapse: collapse; border-radius: 0; font-size: 14px; font-variant-numeric: tabular-nums; }
-.VPDoc .vp-doc [data-design] .note-table th, .VPDoc .vp-doc [data-design] .note-table td { padding: 12px 14px; border: 0; border-bottom: 1px solid var(--note-line); border-right: 1px solid var(--note-line); white-space: normal; min-width: 100px; vertical-align: top; line-height: 1.8; }
-.VPDoc .vp-doc [data-design] .note-table th { font-weight: 650; }
-.section-cs336 .VPDoc .vp-doc .format-directory .note-kicker { color: var(--vp-c-text-2); }
-.VPDoc .vp-doc [data-design] .note-table tbody tr:nth-child(2n) { background: var(--vp-c-bg-alt); }
-.VPDoc .vp-doc [data-design] .note-table tr:last-child td { border-bottom: 0; }
-.VPDoc .vp-doc [data-design] .note-table :where(th,td):last-child { border-right: 0; }
-.VPDoc .vp-doc [data-design] mjx-container[display='true'] { margin: 22px 0; padding: 20px 12px; border: 1px solid var(--note-line); border-radius: 10px; background: var(--vp-c-bg-soft); color: var(--vp-c-text-1); min-width: 0 !important; }
-.VPDoc .vp-doc [data-design] div[class*='language-'] { border: 1px solid var(--note-line); border-radius: 10px; margin: 22px 0; }
-.VPDoc .vp-doc [data-design] .note-details { margin: 24px 0; border: 1px solid var(--note-line); border-radius: 10px; overflow: hidden; background: #f8fafd; }
-.note-details summary { cursor: pointer; display: flex; gap: 12px; align-items: center; padding: 14px 18px; color: var(--vp-c-text-1); font-size: 14px; font-weight: 600; list-style: none; }
-.note-details summary::before { content: '+'; color: var(--note-blue); font-size: 20px; line-height: 1; }
-.note-details[open] summary::before { content: '−'; }
-.note-details summary > span { margin-left: auto; color: var(--vp-c-text-2); font-size: 12px; font-weight: 400; }
-.VPDoc .vp-doc [data-design] .note-details > div[class*='language-'] { margin: 0; border: 0; border-top: 1px solid var(--note-line); border-radius: 0; }
-[data-design] :where(a,summary,[tabindex='0']):focus-visible { outline: 3px solid var(--note-blue); outline-offset: 3px; }
-.dark [data-design] { --note-paper: #151f2d; --note-line: #2d3d53; --note-tint: #1b2e48; --note-shadow: none; --note-blue: #8bbbf6; --note-green: #81ceb8; --note-orange: #edc184; }
-/* Match the component selectors' specificity so light surfaces cannot win. */
-.dark .note-compare-label { color: #a2ddcb; }
-.dark .neutral .note-compare-label { color: #b3d1fc; }
-.dark .VPDoc .vp-doc [data-design] .note-panel .custom-block.warning { background: #3b3020; }
-.dark .VPDoc .vp-doc [data-design] .note-panel .custom-block.tip { background: #173c36; }
-@media (max-width:760px) {
-  .VPDoc .vp-doc [data-design] .note-hero { padding: 28px 24px; border-radius: 16px; }
-  .VPDoc .vp-doc [data-design] .note-panel { padding: 24px; }
-  .VPDoc .vp-doc [data-design] .note-diagram { padding: 22px; }
-  .note-comparison { grid-template-columns: minmax(0,1fr); }
+/* Notebook controls and illustrations. Article typography lives in academic-reading.css. */
+.note-kicker,
+.note-chips,
+.note-jump {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.3em 1em;
 }
-@media (max-width:480px) {
-  .VPDoc .vp-doc [data-design] .note-hero { padding: 26px 21px; }
-  .VPDoc .vp-doc [data-design] .note-panel { padding: 22px 18px; border-radius: 13px; }
-  .VPDoc .vp-doc [data-design] .note-panel > h2 { font-size: 22px; }
-  .note-kicker > span { display: none; }
-  .note-jump { gap: 6px; }
-  .VPDoc .vp-doc [data-design] .note-jump a { padding: 7px 9px; font-size: 12px; }
-  .VPDoc .vp-doc [data-design] .note-diagram { padding: 18px 14px; }
+.note-jump summary {
+  cursor: pointer;
+}
+.note-jump details > div {
+  display: grid;
+  gap: 6px;
+}
+.note-jump a > span {
+  margin-inline-end: 0.5em;
+  color: var(--vp-c-brand-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.note-context-details,
+.note-details {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 4px;
+}
+.note-context-details > summary,
+.note-details > summary {
+  padding: 8px 14px;
+  color: var(--vp-c-text-2);
+  cursor: pointer;
+}
+.note-context-details > div { padding-inline: 14px; }
+.note-details > summary > span {
+  margin-inline-start: 0.75em;
+  color: var(--vp-c-text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.note-figure,
+.note-diagram {
+  padding: clamp(14px, 3vw, 24px);
+}
+.note-figure img,
+.thread-diagram svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+}
+.thread-diagram svg { width: 100%; }
+.thread-label { fill: var(--vp-c-text-1); font-size: 14px; }
+
+.note-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.note-compare-label { color: var(--vp-c-brand-1); }
+.note-compare.neutral .note-compare-label { color: var(--vp-c-text-2); }
+.note-compare small { display: block; color: var(--vp-c-text-2); }
+
+@media (max-width: 760px) {
+  .note-comparison { grid-template-columns: minmax(0, 1fr); }
 }
 @media print {
-  .VPDoc .vp-doc [data-design] .note-hero { background: #fff; color: #000; border: 1px solid #bbb; }
-  .VPDoc .vp-doc [data-design] .note-hero :where(h1,p,span) { color: #000; -webkit-text-fill-color: #000; }
   .note-jump { display: none; }
-  .VPDoc .vp-doc [data-design] .note-panel { box-shadow: none; border-color: #ccc; }
 }

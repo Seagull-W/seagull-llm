@@ -50,18 +50,33 @@ onMounted(() => {
 onUnmounted(() => stopHomeOpening?.())
 const academicReading = computed(() => usesAcademicReading('/' + page.value.relativePath, frontmatter.value))
 const paperNotebook = computed(() => usesPaperNotebook('/' + page.value.relativePath, frontmatter.value))
+const toolbarNotebook = computed(() => paperNotebook.value || (academicReading.value && supportsHtmlNotebook(frontmatter.value)))
 const paperNotesOpen = ref(false)
+const articleNotesOpen = ref(false)
+const notebookOpen = computed({
+  get: () => paperNotebook.value ? paperNotesOpen.value : articleNotesOpen.value,
+  set(value: boolean) {
+    if (paperNotebook.value) paperNotesOpen.value = value
+    else articleNotesOpen.value = value
+  },
+})
+const notebookReady = ref(false)
 const paperAuthor=ref(false)
 const paperBoxMode = ref(false)
-const paperNotesId = useId()
-watch(() => page.value.relativePath, () => { paperBoxMode.value=false; paperAuthor.value=false }, { flush:'sync' })
+const notebookId = useId()
+watch(() => page.value.relativePath, () => {
+  notebookReady.value = false
+  articleNotesOpen.value = false
+  paperBoxMode.value = false
+  paperAuthor.value = false
+}, { flush: 'sync' })
 const sectionClass = computed(() => {
   const section = sectionFor('/' + page.value.relativePath)
   return section ? 'section-' + section.id : ''
 })
 </script>
 <template>
-  <Layout :data-visual-style="visualStyle.id" :class="[sectionClass, { 'academic-reading': academicReading, 'pixel-mountain-home': pixelHome, 'paper-notebook-layout': paperNotebook }]">
+  <Layout :data-visual-style="visualStyle.id" :class="[sectionClass, { 'academic-reading': academicReading, 'pixel-mountain-home': pixelHome, 'paper-notebook-layout': paperNotebook, 'has-notebook-tools': toolbarNotebook }]">
     <template #layout-top>
       <picture v-if="pixelHome" class="pixel-mountain-world" aria-hidden="true">
         <source :media="heroMobileMedia" :srcset="withBase(heroImageFor(visualStyle, isDark, true))" />
@@ -80,24 +95,24 @@ const sectionClass = computed(() => {
     <template #home-hero-info><HomeHero /></template>
     <template #doc-top>
       <ReaderNavigation :outline-in-drawer="paperNotebook">
-        <template v-if="paperNotebook" #actions>
-          <button v-if="paperAuthor" aria-label="框选批注" title="框选批注" :aria-pressed="paperBoxMode" @click="paperBoxMode=!paperBoxMode">
-            <ReaderIcon name="box" /><span class="paper-tool-label">框选</span>
+        <template v-if="toolbarNotebook" #actions>
+          <button v-if="paperNotebook && paperAuthor" aria-label="框选批注" title="框选批注" :aria-pressed="paperBoxMode" @click="paperBoxMode=!paperBoxMode">
+            <ReaderIcon name="box" /><span class="notebook-tool-label">框选</span>
           </button>
-          <button aria-label="阅读笔记" title="阅读笔记" :aria-expanded="paperNotesOpen" :aria-controls="paperNotesId" @click="paperNotesOpen=!paperNotesOpen">
-            <ReaderIcon name="notes" /><span class="paper-tool-label">阅读笔记</span>
+          <button aria-label="阅读笔记" title="阅读笔记" :disabled="!notebookReady" :aria-expanded="notebookOpen" :aria-controls="notebookId" @click="notebookOpen=!notebookOpen">
+            <ReaderIcon name="notes" /><span class="notebook-tool-label">阅读笔记</span>
           </button>
         </template>
       </ReaderNavigation>
       <ClientOnly>
-        <HtmlNotebook v-if="paperNotebook" :key="page.relativePath" :id="paperNotesId" v-model:open="paperNotesOpen" v-model:box-mode="paperBoxMode"
-          :document="'html:'+page.relativePath" :title="page.title" @author="paperAuthor=$event" docked />
+        <HtmlNotebook v-if="toolbarNotebook" :key="page.relativePath" :id="notebookId" v-model:open="notebookOpen" v-model:box-mode="paperBoxMode"
+          :document="'html:'+page.relativePath" :title="page.title" :docked="paperNotebook" @ready="notebookReady=true" @author="paperAuthor=$event" />
       </ClientOnly>
     </template>
     <template #doc-before>
       <ArticleContext v-if="academicReading" />
       <ClientOnly>
-        <HtmlNotebook v-if="!paperNotebook && supportsHtmlNotebook(frontmatter)" :key="page.relativePath" :document="'html:'+page.relativePath" :title="page.title" />
+        <HtmlNotebook v-if="!toolbarNotebook && supportsHtmlNotebook(frontmatter)" inline-launcher :key="page.relativePath" :document="'html:'+page.relativePath" :title="page.title" />
       </ClientOnly>
       <div v-if="frontmatter.status === 'draft'" class="draft-notice">本文仍在写作中，内容尚未完成。</div>
     </template>

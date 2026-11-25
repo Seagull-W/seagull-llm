@@ -30,8 +30,6 @@
 .Layout[data-visual-style='along-the-way'].chapter-index .vp-doc .illustrated-directory-intro { padding-right:260px; min-height:150px; }
 .Layout[data-visual-style='along-the-way'] .film-section-art { width:220px; height:124px; }
 .Layout[data-visual-style='along-the-way'] .film-section-art .section-photograph { width:100%; height:100%; }
-.Layout[data-visual-style='along-the-way'] .VPDoc .vp-doc { --vp-code-block-bg:#f5f4ed; }
-.dark .Layout[data-visual-style='along-the-way'] .VPDoc .vp-doc { --vp-code-block-bg:#252b22; }
 html[data-visual-style='along-the-way'] .Layout:not([data-visual-style='along-the-way']) :is(.hero-art,.section-illustration,.home-closing-art,.section-icon,.section-artwork,.visual-logo) { visibility:hidden; }
 @media(max-width:767px) {
   .Layout[data-visual-style='along-the-way'] .section-grid .section-photograph { width:100%; aspect-ratio:16 / 9; margin-bottom:14px; }

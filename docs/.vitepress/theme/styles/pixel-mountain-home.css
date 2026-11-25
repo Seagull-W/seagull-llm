@@ -10,19 +10,6 @@
 .pixel-mountain-world { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
 .pixel-mountain-world img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: 63% 65%; image-rendering: pixelated; }
 .dark .pixel-mountain-world img { filter: brightness(.78); }
-.pixel-mountain-home :is(.VPHome, .VPFooter, .VPNav) {
-  --vp-c-text-1: #f6f9ff; --vp-c-text-2: #d9e8fa; --vp-c-text-3: #c3d8f1;
-  --vp-c-brand-1: #bedfff; --vp-c-brand-2: #e5f3ff;
-  --vp-c-divider: rgb(183 212 244 / .38); --vp-c-border: var(--vp-c-divider);
-  --pixel-edge: rgb(183 212 244 / .52); --pixel-signal: #f2c588;
-  color: var(--vp-c-text-1);
-}
-.pixel-mountain-home .VPNav {
-  --vp-c-bg: #132239; --vp-c-bg-alt: #192b43; --vp-c-bg-elv: #1d314c;
-  --vp-c-bg-soft: #203650; --vp-nav-screen-bg-color: var(--vp-c-bg);
-  /* Opaque: the left column scrolls beneath the bar. */
-  --vp-nav-bg-color: rgb(19 34 57);
-}
 .Layout.pixel-mountain-home .VPNav .VPNavBar { background: var(--vp-nav-bg-color); border-color: var(--vp-c-divider); }
 .Layout.pixel-mountain-home .VPNavBar .content-body { background: transparent; }
 .pixel-mountain-home .VPNavBar .visual-logo { filter: none; }
