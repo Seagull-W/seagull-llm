@@ -32,10 +32,10 @@
 
 ## 默认模型与额度记录
 
-若用户的 prompt 未指定模型，默认采用以下配置（首次在服务器执行前，分别用 `codex exec --help` / 本机模型配置和 `agy models` 核对实际 CLI 参数名，不臆造不存在的 flag）：
+若用户的 prompt 未指定模型，默认采用以下已在服务器实测确认的配置：
 
-- **阶段一 · Codex 调研默认**：**Codex 6.2 Sol**，推理强度 **`medium`**。
-- **阶段二 · Antigravity (`agy`) 写作默认**：**Gemini 4 Neon**（`--model gemini-4-neon --effort medium`；多篇复杂综述按需升 `high`）。仅做轻量改字、调样式或短笔记修订时，可按需切 **`gemini-4-hydrogen`** 节省额度。
+- **阶段一 · Codex 调研默认**：**`gpt-6.2-sol`**，推理强度 **`medium`**（`-m gpt-6.2-sol -c 'model_reasoning_effort="medium"'`）。
+- **阶段二 · Antigravity (`agy`) 写作默认**：**`gemini-4-neon-medium`**（`agy models` 中强度后缀直接包含在模型 ID 内；多篇复杂综述按需切 `gemini-4-neon-high`；仅做轻量改字、调样式或短笔记修订时可切 **`gemini-4-hydrogen-medium`** 节省额度）。
 - **每次调用必记额度消耗**：每次 `codex exec` 或 `agy -p` 结束后，Hermes 必须运行 `scripts/log-usage.py` 将本次的 `model`、`effort`、token 消耗（input/cache/output/thinking/total）、耗时及可用额度/限流提示追加到 `.research/usage-log.jsonl`，并在向用户回传初稿或修订稿时**附上一行本轮实际消耗摘要**（未返回具体数字的字段标 `-`，严禁编造）。
 
 ## 串行委派命令与文件路径
@@ -51,8 +51,7 @@ run_dir="$project_root/.research/handoffs/$task_name"
 mkdir -p "$run_dir"
 
 # 阶段一：Codex 只做调研，产出 research-notes.md（等它完全退出后再进阶段二）
-# 模型名以服务器本机 codex 可用 ID 为准（默认对应 Codex 6.2 Sol + medium）
-codex_model="${CODEX_RESEARCH_MODEL:-codex-6.2-sol}"
+codex_model="${CODEX_RESEARCH_MODEL:-gpt-6.2-sol}"
 codex exec -C "$project_root" --sandbox workspace-write \
   -m "$codex_model" -c 'model_reasoning_effort="medium"' \
   -c 'web_search="live"' --json \
@@ -66,11 +65,11 @@ python3 "$project_root/scripts/log-usage.py" \
 
 # 确认 codex_rc=0 且 research-notes.md 已生成后，再启动阶段二：
 # 阶段二：Antigravity CLI 读用户原话 + research-notes.md，产出 draft-v1.html
-agy_model="${AGY_WRITE_MODEL:-gemini-4-neon}"
+agy_model="${AGY_WRITE_MODEL:-gemini-4-neon-medium}"
 (
   cd "$project_root" && \
   agy -p "$(cat "$run_dir/task-write.md")" \
-    --model "$agy_model" --effort medium \
+    --model "$agy_model" \
     --mode accept-edits \
     --output-format json \
     --print-timeout 15m \
@@ -79,7 +78,7 @@ agy_model="${AGY_WRITE_MODEL:-gemini-4-neon}"
 agy_rc=$?
 python3 "$project_root/scripts/log-usage.py" \
   --tool agy --stage write --task "$task_name" \
-  --model "$agy_model" --effort medium --exit-code "$agy_rc" \
+  --model "$agy_model" --exit-code "$agy_rc" \
   --input "$run_dir/agy-result.json"
 ```
 

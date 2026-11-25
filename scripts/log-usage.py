@@ -247,9 +247,18 @@ def main(argv: list[str] | None = None) -> int:
     if parsed.get('rate_limit_note'):
         quota_note = (quota_note + '; ' if quota_note else '') + parsed['rate_limit_note']
 
-    status = parsed.get('status') or 'UNKNOWN'
-    if args.exit_code is not None and args.exit_code != 0 and status == 'SUCCESS':
+    status = 'SUCCESS'
+    if args.exit_code is not None and args.exit_code != 0:
         status = f'EXIT_{args.exit_code}'
+    elif parsed.get('status') in ('ERROR', 'FAILED', 'empty-output', 'unparsed', 'missing-input'):
+        # If CLI exited cleanly (rc=0) and completed turns, mid-stream error events
+        # (e.g. Codex WebSocket fallback to HTTP) are non-fatal warnings.
+        if args.exit_code == 0 and (parsed.get('num_turns') or 0) > 0:
+            status = 'SUCCESS'
+        else:
+            status = parsed['status']
+    elif parsed.get('status'):
+        status = parsed['status']
 
     record = {
         'timestamp': datetime.now(SHANGHAI).isoformat(timespec='seconds'),
