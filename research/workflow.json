@@ -120,7 +120,7 @@
   "max_per_source": 4,
   "retrieval": {
     "news": "group-round-robin",
-    "systematic": "legacy daily supplement only; general research follows writing/research.md; --task is optional structured tooling",
+    "systematic": "Legacy daily supplement. Use --task for the structured CLI. For paper research see AGENTS.md.",
     "task_entry": "python3 scripts/research-workflow.py plan --question <question> --mode concept --slug <slug>"
   }
 }

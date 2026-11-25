@@ -44,9 +44,12 @@ contentFormat: html
 
 ## 新增每日调研
 
-新增一篇顶层调研只改两处：写 `docs/research/YYYY-MM-DD-slug.md`，再把日期、标题、摘要、路由和来源登记到 [catalog.json](../docs/research/catalog.json)。栏目侧边栏和卡片都读这份数据，普通稿件用日期作卡片标签。四套主题共用一份条目，切换主题也仍指向同一篇文章。
+独立 HTML 稿按[仓库入口](../AGENTS.md)指向的论文调研技能交付。要发布到网站的「每日调研」栏目，请将定稿转成站内 Markdown，保留图表、就近引用与原文定位，再登记栏目目录。
 
-导读等条目可在目录记录中指定 `label` 和 `sidebarTitle`。给专题新增子章节时，把子章的 `text`、`link` 追加到父记录的 `children` 并链接正文。主题导读的文字与分组仍由作者维护。完整步骤、样本与验证见[每日调研接入与发布说明](../research/README.md)。
+1. 在 `docs/research/YYYY-MM-DD-slug.md` 写正文。元数据含 `title`、`description`、`date` 和 `tags`，标签含「每日调研」或「调研」。顶层文章使用一个一级标题，在 `## 来源与阅读范围` 说明实际读过的材料。[已发布样本](../docs/research/2026-11-02-score-centering-tim.md)
+2. 在 [catalog.json](../docs/research/catalog.json) 填写 `date`、`slug`、`route`、`title`、`description`、`source_urls` 和带时区的 `window_end`。手工稿使用 `"origin": "manual"`。路由为 `/research/YYYY-MM-DD-slug`，每个路由登记一次，标题、摘要与正文元数据一致。
+
+[栏目卡片与侧边栏](../docs/.vitepress/research-sidebar.ts)按目录记录顺序生成。普通卡片显示日期，导读可用 `label` 指定标签，长标题可用 `sidebarTitle` 指定侧栏短标题。专题子章各有 Markdown 文件，按阅读顺序在父记录的 `children` 中登记 `text` 和 `link`，并在父文中链接。发布前运行下方的每日调研专项检查。
 
 ## 新建栏目
 

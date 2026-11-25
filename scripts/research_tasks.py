@@ -321,7 +321,7 @@ class TaskWorkflow:
 模式：{task['mode']}；总体时间策略：{task['time_policy']}；近期范围：{task['recent_days']} 天。
 任务 SHA256：{self.w.digest(task)}
 
-本次使用结构化流水线。以下为文件接口，检索与写作依据后附的调研体例。
+本次使用结构化流水线。以下为文件接口，文末附有项目共用的写作总则。
 1. 按 task.json 中的 scope、audience 与 delivery.requirements 确定真实交付目的，mode 仅为 CLI 参数。首次 discover 后改任务须另开 slug/run。
 2. 执行 pending-searches.json 的网页任务并打开原文。累计写 search-log.json 与 evidence.json，字段见 research/task-pipeline.md。
 3. collect 后按 review.json 补查，最多 {task['budget']['max_rounds']} 轮；结构覆盖不代表答案充分。未解决的问题保留缺口。
@@ -538,7 +538,7 @@ class TaskWorkflow:
         writer_guide = self.w.read_research_guide()
         instructions = writer_guide + f'''\n\n# 本次任务与工具输出约定\n\n你是中文调研作者。本次问题：{task['question']}。任务模式：{task['mode']}。
 根据 task 的读者、范围和知识轴写能回答问题的报告，不套用每日新闻清单。
-结合调研体例与 scope/audience/delivery.requirements 确定组织方式。篇幅随问题与证据变化。
+结合写作总则与 scope/audience/delivery.requirements 确定组织方式。篇幅随问题与证据变化。
 只使用 items 中已审阅证据。每段给 axis_ids、source_ids 和 kind（fact/inference/gap）。引用必须属于该轴；推断标明前提，不能写成作者结论。gap 可以没有来源，且只陈述未解决的问题，不填知识答案。
 按 reading_scope 和 locator 限定主张；摘要不支持未读的证明、公式细节、超参数或复现结论。无日期资料不能证明当前状态，经典材料不能说成新发布。转载共用 independence_key，不是独立验证。source_kind 与 authority 是审阅标注，不是正确性保证。
 review.coverage 中不完整的轴必须有 gap 段，解释缺少什么、影响哪些结论和补查方向。证据矛盾必须呈现条件差异，不以数量投票。不宣称全网覆盖或做过未执行实验。

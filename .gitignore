@@ -42,6 +42,7 @@ __pycache__/
 /.agents/*
 !/.agents/skills/
 /.agents/skills/*
+!/.agents/skills/paper-research/
 /.codex/
 /.hermes/
 /.aws/

@@ -14,12 +14,12 @@ class WorkflowTests(unittest.TestCase):
     def test_research_guide_is_loaded_as_utf8_and_missing_guide_is_not_silenced(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            guide = root / 'writing/research.md'
+            guide = root / 'writing/README.md'
             with patch.object(w, 'ROOT', root):
                 with self.assertRaises(FileNotFoundError):
                     w.read_research_guide()
                 guide.parent.mkdir(parents=True)
-                expected = '# 调研体例\n检索、阅读和试读。\n'
+                expected = '# 写作总则\n关键判断须有依据。\n'
                 guide.write_text(expected, encoding='utf-8')
                 self.assertEqual(w.read_research_guide(), expected)
 

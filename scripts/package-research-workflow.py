@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # An explicit list prevents accidental inclusion of auth caches, logs or raw inputs.
 SOURCES = {
-    'research/README.md': '完整操作手册与已知限制',
+    'research/README.md': '独立调研 CLI 及站点接入说明',
     'research/task-pipeline.md': '通用任务、时间策略、发现与证据审阅契约',
     'research/delivery-contract.md': '提示词优先的对象介绍、具体样本与成稿验收流程',
     'research/DELIVERY_VALIDATION.md': '最新 benchmark 文章失败案例与交付回归范围',
@@ -30,6 +30,8 @@ SOURCES = {
     'research/article.schema.json': '可替换 Agent 的写作输出契约',
     'research/systemd/seagull-research.service.example': '服务器执行单元示例，尚未安装',
     'research/systemd/seagull-research.timer.example': '服务器每日调度示例，尚未启用',
+    'scripts/research-fetch.py': '轻量统一检索与分级取全文 CLI（search/citations/read-paper/read-web）',
+    'scripts/test-research-fetch.py': '统一检索 CLI 离线单元测试',
     'scripts/research-workflow.py': '采集、生成、文章接入、构建、推送与验证主程序',
     'scripts/research_tasks.py': '按任务发现、跨年代证据审阅、覆盖检查与补查',
     'scripts/research_delivery.py': '对象矩阵、原始样本提取与确切成稿验收辅助',
@@ -46,11 +48,12 @@ SOURCES = {
     'AGENTS.md': '当前仓库工作指导',
     'writing/README.md': '正文类型路由、跨类硬规则与分层仲裁',
     'writing/note.md': '知识笔记体例',
-    'writing/research.md': '调研检索、证据综合与成稿说明',
+    '.agents/skills/paper-research/SKILL.md': '论文与材料调研技能（精简自包含）',
+    '.agents/skills/paper-research/references/research-html-guide.md': '独立 HTML 排版要素速查',
+    '.agents/skills/paper-research/assets/article.html': '独立调研文章的 HTML 底稿',
     'writing/publishing.md': '当前内容接入与发布规范',
     'HTML_FORMATS.md': '正文文件、公式、图注与组件格式',
     'VISUAL_STYLES.md': '页面外观、配色与动效',
-    'writing/references/paper-survey.md': '按问题选用的文献速览方法',
     'package.json': 'Node 依赖与构建命令',
     'package-lock.json': 'Node 依赖版本锁',
     'wrangler.toml': '现有 Pages 项目与构建输出配置',
@@ -156,7 +159,7 @@ def main():
 
 ## 用途与范围
 
-通用任务先读 repo/writing/research.md，按文献整理、领域汇报等交付目的检索、归纳和试读，默认直接交付 Markdown。
+论文调研从[仓库入口](repo/AGENTS.md#论文调研)开始。包中保留了该技能、HTML 排版速查与独立底稿。
 
 结构化交接或恢复已有任务时，使用 repo/research/task-pipeline.md 与 repo/research/delivery-contract.md。按写作总则试读正文。网站接入与发布按当前授权进行。
 
@@ -171,7 +174,7 @@ def main():
 1. 本文件：理解范围和验收边界。
 2. [接口与阶段](guides/CONTRACTS.md)：识别可替换 Agent 的 JSON 契约。
 3. [文件地图](guides/FILE_MAP.md)：按任务定位源码。
-4. [操作手册](repo/research/README.md)和[写作总则](repo/writing/README.md)、[调研体例](repo/writing/research.md)和[发布流程](repo/writing/publishing.md)。
+4. 按任务查阅[独立 CLI](repo/research/README.md)、[写作总则](repo/writing/README.md)和[发布流程](repo/writing/publishing.md)。
 5. [迁移清单](guides/MIGRATION.md)：在完整仓库或新项目上实施。
 6. [验证记录](repo/research/VALIDATION.md)：区分已验证功能和未验证事项。
 
@@ -256,7 +259,7 @@ catalog 是跨日期去重状态，不能在迁移时随意清空。旧论文修
 
 1. 获取完整仓库 `https://github.com/Seagull-W/seagull-llm`，核对基准提交 `{head}`。本包中 repo 是精选文件快照；主题和资产不齐全。
 2. 安装 Python 3.10+、Node.js 24、npm 和 Git，在完整仓库运行 `npm ci`。
-3. 通用任务先读 writing/research.md。结构化任务再读 research/task-pipeline.md。运行固定日报前，核对 research/workflow.json 中的主题、英文检索词、来源、窗口与网站发布目标。
+3. 论文调研从 repo/AGENTS.md 进入。使用独立 CLI 时读 repo/research/task-pipeline.md。运行固定日报前，核对 repo/research/workflow.json 中的主题、英文检索词、来源、窗口与网站发布目标。
 4. 选择 Agent。继续用独立 Codex CLI 时先核验登录与网络；网页发现必须有可用搜索/阅读工具。换 Agent 时按 CONTRACTS.md 返回对应版本的 JSON；通用任务先本地 report，已授权网站接入才 integrate/verify。
 5. 保留 catalog 和已有文章；若需要恢复未完成运行，另行在受控环境迁移本机 .research/runs，不能将其凭据或日志放到公开仓库。
 6. 按操作手册完成测试、构建与样例检查，再启用 Git 推送，等待 CI/Pages 完成后运行 verify-site。
@@ -267,7 +270,7 @@ catalog 是跨日期去重状态，不能在迁移时随意清空。旧论文修
 - 可直接复用：公开来源适配器、资料包格式、文章 JSON schema、提示词规则、离线测试思路。
 - 需要适配：ROOT 和文章目录、catalog 路由、侧边栏生成器、栏目卡片、标签映射、构建命令、Git 分支、部署与线上核验。
 - 只复制新增栏目及必要接入点。不要覆盖现有 config.mts、sidebar.ts、package.json 或完整主题。
-- 遵守目标仓库规范。当前仓库以 repo/AGENTS.md 分流任务，repo/writing/README.md 选择体例，repo/writing/publishing.md 管发布；调研正文使用 repo/writing/research.md。
+- 论文调研由 repo/AGENTS.md 指向项目技能。独立 CLI 生成文章 JSON 并渲染为 Markdown，公开栏目接入按 repo/writing/publishing.md 执行。
 
 ## 验收条件
 

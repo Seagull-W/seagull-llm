@@ -1,6 +1,6 @@
 # 可选任务流水线契约
 
-只在选择脚本流水线时使用。普通主题调研见[调研体例](../writing/research.md#检索与成稿检查)；以下门槛是现有工具的结构约束，不代表内容质量。
+本页记录独立 CLI 的文件接口、运行状态与恢复方法。围绕指定主题或方向撰写论文调研，从[仓库入口](../AGENTS.md#论文调研)开始。
 
 本流水线同样执行 [阶段回传与反馈](../hermes/README.md#阶段回传与反馈)：方案回传后可取材，初稿在本地报告处交付并等待反馈。程序状态和内部 `accept` 不代替操作者反馈；收到反馈改变范围时，按本契约更新任务绑定。
 
@@ -154,7 +154,7 @@ source_kind 可用 original-paper、review、textbook、course、official-docs�
 
 新任务另有 accepted 内容验收状态，与构建/发布分开。程序检查的 ready/covered 仍不等于负责人读后接受。
 
-通用任务默认只交付本地报告。用户要求接入网站时才执行 `integrate --task ...`、`verify --task ...`；已授权发布时再执行 `publish --task ...`，核验 CI/部署与 `verify-site --task ...`。发布仍只操作调研栏目，遵循 [发布流程](../writing/publishing.md)。正文体例见 [调研体例](../writing/research.md)，证据与数字口径按 [写作总则](../writing/README.md#跨类硬规则)。
+任务模式默认交付本地 Markdown 报告。用户要求接入网站时才执行 `integrate --task ...`、`verify --task ...`。已授权发布时再执行 `publish --task ...`，核验 CI/部署与 `verify-site --task ...`。调研栏目接入遵循[发布流程](../writing/publishing.md)，证据与数字口径按[写作总则](../writing/README.md#跨类硬规则)。
 
 离线验证：
 

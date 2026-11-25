@@ -27,7 +27,7 @@ python3 scripts/research-workflow.py discover --task .research/tasks/benchmark-i
 
 - facets：按 task.delivery.facets 的 ID 填写，每项为 `{"text":"连贯的说明","source_urls":["已读原文 URL"]}`。清单用于防漏，段落应连贯，避免像填写检查日志一样写正文。
 - schema：数组，每项有 path（如 `/question`）、type、role、description、source_urls。role 区分 input/reference/scoring/environment/metadata。type 用 string/integer/number/boolean/array/object/null。
-- evidence：对应资料增加 subject_ids；一份资料支持哪个对象就标哪个，不将所有 URL 批量贴到所有对象上。还需按[调研体例](../writing/research.md#检索与成稿检查)区分发现方法和实际阅读内容。
+- evidence 的 subject_ids 标明资料支持的具体对象。分别记录发现方式、实际阅读范围和支持主张的位置。
 - specimens：实际文件中的记录，由脚本读取，不让模型手写一段自称真实的 JSON。
 
 样本配置例子（仅格式演示，不是真实采集记录）：

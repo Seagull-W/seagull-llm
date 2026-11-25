@@ -1,52 +1,17 @@
-# 调研入口
+# 独立调研 CLI
 
-调研写作体例见 [writing/research.md](../writing/research.md)，证据与数字口径见[写作总则](../writing/README.md#跨类硬规则)。
-已有调研稿要发布到网站，按下文接入。普通笔记和新栏目的流程见[发布流程](../writing/publishing.md)。
+本目录保存固定订阅与结构化任务的配置、文章 JSON 契约、运行示例和历史实测记录。撰写独立论文调研稿从[仓库入口](../AGENTS.md#论文调研)开始。人工向网站添加「每日调研」文章，按[网站发布流程](../writing/publishing.md#新增每日调研)登记正文和目录。
 
-手工写作和脚本任务均遵守 [阶段回传与反馈](../hermes/README.md#阶段回传与反馈)。方案先回传，初稿等待操作者反馈后再定稿；程序的 `accepted` 状态不能代替操作者反馈。
+## 运行与恢复
 
-## 将一篇每日调研加入网站
+- 使用固定来源和时间窗生成订阅简报，见[日报命令](daily.md)。
+- 按已有 `task.json` 采集、写作、生成本地 Markdown 报告或恢复任务，见[结构化任务契约](task-pipeline.md)。含 `delivery` 的任务另见[交付验收](delivery-contract.md)。
+- 系统服务与定时器示例位于 `systemd/`。配置中的用户、工作目录与发布授权取决于部署环境。
 
-### 手工稿
+## 脚本生成的稿件接入网站
 
-新增顶层调研只改以下两处，路由使用 `/research/YYYY-MM-DD-slug`。
+带 `--task` 的任务可以停在本地报告，按[阶段回传与反馈](../hermes/README.md#阶段回传与反馈)交付初稿。固定订阅模式的 `run` 会继续接入和构建，需要等候反馈时使用[分步命令](daily.md#固定订阅流水线)。有 `delivery` 约定时，读完成稿后运行 `accept`。修稿后重新生成并验收。
 
-| 文件 | 要写什么 |
-| --- | --- |
-| `docs/research/YYYY-MM-DD-slug.md` | 元数据写 `title`、`description`、`date` 和主题 `tags`，标签包含「每日调研」或「调研」。正文保留一个一级标题，在「来源与阅读范围」二级标题下列明资料与实际阅读范围。[已发布样本](../docs/research/2026-11-02-score-centering-tim.md) |
-| [目录记录](../docs/research/catalog.json) | 参照已有手工记录填写 `date`、`slug`、`route`、`title`、`description`、`source_urls`、`window_end` 和 `origin: "manual"`。标题、摘要与文章一致，截止时间带时区。同一路由只登记一次。 |
+`integrate` 按路由写 Markdown 并更新 [catalog.json](../docs/research/catalog.json)，同一路由再次接入会替换正文，并保留原记录的 `label`、`sidebarTitle` 和 `children`。执行前核对路由及同日手工稿。[主程序](../scripts/research-workflow.py)负责接入与发布，[任务模块](../scripts/research_tasks.py)负责本地报告。
 
-[调研侧边栏和卡片](../docs/.vitepress/research-sidebar.ts)从目录记录生成。[栏目首页](../docs/research/index.md)只维护栏目导语和卡片的展示位置。日常增稿无需编辑这两个文件。普通条目用日期作卡片标签、完整标题作侧边栏标题。其余情况按需填写：
-
-- **导读或特殊标签**：记录中写 `"label": "导读"`。若扩充[主题导读](../docs/research/2026-11-04-daily-research-guide.md)的内容，再调整导读正文及其入口摘要。
-- **标题较长**：填写 `sidebarTitle` 作为侧边栏短标题。卡片仍显示完整标题。
-- **专题有子章**：在父记录的 `children` 中依阅读顺序追加 `{ "text": "子章标题", "link": "/research/日期-专题/子章" }`，创建对应 Markdown，并维护父文内的阅读链接。这些子链接会随共享侧边栏进入公开索引；Reward Hacking 的 21 个子章即采用这种方式。
-
-### 使用已有脚本任务
-
-固定订阅的 `run` 在生成稿件后执行 `integrate`，不会自动停下来等待反馈；需要初稿反馈的任务使用分步命令，在本地报告处停下，勿用该一键路径代替协作流程。指定 `--task` 的任务模式将 `run` 停在本地报告，网站接入另用 `integrate`。有 `delivery` 约定时先试读并运行 `accept`；验收后修稿须重新生成、验收、接入。[工作流脚本](../scripts/research-workflow.py)与[任务分派](../scripts/research_tasks.py)负责这些程序阶段。
-
-`integrate` 写本次稿件并按路由更新目录，条目按日期和 slug 倒排。重新接入同一路由会替换其正文，保留该记录的 `label`、`sidebarTitle` 和 `children`。栏目模板与侧边栏程序不会被脚本重写。接入前核对目标路由，特别是同日已有手工稿时。
-
-### 验证与发布
-
-在仓库根目录执行：
-
-```sh
-npm run tags
-node scripts/check-research-content.mjs
-npm run test:content
-npm run build
-node scripts/check-research-content.mjs --built
-node scripts/test-content-discovery.mjs --built
-```
-
-专项检查核对顶层记录、卡片、侧边栏以及登记的子章文件与公开状态；`--built` 同时查生成的栏目页面入口。打开 `/research/`，从新卡片进入正文，再点标签、搜索一个小节并试用本页目录。学术字体子集需更新时运行 `python scripts/update-reading-font.py`，检查生成的 WOFF2 和清单。
-
-落实阶段反馈并核对已有发布授权后，使用 `publish` 或手工提交，无需重复索取已获授权。自动发布允许目录文件和目录内的顶层稿件，还会检查暂存区、工作区和目标分支。若本批还含子章、字体或站点代码，按实际范围审阅并提交。推送后再验证线上路由。
-
-## 从选题开始的调研
-
-明确布置的主题调研按[调研体例](../writing/research.md)检索、归纳和试读，普通交付直接使用 Markdown。脚本使用见[结构化任务与恢复](task-pipeline.md)、[交付验收](delivery-contract.md)及[固定订阅](daily.md)。批量文献发现可按需使用[文献检索工具](../hermes/skills.md)。
-
-本目录中的配置、JSON schema、`examples/` 和 `systemd/` 供相应脚本使用；各 VALIDATION 文件记录过去的实测情况。
+按[发布前验证](../writing/publishing.md#发布前验证)检查。自动发布范围仅含目录文件和目录登记的顶层 Markdown。专题子章、字体或站点代码一并变更时，按实际范围审阅、提交并核验线上路由。

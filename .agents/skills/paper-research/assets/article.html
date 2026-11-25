@@ -1,0 +1,903 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>文章标题</title>
+  <style>
+/* 所有选择器限定在 .research-page 内；可按文章需要自由组合模块。 */
+.research-page {
+  --paper: #fbf9f5;
+  --ink: #26364a;
+  --muted: #5c6874;
+  --sage: #79a99b;
+  --accent: #426e63;
+  --gold: #f2c690;
+  --wash: #f6f1e7;
+  --line: #dddeda;
+  --measure: 46rem;
+  --font-sans: "Noto Sans CJK SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --font-serif: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", "STSong", serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 18px/1.9 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-wrap: break-word;
+  color-scheme: light;
+}
+
+.research-page,
+.research-page * {
+  box-sizing: border-box;
+}
+
+.research-page ::selection {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+.research-page .page-shell {
+  width: min(1080px, calc(100% - 80px));
+  margin-inline: auto;
+}
+
+.research-page .masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 24px;
+  padding-block: 26px 22px;
+  border-bottom: 1px solid var(--line);
+  font-size: 16px;
+}
+
+.research-page .masthead > span:first-child {
+  font-weight: 650;
+  letter-spacing: .04em;
+}
+
+.research-page .masthead [lang="en"],
+.research-page .masthead > span:last-child {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.research-page .layout {
+  display: grid;
+  grid-template-columns: 176px minmax(0, 1fr);
+  gap: 64px;
+  align-items: start;
+  padding-top: 56px;
+}
+
+.research-page .article-content {
+  width: 100%;
+  max-width: var(--measure);
+  min-width: 0;
+}
+
+.research-page article,
+.research-page section,
+.research-page figure,
+.research-page blockquote,
+.research-page p,
+.research-page dl,
+.research-page pre {
+  margin: 0;
+}
+
+.research-page h1,
+.research-page h2,
+.research-page h3 {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 650;
+  text-wrap: pretty;
+}
+
+.research-page h1 {
+  margin-top: 18px;
+  font: 650 clamp(32px, 3.4vw, 44px)/1.35 var(--font-serif);
+  letter-spacing: -.025em;
+}
+
+.research-page h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 20px;
+  font-size: 25px;
+  line-height: 1.55;
+}
+
+.research-page h2 > .section-number {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font: 400 16px/1 var(--font-mono);
+}
+
+.research-page h3 {
+  margin-top: 26px;
+  margin-bottom: 12px;
+  font-size: 20px;
+  line-height: 1.65;
+}
+
+.research-page p + p {
+  margin-top: 16px;
+}
+
+.research-page strong {
+  font-weight: 650;
+}
+
+.research-page em {
+  font-style: normal;
+  text-decoration: underline;
+  text-decoration-color: var(--sage);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 5px;
+}
+
+.research-page mark {
+  padding-inline: .13em;
+  background: linear-gradient(transparent 48%, #f5dfbf 48%, #f5dfbf 92%, transparent 92%);
+  color: inherit;
+}
+
+.research-page a {
+  color: var(--accent);
+  text-decoration-color: var(--sage);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+.research-page a:hover {
+  color: var(--ink);
+  text-decoration-thickness: 2px;
+}
+
+.research-page :is(a, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 5px;
+  border-radius: 2px;
+}
+
+.research-page [id] {
+  scroll-margin-top: 28px;
+}
+
+.research-page .skip-link {
+  position: fixed;
+  z-index: 10;
+  top: -100px;
+  left: 20px;
+  padding: 8px 16px;
+  background: var(--paper);
+  border: 1px solid var(--accent);
+  font-size: 16px;
+}
+
+.research-page .skip-link:focus {
+  top: 16px;
+}
+
+.research-page .eyebrow {
+  color: var(--accent);
+  font-size: 16px;
+  letter-spacing: .06em;
+}
+
+.research-page .meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px 10px;
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.research-page address {
+  font-style: normal;
+}
+
+.research-page .lead {
+  margin-top: 30px;
+  font-size: 22px;
+  line-height: 1.8;
+  font-weight: 450;
+  letter-spacing: .005em;
+}
+
+.research-page .demo-note {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.research-page .article-header > .demo-note {
+  margin-top: 22px;
+  padding-left: 16px;
+  border-left: 2px solid var(--gold);
+}
+
+.research-page .article-section {
+  margin-top: 48px;
+}
+
+.research-page .article-section + .article-section {
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
+}
+
+.research-page .toc {
+  position: sticky;
+  top: 30px;
+  border-top: 2px solid var(--ink);
+  padding-top: 14px;
+  font-size: 16px;
+}
+
+.research-page .toc > p:first-child {
+  margin-bottom: 14px;
+  font-weight: 650;
+  letter-spacing: .04em;
+}
+
+.research-page .toc ol,
+.research-page .toc-mobile ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: contents;
+}
+
+.research-page .toc li,
+.research-page .toc-mobile li {
+  counter-increment: contents;
+}
+
+.research-page .toc a,
+.research-page .toc-mobile a {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-block: 8px;
+  color: var(--muted);
+  text-decoration: none;
+  line-height: 1.7;
+}
+
+.research-page .toc a::before,
+.research-page .toc-mobile a::before {
+  content: counter(contents, decimal-leading-zero);
+  color: var(--accent);
+  font: 400 16px/1.7 var(--font-mono);
+}
+
+.research-page .toc a:hover,
+.research-page .toc-mobile a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.research-page .toc > .demo-note {
+  margin-top: 26px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.research-page .toc-mobile {
+  display: none;
+}
+
+.research-page .term-list {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px 24px;
+  margin-block: 24px;
+  padding-block: 20px;
+  border-block: 1px solid var(--line);
+}
+
+.research-page .term-list dt {
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.research-page .term-list dd {
+  margin: 0;
+}
+
+.research-page .callout {
+  margin-block: 26px;
+  padding: 2px 0 2px 20px;
+  border-left: 3px solid var(--sage);
+}
+
+.research-page .callout[data-tone="caution"] {
+  border-left-color: var(--gold);
+}
+
+.research-page .callout h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.research-page .callout p {
+  margin: 0;
+}
+
+.research-page .callout p + p {
+  margin-top: 8px;
+}
+
+.research-page .figure {
+  margin-block: 26px;
+  padding: 24px;
+  background: var(--wash);
+  border: 1px solid var(--line);
+}
+
+.research-page .figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.research-page .figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+}
+
+/* 仅为这幅示意流程图着色，避免覆盖其他 SVG 图表的编码。 */
+.research-page :is(.flow-wide, .flow-narrow) text {
+  fill: var(--ink);
+  font: 400 20px var(--font-sans);
+}
+
+.research-page :is(.flow-wide, .flow-narrow) text[data-kind="label"] {
+  fill: var(--accent);
+  font-weight: 550;
+}
+
+.research-page :is(.flow-wide, .flow-narrow) rect {
+  fill: var(--paper);
+  stroke: #bfc8c4;
+  stroke-width: 1;
+}
+
+.research-page :is(.flow-wide, .flow-narrow) rect[data-tone="training"] {
+  fill: #edf3ef;
+  stroke: var(--sage);
+}
+
+.research-page :is(.flow-wide, .flow-narrow) path {
+  fill: none;
+  stroke: var(--sage);
+  stroke-width: 1.6;
+}
+
+.research-page .figure .flow-narrow {
+  display: none;
+}
+
+.research-page figcaption {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #d9ded7;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.research-page figcaption strong {
+  color: var(--ink);
+}
+
+.research-page .table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin-block: 24px;
+  scrollbar-color: var(--sage) var(--wash);
+}
+
+.research-page .table-hint {
+  display: none;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.research-page table {
+  width: 100%;
+  min-width: 630px;
+  border-collapse: collapse;
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.research-page caption {
+  padding-bottom: 18px;
+  text-align: left;
+  font-weight: 650;
+}
+
+.research-page caption span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.research-page th,
+.research-page td {
+  padding: 14px 14px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.research-page th:first-child,
+.research-page td:first-child {
+  padding-left: 0;
+}
+
+.research-page th:last-child,
+.research-page td:last-child {
+  padding-right: 0;
+}
+
+.research-page thead th {
+  border-block: 1.5px solid var(--ink);
+  font-weight: 650;
+}
+
+.research-page tbody th {
+  min-width: 100px;
+  font-weight: 550;
+}
+
+.research-page ul,
+.research-page ol {
+  margin-block: 16px 20px;
+  padding-left: 1.5em;
+}
+
+.research-page li + li {
+  margin-top: 10px;
+}
+
+.research-page li::marker {
+  color: var(--accent);
+}
+
+.research-page .toc li + li,
+.research-page .toc-mobile li + li {
+  margin-top: 0;
+}
+
+.research-page .equation {
+  max-width: 100%;
+  overflow-x: auto;
+  margin-block: 24px;
+  padding-block: 24px 18px;
+  border-block: 1px solid var(--line);
+  text-align: center;
+}
+
+.research-page .equation math {
+  font-size: 27px;
+  width: max-content;
+  margin-inline: auto;
+}
+
+.research-page .equation p {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.research-page .code-block {
+  max-width: 100%;
+  overflow-x: auto;
+  margin-block: 20px;
+  padding: 20px 24px;
+  background: #f0f2ef;
+  border: 1px solid #dde2dc;
+  border-left: 3px solid var(--sage);
+  font: 400 16px/1.8 var(--font-mono);
+  tab-size: 4;
+  scrollbar-color: var(--sage) var(--wash);
+}
+
+.research-page code {
+  font-family: var(--font-mono);
+}
+
+.research-page blockquote {
+  margin-block: 26px;
+  padding: 22px 24px;
+  background: var(--wash);
+  font: 500 22px/1.8 var(--font-serif);
+}
+
+.research-page blockquote footer {
+  margin-top: 14px;
+  color: var(--muted);
+  font: 400 16px/1.8 var(--font-sans);
+}
+
+.research-page cite {
+  font-style: normal;
+}
+
+.research-page .supplement {
+  margin-block: 26px;
+  padding-block: 18px;
+  border-block: 1px solid var(--line);
+  font-size: 16px;
+}
+
+.research-page summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-weight: 550;
+  line-height: 1.8;
+}
+
+.research-page summary::marker {
+  color: var(--accent);
+}
+
+.research-page .supplement p {
+  margin-top: 16px;
+  padding-left: 20px;
+}
+
+.research-page .reference-list {
+  margin-top: 20px;
+  font-size: 16px;
+  line-height: 1.9;
+}
+
+.research-page .reference-list li + li {
+  margin-top: 16px;
+}
+
+.research-page .reference-list .reference-backlink {
+  margin-left: .35em;
+  white-space: nowrap;
+}
+
+.research-page .page-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px 24px;
+  margin-top: 48px;
+  padding-block: 24px 48px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 16px;
+}
+
+@media (max-width: 1100px) {
+  .research-page .layout {
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 40px;
+  }
+}
+
+@media (max-width: 960px) {
+  .research-page .page-shell {
+    width: min(var(--measure), calc(100% - 48px));
+  }
+
+  .research-page .layout {
+    display: block;
+    padding-top: 40px;
+  }
+
+  .research-page .toc {
+    display: none;
+  }
+
+  .research-page .toc-mobile {
+    display: block;
+    margin-top: 30px;
+    padding-block: 16px;
+    border-block: 1px solid var(--line);
+    font-size: 16px;
+  }
+
+  .research-page .toc-mobile nav {
+    margin-top: 12px;
+  }
+}
+
+@media (max-width: 720px) {
+  .research-page .figure .flow-wide {
+    display: none;
+  }
+
+  .research-page .figure .flow-narrow {
+    display: block;
+    max-width: 340px;
+    margin-inline: auto;
+  }
+
+  .research-page .figure .flow-narrow text {
+    font-size: 17px;
+  }
+}
+
+@media (max-width: 600px) {
+  .research-page {
+    font-size: 17px;
+    line-height: 1.9;
+  }
+
+  .research-page .page-shell {
+    width: calc(100% - 40px);
+  }
+
+  .research-page .masthead {
+    gap: 12px;
+    padding-block: 20px 16px;
+  }
+
+  .research-page .masthead [lang="en"] {
+    display: none;
+  }
+
+  .research-page h1 {
+    font-size: clamp(28px, 7.6vw, 36px);
+    line-height: 1.42;
+  }
+
+  .research-page h2 {
+    gap: 10px;
+    font-size: 22px;
+  }
+
+  .research-page h3 {
+    font-size: 19px;
+  }
+
+  .research-page .lead {
+    margin-top: 24px;
+    font-size: 20px;
+    line-height: 1.85;
+  }
+
+  .research-page .article-section {
+    margin-top: 36px;
+  }
+
+  .research-page .article-section + .article-section {
+    padding-top: 26px;
+  }
+
+  .research-page .term-list {
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 12px 16px;
+  }
+
+  .research-page .figure {
+    padding: 20px 12px;
+  }
+
+  .research-page figcaption {
+    margin-top: 14px;
+  }
+
+  .research-page .callout {
+    padding-left: 16px;
+  }
+
+  .research-page .code-block {
+    padding: 18px 16px;
+  }
+
+  .research-page .equation math {
+    font-size: 25px;
+  }
+
+  .research-page .table-hint {
+    display: block;
+    margin-top: 16px;
+  }
+
+  .research-page blockquote {
+    padding: 20px;
+    font-size: 20px;
+  }
+
+  .research-page .page-footer {
+    margin-top: 36px;
+    padding-bottom: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .research-page *,
+  .research-page *::before,
+  .research-page *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 独立页面的打印页边距；嵌入网站时由宿主统一配置。 */
+@page {
+  margin: 18mm 16mm;
+}
+
+@media print {
+  .research-page {
+    background: #fff;
+    color: #172536;
+    font-size: 11pt;
+    line-height: 1.65;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .research-page .page-shell {
+    width: 100%;
+  }
+
+  .research-page .layout {
+    display: block;
+    padding-top: 22px;
+  }
+
+  .research-page .article-content {
+    max-width: none;
+  }
+
+  .research-page .toc,
+  .research-page .toc-mobile,
+  .research-page .skip-link,
+  .research-page .page-footer a,
+  .research-page .reference-backlink,
+  .research-page .table-hint {
+    display: none;
+  }
+
+  .research-page h1 {
+    font-size: 27pt;
+  }
+
+  .research-page h2 {
+    font-size: 16pt;
+  }
+
+  .research-page h3 {
+    font-size: 12pt;
+  }
+
+  .research-page h1,
+  .research-page h2,
+  .research-page h3,
+  .research-page caption {
+    break-after: avoid;
+  }
+
+  .research-page .lead {
+    font-size: 14pt;
+  }
+
+  .research-page .article-section {
+    margin-top: 28px;
+  }
+
+  .research-page .article-section + .article-section {
+    padding-top: 22px;
+  }
+
+  .research-page p,
+  .research-page li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .research-page .figure,
+  .research-page blockquote,
+  .research-page .equation {
+    break-inside: avoid;
+  }
+
+  .research-page .figure .flow-wide {
+    display: block;
+  }
+
+  .research-page .figure .flow-narrow {
+    display: none;
+  }
+
+  .research-page .table-scroll,
+  .research-page .code-block,
+  .research-page .equation {
+    overflow: visible;
+  }
+
+  .research-page table {
+    min-width: 0;
+    font-size: 10pt;
+  }
+
+  .research-page thead {
+    display: table-header-group;
+  }
+
+  .research-page tr {
+    break-inside: avoid;
+  }
+
+  .research-page .code-block {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 10pt;
+  }
+
+  .research-page .equation math {
+    font-size: 17pt;
+  }
+
+  .research-page .supplement {
+    break-inside: auto;
+  }
+
+  .research-page .supplement summary {
+    list-style: none;
+  }
+
+  .research-page .supplement summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .research-page a {
+    color: inherit;
+  }
+
+  .research-page .page-footer {
+    margin-top: 28px;
+    padding-bottom: 0;
+  }
+}
+  </style>
+  <style>
+    /* 单栏短文。添加侧栏时可采用指南中的 .layout 结构。 */
+    :where(.page-shell > .article-content) {
+      margin-inline: auto;
+      padding-block: clamp(1.25rem, 5vw, 3.5rem);
+    }
+
+    :where(.article-content > article > h1) {
+      padding-block-end: .45em;
+    }
+  </style>
+</head>
+<body class="research-page">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+  <div class="page-shell">
+    <main id="main-content" class="article-content" tabindex="-1">
+      <article>
+        <h1>文章标题</h1>
+        <p>正文。</p>
+        <!-- 按本文的论述添加段落、图表、公式或引文。
+             可从配套的 research-html-guide.md 选用对应片段。 -->
+      </article>
+    </main>
+  </div>
+</body>
+</html>

@@ -27,8 +27,8 @@ GROUPS = ['paper', 'research-blog', 'release', 'manual', 'systematic']
 
 
 def read_research_guide():
-    """Load the project's research writing guide."""
-    return (ROOT / 'writing/research.md').read_text(encoding='utf-8')
+    """Use the shared writing principles; the CLI supplies its own output schema."""
+    return (ROOT / 'writing/README.md').read_text(encoding='utf-8')
 
 
 def task_engine():
