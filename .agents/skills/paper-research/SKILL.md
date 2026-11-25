@@ -52,4 +52,4 @@ description: 对指定论文、主题方向或其他可检索的一手材料做�
   3. **抽检事实**：抽查 3–5 处核心数字/机制，确认与原文一致、引用链接可跳转。
   4. **浏览器检查**：打开实际 HTML，确认窄屏下 SVG、表格、公式可读且无整页横向溢出。
 
-初稿回传后停下等待用户反馈再定稿，协作与交接边界见 [Hermes/Codex 共用约定](../../../hermes/README.md)。仅在任务明确要求上线到网站时才使用 [发布流程](../../../writing/publishing.md)。
+初稿回传后停下等待用户反馈再定稿。支持单执行者一口气完成，也支持串行分工（Codex 完成第 1–2 节产出 `research-notes.md`，再由 Antigravity CLI 完成第 3–4 节写作与 HTML 交付），协作与单进程串行边界见 [Hermes/Codex/Antigravity 协作约定](../../../hermes/README.md)。仅在任务明确要求上线到网站时才使用 [发布流程](../../../writing/publishing.md)。

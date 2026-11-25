@@ -32,6 +32,7 @@ SOURCES = {
     'research/systemd/seagull-research.timer.example': '服务器每日调度示例，尚未启用',
     'scripts/research-fetch.py': '轻量统一检索与分级取全文 CLI（search/citations/read-paper/read-web）',
     'scripts/test-research-fetch.py': '统一检索 CLI 离线单元测试',
+    'scripts/log-usage.py': 'Codex 与 Antigravity CLI 每次调用的 token/额度记录脚本',
     'scripts/research-workflow.py': '采集、生成、文章接入、构建、推送与验证主程序',
     'scripts/research_tasks.py': '按任务发现、跨年代证据审阅、覆盖检查与补查',
     'scripts/research_delivery.py': '对象矩阵、原始样本提取与确切成稿验收辅助',

@@ -36,8 +36,8 @@
 入口仅从仓库已有 `.env` 向子进程注入 `ZHIHU_ACCESS_SECRET`；已有非空环境变量优先。
 不另存密钥、不修改 PATH、不输出 `.env` 或凭证。
 
-## Codex 与 Hermes 分工
+## Hermes、Codex 与 Antigravity 协作
 
-执行与委派见 [Hermes/Codex 协作约定](hermes/README.md)。Hermes 负责原文透传、产物回传与权限边界，严禁改写用户原话或预设提纲与约束；由 Codex 读原文后独立成稿。
+执行与委派见 [协作约定](hermes/README.md)。采用串行分工：**Hermes** 负责原文透传、串行调度、每次调用的额度记录（`scripts/log-usage.py` → `.research/usage-log.jsonl`）、产物回传与权限边界（严禁改写原话或预设提纲）；**Codex CLI**（默认 Codex 6.2 Sol / `medium`）负责调研与核对原文（产出 `research-notes.md`）；**Antigravity CLI（`agy`）**（默认 Gemini 4 Neon / `medium`，轻量修订可用 Hydrogen）负责结构编排、图表与最终 HTML 写作。同一时刻最多运行 1 个重型 CLI 进程，避免服务器过载。
 
-完整调研与实质改写按 [阶段回传与反馈](hermes/README.md#阶段回传与反馈) 执行：默认直接交付精简初稿并等待用户反馈，再修订定稿并按授权发布；用户要求先看选材清单时再分步。
+完整调研与实质改写按 [阶段回传与反馈](hermes/README.md#阶段回传与反馈) 执行：默认串行产出精简初稿并等待用户反馈，再定向修订并按授权发布；用户要求先看选材清单时只跑调研阶段。
