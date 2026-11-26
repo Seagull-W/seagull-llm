@@ -93,6 +93,9 @@ function escape(e:KeyboardEvent) {
   else if (editing.value) {
     e.stopPropagation()
     finishEditing()
+  } else if (props.kind === 'html') {
+    e.stopPropagation()
+    emit('close')
   }
 }
 watch(section,() => { nextTick(() => emit('layout')) })
@@ -113,7 +116,7 @@ defineExpose({reveal, finish:() => setMode('','read')})
         <div class="menu-items"><button @click="backupAction('json')">导出 JSON 备份</button><button @click="backupAction('md')">导出 Markdown</button><button @click="backupAction('import')">导入笔记备份</button><button @click="emit('logout')">退出登录</button></div>
       </details>
       <input ref="file" type="file" accept=".json,application/json" hidden @change="pickFile" />
-      <button title="收起笔记" aria-label="收起笔记" @click="emit('close')"><ReaderIcon name="close" /></button>
+      <button class="notebook-close" title="收起笔记" aria-label="收起笔记" @click="emit('close')"><ReaderIcon name="close" /></button>
     </header>
     <div v-if="author && localCount" class="notebook-filters"><button @click="emit('importLocal')">导入本篇 {{localCount}} 条本机笔记为私有</button></div>
     <nav v-if="author" class="notebook-tabs" aria-label="笔记分类">

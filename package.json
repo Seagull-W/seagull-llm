@@ -1,6 +1,7 @@
 {
   "name": "seagull-llm",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "大语言模型介绍文档",
   "scripts": {
     "test:notes": "node --experimental-strip-types --test scripts/test-annotations.mjs scripts/test-notes-api.mjs",

@@ -50,16 +50,24 @@
 }
 .Layout[data-visual-style='grace-archive'] .VPDoc .reader-toc,
 .Layout[data-visual-style='grace-archive'] .VPDoc .reader-tools { background: var(--grace-reading-edge); }
+.Layout[data-visual-style='grace-archive'] .reader-navigation:not(.toc-collapsed) > .reader-toc {
+  padding: 6px 10px 10px;
+}
 .Layout[data-visual-style='grace-archive'] .VPFooter {
   color: var(--vp-c-text-2);
   background: #1c221dd6; border-color: #d6c7a06b;
 }
 .Layout[data-visual-style='grace-archive'] .NotFound { background: var(--grace-reading-surface); }
-@media screen and (min-width: 900px) {
-  .Layout.academic-reading[data-visual-style='grace-archive'] .VPDoc:has(.reader-navigation) {
-    /* Keep a place for Millicent when the outline opens. Wide spreads stay centered. */
-    padding-inline-start: max(clamp(148px, 14%, 180px), calc((100% - var(--reader-spread-width)) / 2));
-    justify-content: start;
+@media screen and (min-width: 768px) {
+  .Layout.academic-reading[data-visual-style='grace-archive'] .VPDoc .content-container {
+    padding-inline: clamp(32px, 4vw, 56px);
+  }
+}
+@media screen and (max-width: 767px) {
+  .Layout.academic-reading[data-visual-style='grace-archive'] .VPDoc .content-container {
+    /* Extend the paper into the page gutters so the text keeps its full measure. */
+    margin-inline: -12px;
+    padding: 16px 12px;
   }
 }
 @media (max-width: 639px) {

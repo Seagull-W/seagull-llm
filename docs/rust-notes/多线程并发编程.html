@@ -27,12 +27,12 @@
 <p class="note-diagram-title">同时存在，与同时执行</p>
 <svg viewBox="0 0 660 232" role="img" aria-label="单核上的并发由 A B 两个任务交替执行，多核上的并行可以在同一时段执行两个任务">
   <text x="16" y="25" class="thread-label">单核上的并发（示意）</text>
-  <path d="M116 64H636 M116 146H636 M116 198H636" stroke="#a4b7cf" stroke-width="2"/>
+  <path d="M116 64H636 M116 146H636 M116 198H636" stroke="var(--vp-c-text-2)" stroke-width="2"/>
   <text x="16" y="68" class="thread-label">CPU 核 1</text>
-  <g fill="#dbeafe" stroke="#8bb7f5"><rect x="120" y="42" width="110" height="36" rx="7"/><rect x="370" y="42" width="110" height="36" rx="7"/><rect x="120" y="124" width="480" height="36" rx="7"/></g>
-  <g fill="#dcf6ef" stroke="#8bcdb8"><rect x="245" y="42" width="110" height="36" rx="7"/><rect x="495" y="42" width="110" height="36" rx="7"/><rect x="120" y="176" width="480" height="36" rx="7"/></g>
-  <g fill="#234778" font-size="14" text-anchor="middle"><text x="175" y="66">任务 A</text><text x="425" y="66">任务 A</text><text x="360" y="148">任务 A</text></g>
-  <g fill="#096954" font-size="14" text-anchor="middle"><text x="300" y="66">任务 B</text><text x="550" y="66">任务 B</text><text x="360" y="200">任务 B</text></g>
+  <g fill="color-mix(in srgb, var(--vp-c-brand-1) 26%, var(--vp-c-bg))" stroke="var(--vp-c-brand-1)"><rect x="120" y="42" width="110" height="36" rx="7"/><rect x="370" y="42" width="110" height="36" rx="7"/><rect x="120" y="124" width="480" height="36" rx="7"/></g>
+  <g fill="var(--vp-c-bg)" stroke="var(--vp-c-text-2)"><rect x="245" y="42" width="110" height="36" rx="7"/><rect x="495" y="42" width="110" height="36" rx="7"/><rect x="120" y="176" width="480" height="36" rx="7"/></g>
+  <g fill="currentColor" font-size="14" text-anchor="middle"><text x="175" y="66">任务 A</text><text x="425" y="66">任务 A</text><text x="360" y="148">任务 A</text></g>
+  <g fill="currentColor" font-size="14" text-anchor="middle"><text x="300" y="66">任务 B</text><text x="550" y="66">任务 B</text><text x="360" y="200">任务 B</text></g>
   <text x="16" y="108" class="thread-label">多核上的并行（示意）</text><text x="16" y="148" class="thread-label">CPU 核 1</text><text x="16" y="200" class="thread-label">CPU 核 2</text>
 </svg>
 <figcaption>横向表示时间；色块只说明调度关系，不代表真实任务的运行时长。</figcaption>

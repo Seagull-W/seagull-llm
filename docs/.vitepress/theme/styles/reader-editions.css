@@ -79,24 +79,23 @@
 .related-reading .recommendation-copy small { flex:0 1 auto; }
 .academic-reading :is(.article-context,.reader-position,.related-reading,.reader-toc-list) :is(a,button):focus-visible { outline:2px solid var(--vp-c-brand-1); outline-offset:2px; }
 /* Edition details at the end of the article. */
-.Layout[data-visual-style='paper-coast'] .reading-sequence > div { gap:0; background:var(--vp-c-bg-alt); border-block:1px solid var(--vp-c-divider); }
+.Layout[data-visual-style='paper-coast'] .reading-sequence > div {
+  gap:0 16px; background:var(--vp-c-bg-alt); border-block:1px solid var(--paper-reading-line);
+}
 .Layout[data-visual-style='paper-coast'] .reading-sequence a { border:0; border-radius:0; }
-.Layout[data-visual-style='paper-coast'] .reading-sequence a + a { border-left:1px solid var(--vp-c-divider); }
-.Layout[data-visual-style='paper-coast'] .reading-recommendations { padding-left:15px; border-left:2px solid var(--vp-c-divider); }
+.Layout[data-visual-style='paper-coast'] .related-link { border-bottom-color:var(--paper-reading-line); }
+.Layout[data-visual-style='paper-coast'] .related-link:last-child { border-bottom:0; }
 
-/* Pixel Voyage — a pixel track links the suggested articles. */
-.Layout[data-visual-style='pixel-voyage'] .reading-sequence > div { column-gap:20px; }
-.Layout[data-visual-style='pixel-voyage'] .reading-sequence a { border:0; border-top:2px dashed var(--pixel-edge); border-radius:0; padding:12px 0; }
+/* Pixel Voyage keeps a square edge and a single rule above each group. */
+.Layout[data-visual-style='pixel-voyage'] :is(.reading-sequence > div, .reading-recommendations) { border-top:1px solid var(--vp-c-divider); }
+.Layout[data-visual-style='pixel-voyage'] .reading-sequence a { border:0; border-radius:0; padding:12px 0; }
 .Layout[data-visual-style='pixel-voyage'] .reading-recommendations {
   display:grid; grid-template-columns:repeat(auto-fit,minmax(min(146px,100%),1fr)); gap:18px;
-  margin-top:14px; border-top:2px dashed var(--pixel-edge);
+  margin-top:8px;
 }
-.Layout[data-visual-style='pixel-voyage'] .related-link { display:block; padding:18px 0 10px; position:relative; border-bottom-style:dashed; }
+.Layout[data-visual-style='pixel-voyage'] .related-link { display:block; padding:12px 0; border:0; }
 .Layout[data-visual-style='pixel-voyage'] .recommendation-copy { display:block; }
 .Layout[data-visual-style='pixel-voyage'] .recommendation-copy small { display:block; margin-top:6px; text-align:left; }
-.Layout[data-visual-style='pixel-voyage'] .related-link::before {
-  content:""; position:absolute; left:0; top:-4px; width:6px; height:6px; background:var(--pixel-edge);
-}
 
 /* Along the Way — a film still accompanies the recommendations. */
 .Layout[data-visual-style='along-the-way'] .reading-sequence a { border:0; border-top:1px solid var(--journey-warm); border-radius:0; padding:12px 0; }
@@ -124,12 +123,10 @@
 }
 @media(max-width:540px) {
   .related-reading .reading-sequence > div { grid-template-columns:1fr; }
-  .Layout[data-visual-style='paper-coast'] .reading-sequence a + a { border-left:0; border-top:1px solid var(--vp-c-divider); }
+  .Layout[data-visual-style='paper-coast'] .reading-sequence a + a { border-top:1px solid var(--paper-reading-line); }
   .related-reading .recommendation-copy { display:block; }
   .related-reading .recommendation-copy small { display:block; text-align:left; margin-top:2px; }
-  .Layout[data-visual-style='pixel-voyage'] .reading-recommendations { display:block; margin:8px 0 0 4px; border-top:0; border-left:2px dotted var(--pixel-edge); }
-  .Layout[data-visual-style='pixel-voyage'] .related-link { padding:10px 0 10px 15px; }
-  .Layout[data-visual-style='pixel-voyage'] .related-link::before { left:-4px; top:18px; }
+  .Layout[data-visual-style='pixel-voyage'] .reading-recommendations { grid-template-columns:1fr; gap:0; }
   .Layout[data-visual-style='along-the-way'] .reading-recommendations { display:block; }
   .Layout[data-visual-style='along-the-way'] .related-link { padding-block:10px; }
   .Layout[data-visual-style='along-the-way'] .recommendation-still { width:min(100%,290px); aspect-ratio:2.6; margin:6px 0 10px; }

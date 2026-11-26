@@ -13,7 +13,7 @@ import './notebook.css'
 
 const props = defineProps<{ target?: HTMLElement; document:string; title:string; kind:Kind; docked?:boolean; wideDock?:boolean; boxActive?:boolean }>()
 const open = defineModel<boolean>('open',{required:true})
-const emit = defineEmits<{ boxMode:[active:boolean]; author:[value:boolean] }>()
+const emit = defineEmits<{ boxMode:[active:boolean]; author:[value:boolean]; close:[] }>()
 const legacy = useNotebook(props.document,props.kind)
 const { records, author, status, conflicts, login, logout, edit, retry, resolveConflicts } = useCloudNotebook(props.document,props.kind)
 const currentById = computed(() => new Map(records.value.map(n => [n.id,n])))
@@ -250,6 +250,10 @@ async function importFile(file:File) {
   } catch(e) { notice(e instanceof Error?e.message:'无法导入笔记备份。') }
 }
 function toggleBox() { if (author.value) boxMode.value=!boxMode.value }
+function closePanel() {
+  open.value = false
+  emit('close')
+}
 function openMark(id:string,part:number) { const n=currentById.value.get(id); if (n?.type==='annotation') show(n,false,true,part) }
 defineExpose({toggleBox,pageRendered})
 </script>
@@ -257,7 +261,7 @@ defineExpose({toggleBox,pageRendered})
   <div ref="host" class="annotation-notebook" :class="{'notebook-open':open,'notebook-html':kind==='html','notebook-docked':docked}">
     <NotebookDivider v-show="open" :kind="kind" :docked="docked" />
     <NotebookPanel v-show="open" ref="panel" v-model:section="section" :kind="kind" :annotations="annotations" :papers="papers" :bookmarks="bookmarks" :active="active" :author="author" :status="status" :conflict="!!conflicts.length" :local-count="localImports.length" :images="sourceImages" :missing="missing" :can-undo="!!undo"
-      @close="open=false" @retry="retry" @login="login" @logout="logout" @resolve="resolveConflicts" @import-local="importLocal" @backup="backup" @import="importFile" @undo="restore" @add-paper="addPaper" @add-bookmark="addBookmark()" @bookmark="goToPosition($event.position)" @remove="remove" @body="updateBody" @action="act" @color="recolor" @layout="layout" />
+      @close="closePanel" @retry="retry" @login="login" @logout="logout" @resolve="resolveConflicts" @import-local="importLocal" @backup="backup" @import="importFile" @undo="restore" @add-paper="addPaper" @add-bookmark="addBookmark()" @bookmark="goToPosition($event.position)" @remove="remove" @body="updateBody" @action="act" @color="recolor" @layout="layout" />
     <Teleport to="body">
       <div v-for="(r,i) in visualRects" :key="i" class="annotation-direct-selection" aria-hidden="true" :style="{left:r.x+'px',top:r.y+'px',width:r.width+'px',height:r.height+'px'}" />
       <SelectionToolbar v-if="author && selection && toolPoint" :point="toolPoint" :pdf="kind==='pdf'" :image-only="!selection.quote" :highlight-color="penColor" @highlight="createAnnotation(selection,'highlight')" @color="highlightSelection" @comment="createAnnotation(selection,'comment')" @favorite="createAnnotation(selection,'favorite')" @copy="copySelection" @bookmark="bookmarkSelection" @dismiss="clearSelection" />

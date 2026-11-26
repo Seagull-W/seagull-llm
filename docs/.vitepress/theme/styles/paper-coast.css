@@ -1,10 +1,11 @@
 /* Paper Coast v1: decoration stays outside scientific figures and reading text. */
 :root[data-visual-style='paper-coast'],
 :root:not([data-visual-style]) .Layout[data-visual-style='paper-coast'] {
-  --vp-c-bg:#f5f8f9; --vp-c-bg-alt:#fff; --vp-c-bg-soft:#e8f0f1;
-  --vp-c-text-1:#153a47; --vp-c-text-2:#536a73; --vp-c-text-3:#647c84;
+  --vp-c-bg:#f7f9f9; --vp-c-bg-alt:#fff; --vp-c-bg-soft:#e8f0f1;
+  --vp-c-text-1:#17323b; --vp-c-text-2:#536a73; --vp-c-text-3:#647c84;
   --vp-c-brand-1:#126b78; --vp-c-brand-2:#105a66; --vp-c-brand-3:#267d89;
   --vp-c-divider:#cfdddf; --vp-c-border:var(--vp-c-divider); --vp-c-border-hover:#8bafb6;
+  --paper-reading-line:color-mix(in srgb,var(--vp-c-divider) 65%,transparent);
   --vp-button-brand-text:#fff; --vp-button-brand-hover-text:var(--vp-button-brand-text);
   --illustration-paper:#d3e3e6;
   --illustration-mist:#e9eff0;

@@ -33,6 +33,13 @@
   background: var(--vp-c-bg-soft);
 }
 
+/* A run of definitions reads as one passage. Keep the labels and soften the paper. */
+.academic-lecture .definitionbox:has(+ .definitionbox),
+.academic-lecture .definitionbox + .definitionbox {
+  border-inline-start-color: color-mix(in srgb, var(--vp-c-brand-1) 40%, var(--vp-c-divider));
+  background: color-mix(in srgb, var(--vp-c-bg-soft) 36%, transparent);
+}
+
 .academic-lecture :is(.proofbox, .remarkbox) {
   border-color: var(--vp-c-divider);
   background: transparent;

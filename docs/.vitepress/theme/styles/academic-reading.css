@@ -161,6 +161,15 @@
   font-size: inherit;
   line-height: inherit;
 }
+/* Keep the syntax hue while lifting muted tokens on the themed dark code surface. */
+.dark .academic-reading .VPDoc .vp-doc .shiki span[style*='--shiki-dark'] {
+  color: color-mix(in srgb, var(--shiki-dark) 62%, var(--vp-c-text-1));
+}
+@supports (color: oklch(from currentColor l c h)) {
+  .dark .academic-reading .VPDoc .vp-doc .shiki span[style*='--shiki-dark'] {
+    color: oklch(from var(--shiki-dark) max(l, .72) c h);
+  }
+}
 .academic-reading .VPDoc .vp-doc .vp-code-group .tabs {
   margin-inline: 0;
   background: var(--vp-code-block-bg);

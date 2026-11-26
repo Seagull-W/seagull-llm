@@ -31,16 +31,16 @@ import { withBase } from 'vitepress'
 <p>第一轮合并后，语料变为 <code>[a,ba] × 3</code> 和 <code>[a,c,a] × 1</code>，相邻对总数降为 5。新出现的 <code>(a,ba)</code> 有 3 票，胜过各 1 票的 <code>(a,c)</code> 和 <code>(c,a)</code>。第二轮因此得到 <code>[aba] × 3</code> 和 <code>[a,c,a] × 1</code>，只剩后一个片段里的 2 对。</p>
 <figure class="note-diagram">
 <svg viewBox="0 0 720 390" role="img" aria-label="BPE 两轮合并：12 → 9 → 6 个符号；前三个 aba 各合成一个词元，aca 保留三个词元。" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
-<rect width="720" height="390" rx="12" fill="#f8fafc"/>
-<g fill="#243746" font-family="sans-serif" font-size="16">
+<rect width="720" height="390" rx="12" fill="var(--vp-c-bg-soft)"/>
+<g fill="currentColor" font-family="sans-serif" font-size="16">
 <text x="24" y="34">初始：12 个符号</text><text x="475" y="34">r = 1 字节/词元</text>
-<path d="M350 112v23m-5 -5l5 5 5 -5" fill="none" stroke="#536977"/><text x="370" y="130">合并 (b,a)</text>
+<path d="M350 112v23m-5 -5l5 5 5 -5" fill="none" stroke="var(--vp-c-text-2)"/><text x="370" y="130">合并 (b,a)</text>
 <text x="24" y="152">第一轮：9 个符号</text><text x="475" y="152">r = 12/9 ≈ 1.33</text>
-<path d="M350 230v23m-5 -5l5 5 5 -5" fill="none" stroke="#536977"/><text x="370" y="248">合并 (a,ba)</text>
+<path d="M350 230v23m-5 -5l5 5 5 -5" fill="none" stroke="var(--vp-c-text-2)"/><text x="370" y="248">合并 (a,ba)</text>
 <text x="24" y="270">第二轮：6 个符号</text><text x="475" y="270">r = 2 字节/词元</text>
 <text x="24" y="374" font-size="14">括线表示预分词片段；每个方框表示一个词元。</text>
 </g>
-<g fill="#fff" stroke="#9aabb5">
+<g fill="var(--vp-c-bg)" stroke="var(--vp-c-text-2)">
 <rect x="24" y="54" width="46" height="38" rx="5"/>
 <rect x="76" y="54" width="46" height="38" rx="5"/>
 <rect x="128" y="54" width="46" height="38" rx="5"/>
@@ -54,22 +54,22 @@ import { withBase } from 'vitepress'
 <rect x="592" y="54" width="46" height="38" rx="5"/>
 <rect x="644" y="54" width="46" height="38" rx="5"/>
 <rect x="24" y="172" width="72" height="38" rx="5"/>
-<rect x="102" y="172" width="72" fill="#e2ecef" height="38" rx="5"/>
+<rect x="102" y="172" width="72" fill="color-mix(in srgb, var(--vp-c-brand-1) 26%, var(--vp-c-bg))" height="38" rx="5"/>
 <rect x="196" y="172" width="72" height="38" rx="5"/>
-<rect x="274" y="172" width="72" fill="#e2ecef" height="38" rx="5"/>
+<rect x="274" y="172" width="72" fill="color-mix(in srgb, var(--vp-c-brand-1) 26%, var(--vp-c-bg))" height="38" rx="5"/>
 <rect x="368" y="172" width="72" height="38" rx="5"/>
-<rect x="446" y="172" width="72" fill="#e2ecef" height="38" rx="5"/>
+<rect x="446" y="172" width="72" fill="color-mix(in srgb, var(--vp-c-brand-1) 26%, var(--vp-c-bg))" height="38" rx="5"/>
 <rect x="540" y="172" width="46" height="38" rx="5"/>
 <rect x="592" y="172" width="46" height="38" rx="5"/>
 <rect x="644" y="172" width="46" height="38" rx="5"/>
-<rect x="24" y="290" width="150" fill="#e2ecef" height="38" rx="5"/>
-<rect x="196" y="290" width="150" fill="#e2ecef" height="38" rx="5"/>
-<rect x="368" y="290" width="150" fill="#e2ecef" height="38" rx="5"/>
+<rect x="24" y="290" width="150" fill="color-mix(in srgb, var(--vp-c-brand-1) 26%, var(--vp-c-bg))" height="38" rx="5"/>
+<rect x="196" y="290" width="150" fill="color-mix(in srgb, var(--vp-c-brand-1) 26%, var(--vp-c-bg))" height="38" rx="5"/>
+<rect x="368" y="290" width="150" fill="color-mix(in srgb, var(--vp-c-brand-1) 26%, var(--vp-c-bg))" height="38" rx="5"/>
 <rect x="540" y="290" width="46" height="38" rx="5"/>
 <rect x="592" y="290" width="46" height="38" rx="5"/>
 <rect x="644" y="290" width="46" height="38" rx="5"/>
 </g>
-<g fill="#243746" font-family="monospace" font-size="19" text-anchor="middle">
+<g fill="currentColor" font-family="monospace" font-size="19" text-anchor="middle">
 <text x="47" y="79">a</text>
 <text x="99" y="79">b</text>
 <text x="151" y="79">a</text>
@@ -98,7 +98,7 @@ import { withBase } from 'vitepress'
 <text x="615" y="315">c</text>
 <text x="667" y="315">a</text>
 </g>
-<path d="M24 98v5h150v-5 M196 98v5h150v-5 M368 98v5h150v-5 M540 98v5h150v-5 M24 216v5h150v-5 M196 216v5h150v-5 M368 216v5h150v-5 M540 216v5h150v-5 M24 334v5h150v-5 M196 334v5h150v-5 M368 334v5h150v-5 M540 334v5h150v-5" fill="none" stroke="#aab6bf"/>
+<path d="M24 98v5h150v-5 M196 98v5h150v-5 M368 98v5h150v-5 M540 98v5h150v-5 M24 216v5h150v-5 M196 216v5h150v-5 M368 216v5h150v-5 M540 216v5h150v-5 M24 334v5h150v-5 M196 334v5h150v-5 M368 334v5h150v-5 M540 334v5h150v-5" fill="none" stroke="var(--vp-c-text-2)"/>
 </svg>
 <figcaption>上述 12 字节手算语料（不含分隔符）的压缩率：1 → 12/9 ≈ 1.33 → 2 字节/词元。末轮的三个 aba 各占一个词元，aca 仍占三个词元。</figcaption></figure>
 

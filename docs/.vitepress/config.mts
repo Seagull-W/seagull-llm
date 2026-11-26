@@ -247,6 +247,7 @@ const config = withMermaid({
 
     // --- 导航栏 ---
     nav: [
+      { text: '论文精读', link: '/papers/#论文精读', activeMatch: '^/papers/' },
       { text: '全部内容', link: '/tags' },
       { text: '学习笔记', activeMatch: '/(?:cs336|datawhale-agentic-rl|rl-book|westlake-rl|rust-notes|linux-notes|cuda-notes|vllm-notes)/', items: [
         { text: 'CS336学习笔记', link: '/cs336/' },
@@ -258,7 +259,6 @@ const config = withMermaid({
         { text: 'CUDA C++ 学习笔记', link: '/cuda-notes/' },
         { text: 'vLLM 学习笔记', link: '/vllm-notes/' }
       ] },
-      { text: '论文与项目解读', link: '/papers/' },
       { text: '调研', link: '/research/' },
       { text: '视频', link: '/videos/' }
     ],
@@ -288,7 +288,7 @@ const config = withMermaid({
     // --- 页脚 ---
     footer: {
       message: '<a href="https://github.com/Seagull-W/seagull-llm">GitHub</a> · 基于 VitePress 构建',
-      copyright: 'Copyright © 2026'
+      copyright: 'Copyright © 2026 · <a href="https://github.com/Seagull-W/seagull-llm#许可协议">代码与文章授权</a>'
     },
 
     // --- 外部链接图标 ---

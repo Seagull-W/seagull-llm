@@ -66,6 +66,11 @@ html.dark[data-visual-style='grace-archive'],
   --illustration-shade: #6b654e;
 }
 
+.Layout.academic-reading[data-visual-style='grace-archive'] {
+  --grace-reading-surface: color-mix(in srgb, var(--vp-c-bg) 97%, transparent);
+  --grace-reading-edge: var(--grace-reading-surface);
+}
+
 /* Foreground palettes for text over the landscape. */
 .Layout[data-visual-style='grace-archive'] :is(.VPHome, .video-gallery .gallery-header, .home-colophon .closing-line) {
   --vp-c-text-1: #fff7df;

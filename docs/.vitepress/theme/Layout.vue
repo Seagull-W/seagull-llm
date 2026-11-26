@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import DefaultTheme from 'vitepress/theme'
-import { defineAsyncComponent, computed, nextTick, onMounted, onUnmounted, provide, ref, useId, watch } from 'vue'
+import { defineAsyncComponent, computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { useData, withBase } from 'vitepress'
 import ReaderNavigation from '../components/ReaderNavigation.vue'
 import HomeHero from '../components/HomeHero.vue'
@@ -51,23 +51,9 @@ onMounted(() => {
 onUnmounted(() => stopHomeOpening?.())
 const academicReading = computed(() => usesAcademicReading('/' + page.value.relativePath, frontmatter.value))
 const paperNotebook = computed(() => usesPaperNotebook('/' + page.value.relativePath, frontmatter.value))
-const toolbarNotebook = computed(() => paperNotebook.value || (academicReading.value && supportsHtmlNotebook(frontmatter.value)))
-const paperNotesOpen = ref(false)
-const articleNotesOpen = ref(false)
-const notebookOpen = computed({
-  get: () => paperNotebook.value ? paperNotesOpen.value : articleNotesOpen.value,
-  set(value: boolean) {
-    if (paperNotebook.value) paperNotesOpen.value = value
-    else articleNotesOpen.value = value
-  },
-})
-const notebookReady = ref(false)
 const paperAuthor=ref(false)
 const paperBoxMode = ref(false)
-const notebookId = useId()
 watch(() => page.value.relativePath, () => {
-  notebookReady.value = false
-  articleNotesOpen.value = false
   paperBoxMode.value = false
   paperAuthor.value = false
 }, { flush: 'sync' })
@@ -77,7 +63,7 @@ const sectionClass = computed(() => {
 })
 </script>
 <template>
-  <Layout :data-visual-style="visualStyle.id" :class="[sectionClass, { 'academic-reading': academicReading, 'pixel-mountain-home': pixelHome, 'paper-notebook-layout': paperNotebook, 'has-notebook-tools': toolbarNotebook }]">
+  <Layout :data-visual-style="visualStyle.id" :class="[sectionClass, { 'academic-reading': academicReading, 'pixel-mountain-home': pixelHome, 'paper-notebook-layout': paperNotebook, 'has-notebook-tools': paperNotebook && paperAuthor }]">
     <template #layout-top>
       <picture v-if="pixelHome" class="pixel-mountain-world" aria-hidden="true">
         <source :media="heroMobileMedia" :srcset="withBase(heroImageFor(visualStyle, isDark, true))" />
@@ -96,25 +82,19 @@ const sectionClass = computed(() => {
     <template #home-hero-info><HomeHero /></template>
     <template #doc-top>
       <ReaderNavigation :outline-in-drawer="paperNotebook">
-        <template v-if="toolbarNotebook" #actions>
-          <button v-if="paperNotebook && paperAuthor" aria-label="框选批注" title="框选批注" :aria-pressed="paperBoxMode" @click="paperBoxMode=!paperBoxMode">
+        <template v-if="paperNotebook && paperAuthor" #actions>
+          <button aria-label="框选批注" title="框选批注" :aria-pressed="paperBoxMode" @click="paperBoxMode=!paperBoxMode">
             <ReaderIcon name="box" /><span class="notebook-tool-label">框选</span>
-          </button>
-          <button aria-label="阅读笔记" title="阅读笔记" :disabled="!notebookReady" :aria-expanded="notebookOpen" :aria-controls="notebookId" @click="notebookOpen=!notebookOpen">
-            <ReaderIcon name="notes" /><span class="notebook-tool-label">阅读笔记</span>
           </button>
         </template>
       </ReaderNavigation>
       <ClientOnly>
-        <HtmlNotebook v-if="toolbarNotebook" :key="page.relativePath" :id="notebookId" v-model:open="notebookOpen" v-model:box-mode="paperBoxMode"
-          :document="'html:'+page.relativePath" :title="page.title" :docked="paperNotebook" @ready="notebookReady=true" @author="paperAuthor=$event" />
+        <HtmlNotebook v-if="supportsHtmlNotebook(frontmatter)" :key="page.relativePath" v-model:box-mode="paperBoxMode"
+          :document="'html:'+page.relativePath" :title="page.title" :docked="paperNotebook" @author="paperAuthor=$event" />
       </ClientOnly>
     </template>
     <template #doc-before>
       <ArticleContext v-if="academicReading" />
-      <ClientOnly>
-        <HtmlNotebook v-if="!toolbarNotebook && supportsHtmlNotebook(frontmatter)" inline-launcher :key="page.relativePath" :document="'html:'+page.relativePath" :title="page.title" />
-      </ClientOnly>
       <div v-if="frontmatter.status === 'draft'" class="draft-notice">本文仍在写作中，内容尚未完成。</div>
     </template>
     <template #doc-after><RelatedReading v-if="academicReading" /></template>

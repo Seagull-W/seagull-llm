@@ -5,7 +5,7 @@ import { readingPortraitFor } from './grace-characters'
 import { themeImagePath } from '../theme/visual-styles'
 
 const host = ref<HTMLElement>()
-const readingEdge = ref(0)
+const marginWidth = ref(0)
 const { page, isDark } = useData()
 const switches = ref(0)
 watch(isDark, () => { switches.value++ }, { flush: 'sync' })
@@ -17,10 +17,15 @@ onMounted(() => {
   const paper = doc?.querySelector('.content-container')
   if (!doc || !paper) return
 
+  const viewport = window.matchMedia('screen and (min-width: 1440px)')
   const measure = () => {
+    if (!viewport.matches) {
+      marginWidth.value = 0
+      return
+    }
     const outline = doc.querySelector('.reader-toc')
     const leftmost = outline?.getClientRects().length ? outline : paper
-    readingEdge.value = Math.floor(leftmost.getBoundingClientRect().left)
+    marginWidth.value = Math.max(0, Math.floor(leftmost.getBoundingClientRect().left) - 16)
   }
   observer = new ResizeObserver(measure)
   observer.observe(doc)
@@ -35,9 +40,9 @@ onUnmounted(() => observer?.disconnect())
 </script>
 
 <template>
-  <div ref="host" class="grace-reading-portrait" :style="{ '--reading-edge': readingEdge + 'px' }" aria-hidden="true" inert>
-    <img v-if="readingEdge >= 140" :src="withBase(themeImagePath(portrait))"
-      alt="" width="425" height="972" decoding="async" draggable="false" />
+  <div ref="host" class="grace-reading-portrait" :style="{ '--portrait-margin': marginWidth + 'px' }" aria-hidden="true" inert>
+    <img v-if="marginWidth > 0" :src="withBase(themeImagePath(portrait))"
+      alt="" width="425" height="972" decoding="async" fetchpriority="low" draggable="false" />
   </div>
 </template>
 
@@ -47,7 +52,8 @@ onUnmounted(() => observer?.disconnect())
   left: 0;
   bottom: 0;
   z-index: 2;
-  width: min(var(--reading-edge), calc(76vh * 425 / 972), 425px);
+  width: min(var(--portrait-margin), 26vh, 260px);
+  opacity: .30;
   pointer-events: none;
   user-select: none;
 }

@@ -13,7 +13,7 @@ const tags = computed(() => topicTags(frontmatter.value.tags || []))
 </script>
 <template>
   <div class="article-context">
-    <div v-if="section" class="reader-imprint" aria-hidden="true">
+    <div v-if="section && style.iconSet !== 'cinema'" class="reader-imprint" aria-hidden="true">
       <GraceEmblem v-if="style.iconSet === 'grace'" :section="section.id" />
       <SectionArtwork v-else :section="section.id" />
     </div>
@@ -29,7 +29,7 @@ const tags = computed(() => topicTags(frontmatter.value.tags || []))
   margin:0 auto 14px; font:12px/1.55 var(--vp-font-family-base); color:var(--vp-c-text-2);
 }
 .reader-imprint { flex:none; width:34px; }
-.article-context .reader-imprint :deep(:is(svg,.section-photograph)) { display:block; width:100%; height:auto; }
+.article-context .reader-imprint :deep(svg) { display:block; width:100%; height:auto; }
 .article-context-copy { flex:1; min-width:0; display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 16px; }
 nav { min-width:0; display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 8px; }
 .section-link { font-weight:600; color:var(--vp-c-text-1); }

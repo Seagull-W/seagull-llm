@@ -1,8 +1,8 @@
 /* Along the Way: original film frames carry atmosphere; text keeps a quiet surface. */
 :root[data-visual-style='along-the-way'],
 .Layout.Layout[data-visual-style='along-the-way'] {
-  --vp-c-bg:#eeede6; --vp-c-bg-alt:#f6f5ef; --vp-c-bg-soft:#e3e5da;
-  --vp-c-text-1:#30372f; --vp-c-text-2:#626b5e; --vp-c-text-3:#777d6f;
+  --vp-c-bg:#f3f2ec; --vp-c-bg-alt:#f6f5ef; --vp-c-bg-soft:#e3e5da;
+  --vp-c-text-1:#232922; --vp-c-text-2:#626b5e; --vp-c-text-3:#777d6f;
   --vp-c-brand-1:#4b665a; --vp-c-brand-2:#354e43; --vp-c-brand-3:#647d6d;
   --vp-c-divider:#ccd0c2; --vp-c-border:#ccd0c2; --vp-c-border-hover:#87977d;
   --vp-button-brand-text:#f6f5ef; --vp-button-brand-hover-text:#f6f5ef;
