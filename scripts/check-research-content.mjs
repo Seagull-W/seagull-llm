@@ -9,10 +9,12 @@ const modules = await Promise.all(result.outputFiles.map(file => import(`data:te
 const { isPublicContent } = modules.find(module => module.isPublicContent)
 const { researchSidebar, researchCards } = modules.find(module => module.researchSidebar)
 const catalog = JSON.parse(await readFile('docs/research/catalog.json', 'utf8'))
+const newestFirst = [...catalog].sort((a, b) => b.date.localeCompare(a.date))
+const expectedRoutes = newestFirst.map(row => row.route)
 const index = await readFile('docs/research/index.md', 'utf8')
 const links = researchSidebar.flatMap(group => group.items)
-assert.equal(links.length, catalog.length)
-assert.equal(researchCards.length, catalog.length)
+assert.deepEqual(links.map(item => item.link), expectedRoutes)
+assert.deepEqual(researchCards.map(card => card.link), expectedRoutes)
 assert.equal(new Set(catalog.map(item => item.route)).size, catalog.length)
 for (const row of catalog) {
   const raw = await readFile(`docs${row.route}.md`, 'utf8')
@@ -44,7 +46,7 @@ if (process.argv.includes('--built')) {
   const cards = [...page.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)]
     .filter(([, attrs]) => /\bclass="[^"]*\bchapter-card\b[^"]*"/.test(attrs))
   assert.equal(cards.length, catalog.length, 'Built research cards')
-  for (const [i, row] of catalog.entries()) {
+  for (const [i, row] of newestFirst.entries()) {
     const [, attrs, body] = cards[i]
     const href = attrs.match(/\bhref="([^"]+)"/)?.[1]
     assert.ok(href?.endsWith(row.route), 'Missing or misplaced card: ' + row.route)

@@ -10,8 +10,8 @@ interface ResearchEntry {
   children?: { text: string; link: string }[]
 }
 
-// Both public entrances use the same editorial order, labels and nesting.
-const entries: ResearchEntry[] = catalog
+// List newest issues first, keeping the catalog order within each date.
+const entries: ResearchEntry[] = [...catalog].sort((a, b) => b.date.localeCompare(a.date))
 export const researchCards = entries.map(({ title, route, description, label, date }) => ({
   title, link: route, description, label: label || date,
 }))
