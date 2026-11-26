@@ -10,6 +10,7 @@ const result = await build({
   stdin: {
     contents: [
       "export * from './docs/.vitepress/data/catalog-source.ts'",
+      "export { default as graphLoader } from './docs/.vitepress/data/knowledge-graph.data.mts'",
       "export * from './docs/.vitepress/content-catalog.ts'",
       "export * from './docs/.vitepress/components/home-discovery-data.ts'",
       "export * from './docs/.vitepress/components/grace-home-data.ts'"
@@ -22,7 +23,7 @@ const result = await build({
     build.onLoad({ filter: /.*/, namespace: 'loader' }, () => ({ contents: 'export function createContentLoader(patterns, options) { return { patterns, ...options } }' }))
   } }]
 })
-const { catalogLoader, searchContent, topicTags, readingSeries, sections, getHomeTopics, discoveryGroups, graceColumns, graceIssues, connectedColumns } = await import('data:text/javascript;base64,' + Buffer.from(result.outputFiles[0].text).toString('base64'))
+const { catalogLoader, graphLoader, searchContent, topicTags, readingSeries, sections, maturities, maturityLabels, isMaturity, getHomeTopics, discoveryGroups, graceColumns, graceIssues, connectedColumns } = await import('data:text/javascript;base64,' + Buffer.from(result.outputFiles[0].text).toString('base64'))
 const inputs = readdirSync('docs', { recursive: true }).map(f => f.replaceAll('\\', '/')).filter(f => f.endsWith('.md') && !/^(?:\.vitepress|public)\//.test(f)).map(f => {
   const src = readFileSync('docs/' + f, 'utf8')
   return { src, frontmatter: matter(src).data, url: '/' + f.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '') }
@@ -59,7 +60,57 @@ test('one public catalog includes articles and individually addressable videos',
   assert.ok(pages.length >= 79)
   assert.ok(!pages.some(p => /llm-book|adr|unlisted/.test(p.url)))
   assert.ok(pages.every(p => p.title && p.section && p.description))
+  assert.ok(pages.every(p => isMaturity(p.maturity)))
+  assert.ok(pages.filter(p => p.kind === '视频').every(p => p.maturity === 'budding'))
   assert.equal(searchContent(pages, documents, '尺度变换')[0].page.url, '/videos/#BV1Meap6cEfd')
+})
+test('knowledge graph preserves the public catalog and one undirected link per article membership', () => {
+  const graph = graphLoader.transform(inputs)
+  const nodes = new Map(graph.nodes.map(node => [node.id, node]))
+  assert.equal(nodes.size, graph.nodes.length)
+  assert.deepEqual(graph.nodes.filter(node => node.kind === 'article').map(node => node.value).sort(),
+    pages.map(page => page.url).sort())
+  assert.ok(graph.nodes.every(node => Number.isFinite(node.x) && Number.isFinite(node.y)))
+  const expected = new Map(pages.map(page => [page.url, new Set([
+    'section:' + page.section, ...page.tags.map(tag => 'tag:' + tag)
+  ])]))
+  for (const { source, target } of graph.links) {
+    const article = nodes.get(source), related = nodes.get(target)
+    assert.equal(article?.kind, 'article')
+    assert.ok(related && ['section', 'tag'].includes(related.kind))
+    assert.ok(expected.get(article.value).delete(target), source + ' → ' + target)
+  }
+  assert.ok([...expected.values()].every(targets => targets.size === 0))
+  assert.equal(graph.nodes.filter(node => node.kind === 'tag').length, new Set(pages.flatMap(p => p.tags)).size)
+  assert.equal(graph.nodes.filter(node => node.kind === 'section').length, new Set(pages.map(p => p.section)).size)
+})
+test('graph coordinates are deterministic across input order, repeated tags and colliding labels', () => {
+  const input = (url, tags) => ({ url, src: '', frontmatter: { title: 'research', tags } })
+  const a = input('/cs336/lecture-01', ['research', 'a', 'a'])
+  const b = input('/research/2026-10-14-llm-post-training-agentic-rl', ['a'])
+  const graph = graphLoader.transform([a, b])
+  assert.deepEqual(graphLoader.transform([b, a]), graph)
+  assert.ok(graph.nodes.some(node => node.id === 'tag:research' && node.label === 'research'))
+  assert.ok(graph.nodes.some(node => node.id === 'section:research' && node.label === '每日调研'))
+  assert.equal(graph.links.filter(link => link.source === 'article:' + a.url && link.target === 'tag:a').length, 1)
+})
+test('explicit maturity takes precedence over research, lecture and study-note defaults', () => {
+  assert.deepEqual(maturities.map(maturity => maturityLabels[maturity]), ['幼苗', '成长', '常青'])
+  for (const value of [null, {}, 'unknown', '__proto__']) assert.equal(isMaturity(value), false)
+  const entries = [
+    ['/research/2026-10-14-llm-post-training-agentic-rl', {}, '', 'seedling'],
+    ['/research/2026-10-16-post-training-rl-benchmarks', { maturity: 'evergreen' }, '', 'evergreen'],
+    ['/cs336/lecture-01', { contentFormat: 'html' }, '', 'evergreen'],
+    ['/cs336/lecture-02', {}, '<!--@include: ./lecture-02.html-->', 'evergreen'],
+    ['/cs336/lecture-03', { maturity: 'seedling', contentFormat: 'html' }, '', 'seedling'],
+    ['/cs336/lecture-04', {}, '# Markdown', 'budding'],
+    ['/linux-notes/linux-isolation', { maturity: 'unknown', contentFormat: 'html' }, '', 'budding'],
+    ['/cs336/lecture-05', { maturity: 'budding', contentFormat: 'html' }, '', 'budding'],
+    ['/cs336/lecture-06', { status: 'draft', maturity: 'evergreen' }, '', undefined]
+  ]
+  const fixtures = entries.map(([url, fields, src]) => ({ url, src, frontmatter: { title: url, ...fields } }))
+  const byUrl = new Map(catalogLoader().transform(fixtures).map(p => [p.url, p.maturity]))
+  for (const [url, , , expected] of entries) assert.equal(byUrl.get(url), expected, url)
 })
 test('full text finds commands and groups matches by article with useful context', () => {
   const commands = searchContent(pages, documents, 'unshare --user')

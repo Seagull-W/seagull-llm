@@ -5,7 +5,7 @@ export type HtmlRegion = RegionRect & { path: number[]; fingerprint: string; lab
 export type Anchor = { quote: string; boxes: Box[]; start?: number; prefix?: string; suffix?: string; region?: HtmlRegion }
 type Identity = { id: string; created: string; updated: string; deleted?: boolean; revision?: string }
 export type Note = Identity & Anchor & { document: string; kind: Kind; body: string }
-export type Annotation = Identity & { type: 'annotation'; anchor: Anchor; comment: string | null; highlighted: boolean; favorite: boolean; published?: boolean }
+export type Annotation = Identity & { type: 'annotation'; anchor: Anchor; comment: string | null; highlighted: boolean; highlightColor?: string; favorite: boolean; published?: boolean }
 export type PaperNote = Identity & { type: 'paper'; body: string }
 export type Position = { page: number; x: number; y: number }
 export type Bookmark = Identity & { type: 'bookmark'; position: Position }
@@ -21,6 +21,16 @@ export function anchorLabel(a: Anchor) {
 const validText = (v: unknown, max: number) => typeof v === 'string' && v.length <= max
 const fraction = (n: number) => Number.isFinite(n) && n >= 0 && n <= 1
 function invalid(): never { throw new Error('备份格式或文档标识不匹配，请选择这篇文章的笔记备份。') }
+
+export function isHighlightColor(value: unknown): value is string {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)
+}
+export function normalizeEntryColor(entry: Entry): Entry {
+  if (entry.type !== 'annotation' || entry.highlightColor === undefined) return entry
+  if (!isHighlightColor(entry.highlightColor)) throw new Error('高亮颜色须为六位十六进制色值。')
+  const highlightColor = entry.highlightColor.toLowerCase()
+  return highlightColor === entry.highlightColor ? entry : { ...entry, highlightColor }
+}
 
 function rect(b: RegionRect): RegionRect {
   if (!b || !fraction(b.x) || !fraction(b.y) || !Number.isFinite(b.w) || !Number.isFinite(b.h) ||
@@ -102,8 +112,9 @@ export function validateEntry(n: Entry, kind: Kind): Entry {
           (n.comment !== null && !validText(n.comment, 100000)) ||
           typeof n.highlighted !== 'boolean' || typeof n.favorite !== 'boolean') invalid()
       if (n.published !== undefined && typeof n.published !== 'boolean') invalid()
-      return { ...meta, type: 'annotation', anchor: a, comment: n.comment, highlighted: n.highlighted, favorite: n.favorite,
-        ...(n.published === true ? {published:true} : {}) }
+      return normalizeEntryColor({ ...meta, type: 'annotation', anchor: a, comment: n.comment, highlighted: n.highlighted, favorite: n.favorite,
+        ...(n.highlightColor !== undefined ? { highlightColor: n.highlightColor } : {}),
+        ...(n.published === true ? {published:true} : {}) })
     }
     default: return invalid()
   }
@@ -116,7 +127,7 @@ export function parseBackup(input: unknown, document: string, kind: Kind): Entry
   return data.entries.map(n => validateEntry(n, kind))
 }
 export function jsonBackup(entries: Entry[], document: string, kind: Kind, title: string) {
-  return JSON.stringify({ version: 2, document, kind, title, entries }, null, 2)
+  return JSON.stringify({ version: 2, document, kind, title, entries: entries.map(normalizeEntryColor) }, null, 2)
 }
 export function markdownBackup(entries: Entry[], title: string) {
   const sections: string[] = ['# ' + title]

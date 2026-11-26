@@ -3,7 +3,14 @@ import sections from './sections.json'
 
 export { sections }
 export const textSections = sections.filter(section => section.kind !== 'gallery')
-export interface ContentEntry { title: string; url: string; description: string; tags: string[]; section: string; kind: string; updated: string }
+export const maturities = ['seedling', 'budding', 'evergreen'] as const
+export type Maturity = typeof maturities[number]
+export const maturityLabels: Record<Maturity, string> = { seedling: '幼苗', budding: '成长', evergreen: '常青' }
+export function isMaturity(value: unknown): value is Maturity {
+  return maturities.some(maturity => maturity === value)
+}
+
+export interface ContentEntry { title: string; url: string; description: string; tags: string[]; section: string; kind: string; maturity: Maturity; updated: string }
 export interface SearchSection { title: string; anchor: string; text: string }
 export interface SearchDocument { url: string; sections: SearchSection[] }
 

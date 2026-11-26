@@ -22,6 +22,10 @@ $$z^2$$
 \]
 `)
   assert.equal(countMath(html), 4)
+  assert.deepEqual([...html.matchAll(/<mjx-container[^>]*class="MathJax math-(\w+)" data-tex="([^"]*)"/g)]
+    .map(([, mode, source]) => [mode, source.trim()]), [
+    ['inline', 'x'], ['inline', 'y_i'], ['block', 'z^2'], ['block', '\\frac{a}{b}\n= c']
+  ])
   assert.doesNotMatch(html, /data-mjx-error/)
 })
 

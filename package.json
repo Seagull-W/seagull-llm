@@ -6,7 +6,7 @@
     "test:notes": "node --experimental-strip-types --test scripts/test-annotations.mjs scripts/test-notes-api.mjs",
     "tags": "node scripts/generate-content-tags.mjs",
     "test:styles": "node --experimental-strip-types scripts/test-visual-styles.mjs",
-    "test:content": "node scripts/test-native-html.mjs && node scripts/test-public-content.mjs && node scripts/test-paper-project-content.mjs && node scripts/test-markdown-math.mjs && node scripts/test-westlake-lectures.mjs && node scripts/test-academic-reading.mjs && node scripts/test-content-discovery.mjs && npm run test:notes",
+    "test:content": "node scripts/test-native-html.mjs && node scripts/test-public-content.mjs && node scripts/test-paper-project-content.mjs && node scripts/test-markdown-math.mjs && node --experimental-strip-types scripts/test-math-tex-clipboard.mjs && node scripts/test-westlake-lectures.mjs && node scripts/test-academic-reading.mjs && node scripts/test-content-discovery.mjs && npm run test:notes",
     "predev": "npm run tags",
     "prebuild": "npm run tags",
     "dev": "vitepress dev docs",
@@ -14,6 +14,10 @@
     "preview": "vitepress preview docs"
   },
   "devDependencies": {
+    "@types/d3-force": "^3.0.10",
+    "@types/d3-selection": "^3.0.11",
+    "@types/d3-zoom": "^3.0.8",
+    "d3-force": "^3.0.0",
     "fake-indexeddb": "^6.2.8",
     "gray-matter": "^4.0.3",
     "markdown-it-mathjax3": "^4.3.2",
@@ -24,6 +28,8 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
+    "d3-selection": "^3.0.0",
+    "d3-zoom": "^3.0.0",
     "jose": "^6.2.18",
     "katex": "0.19.1",
     "markdown-it": "14.3.3",

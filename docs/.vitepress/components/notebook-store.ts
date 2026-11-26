@@ -1,4 +1,4 @@
-import { fromLegacy, newerEntry, storagePrefix, validateEntry, validateNotes } from './annotations.ts'
+import { fromLegacy, newerEntry, normalizeEntryColor, storagePrefix, validateEntry, validateNotes } from './annotations.ts'
 import type { Entry, Kind } from './annotations.ts'
 
 export type SaveState = 'idle' | 'saving' | 'saved' | 'failed'
@@ -82,7 +82,7 @@ export class NotebookStore {
   stage(entries: Entry[]) {
     let direct = false
     let changed = 0
-    for (const n of entries) {
+    for (const n of entries.map(normalizeEntryColor)) {
       if (!this.merge(n)) continue
       this.pending.set(n.id, n)
       changed++

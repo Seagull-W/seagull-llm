@@ -35,7 +35,7 @@ test('imported Markdown cannot create scripts or trusted TeX commands',()=>{
  assert.match(renderNoteMarkdown('![说明](https://example.org/a.png)'),/>图片：说明<\/a>/)
 })
 
-import { anchorLabel, fromLegacy, isVisualPart, jsonBackup, markdownBackup, parseBackup } from '../docs/.vitepress/components/annotations.ts'
+import { anchorLabel, fromLegacy, isHighlightColor, isVisualPart, jsonBackup, markdownBackup, parseBackup } from '../docs/.vitepress/components/annotations.ts'
 import { NotebookStore } from '../docs/.vitepress/components/notebook-store.ts'
 
 function memoryStorage() {
@@ -52,6 +52,39 @@ function memoryStorage() {
 const paper = fromLegacy({...note,id:'paper',quote:'',boxes:[]})
 const highlight = fromLegacy({...note,body:''})
 const bookmark = {id:'bookmark',type:'bookmark',created:note.created,updated:note.updated,position:{page:2,x:.45,y:.74}}
+test('custom highlight colors survive local writes and JSON backups while old notes keep the theme default', () => {
+  const colored = { ...highlight, highlightColor: '#A1b2C3', highlighted: false }
+  const disk = memoryStorage(), session = memoryStorage()
+  const open = () => new NotebookStore(note.document, 'pdf', () => disk, () => session)
+  const book = open()
+  book.edit(colored)
+  assert.equal(book.records.get(colored.id).highlightColor, '#a1b2c3')
+  assert.equal(book.flush(), true)
+  const reopened = open()
+  reopened.load()
+  assert.equal(reopened.records.get(colored.id).highlightColor, '#a1b2c3')
+
+  const backup = JSON.parse(jsonBackup([colored], note.document, 'pdf', '论文'))
+  assert.equal(backup.entries[0].highlightColor, '#a1b2c3')
+  const [restored] = parseBackup(backup, note.document, 'pdf')
+  assert.equal(restored.highlightColor, '#a1b2c3')
+  assert.equal(restored.highlighted, false)
+  assert.equal(isHighlightColor('#000000'), true)
+  assert.equal(isHighlightColor('#FFFFFF'), true)
+  for (const value of [null, '', 'red', '#abc', '#12345g', '#123456ff', '#123456\n', 11]) {
+    assert.equal(isHighlightColor(value), false)
+    assert.throws(() => parseBackup({ ...backup, entries: [{ ...highlight, highlightColor: value }] }, note.document, 'pdf'))
+  }
+  for (const old of [
+    { version: 1, notes: [note] },
+    { ...backup, entries: [highlight] },
+    { ...backup, entries: [{ ...colored, highlightColor: undefined }] }
+  ]) {
+    const [entry] = parseBackup(old, note.document, 'pdf')
+    assert.equal(entry.highlightColor, undefined)
+    assert.ok(!jsonBackup([entry], note.document, 'pdf', '论文').includes('highlightColor'))
+  }
+})
 test('HTML region backups preserve local coordinates and an element anchor',()=>{
   const document='html:papers/deepseek-r1/index.md'
   const region={path:[3,1],fingerprint:'img|图1',label:'架构图',x:.15,y:.2,w:.3,h:.4}

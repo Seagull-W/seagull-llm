@@ -1,5 +1,5 @@
 import { onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
-import { validateEntry, type Entry, type Kind } from './annotations'
+import { normalizeEntryColor, validateEntry, type Entry, type Kind } from './annotations'
 import { claim, enqueue, finish, forkConflict, pending, type Mutation } from './notes-outbox'
 
 const loginHint='seagull-author-login'
@@ -56,7 +56,7 @@ export function useCloudNotebook(doc:string,kind:Kind) {
     if (!author.value) return
     const previous=live.get(input.id)
     const previousTime=previous ? Date.parse(previous.updated) : 0
-    const entry={...input,revision:crypto.randomUUID(),updated:new Date(Math.max(Date.now(),previousTime+1)).toISOString()}
+    const entry={...normalizeEntryColor(input),revision:crypto.randomUUID(),updated:new Date(Math.max(Date.now(),previousTime+1)).toISOString()}
     generation++
     live.set(entry.id,entry); records.value=Array.from(live.values())
     persist({doc,writer,entry,base:previous?.revision || null})

@@ -91,6 +91,19 @@ function mathBaselines(html) {
 }
 
 export default function nativeHtml(md, base = '/') {
+  // Put the source on MathJax's existing scrollable box for both Markdown
+  // tokens and native HTML. This preserves its baseline, SVG and assistive MML.
+  for (const mode of ['inline', 'block']) {
+    const rule = 'math_' + mode
+    const renderMath = md.renderer.rules[rule]
+    md.renderer.rules[rule] = (tokens, index, ...args) => {
+      const source = md.utils.escapeHtml(tokens[index].content)
+      return renderMath(tokens, index, ...args).replace(
+        /^(<mjx-container\b[^>]*? class=")([^"]*)"/,
+        (_, start, classes) => `${start}${classes} math-${mode}" data-tex="${source}"`
+      )
+    }
+  }
   const render = md.render.bind(md)
   md.render = (source, env = {}) => {
     const { data, content } = matter(source)
@@ -108,14 +121,13 @@ export default function nativeHtml(md, base = '/') {
     // Keep formula sources editable in HTML; MathJax produces static,
     // accessible SVG during compilation, with no browser-side dependency.
     html = html.replace(/<(span|div) class="math-(inline|block)" data-tex="([^"]*)"><\/\1>/g,
-      (markup, tag, mode) => {
+      (markup, _tag, mode) => {
         const node = parse(markup).children[0]
         const tex = node.props.find(prop => prop.name === 'data-tex').value.content
-        const rendered = render(mode === 'block' ? `$$\n${tex}\n$$` : `$${tex}$`, {})
-        if (mode === 'block') return rendered
+        const rendered = md.renderer.rules['math_' + mode]([{ content: tex }], 0, md.options, env, md.renderer)
         // Scrollable inline math needs the SVG's TeX depth on its outer box;
         // otherwise overflow changes the baseline to the box's bottom edge.
-        return mathBaselines(rendered.trim().replace(/^<p>|<\/p>$/g, ''))
+        return mode === 'block' ? rendered : mathBaselines(rendered)
       })
     // Browsers insert tbody around bare rows; compile the same structure so
     // hydration and the shared table controls see one consistent DOM.

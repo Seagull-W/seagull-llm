@@ -95,6 +95,11 @@
 .academic-reading .VPDoc .vp-doc blockquote p { margin-block: .5em; }
 
 /* MathJax sets the SVG baseline inline. The scrollable wrapper carries that baseline. */
+.academic-reading .vp-doc [data-tex] svg * { pointer-events: none; }
+.academic-reading .vp-doc :is(.math-inline, .math-block)[data-tex]:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 2px;
+}
 .academic-reading .VPDoc .vp-doc mjx-container:not([display='true']) {
   display: inline-block;
   max-width: calc(100% - .26em);

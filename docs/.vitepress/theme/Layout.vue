@@ -19,6 +19,7 @@ import { createVisualStyleControls, gracePortraitMedia, heroImageFor, heroMobile
 import './styles/route-arrival.css'
 import { showPageArrival } from './page-arrival'
 const HtmlNotebook = defineAsyncComponent(() => import('../components/HtmlNotebook.vue'))
+const MathTexCopy = defineAsyncComponent(() => import('../components/MathTexCopy.vue'))
 const styleControls = createVisualStyleControls()
 const visualStyle = computed(() => visualStyles[styleControls.selected.value])
 provide(visualStyleKey, visualStyle)
@@ -117,6 +118,11 @@ const sectionClass = computed(() => {
       <div v-if="frontmatter.status === 'draft'" class="draft-notice">本文仍在写作中，内容尚未完成。</div>
     </template>
     <template #doc-after><RelatedReading v-if="academicReading" /></template>
-    <template #layout-bottom><ClientOnly><ReadingMedia /></ClientOnly></template>
+    <template #layout-bottom>
+      <ClientOnly>
+        <ReadingMedia />
+        <MathTexCopy v-if="academicReading" :key="page.relativePath" :box-mode="paperBoxMode" />
+      </ClientOnly>
+    </template>
   </Layout>
 </template>

@@ -89,6 +89,20 @@ test('private import, publication, incremental sync, conflicting edits, retracti
   assert.deepEqual(await read(false),[])
 })
 
+test('owner and public readers receive the saved highlight color and the theme default after reset', async () => {
+  const db = database()
+  const read = async owner => (await (await notes(new Request(address), db, owner)).json()).rows[0].entry
+  const colored = { ...entry, published: true, highlightColor: '#F0aB7C' }
+  assert.equal((await notes(put(colored), db, true)).status, 200)
+  for (const owner of [true, false]) assert.equal((await read(owner)).highlightColor, '#f0ab7c')
+
+  const next = { ...colored, revision: crypto.randomUUID() }
+  assert.equal((await notes(put({ ...next, highlightColor: '#123' }, colored.revision), db, true)).status, 400)
+  assert.equal((await read(true)).revision, colored.revision)
+  assert.equal((await notes(put({ ...next, highlightColor: undefined }, colored.revision), db, true)).status, 200)
+  for (const owner of [true, false]) assert.equal(Object.hasOwn(await read(owner), 'highlightColor'), false)
+})
+
 test('only a signed Access identity for the intended application and allowlisted mailbox reaches owner data',async t => {
   const env={NOTES_DB:database(),ACCESS_TEAM_DOMAIN:'test.cloudflareaccess.com',ACCESS_AUD:'notes',
     NOTES_OWNER_EMAILS:'preferred@example.org,backup@example.org'}

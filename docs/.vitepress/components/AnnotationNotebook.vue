@@ -7,7 +7,7 @@ import { useAnnotationSource } from './useAnnotationSource'
 import { useCloudNotebook } from './useCloudNotebook'
 import { useNotebook } from './useNotebook'
 import { cropPdfBox } from './pdf-selection'
-import { jsonBackup, markdownBackup, newerEntry, parseBackup, type Anchor, type Annotation, type Bookmark, type Entry, type Kind, type PaperNote } from './annotations'
+import { isHighlightColor, jsonBackup, markdownBackup, newerEntry, parseBackup, type Anchor, type Annotation, type Bookmark, type Entry, type Kind, type PaperNote } from './annotations'
 import type { CardAction } from './NoteCard.vue'
 import './notebook.css'
 
@@ -21,6 +21,8 @@ const localImports = computed(() => legacy.records.value.filter(n => !n.deleted 
 function importLocal() { if (author.value) for (const n of localImports.value) edit(n.type==='annotation' ? {...n,published:false} : n) }
 const host = ref<HTMLElement>(), panel = ref<InstanceType<typeof NotebookPanel>>()
 const section = ref<Entry['type']>('annotation'), active = ref(''), message = ref('')
+const penColor = ref<string>()
+const penPreferenceKey = 'seagull-annotation-pen-color'
 const undo = shallowRef<() => void>()
 let messageTimer: ReturnType<typeof setTimeout>
 function notice(text:string) { message.value=text; clearTimeout(messageTimer); messageTimer=setTimeout(() => { message.value='' },3200) }
@@ -32,7 +34,7 @@ const papers = computed(() => records.value.filter((n): n is PaperNote => !n.del
 const bookmarks = computed(() => records.value.filter((n): n is Bookmark => !n.deleted && n.type==='bookmark').sort((a,b) => a.position.page-b.position.page || a.position.y-b.position.y))
 const markSources = computed<Annotation[]>(previous => {
   const rows=annotations.value
-  return previous?.length===rows.length && rows.every((n,i) => n.id===previous[i].id && n.anchor===previous[i].anchor && n.highlighted===previous[i].highlighted) ? previous : rows
+  return previous?.length===rows.length && rows.every((n,i) => n.id===previous[i].id && n.anchor===previous[i].anchor && n.highlighted===previous[i].highlighted && n.highlightColor===previous[i].highlightColor) ? previous : rows
 })
 const { marks,missing,selection,visualRects,toolPoint,clearSelection,boxMode,connector,sourceImages,layout,pageRendered,focusSource,readingPosition,goToPosition } = useAnnotationSource({
   editable:() => author.value, kind:props.kind, target:() => props.target, annotations:markSources, active, panel:host, showing:() => open.value && section.value==='annotation',
@@ -75,6 +77,10 @@ function restorePanel() {
 watch(() => props.wideDock, restorePanel)
 watch(hasContent, () => { if (initialized) applyDefault() })
 onMounted(() => {
+  try {
+    const saved = localStorage.getItem(penPreferenceKey)
+    if (isHighlightColor(saved)) penColor.value = saved.toLowerCase()
+  } catch {}
   restorePanel()
   if (props.kind==='html') document.body.classList.toggle('annotation-html-open',open.value)
   initialized=true
@@ -145,12 +151,28 @@ function sameAnchor(a:Anchor,b:Anchor) {
 function createAnnotation(anchor:Anchor, action:'highlight'|'comment'|'favorite') {
   const old=annotations.value.find(n => sameAnchor(n.anchor,anchor))
   const n:Annotation=old ? {...old} : {...meta(),type:'annotation',anchor,highlighted:false,comment:null,favorite:false}
-  if (action==='comment') { n.comment??=''; if (!old) n.highlighted=true }
-  if (action==='highlight') n.highlighted=true
+  if (action==='comment') n.comment??=''
+  if (action==='highlight' || (action==='comment' && !old)) {
+    n.highlighted=true
+    n.highlightColor=penColor.value
+  }
   if (action==='favorite') n.favorite=true
   edit(n); clearSelection()
   if (action==='comment') show(n,true,true)
   else notice(action==='highlight'?'已高亮':'已收藏选文')
+}
+function highlightSelection(color?:string) {
+  if (!author.value || !selection.value) return
+  penColor.value=color
+  try {
+    if (color) localStorage.setItem(penPreferenceKey,color)
+    else localStorage.removeItem(penPreferenceKey)
+  } catch {}
+  createAnnotation(selection.value,'highlight')
+}
+function recolor(note:Annotation,color?:string) {
+  if (!author.value || (note.highlighted && note.highlightColor===color)) return
+  edit({...note,highlighted:true,highlightColor:color})
 }
 function addPaper() { const n:PaperNote={...meta(),type:'paper',body:''}; edit(n); show(n,true) }
 function addBookmark(position=readingPosition()) {
@@ -235,10 +257,10 @@ defineExpose({toggleBox,pageRendered})
   <div ref="host" class="annotation-notebook" :class="{'notebook-open':open,'notebook-html':kind==='html','notebook-docked':docked}">
     <NotebookDivider v-show="open" :kind="kind" :docked="docked" />
     <NotebookPanel v-show="open" ref="panel" v-model:section="section" :kind="kind" :annotations="annotations" :papers="papers" :bookmarks="bookmarks" :active="active" :author="author" :status="status" :conflict="!!conflicts.length" :local-count="localImports.length" :images="sourceImages" :missing="missing" :can-undo="!!undo"
-      @close="open=false" @retry="retry" @login="login" @logout="logout" @resolve="resolveConflicts" @import-local="importLocal" @backup="backup" @import="importFile" @undo="restore" @add-paper="addPaper" @add-bookmark="addBookmark()" @bookmark="goToPosition($event.position)" @remove="remove" @body="updateBody" @action="act" @layout="layout" />
+      @close="open=false" @retry="retry" @login="login" @logout="logout" @resolve="resolveConflicts" @import-local="importLocal" @backup="backup" @import="importFile" @undo="restore" @add-paper="addPaper" @add-bookmark="addBookmark()" @bookmark="goToPosition($event.position)" @remove="remove" @body="updateBody" @action="act" @color="recolor" @layout="layout" />
     <Teleport to="body">
       <div v-for="(r,i) in visualRects" :key="i" class="annotation-direct-selection" aria-hidden="true" :style="{left:r.x+'px',top:r.y+'px',width:r.width+'px',height:r.height+'px'}" />
-      <SelectionToolbar v-if="author && selection && toolPoint" :point="toolPoint" :pdf="kind==='pdf'" :image-only="!selection.quote" @highlight="createAnnotation(selection,'highlight')" @comment="createAnnotation(selection,'comment')" @favorite="createAnnotation(selection,'favorite')" @copy="copySelection" @bookmark="bookmarkSelection" @dismiss="clearSelection" />
+      <SelectionToolbar v-if="author && selection && toolPoint" :point="toolPoint" :pdf="kind==='pdf'" :image-only="!selection.quote" :highlight-color="penColor" @highlight="createAnnotation(selection,'highlight')" @color="highlightSelection" @comment="createAnnotation(selection,'comment')" @favorite="createAnnotation(selection,'favorite')" @copy="copySelection" @bookmark="bookmarkSelection" @dismiss="clearSelection" />
       <svg v-if="connector" class="annotation-connector" aria-hidden="true"><path :d="connector" /></svg>
       <div v-if="message || boxMode" class="notebook-toast" role="status">
         <template v-if="boxMode">{{kind==='pdf'?'在 PDF 页内拖动框选区域。':'在正文中拖动框选区域。'}}<button @click="toggleBox">取消框选</button></template>
@@ -246,7 +268,7 @@ defineExpose({toggleBox,pageRendered})
       </div>
     </Teleport>
     <Teleport v-for="m in marks" :key="m.id+'-'+m.part" :to="m.parent">
-      <span class="annotation-mark" :data-mark-id="m.id" :data-part="m.part" :class="{'is-filled':m.filled,'is-region':m.area,'is-current':open && section==='annotation' && active===m.id}" :style="m.style">
+      <span class="annotation-mark" :data-mark-id="m.id" :data-part="m.part" :class="{'is-filled':m.filled,'is-colored':m.filled && m.color,'is-region':m.area,'is-current':open && section==='annotation' && active===m.id}" :style="[m.style, {'--nw-mark-color':m.color}]">
         <button v-if="m.part===0 && !m.marginTop" class="annotation-number" :aria-label="'查看原文批注 '+m.number" @click.stop="openMark(m.id,m.part)">{{m.number}}</button>
       </span>
       <span v-if="m.marginTop" class="annotation-mark margin-marker" :class="{'is-current':open && section==='annotation' && active===m.id}" :style="{top:m.marginTop}">

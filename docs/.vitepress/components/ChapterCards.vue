@@ -1,14 +1,22 @@
 <script setup lang="ts">
 import { withBase } from 'vitepress'
+import { maturityLabels, type Maturity } from '../content-catalog'
 import { useVisualStyle } from '../theme/visual-styles'
-defineProps<{ items: { title: string; link: string; description: string; label?: string; date?: string }[] }>()
+import MaturityIcon from './MaturityIcon.vue'
+defineProps<{ items: { title: string; link: string; description: string; label?: string; date?: string; maturity?: Maturity }[] }>()
 const visual = useVisualStyle()
 </script>
 <template>
   <nav class="chapter-cards" aria-label="文章列表" :data-index="visual.iconSet">
     <a v-for="(item,i) in items" :key="item.link" class="chapter-card" :href="withBase(item.link)">
       <span class="chapter-no" aria-hidden="true">{{ String(i + 1).padStart(2,'0') }}</span>
-      <span v-if="item.label || item.date" class="chapter-card-meta"><span v-if="item.label">{{ item.label }}</span><time v-if="item.date" :datetime="item.date">{{ item.date }}</time></span>
+      <span v-if="item.label || item.date || item.maturity" class="chapter-card-meta">
+        <span v-if="item.label">{{ item.label }}</span>
+        <time v-if="item.date" :datetime="item.date">{{ item.date }}</time>
+        <span v-if="item.maturity" class="chapter-card-maturity">
+          <MaturityIcon :maturity="item.maturity" />{{ maturityLabels[item.maturity] }}
+        </span>
+      </span>
       <span class="chapter-card-title">{{ item.title }}<span class="chapter-card-arrow" aria-hidden="true">→</span></span>
       <span class="chapter-card-description">{{ item.description }}</span>
     </a>

@@ -3,7 +3,7 @@ import { isVisualPart, locateQuote, type Anchor, type Annotation, type Box, type
 import { cropPdfBox, imageAt, pageBounds, pdfSelection } from './pdf-selection'
 import { captureHtmlRegion, cropHtmlRegion, locateHtmlRegion, regionBounds as boundsFor, revealHtmlRegion, visibleRegionBounds } from './html-selection'
 
-type Mark = { id: string; part: number; number: number; filled: boolean; area?: boolean; marginTop?: string; parent: HTMLElement; style: Record<string, string> }
+type Mark = { id: string; part: number; number: number; filled: boolean; color?: string; area?: boolean; marginTop?: string; parent: HTMLElement; style: Record<string, string> }
 type Point = { x: number; y: number }
 const bound = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 const frame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
@@ -92,7 +92,7 @@ export function useAnnotationSource(options: {
       const nextBadgeY = new Map<number, number>()
       const nodes = kind === 'html' ? textNodes(root) : [], text = nodes.map(n => n.data).join('')
       for (const [i, n] of options.annotations.value.entries()) {
-        const base = { id: n.id, number: i + 1, filled: n.highlighted }
+        const base = { id: n.id, number: i + 1, filled: n.highlighted, color: n.highlightColor }
         if (kind === 'pdf') {
           n.anchor.boxes.forEach((b, part) => {
             let parent = parents.get(b.page)
@@ -409,6 +409,9 @@ export function useAnnotationSource(options: {
   }
   function selectionChanged() {
     if (selecting || drag) return
+    // Moving focus into the palette can collapse the browser range. Keep the
+    // captured anchor until the author applies a color or leaves the toolbar.
+    if (selection.value && document.activeElement?.closest('.selection-actions')) return
     if (ownedRange()) capture()
     else if (!direct || !window.getSelection()?.isCollapsed) resetSelection()
   }
@@ -434,7 +437,14 @@ export function useAnnotationSource(options: {
   }
   function keydown(e: KeyboardEvent) {
     if (!options.editable()) return
+    const el = e.target instanceof Element ? e.target : null
+    if (e.key === 'Tab' && !e.shiftKey && selection.value && toolPoint.value &&
+        (el === document.body || el === scroller() || (el && target()?.contains(el)))) {
+      const button = document.querySelector<HTMLButtonElement>('.selection-actions button')
+      if (button) { e.preventDefault(); button.focus({preventScroll:true}); return }
+    }
     if (e.key === 'Escape' && (boxMode.value || selection.value)) {
+      if (el?.closest('.selection-actions .highlight-color-picker')) return
       e.preventDefault(); e.stopPropagation(); cancelDrag(); boxMode.value = false; clearSelection()
       return
     }
@@ -442,7 +452,6 @@ export function useAnnotationSource(options: {
         e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
     if (e.repeat && consumedEnter) { e.preventDefault(); return }
     if (e.repeat || boxMode.value || selecting) return
-    const el = e.target instanceof Element ? e.target : null
     if (el?.closest('input,textarea,select,button,a[href],summary,[role=textbox],[role=button]') ||
         (el instanceof HTMLElement && el.isContentEditable)) return
     if (el && el !== document.body && el !== document.documentElement && el !== scroller() && !target()?.contains(el)) return

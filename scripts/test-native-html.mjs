@@ -91,9 +91,15 @@ test('native figures reserve their size and bare table rows hydrate consistently
 })
 test('editable HTML formulas compile to accessible static math', () => {
   const env = {}
-  const html = md.render('---\ncontentFormat: html\n---\n<h1>Math</h1><span class="math-inline" data-tex="x &lt; y"></span><div class="math-block" data-tex="\\frac{a}{b}"></div>', env)
+  const block = String.raw`\begin{aligned}
+x &amp;= \text{&quot;a&quot;} \\
+y &amp;= 2
+\end{aligned}`
+  const html = md.render(`---\ncontentFormat: html\n---\n<h1>Math</h1><span class="math-inline" data-tex="x &lt; y"></span><div class="math-block" data-tex="${block}"></div>`, env)
   assert.equal((html.match(/<mjx-container/g) ?? []).length, 2)
-  assert.doesNotMatch(html, /data-mjx-error|data-tex=/)
+  assert.doesNotMatch(html, /data-mjx-error/)
+  assert.match(html, /<mjx-container[^>]*class="MathJax math-inline" data-tex="x &lt; y"/)
+  assert.ok(html.includes(`class="MathJax math-block" data-tex="${block}"`))
   assert.match(html, /<mjx-assistive-mml/)
   const subscript = md.render('---\ncontentFormat: html\n---\n<span class="math-inline" data-tex="p_i"></span>', {})
   assert.match(subscript, /--math-baseline:-[\d.]+ex/)

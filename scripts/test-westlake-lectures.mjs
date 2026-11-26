@@ -36,7 +36,9 @@ for (const page of pages) {
     // A full rendering pass catches unsupported TeX, not just source counts.
     const env = { path: resolve(file) }
     const rendered = md.render(source.replace(/<!--@include:[\s\S]*?-->/, content), env)
-    assert.doesNotMatch(rendered, /data-mjx-error|<merror\b|data-tex=/)
+    assert.doesNotMatch(rendered, /data-mjx-error|<merror\b/)
+    assert.equal((rendered.match(/class="MathJax math-(?:inline|block)" data-tex="/g) ?? []).length,
+      (htmlBody.match(/class="math-(?:inline|block)" data-tex="/g) ?? []).length)
     assert.match(rendered, /<mjx-assistive-mml/)
     assert.equal((rendered.match(/<mjx-container[^>]+display="true"/g) ?? []).length, page.math.DisplayMath)
     const pdfLink = rendered.match(/<a href="([^"]+)">阅读原版 PDF<\/a>/)

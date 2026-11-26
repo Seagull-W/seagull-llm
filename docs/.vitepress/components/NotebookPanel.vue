@@ -9,7 +9,7 @@ const props = defineProps<{ kind:Kind; annotations:Annotation[]; papers:PaperNot
 const section = defineModel<Section>('section',{required:true})
 const emit = defineEmits<{ close:[]; retry:[]; login:[]; logout:[]; importLocal:[]; resolve:[]; backup:[format:'json'|'md']; import:[file:File]; undo:[]
   addPaper:[]; addBookmark:[]; bookmark:[entry:Bookmark]; remove:[entry:Entry]; body:[entry:Annotation|PaperNote,body:string]
-  action:[entry:Annotation|PaperNote,name:CardAction,part?:number]; layout:[] }>()
+  action:[entry:Annotation|PaperNote,name:CardAction,part?:number]; color:[entry:Annotation,color:string|undefined]; layout:[] }>()
 const panel = ref<HTMLElement>(), file = ref<HTMLInputElement>(), backup = ref<HTMLDetailsElement>()
 const editing = ref(''), mode = ref<CardMode>('read'), sort = ref('position'), favorites = ref(false)
 const editedNote = computed(() => {
@@ -127,7 +127,8 @@ defineExpose({reveal, finish:() => setMode('','read')})
       <div class="notebook-list">
         <p v-if="!order.length" class="notebook-empty">{{!author?'暂无公开批注。':favorites?'暂无收藏的选文。':kind==='pdf'?'拖选文字或点选图像，按 Enter 写批注。':'选中原文后按 Enter 写批注。'}}</p>
         <NoteCard :author="author" v-for="n in order" :key="n.id" :note="n" :number="numbers.get(n.id)!" :mode="editing===n.id?mode:'read'" :active="active===n.id" :images="images" :show-time="sort==='time'" :missing="missing.includes(n.id)"
-          @action="(name,part)=>emit('action',n,name,part)" @mode="finishEditing" @body="emit('body',n,$event)" />
+          @action="(name,part)=>emit('action',n,name,part)" @mode="finishEditing" @body="emit('body',n,$event)"
+          @color="emit('color',n,$event)" @layout="emit('layout')" />
       </div>
     </div>
     <div v-if="author" v-show="section==='paper'" class="notebook-section">

@@ -3,11 +3,17 @@ import { existsSync, readFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { createContentLoader } from 'vitepress'
 import { isPublicContent } from '../public-content'
-import { kindFor, newestFirst, sectionFor, topicTags, type ContentEntry, type SearchDocument } from '../content-catalog'
+import { isMaturity, kindFor, newestFirst, sectionFor, topicTags, type ContentEntry, type Maturity, type SearchDocument } from '../content-catalog'
 import { scienceVideos } from './videos'
 
 // VitePress 1.x heading slug rules; kept in sync by the search anchor check.
 const slugify = (s: string) => s.normalize('NFKD').replace(/[\u0300-\u036f\u0000-\u001f]/g, '').replace(/[\s~`!@#$%^&*()\-_+=[\]{}|\\;:"'“”‘’<>,.?/]+/g, '-').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '').replace(/^(\d)/, '_$1').toLowerCase()
+
+function maturityFor(value: unknown, section: string, kind: string, html: boolean): Maturity {
+  if (isMaturity(value)) return value
+  if (section === 'research') return 'seedling'
+  return kind === '课程讲义' && html ? 'evergreen' : 'budding'
+}
 
 // Checkout times are not content update dates. Read history once per loader.
 function updateDates() {
@@ -42,11 +48,12 @@ export function searchSections(source: string, html: boolean) {
     return { title, anchor, text: plainText(source.slice(match.index! + match[0].length, headings[i + 1]?.index)) }
   })].filter(part => part.title || part.text)
 }
-export function catalogLoader(fullText = false) {
+export function catalogLoader<T = ContentEntry[]>(output: boolean | ((entries: ContentEntry[]) => T) = false) {
+  const fullText = output === true
   const dates = updateDates()
   return createContentLoader(['**/*.md', '**/*.html'], {
     includeSrc: true,
-    transform(pages): ContentEntry[] | SearchDocument[] {
+    transform(pages): ContentEntry[] | SearchDocument[] | T {
       const catalog: ContentEntry[] = [], documents: SearchDocument[] = []
       for (const page of pages) {
         if (!isPublicContent(page.url, page.frontmatter) || page.url.replace(/\/$/, '') === '/videos') continue
@@ -57,15 +64,19 @@ export function catalogLoader(fullText = false) {
         const htmlFile = include ? resolve(dirname(file), include[1]) : ''
         if (htmlFile && existsSync(htmlFile)) source = readFileSync(htmlFile, 'utf8')
         const fm = page.frontmatter
+        const section = sectionFor(page.url)?.id || ''
+        const kind = kindFor(page.url)
+        const maturity = maturityFor(fm.maturity, section, kind, fm.contentFormat === 'html' || Boolean(include))
         // Research is chronological: editing an older report must not promote it.
-        const researchDate = sectionFor(page.url)?.id === 'research'
+        const researchDate = section === 'research'
           ? (fm.date instanceof Date ? fm.date.toISOString().slice(0, 10) : String(fm.date || '').slice(0, 10)) || page.url.match(/^\/research\/(\d{4}-\d{2}-\d{2})-/)?.[1]
           : ''
         const date = researchDate || [dates.get('docs/' + relative), dates.get('docs/' + relative.replace(/\.md$/, '.html')), String(fm.updated || fm.date || '').slice(0, 10)].filter(Boolean).sort().at(-1) || ''
-        catalog.push({ title: String(fm.title), url: page.url, description: String(fm.description || ''), tags: topicTags(fm.tags || []), section: sectionFor(page.url)?.id || '', kind: kindFor(page.url), updated: date })
+        catalog.push({ title: String(fm.title), url: page.url, description: String(fm.description || ''), tags: topicTags(fm.tags || []), section, kind, maturity, updated: date })
         if (fullText) documents.push({ url: page.url, sections: searchSections(source, Boolean(htmlFile)) })
       }
-      for (const video of scienceVideos) catalog.push({ title: video.title, url: '/videos/#' + video.bvid, description: video.description, tags: video.bvid === 'BV1VTaZ6iE6Q' ? ['强化学习', 'RLHF', 'GAE'] : ['梯度下降'], section: 'videos', kind: '视频', updated: video.publishedAt })
+      for (const video of scienceVideos) catalog.push({ title: video.title, url: '/videos/#' + video.bvid, description: video.description, tags: video.bvid === 'BV1VTaZ6iE6Q' ? ['强化学习', 'RLHF', 'GAE'] : ['梯度下降'], section: 'videos', kind: '视频', maturity: 'budding', updated: video.publishedAt })
+      if (typeof output === 'function') return output(catalog)
       return fullText ? documents : catalog.sort(newestFirst)
     }
   })
