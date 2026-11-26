@@ -20,10 +20,16 @@ function toggleDaylight() {
   warmAppearancePicture(style.value, !isDark.value)
   changeAppearance(style.value.iconSet, () => { isDark.value = !isDark.value }, isDark.value ? 'blessing' : 'moonlight')
 }
+function openGraph() {
+  window.dispatchEvent(new Event('seagull-graph'))
+}
 </script>
 
 <template>
   <div class="seagull-nav-actions"><slot />
+    <button class="graph-toggle" type="button" aria-haspopup="dialog" title="全屏知识星图 (Ctrl+Shift+G)" aria-label="打开全屏知识星图" @click="openGraph">
+      <InterfaceIcon name="graph" /><span class="action-label">星图</span>
+    </button>
     <StyleSwitcher />
     <ClientOnly><Teleport to="body"><GraceTransitionLight v-if="style.iconSet === 'grace'" /></Teleport></ClientOnly>
     <button class="theme-toggle" type="button" :aria-pressed="dark" :title="dark ? '切换到浅色模式' : '切换到深色模式'" aria-label="深色主题"

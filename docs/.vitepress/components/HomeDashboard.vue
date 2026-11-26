@@ -35,10 +35,22 @@ watch(active, () => {
   }
 }, { flush: 'post' })
 function search() { window.dispatchEvent(new Event('seagull-search')) }
+function openGraph() { window.dispatchEvent(new Event('seagull-graph')) }
 </script>
 <template>
   <div class="home-dashboard" :data-index="style.iconSet">
-    <div v-if="style.iconSet === 'paper' || style.iconSet === 'cinema'" class="home-discover"><button class="home-search" aria-haspopup="dialog" @click="search"><InterfaceIcon name="search" /> 搜索笔记、论文、主题…<span class="search-key">Ctrl K</span></button><a :href="withBase('/tags')">全部内容 <span aria-hidden="true">→</span></a></div>
+    <div v-if="style.iconSet === 'paper' || style.iconSet === 'cinema'" class="home-discover">
+      <button class="home-search" aria-haspopup="dialog" @click="search"><InterfaceIcon name="search" /> 搜索笔记、论文、主题…<span class="search-key">Ctrl K</span></button>
+      <button type="button" class="home-graph-trigger" aria-haspopup="dialog" @click="openGraph"><InterfaceIcon name="graph" /><span>知识星图</span></button>
+      <a :href="withBase('/tags')">全部内容 <span aria-hidden="true">→</span></a>
+    </div>
+    <div v-else class="home-atlas-bar">
+      <button type="button" class="home-graph-trigger is-banner" aria-haspopup="dialog" @click="openGraph">
+        <InterfaceIcon name="graph" />
+        <span class="atlas-copy"><strong>全屏知识星图</strong><small>漫游 {{ pages.length }} 篇笔记、论文与主题星轨</small></span>
+        <span class="atlas-cta" aria-hidden="true">进入星图 ↗</span>
+      </button>
+    </div>
     <template v-if="style.iconSet === 'paper' || style.iconSet === 'pixel'">
       <PaperDiscovery v-if="style.iconSet === 'paper'" :pages="pages" />
       <PixelCliffDiscovery v-else :pages="pages" />
@@ -63,10 +75,32 @@ function search() { window.dispatchEvent(new Event('seagull-search')) }
 .home-dashboard a { text-decoration:none; font-weight:400; }
 .home-dashboard h2,.home-dashboard h3 { margin:0; padding:0; border:0; }
 .home-dashboard p { margin-bottom:0; }
-.home-discover { display:flex; align-items:center; gap:24px; margin:0 0 34px; }
+.home-discover { display:flex; align-items:center; gap:14px; margin:0 0 34px; }
 .home-search { flex:1; display:flex; align-items:center; text-align:left; gap:10px; padding:14px 18px; border:1px solid var(--vp-c-divider); border-radius:8px; background:var(--vp-c-bg-alt); color:var(--vp-c-text-2); font-size:15px; min-height:54px; }
 .home-search > span:first-child { font-size:25px; color:var(--vp-c-brand-1); }
 .search-key { margin-left:auto; font-size:11px; opacity:.7; }
+.home-graph-trigger {
+  position:relative; display:inline-flex; align-items:center; gap:8px; min-height:54px; padding:0 16px;
+  border:1px solid color-mix(in srgb, var(--vp-c-brand-1) 42%, var(--vp-c-divider)); border-radius:8px;
+  background:linear-gradient(135deg, color-mix(in srgb, var(--vp-c-brand-1) 12%, var(--vp-c-bg-alt)), var(--vp-c-bg-alt));
+  color:var(--vp-c-brand-1); font-size:14px; font-weight:600; white-space:nowrap; flex:none;
+  transition:border-color .18s, background-color .18s, box-shadow .18s, transform .18s;
+}
+.home-graph-trigger:hover {
+  border-color:var(--vp-c-brand-1);
+  box-shadow:0 6px 20px color-mix(in srgb, var(--vp-c-brand-1) 20%, transparent);
+  transform:translateY(-1px);
+}
+.home-graph-trigger:focus-visible { outline:2px solid var(--vp-c-brand-1); outline-offset:2px; }
+.home-atlas-bar { display:flex; justify-content:flex-end; margin:0 0 20px; }
+.home-graph-trigger.is-banner {
+  width:100%; justify-content:flex-start; gap:12px; min-height:52px; padding:10px 16px;
+  backdrop-filter:blur(10px);
+}
+.atlas-copy { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; text-align:left; }
+.atlas-copy strong { font-size:14px; color:var(--vp-c-text-1); }
+.atlas-copy small { font-size:12px; font-weight:400; color:var(--vp-c-text-2); }
+.atlas-cta { margin-inline-start:auto; font-size:12px; color:var(--vp-c-brand-1); }
 .home-discover > a,.home-heading > a { font-size:13px; color:var(--vp-c-brand-1); flex:none; white-space:nowrap; }
 .home-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
 .home-heading h2 { font-size:22px; font-weight:600; line-height:1.5; }

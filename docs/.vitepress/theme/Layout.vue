@@ -20,6 +20,7 @@ import './styles/route-arrival.css'
 import { showPageArrival } from './page-arrival'
 const HtmlNotebook = defineAsyncComponent(() => import('../components/HtmlNotebook.vue'))
 const MathTexCopy = defineAsyncComponent(() => import('../components/MathTexCopy.vue'))
+const KnowledgeGraphModal = defineAsyncComponent(() => import('../components/KnowledgeGraphModal.vue'))
 const styleControls = createVisualStyleControls()
 const visualStyle = computed(() => visualStyles[styleControls.selected.value])
 provide(visualStyleKey, visualStyle)
@@ -102,6 +103,7 @@ const sectionClass = computed(() => {
       <ClientOnly>
         <ReadingMedia />
         <MathTexCopy v-if="academicReading" :key="page.relativePath" :box-mode="paperBoxMode" />
+        <KnowledgeGraphModal />
       </ClientOnly>
     </template>
   </Layout>

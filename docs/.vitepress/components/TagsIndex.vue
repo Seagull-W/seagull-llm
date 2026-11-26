@@ -81,6 +81,9 @@ function selectView(mode: 'list' | 'graph') {
   view.value = mode
   writeUrl()
 }
+function openFullscreenGraph() {
+  window.dispatchEvent(new Event('seagull-graph'))
+}
 function selectSection(id: string) {
   section.value = id
   writeUrl()
@@ -156,7 +159,7 @@ onUnmounted(() => {
     <p v-if="!filtered.length" class="tag-empty">没有找到匹配的内容。试试其他关键词，或清除筛选。</p>
     <ChapterCards v-else-if="view === 'list'" :items="cards" />
     <ClientOnly v-else>
-      <KnowledgeGraph :pages="filtered" @tag="selectTag" @section="selectSection" />
+      <KnowledgeGraph :pages="filtered" show-fullscreen-button @tag="selectTag" @section="selectSection" @expand="openFullscreenGraph" />
     </ClientOnly>
   </section>
 </template>
