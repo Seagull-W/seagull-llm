@@ -1,4 +1,61 @@
-/* The article text retains the shared reading measure. Navigation takes the visual style's form. */
+/* academic-reading.css sets the measure, left alignment and section spacing.
+   Use ::after so a chapter's own ::before counter stays in the text flow. */
+@media screen {
+  .academic-reading .vp-doc h2[id]::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+  }
+
+  .academic-reading:is([data-visual-style='paper-coast'], [data-visual-style='pixel-voyage']) .vp-doc h2[id]::after {
+    inset-inline-start: -12px;
+    top: .7em;
+    transform: translateY(-50%);
+  }
+  .academic-reading[data-visual-style='paper-coast'] .vp-doc h2[id]::after {
+    width: 3px;
+    height: .85em;
+    border-radius: 2px;
+    background: var(--vp-c-brand-1);
+  }
+  .academic-reading[data-visual-style='pixel-voyage'] .vp-doc h2[id]::after {
+    width: 6px;
+    height: 6px;
+    background: var(--pixel-signal);
+  }
+  /* The permalink uses the same gutter when the reader points to a heading or tabs to it. */
+  .academic-reading:is([data-visual-style='paper-coast'], [data-visual-style='pixel-voyage']) .vp-doc h2[id]:is(:hover, :has(.header-anchor:focus-visible))::after {
+    visibility: hidden;
+  }
+
+  .academic-reading[data-visual-style='along-the-way'] .vp-doc h2[id] {
+    font-family: 'Seagull Academic Serif', 'Noto Serif SC', 'Songti SC', serif;
+  }
+  .academic-reading[data-visual-style='grace-archive'] .vp-doc h2[id] {
+    font-family: var(--grace-serif);
+    color: var(--vp-c-brand-1);
+  }
+  .academic-reading:is([data-visual-style='along-the-way'], [data-visual-style='grace-archive']) .vp-doc h2[id]::after {
+    inset-inline-start: 0;
+    bottom: -.3em;
+    height: 1px;
+  }
+  .academic-reading[data-visual-style='along-the-way'] .vp-doc h2[id]::after {
+    width: 32px;
+    background: var(--journey-warm);
+  }
+  .academic-reading[data-visual-style='grace-archive'] .vp-doc h2[id]::after {
+    width: 5em;
+    background: linear-gradient(to right, var(--grace-etch), transparent);
+  }
+}
+
+@media screen and (max-width: 639px) {
+  .academic-reading:is([data-visual-style='paper-coast'], [data-visual-style='pixel-voyage']) .vp-doc h2[id]::after {
+    inset-inline-start: -8px;
+  }
+}
+
 .reader-pocket-position { display:none; }
 .reader-position { margin-bottom:8px; }
 .position-counter, .section-turns { display:flex; justify-content:space-between; gap:8px; align-items:center; }
