@@ -1,0 +1,16 @@
+<script setup lang="ts">
+import { useRouter, withBase } from 'vitepress'
+import KnowledgeAtlas from './.vitepress/components/KnowledgeAtlas.vue'
+import { data as pages } from './.vitepress/data/tagged-pages.data'
+
+const router = useRouter()
+</script>
+
+<main class="atlas-page">
+  <h1 class="sr-only">全屏知识星图</h1>
+  <KnowledgeAtlas :pages="pages" @close="router.go(withBase('/tags'))" />
+</main>
+
+<style scoped>
+.atlas-page { position: fixed; inset: 0; background: #050a10; }
+</style>

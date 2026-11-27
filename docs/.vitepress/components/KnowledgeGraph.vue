@@ -25,7 +25,7 @@ const emit = defineEmits<{
 <template>
   <KnowledgeAtlas v-if="fullscreen" :pages="pages"
     @tag="emit('tag', $event)" @section="emit('section', $event)"
-    @close="emit('close')" @expand="emit('expand')" />
+    @close="emit('close')" @navigate="emit('close')" @expand="emit('expand')" />
   <KnowledgeGraphEmbedded v-else :pages="pages" :show-fullscreen-button="showFullscreenButton"
     @tag="emit('tag', $event)" @section="emit('section', $event)"
     @close="emit('close')" @expand="emit('expand')" />

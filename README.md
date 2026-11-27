@@ -25,9 +25,9 @@
 
 打开网站顶栏的「星图」，按 `/` 搜索「奖励」，选中《奖励、优势与策略更新》。亮起的连线通向这篇文章所属的栏目和主题。点「前往阅读」打开正文，或选中相邻的主题，继续找同一问题下的其他笔记。
 
-[![知识星图中选中《奖励、优势与策略更新》，连线标出关联节点，底部卡片提供阅读入口](design/readme/knowledge-atlas.webp)](https://seagull-llm.pages.dev/tags?view=graph)
+[![知识星图中选中《奖励、优势与策略更新》，连线标出关联节点，底部卡片提供阅读入口](design/readme/knowledge-atlas.webp)](https://seagull-llm.pages.dev/atlas)
 
-知道关键词时，顶栏搜索可以直接查正文。想缩小阅读范围，可以在主题索引里叠加栏目、内容类型和「幼苗／成长／常青」成熟度筛选。[打开图谱](https://seagull-llm.pages.dev/tags?view=graph) · [浏览「强化学习」主题](https://seagull-llm.pages.dev/tags#强化学习)
+知道关键词时，顶栏搜索可以直接查正文。想缩小阅读范围，可以在主题索引里叠加栏目、内容类型和「幼苗／成长／常青」成熟度筛选。[打开全屏知识星图](https://seagull-llm.pages.dev/atlas) · [浏览「强化学习」主题](https://seagull-llm.pages.dev/tags#强化学习)
 
 ## 精选调研 · 0.5B–3B 小模型预训练
 

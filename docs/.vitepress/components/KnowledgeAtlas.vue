@@ -7,7 +7,7 @@ import { useVisualStyle } from '../theme/visual-styles'
 import { createAtlasEngine, type AtlasEngine } from './atlas/atlas-engine'
 
 const props = defineProps<{ pages: ContentEntry[] }>()
-const emit = defineEmits<{ tag: [value: string]; section: [value: string]; close: []; expand: [] }>()
+const emit = defineEmits<{ tag: [value: string]; section: [value: string]; close: []; navigate: []; expand: [] }>()
 const router = useRouter()
 const { isDark } = useData()
 const visualStyle = useVisualStyle()
@@ -127,7 +127,7 @@ function focusNode(node: GraphNode) {
 }
 function activate(node: GraphNode) {
   if (node.kind === 'article') {
-    emit('close')
+    emit('navigate')
     void router.go(withBase(node.value))
   } else focusNode(node)
 }
@@ -313,8 +313,8 @@ onBeforeUnmount(() => {
       <aside v-if="active" class="atlas-card" aria-label="星体详情" @pointerenter="holdCard" @pointerleave="releaseCard" @focusin="holdCard" @focusout="releaseCard">
         <div class="atlas-card-copy"><small>{{ kinds[active.kind] }} <span>·</span> {{ degree }} 个关联</small><strong>{{ active.label }}</strong></div>
         <div class="atlas-card-actions">
-          <a v-if="active.kind === 'article'" :href="withBase(active.value)" @click="emit('close')">前往阅读 <span aria-hidden="true">↗</span></a>
-          <template v-else><button type="button" @click="focusNode(active)">聚焦星团</button><a :href="catalogUrl(active)" @click="emit('close')">目录查看 <span aria-hidden="true">↗</span></a></template>
+          <a v-if="active.kind === 'article'" :href="withBase(active.value)" @click="emit('navigate')">前往阅读 <span aria-hidden="true">↗</span></a>
+          <template v-else><button type="button" @click="focusNode(active)">聚焦星团</button><a :href="catalogUrl(active)" @click="emit('navigate')">目录查看 <span aria-hidden="true">↗</span></a></template>
           <button v-if="selected" class="atlas-unpin" type="button" aria-label="取消选中星体" @click="selected = hovered = ''">×</button>
         </div>
       </aside>
