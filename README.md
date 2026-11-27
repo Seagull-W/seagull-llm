@@ -1,9 +1,6 @@
 <p align="center">
   <a href="https://seagull-llm.pages.dev/">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/public/images/home/closing/paper-tide-night.webp">
-      <img src="docs/public/images/home/closing/paper-tide-day.webp" width="900" alt="纸海鸥飞过灯塔与海浪，浪间摊开一本书">
-    </picture>
+    <img src="docs/public/images/along-way/train-rest.webp" width="900" alt="阳光透过列车窗帘，一位乘客靠在窗边闭目休息">
   </a>
 </p>
 
