@@ -819,7 +819,7 @@ def integrate(config, run):
                            'content_sha256': hashlib.sha256(content.encode()).hexdigest()}
     # These fields describe the published section, independent of how its article was produced.
     previous = next((x for x in catalog if x['route'] == row['route']), {})
-    for key in ('label', 'sidebarTitle', 'children'):
+    for key in ('label', 'sidebarTitle', 'children', 'featured', 'featuredNote'):
         if key in previous:
             row[key] = previous[key]
     catalog = sorted([x for x in catalog if x['route'] != row['route']] + [row], key=lambda x: (x['date'], x['slug']), reverse=True)

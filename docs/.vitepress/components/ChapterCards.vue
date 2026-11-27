@@ -3,19 +3,28 @@ import { withBase } from 'vitepress'
 import { maturityLabels, type Maturity } from '../content-catalog'
 import { useVisualStyle } from '../theme/visual-styles'
 import MaturityIcon from './MaturityIcon.vue'
-defineProps<{ items: { title: string; link: string; description: string; label?: string; date?: string; maturity?: Maturity }[] }>()
+defineProps<{ items: {
+  title: string
+  link: string
+  description: string
+  label?: string
+  date?: string
+  maturity?: Maturity
+  featured?: boolean
+}[] }>()
 const visual = useVisualStyle()
 </script>
 <template>
   <nav class="chapter-cards" aria-label="文章列表" :data-index="visual.iconSet">
     <a v-for="(item,i) in items" :key="item.link" class="chapter-card" :href="withBase(item.link)">
       <span class="chapter-no" aria-hidden="true">{{ String(i + 1).padStart(2,'0') }}</span>
-      <span v-if="item.label || item.date || item.maturity" class="chapter-card-meta">
-        <span v-if="item.label">{{ item.label }}</span>
+      <span v-if="item.label || item.date || item.maturity || item.featured" class="chapter-card-meta">
+        <span v-if="item.label && item.label !== item.date">{{ item.label }}</span>
         <time v-if="item.date" :datetime="item.date">{{ item.date }}</time>
         <span v-if="item.maturity" class="chapter-card-maturity">
           <MaturityIcon :maturity="item.maturity" />{{ maturityLabels[item.maturity] }}
         </span>
+        <span v-if="item.featured" class="chapter-card-featured">精选</span>
       </span>
       <span class="chapter-card-title">{{ item.title }}<span class="chapter-card-arrow" aria-hidden="true">→</span></span>
       <span class="chapter-card-description">{{ item.description }}</span>
@@ -26,6 +35,7 @@ const visual = useVisualStyle()
 .chapter-cards { display:grid; grid-template-columns:minmax(0,1fr); margin:0 0 24px; }
 .vp-doc .chapter-card { display:flex; flex-direction:column; padding:20px 0; border-bottom:1px solid var(--vp-c-divider); background:transparent; text-decoration:none; color:var(--vp-c-text-1); }
 .chapter-card-meta { display:flex; flex-wrap:wrap; gap:4px 16px; font-size:12px; color:var(--vp-c-text-2); margin-bottom:6px; }
+.chapter-card-featured { align-self:center; padding:0 6px; border:1px solid currentColor; border-radius:3px; color:var(--vp-c-text-2); font-size:11px; line-height:1.5; white-space:nowrap; }
 .chapter-card-title { display:flex; justify-content:space-between; gap:16px; font-size:19px; line-height:1.6; font-weight:600; }
 .chapter-card-arrow { flex:none; color:var(--vp-c-brand-1); font-size:17px; font-weight:400; }
 .chapter-card-description { margin-top:6px; color:var(--vp-c-text-2); font-size:14px; line-height:1.85; max-width:60em; }

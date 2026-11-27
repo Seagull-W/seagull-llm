@@ -281,9 +281,9 @@ class TaskTests(unittest.TestCase):
         with patch.object(w, 'ROOT', root), patch.object(w, 'CATALOG', catalog):
             w.integrate(task, self.run)
             rows = w.read_json(catalog)
-            # Reimporting an existing entry must retain its editorial label and nested navigation.
+            # Reimporting an existing entry must retain editorial metadata and nested navigation.
             entry = next(item for item in rows if item['route'] != prior['route'])
-            additions = {'label': '导读', 'sidebarTitle': '阅读导引',
+            additions = {'label': '导读', 'sidebarTitle': '阅读导引', 'featured': True, 'featuredNote': '本期选读。',
                          'children': [{'text': '第一章', 'link': entry['route'] + '/chapter-one'}]}
             entry.update(additions)
             w.write_json(catalog, rows)

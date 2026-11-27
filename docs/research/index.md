@@ -8,7 +8,7 @@ tags: ["每日调研"]
 ---
 
 <script setup>
-import { researchCards } from '../.vitepress/research-sidebar'
+import ResearchDirectory from '../.vitepress/components/ResearchDirectory.vue'
 </script>
 
 <DirectoryIntro>
@@ -19,6 +19,4 @@ import { researchCards } from '../.vitepress/research-sidebar'
 
 </DirectoryIntro>
 
-## 调研记录
-
-<ChapterCards :items="researchCards" />
+<ResearchDirectory />
