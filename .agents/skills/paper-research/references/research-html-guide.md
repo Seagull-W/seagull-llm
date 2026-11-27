@@ -1,188 +1,161 @@
-# 调研 HTML 排版要素速查
+# 调研原生 HTML 排版组件速查
 
-本指南只负责**视觉呈现**，不规定文章结构、章节数或必选模块。所有 CSS 样式已完整内置在 [../assets/article.html](../assets/article.html) 的 `.research-page` 中，起稿时直接基于该文件替换正文，按需选用下方片段即可。
+本指南服务于**论断清晰、图文并茂的原生 HTML 调研稿**。全套 CSS 与零依赖交互脚本（原图灯箱放大、场景切换、侧栏滚动高亮）已完整内置在 [../assets/article.html](../assets/article.html) 的 `.research-page` 中；上线到站内「每日调研」时，对应样式由 `docs/.vitepress/theme/styles/research-article.css` 承接并自动适配昼夜主题。
 
-## 1. 先选对表达方式（多用图表省文字）
+## 1. 先选对表达组件（发挥原生 HTML 优势）
 
-| 内容需要 | 推荐组件 | 使用原则 |
+| 表达目的 | 推荐组件 | 使用要点 |
 | --- | --- | --- |
-| 首屏交代核心问题与结论 | `.article-header` + `.lead` | 2–4 句话直接给答案，不写空泛导读 |
-| 流程、架构、机制对比或思路分岔 | `figure.figure` + 内联 `<svg>` | 优先用图替代大段流程叙述；节点少、字大、窄屏可读 |
-| 多方法/多实验/多配置对比 | `.table-scroll` + `table` | 关键条件放表头或 `caption`，不在正文逐格复述 |
-| 全文 1–2 处核心结论或关键前提 | `.callout` | 少而精，避免连续加框；普通段落清楚就不加框 |
-| 解释少量术语或记号 | `dl.term-list` | 简短的“名称—解释”；复杂论证改回正文 |
-| 核心数学公式 / 代码与配置 | `.equation`（MathML） / `pre.code-block` | 只写影响理解的公式，离线可用，紧邻说明符号 |
-| 原文逐字摘录 | `blockquote` + `footer` | 仅在原文措辞本身影响判断时使用 |
-| 次要细节、口径说明、检索范围 | `details.supplement` | 默认折叠，不打断主线阅读 |
-| 关键判断溯源 | `sup > a` + `ol.reference-list` | 唯一锚点，点击可双向跳转 |
+| 首屏速览多个核心问题判断 | `.thesis-bento` + `.thesis-card` | 2×2 卡片，每张卡给出“问题标签 + 关键量级徽章 + 一句话硬判断 + 决定性数字” |
+| 每节开篇亮明核心论断与边界 | `.thesis-banner` | 一两句话直接给判断（`data-tone="caution"` 切琥珀强调），避免温吞过渡段 |
+| 论文原图精读（曲线/相图/消融） | `.visual-card` + `.paper-studio` / `.paper-shot-pair` | 300 DPI 原图挂 `data-lightbox` 支持点击放大，紧邻配 3 栏 `.note-point` 拆解看图要点 |
+| 跨论文定量光谱、架构解剖、决策相图 | `.visual-card` + 内联 `<svg>` | 信息图级绘制，不用简陋三框图；连线文字垫底色，保证文字不溢出边框 |
+| 阶段跃迁 / 多路线正面对决数据表 | `.table-card` + `.bar-track` + `.delta-tag` | 关键数值列嵌比例进度条与涨跌徽章，最优行加 `.row-highlight`，反例行加 `.row-warn` |
+| 正反机制对比 / 分类器偏科对照 | `.ab-grid` + `.ab-card` | 双栏并排呈现本质差异，配 `.pill-good` / `.pill-bad` 徽章 |
+| 多场景工程选型速查 | `.decision-widget` | 2–3 个场景 Tab 切换展示“首选路线 / 算力账 / 必避陷阱”，零外部依赖 |
+| 核心数学公式 | `.equation`（独立稿用 MathML；站内稿用 `data-tex`） | 只放决定理解的公式，下方 `.equation-note` 点出关键项物理意义 |
+| 次要口径、评测差异与未核实空白 | `details.supplement` | 默认折叠，保持主线锋利 |
+| 双向溯源引用 | `sup#cite-N > a` + `ol.reference-list` | 唯一锚点，确保每条 `.reference-backlink` 指向真实正文 `id` |
 
 ---
 
-## 2. 页面骨架与篇首
-
-短文保持 `assets/article.html` 默认的**单栏结构**即可，不必加目录。篇首用 `header.article-header` 直接亮明标题与核心结论：
+## 2. 首屏论断看板与章节论断条
 
 ```html
-<header class="article-header">
-  <p class="eyebrow">论文精读</p>
-  <h1>直接点破核心问题或结论的标题</h1>
-  <p class="meta">
-    <time datetime="2026-11-24">2026 年 11 月 24 日</time>
-    <span>·</span>
-    <span>依据原文：Paper Title (arXiv v1)</span>
-  </p>
-  <p class="lead">用 2–4 句话直接回答核心问题，让读者 10 秒内看清全文主旨。</p>
-</header>
+<div class="thesis-bento" aria-label="核心问题直接结论">
+  <div class="thesis-card">
+    <div class="thesis-q"><span>Q1 · 核心问题</span><span>关键锚点数字</span></div>
+    <p class="thesis-verdict">一句话直接给判断，不绕弯。</p>
+    <p class="thesis-evidence">一句决定性消融证据与出处角标<sup id="cite-1"><a href="#ref-1">[1]</a></sup>。</p>
+  </div>
+  <div class="thesis-card" data-accent="amber"><!-- 支持 default / amber / indigo / danger --></div>
+</div>
 
-<section class="article-section" id="mechanism">
-  <h2><span class="section-number">01</span>核心机制</h2>
-  <p>正文段落。</p>
+<section class="article-section" id="sec-1">
+  <h2><span class="sec-num">01</span>直接点破结论的章节标题</h2>
+  <div class="thesis-banner">
+    <strong>核心判断：</strong>用 1–2 句话点清机制与成立前提。
+  </div>
+  <div class="prose">
+    <p>紧凑正文段落，保持 ~70ch 舒适行宽。</p>
+  </div>
 </section>
 ```
 
-> 仅在章节超过 4–5 节、确实需要跳转时，才把 `<main>` 外层改为 `<div class="layout">` 并加上 `<nav class="toc">`（宽屏侧栏）和 `<details class="toc-mobile">`（窄屏折叠目录）。
+---
+
+## 3. 原论文配图精读（带点击灯箱放大）
+
+单幅宽图使用 `.paper-studio.wide-top`，双图并排对比使用 `.paper-shot-pair`；图片放在同目录 `./figures/`（站内放 `docs/public/research/<slug>/`）：
+
+```html
+<div class="visual-card">
+  <div class="visual-card-header">
+    <strong>原图精读 1｜直接写出这张图证明了什么</strong>
+    <span class="visual-badge">来源：作者 (年份) Figure X · 点击原图可放大</span>
+  </div>
+  <div class="paper-studio wide-top">
+    <div class="paper-shot" data-lightbox="./figures/fig-example.png" data-caption="原图完整图注说明。">
+      <img src="./figures/fig-example.png" alt="清晰的图意替代文本" loading="lazy">
+      <span class="zoom-hint">点击放大查看 300 DPI 原图</span>
+    </div>
+    <div class="studio-notes-row">
+      <div class="note-point">
+        <strong>1. 看基准线</strong>
+        指出读者最该先盯住的曲线或趋势。
+      </div>
+      <div class="note-point" data-kind="warn">
+        <strong>2. 看关键拐点</strong>
+        给出精确坐标数字与反常反转现象。
+      </div>
+      <div class="note-point" data-kind="amber">
+        <strong>3. 机制推论</strong>
+        点破背后原因及适用边界。
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+> 避坑：`.zoom-hint` 已设为图下方右对齐标签，绝不叠压原图坐标轴；`.note-point` 内只有首个直系 `<strong>` 独占一行，正文里的加粗关键词保持行内显示。
 
 ---
 
-## 3. 图与表（优先使用）
-
-### 3.1 内联 SVG 机制图
-
-内联 SVG 随 HTML 离线可用。配色沿用页面暖白纸面系：浅绿节点 `#edf3ef`（描边 `#79a99b`）、普通节点 `#fbf9f5`（描边 `#bfc8c4`）、强调暖色 `#f2c690`、文字 `#26364a`、箭头 `#536773`。
+## 4. 内嵌比例数据条的视觉化表格
 
 ```html
-<figure class="figure" id="fig-flow">
-  <svg viewBox="0 0 640 130" role="img" aria-labelledby="fig-flow-title">
-    <title id="fig-flow-title">核心流程示意图</title>
-    <rect x="12" y="34" width="170" height="60" rx="8" fill="#fbf9f5" stroke="#bfc8c4" />
-    <rect x="235" y="34" width="170" height="60" rx="8" fill="#edf3ef" stroke="#79a99b" />
-    <rect x="458" y="34" width="170" height="60" rx="8" fill="#fbf9f5" stroke="#bfc8c4" />
-    <g fill="#26364a" font-size="18" text-anchor="middle">
-      <text x="97" y="70">输入 / 问题</text>
-      <text x="320" y="70">关键改动步骤</text>
-      <text x="543" y="70">结果变化</text>
-    </g>
-    <g fill="none" stroke="#536773" stroke-width="2">
-      <path d="M182 64 H225 M217 58 L225 64 L217 70" />
-      <path d="M405 64 H448 M440 58 L448 64 L440 70" />
-    </g>
-  </svg>
-  <figcaption><strong>图 1｜方法分岔点。</strong>简明说明图中重点与来源；每张 SVG 的 <code>id</code> 须保持唯一。</figcaption>
-</figure>
-```
-
-> 窄屏适配与避坑：尽量控制宽图宽高比或采用紧凑竖向布局；若横向图在手机上字号过小，可提供 `.flow-wide` 与 `.flow-narrow` 两套 SVG（样式已在底稿中配置 `720px` 自动切换）。**若文字标签压在连线上，务必在 `<text>` 下垫一块不透明 `<rect fill="#f6f1e7">` 遮住线条，避免横线穿字。** 无真实数值时，不要用柱高/面积暗示实测大小。
-
-### 3.2 对比表格
-
-```html
-<div class="table-scroll" role="region" aria-labelledby="tbl-1" tabindex="0">
-  <table>
-    <caption id="tbl-1">
-      表 1｜核心方案对比
-      <span>条件与口径简注（例如：相同基座与预算；来源：原文 Table 2）</span>
-    </caption>
-    <thead>
-      <tr>
-        <th scope="col">方法</th>
-        <th scope="col">核心改动</th>
-        <th scope="col">关键结果</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <th scope="row">基线</th>
-        <td>固定单步流程</td>
-        <td>68.6%</td>
-      </tr>
-      <tr>
-        <th scope="row">改进方案</th>
-        <td>增加动态反馈</td>
-        <td>75.9%（+7.3 pp）</td>
-      </tr>
-    </tbody>
-  </table>
+<div class="table-card">
+  <div class="table-scroll" role="region" aria-labelledby="tbl-1" tabindex="0">
+    <table>
+      <caption id="tbl-1">
+        表 1｜核心路线等算力对照
+        <span>口径与来源简注</span>
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">方案</th>
+          <th scope="col" class="bar-cell">核心指标</th>
+          <th scope="col">结论</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">基线</th>
+          <td class="bar-cell">
+            <div class="bar-wrap">
+              <span class="bar-val">24.36</span>
+              <div class="bar-track"><div class="bar-fill danger" style="width:45%"></div></div>
+            </div>
+          </td>
+          <td>接近随机水平</td>
+        </tr>
+        <tr class="row-highlight">
+          <th scope="row">最优方案</th>
+          <td class="bar-cell">
+            <div class="bar-wrap">
+              <span class="bar-val">42.45</span>
+              <div class="bar-track"><div class="bar-fill" style="width:80%"></div></div>
+            </div>
+            <span class="delta-tag">+18.1 pp</span>
+          </td>
+          <td><strong>等算力显著胜出</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 ```
 
 ---
 
-## 4. 重点提示、公式、代码与引用
-
-### 4.1 提示块（默认浅绿；`data-tone="caution"` 为暖黄）
+## 5. 双栏正反对照卡与交互场景选型器
 
 ```html
-<div class="callout">
-  <h3>核心结论</h3>
-  <p>用一两句话概括最关键的判断及其成立前提。</p>
+<div class="ab-grid">
+  <div class="ab-card">
+    <h4><span>方案 A</span><span class="pill-good">优势场景</span></h4>
+    <p>说明机制与关键消融数字。</p>
+  </div>
+  <div class="ab-card">
+    <h4><span>方案 B</span><span class="pill-bad">失败陷阱</span></h4>
+    <p>说明为何在对应条件下失效。</p>
+  </div>
 </div>
 
-<div class="callout" data-tone="caution">
-  <h3>关键边界</h3>
-  <p>仅在会改变核心结论时，写出影响判断的前提或局限。</p>
+<div class="decision-widget" aria-label="工程路线交互选型">
+  <div class="decision-tabs" role="tablist">
+    <button class="decision-tab" role="tab" aria-selected="true" data-target="panel-a" type="button">
+      <strong>场景 A · 条件描述</strong>一句话特征
+    </button>
+    <button class="decision-tab" role="tab" aria-selected="false" data-target="panel-b" type="button">
+      <strong>场景 B · 条件描述</strong>一句话特征
+    </button>
+  </div>
+  <div class="decision-panel is-active" id="panel-a" role="tabpanel">
+    <div class="dp-box"><span class="kicker">首选路线</span><strong>核心方案</strong><br>执行要点。</div>
+    <div class="dp-box"><span class="kicker">预算口径</span><strong>数据/算力量级</strong><br>关键参数。</div>
+    <div class="dp-box"><span class="kicker">必避陷阱</span><strong>常见误区</strong><br>反例依据。</div>
+  </div>
+  <div class="decision-panel" id="panel-b" role="tabpanel"><!-- 同上 --></div>
 </div>
-```
-
-### 4.2 术语表、原文摘录与代码
-
-```html
-<dl class="term-list">
-  <dt>术语名</dt>
-  <dd>一句话解释。</dd>
-</dl>
-
-<blockquote>
-  <p>需要逐字讨论的原句。</p>
-  <footer>—— <cite>论文标题</cite> §3.2</footer>
-</blockquote>
-
-<pre class="code-block"><code># 保留精确格式的配置或核心伪代码（HTML 标签须转义为 &lt; &gt;）
-advantage = reward - group_mean</code></pre>
-```
-
-### 4.3 原生 MathML 公式（离线直接显示）
-
-简单上下标直接用 `p<sub>θ</sub>`、`x<sup>2</sup>`；复杂公式用原生 MathML（裸写 `$...$` 在独立 HTML 中不会自动渲染）：
-
-```html
-<div class="equation">
-  <math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
-    <mrow>
-      <mover><mi>A</mi><mo>^</mo></mover><msub><mrow></mrow><mi>i</mi></msub>
-      <mo>=</mo>
-      <msub><mi>r</mi><mi>i</mi></msub>
-      <mo>−</mo>
-      <mfrac><mn>1</mn><mi>G</mi></mfrac>
-      <munderover><mo>∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>G</mi></munderover>
-      <msub><mi>r</mi><mi>j</mi></msub>
-    </mrow>
-  </math>
-  <p>r<sub>i</sub> 为第 i 条轨迹奖励，G 为同组采样数。</p>
-</div>
-```
-
-### 4.4 折叠次要细节与双向引用
-
-次要实验口径、检索范围或补充细节放进 `<details class="supplement">`，保持正文干净。正文引用统一使用 `<sup id="cite-N"><a href="#ref-N">[N]</a></sup>`，并确保文末每条 `.reference-backlink` 的 `href` 都对应实际存在的正文 `id`：
-
-```html
-<p>
-  关键判断写在这里。<sup id="cite-1"><a href="#ref-1" aria-label="参考文献 1">[1]</a></sup>
-</p>
-
-<details class="supplement">
-  <summary>补充口径与检索记录（按需展开）</summary>
-  <p>版本信息、次要超参或筛选说明。</p>
-</details>
-
-<section class="article-section" id="references">
-  <h2>参考文献</h2>
-  <ol class="reference-list">
-    <li id="ref-1">
-      作者，<cite>论文或材料标题</cite>（年份/版本），定位：§3.2、表 2。
-      <a href="https://arxiv.org/abs/0000.00000" target="_blank" rel="noopener">原文链接</a>
-      <a class="reference-backlink" href="#cite-1" aria-label="返回正文引用">↩</a>
-    </li>
-  </ol>
-</section>
 ```

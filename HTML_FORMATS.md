@@ -2,7 +2,7 @@
 
 本文是 L2 正文格式规范，规定文件对、HTML 标记、公式、图注和组件用法。语气与组织按 [写作总则](./writing/README.md) 选择体例；页面外观见 [视觉规范](./VISUAL_STYLES.md)，接入与验证见 [发布流程](./writing/publishing.md)。
 
-本文只说明 VitePress 站点内的正文格式。论文调研独立交付时，从[仓库入口](./AGENTS.md)进入调研技能，按技能随附的 HTML 模板生成可直接打开的文章。发布到站内「每日调研」时，正文采用 Markdown，其他读者栏目按下文维护 HTML 片段。
+本文只说明 VitePress 站点内的正文格式。论文调研独立交付时，从[仓库入口](./AGENTS.md)进入调研技能，按技能随附的 HTML 模板生成可直接打开的文章。发布到站内「每日调研」时，新稿推荐采用与其余栏目一致的原生 HTML（`name.html` + `name.md` 元数据 include，`article.native-document.research-article.research-studio`），历史旧稿仍兼容 Markdown。
 
 ## 笔记 HTML 元素
 
@@ -47,7 +47,7 @@ HTML 是页面模板片段，编译后直接出现在主文档中。不要添加
 | 栏目首页与标签页 | `div.format-directory` | `DirectoryIntro` 包含标题与简介，接 `ChapterCards` 或 `TagsIndex`；保留 `pageClass: chapter-index` |
 | 视频 | `div.format-gallery` | `VideoGallery` 管理封面、简介及观看入口 |
 | 网站首页 | `div.format-home` | 首屏文案在 `docs/index.md` 的 `hero` 中维护；栏目入口来自 `docs/.vitepress/sections.json` |
-| 每日调研 | Markdown | [正文元数据与目录登记](./writing/publishing.md#新增每日调研) |
+| 每日调研 | 原生 HTML（`article.native-document.research-article.research-studio`）；历史旧稿兼容 Markdown | [正文元数据与目录登记](./writing/publishing.md#新增每日调研) |
 
 ### 西湖讲义导入格式（2026-10-27 试用）
 

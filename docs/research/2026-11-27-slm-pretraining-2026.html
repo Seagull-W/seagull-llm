@@ -1,0 +1,741 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import { withBase } from 'vitepress'
+
+const activeTab = ref<'a' | 'b' | 'c'>('a')
+const dialogRef = ref<HTMLDialogElement | null>(null)
+const lbSrc = ref('')
+const lbAlt = ref('')
+const lbCap = ref('')
+
+function openLightbox(path: string, alt: string, caption: string) {
+  lbSrc.value = withBase(path)
+  lbAlt.value = alt
+  lbCap.value = caption
+  dialogRef.value?.showModal()
+}
+
+function closeLightbox() {
+  dialogRef.value?.close()
+}
+
+function onDialogClick(e: MouseEvent) {
+  if (e.target === dialogRef.value) closeLightbox()
+}
+</script>
+
+<article class="native-document research-article research-studio" data-format="research" aria-label="0.5B–3B 小模型预训练：过度训练边界、退火配方、深窄架构与蒸馏取舍">
+  <header class="document-intro">
+    <h1 id="slm-pretraining-2026" tabindex="-1">0.5B–3B 小模型预训练：过度训练边界、退火配方、深窄架构与蒸馏取舍 <a class="header-anchor" href="#slm-pretraining-2026" aria-label="文章链接">&#8203;</a></h1>
+    <p class="rs-lead">
+      把百亿参数大模型的预训练经验直接缩放到 3B 以下，会在三个地方失灵：<strong>词表吃掉两成以上参数预算、固定配方拉长训练诱发微调退化、盲目挂大教师做蒸馏反而跑输硬标签</strong>。近两年端侧模型实现越级表现，靠的是把数据量推向 <strong>4T–36T（数千至上万 tokens/参数）</strong>的同时，用<strong>末期退火承接高密度推理语料、用绑定词表与深窄结构榨干参数容量、按“有无现成同族教师”切换剪枝蒸馏与从头预训练</strong>。
+    </p>
+
+    <div class="thesis-bento" aria-label="四个核心问题的直接结论">
+      <div class="thesis-card">
+        <div class="thesis-q"><span>Q1 · 缩放律与算力分配</span><span>M = D/N 边界</span></div>
+        <p class="thesis-verdict">固定网页配方的有效上限在 ~2,000×；突破 6,000×–10,000× 必须靠分阶段换挡。</p>
+        <p class="thesis-evidence">OLMo-1B 训到 3T（~3,000×）微调后反比 2.3T 跌 2%–3%<sup id="cite-1"><a href="#ref-1">[1]</a></sup>；工业界推到 11T–36T（SmolLM2 / Qwen3）均依赖后期切入合成推理数据与学习率退火<sup id="cite-2"><a href="#ref-2">[2]</a></sup><sup id="cite-6"><a href="#ref-6">[6]</a></sup>。</p>
+      </div>
+      <div class="thesis-card" data-accent="amber">
+        <div class="thesis-q"><span>Q2 · 数据过滤、合成与退火</span><span>最后 10% 定胜负</span></div>
+        <p class="thesis-verdict">网页分类器负责打底，真正撬动数学与代码飞跃的是最后 10% 步数的线性退火。</p>
+        <p class="thesis-evidence">SmolLM2-1.7B 前 10T 恒定学习率阶段 GSM8K 仅到 10.0%，最后 1T 退火注入 FineMath4+ 与 Stack-Edu 后直接跳至 <strong>32.6%（+22.6 pp）</strong><sup id="cite-2-2"><a href="#ref-2">[2]</a></sup>。</p>
+      </div>
+      <div class="thesis-card" data-accent="indigo">
+        <div class="thesis-q"><span>Q3 · 架构设计取舍</span><span>深窄 + 绑词表</span></div>
+        <p class="thesis-verdict">3B 以下“架构无关论”不成立：必须绑定输入输出词表，把省下的参数换成 30–54 层深度。</p>
+        <p class="thesis-evidence">MobileLLM 证实等参数下 32 层比 5 层阅读问答翻倍（14.5 vs 7.8）；GQA（3:1–4:1）与紧邻块共享在不涨体积下继续提分，且 Qwen3 明确以 4B 为词表绑定分界线<sup id="cite-3"><a href="#ref-3">[3]</a></sup><sup id="cite-6-2"><a href="#ref-6">[6]</a></sup>。</p>
+      </div>
+      <div class="thesis-card" data-accent="danger">
+        <div class="thesis-q"><span>Q4 · 从头训 vs 蒸馏 vs 剪枝</span><span>看有无现成教师</span></div>
+        <p class="thesis-verdict">只训单个小模型且无现成教师时，从头训练必胜；有同族大模型时，“剪宽不剪深 + 纯 Logit KLD”省 40 倍数据。</p>
+        <p class="thesis-evidence">Apple 缩放律证明计入教师预训练算力时蒸馏恒输从头训<sup id="cite-4"><a href="#ref-4">[4]</a></sup>；NVIDIA Minitron 证明 15B→8B→4B 迭代剪宽配纯 KLD 比等算力从头训高 <strong>+18.1 pp MMLU</strong><sup id="cite-5"><a href="#ref-5">[5]</a></sup>。</p>
+      </div>
+    </div>
+
+    <details class="source-deck">
+      <summary>查看本篇锁定的 5 篇代表性一手文献与入选理由（2024–2025）</summary>
+      <div class="paper-pills">
+        <div class="paper-pill">
+          <span class="tag">缩放与微调边界 · arXiv 2025</span>
+          <strong>Springer 等 · Catastrophic Overtraining</strong>
+          首次用 OLMo-1B 中间检查点与受控实验证明：过度预训练虽单调降低预训练困惑度，却系统性抬高参数敏感度，在 ~2.3T–2.5T 后引发微调性能倒退。
+        </div>
+        <div class="paper-pill">
+          <span class="tag">数据配方完全公开 · HF 2025</span>
+          <strong>Ben Allal 等 · SmolLM2 (135M/360M/1.7B)</strong>
+          罕见公开 11T 全流程数据干预、网页双分类器配比、FineMath/Stack-Edu 精筛构建及 WSD 四阶段退火逐阶段评测表的标杆报告。
+        </div>
+        <div class="paper-pill">
+          <span class="tag">端侧架构消融 · ICML 2024</span>
+          <strong>Liu 等 (Meta) · MobileLLM (125M–1.5B)</strong>
+          固定训练设置对 19 组深宽比、词表共享、GQA 头比例、SRAM 块级权重共享及朴素 KD 负结果做了最严密的单变量消融。
+        </div>
+        <div class="paper-pill">
+          <span class="tag">蒸馏定量边界 · ICML 2025</span>
+          <strong>Busbridge 等 (Apple) · Distillation Scaling Laws</strong>
+          用 770 组训练运行给出学生损失关于教师损失、参数与 Token 的断裂幂律，精确划出蒸馏与从头预训练的算力交叉点与容量鸿沟。
+        </div>
+        <div class="paper-pill">
+          <span class="tag">剪枝+蒸馏实证 · NeurIPS 2024</span>
+          <strong>Muralidharan 等 (NVIDIA) · Minitron</strong>
+          在等算力条件下直接正面对照“随机初始化从头训 vs 剪枝+CE vs 剪枝+纯 Logit 蒸馏”，明确剪宽优于剪深与迭代压缩增益。
+        </div>
+        <div class="paper-pill">
+          <span class="tag">工业界极值参照 · 2024–2025</span>
+          <strong>Gadre 过度训练幂律 &amp; Qwen3 (0.6B–4B)</strong>
+          Gadre 等量化 M=640× 内的幂律可预测性；Qwen3 提供 36T 三阶段预训练、4B 词表绑定分界及强到弱在线蒸馏算力账参照。
+        </div>
+      </div>
+    </details>
+  </header>
+
+  <section class="document-section" id="sec-scaling" aria-labelledby="h-scaling">
+    <h2 id="h-scaling" tabindex="-1">一、过度训练的双重边界：推理账把数据推向 10T+，微调敏感度却在 2.5T 设卡 <a class="header-anchor" href="#h-scaling" aria-label="章节链接">&#8203;</a></h2>
+    <div class="thesis-banner">
+      <strong>核心判断：</strong>Chinchilla 的 <code>M = D/N ≈ 20</code> 只优化单次预训练算力；一旦计入端侧高频推理开销，把 0.5B–3B 模型喂到 <strong>2T–18T tokens（M ≈ 2,000–15,000）</strong>在经济学上完全划算。但<strong>用单一网页分布硬拉长度存在隐蔽上限</strong>：模型参数的扰动敏感度随步数单调累积，过了拐点后“基座越训越强、微调后反而越差”。
+    </div>
+
+    <p>
+      小模型敢于“过度训练（Over-training）”，底气来自 Gadre 等对 <code>0.011B–6.9B</code> 模型的重参数化缩放律验证<sup id="cite-7"><a href="#ref-7">[7]</a></sup>。将总训练算力记为 <code>C = 6ND</code>、词元参数比记为 <code>M = D/N</code>，验证集交叉熵严格服从平行对数幂律：
+    </p>
+    <div class="math-block" data-tex="L(C,M) = E + \left(aM^{\eta} + bM^{-\eta}\right)C^{-\eta}, \qquad \mathrm{Err}(L) = \epsilon - k\exp(-\gamma L)"></div>
+    <p>
+      C4 实测拟合 <span class="math-inline" data-tex="\eta = 0.121"></span>（RedPajama 为 <span class="math-inline" data-tex="0.136"></span>）：直到 <code>M = 640</code>，斜率 <span class="math-inline" data-tex="-\eta"></span> 始终不变，仅由 <span class="math-inline" data-tex="aM^{\eta}"></span> 支付边际算力折损<sup id="cite-7-2"><a href="#ref-7">[7]</a></sup>。固定参数量 <code>N</code> 时，每把预训练数据翻倍，推理端延迟与显存<strong>完全不变</strong>，下游 17 项任务平均错误率仍按指数规律可预测地下降。正因如此，<strong>SmolLM2-135M / 360M / 1.7B</strong> 分别训到 <strong>2T / 4T / 11T</strong>，<strong>Qwen2.5-1.5B</strong> 训到 <strong>18T</strong>，<strong>Qwen3-0.6B / 1.7B</strong> 更共享了 <strong>36T tokens</strong> 语料池<sup id="cite-2-3"><a href="#ref-2">[2]</a></sup><sup id="cite-6-3"><a href="#ref-6">[6]</a></sup>。
+    </p>
+    <p>
+      然而，Springer 等（2025）指出了此前被基座榜单掩盖的第二重边界——<strong>灾难性过度训练（Catastrophic Overtraining）</strong><sup id="cite-1-2"><a href="#ref-1">[1]</a></sup>。真正的部署模型都要经过 SFT、多模态对齐或 RL；当预训练在同一分布上推进过久，参数对后续权重更新的<strong>渐进敏感度（Progressive Sensitivity）</strong>会超过基座自身的增益速度。
+    </p>
+
+    <div class="visual-card" id="fig-svg-spectrum">
+      <div class="visual-card-header">
+        <strong>图 1｜0.5B–3B 小模型的词元倍数光谱（M = D/N）与两道机制边界</strong>
+        <span class="visual-badge">自绘定量综合图 · 对数刻度</span>
+      </div>
+      <div class="visual-body">
+        <svg viewBox="0 0 860 310" role="img" aria-labelledby="svg1-title">
+          <title id="svg1-title">小模型过度训练倍数光谱：从 Chinchilla 20倍到 Qwen3 60000倍及 OLMo-1B 微调退化墙</title>
+          <defs>
+            <linearGradient id="zoneSafe" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0%" stop-color="#eaf0fa"/>
+              <stop offset="100%" stop-color="#e7f3f1"/>
+            </linearGradient>
+            <linearGradient id="zoneRecipe" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0%" stop-color="#fdf3e4"/>
+              <stop offset="100%" stop-color="#f6e7cf"/>
+            </linearGradient>
+          </defs>
+          <rect x="48" y="36" width="388" height="156" rx="8" fill="url(#zoneSafe)" stroke="#b8ccdf"/>
+          <rect x="436" y="36" width="376" height="156" rx="8" fill="url(#zoneRecipe)" stroke="#e7b877"/>
+          <text x="64" y="58" fill="#182635" font-size="13" font-weight="700">常规幂律区（单一高质量网页分布可稳定推进）</text>
+          <text x="454" y="58" fill="#8b4a0b" font-size="13" font-weight="700">高倍超训区（固定配方易触发微调退化，须靠多阶段+退火突围）</text>
+          <line x1="436" y1="30" x2="436" y2="208" stroke="#b23b35" stroke-width="2.5" stroke-dasharray="6 4"/>
+          <rect x="346" y="14" width="180" height="22" rx="4" fill="#fceceb" stroke="#e5a5a1"/>
+          <text x="436" y="29" text-anchor="middle" fill="#b23b35" font-size="11.5" font-weight="700">单一配方敏感度拐点 M ≈ 2,300×</text>
+          <line x1="48" y1="158" x2="812" y2="158" stroke="#182635" stroke-width="2"/>
+          <g fill="#667686" font-size="11.5" font-family="JetBrains Mono, Consolas, monospace" text-anchor="middle">
+            <line x1="48" y1="158" x2="48" y2="165" stroke="#182635" stroke-width="1.5"/>
+            <text x="48" y="181">10×</text>
+            <line x1="239" y1="158" x2="239" y2="165" stroke="#182635" stroke-width="1.5"/>
+            <text x="239" y="181">100×</text>
+            <line x1="430" y1="158" x2="430" y2="165" stroke="#182635" stroke-width="1.5"/>
+            <text x="430" y="181">1,000×</text>
+            <line x1="621" y1="158" x2="621" y2="165" stroke="#182635" stroke-width="1.5"/>
+            <text x="621" y="181">10,000×</text>
+            <line x1="812" y1="158" x2="812" y2="165" stroke="#182635" stroke-width="1.5"/>
+            <text x="802" y="181">100,000×</text>
+          </g>
+          <line x1="105" y1="102" x2="105" y2="158" stroke="#2e4f8a" stroke-width="1.6"/>
+          <circle cx="105" cy="158" r="5.5" fill="#2e4f8a"/>
+          <rect x="56" y="74" width="112" height="34" rx="5" fill="#ffffff" stroke="#9cb4de"/>
+          <text x="112" y="89" text-anchor="middle" fill="#182635" font-size="12" font-weight="700">Chinchilla 基准</text>
+          <text x="112" y="103" text-anchor="middle" fill="#2e4f8a" font-size="11">M ≈ 20× (训练最优)</text>
+
+          <line x1="365" y1="118" x2="393" y2="158" stroke="#1b6b66" stroke-width="1.6"/>
+          <circle cx="393" cy="158" r="5.5" fill="#1b6b66"/>
+          <rect x="242" y="86" width="154" height="34" rx="5" fill="#ffffff" stroke="#8fc4bf"/>
+          <text x="319" y="101" text-anchor="middle" fill="#182635" font-size="12" font-weight="700">Gadre 实测外推上限</text>
+          <text x="319" y="115" text-anchor="middle" fill="#1b6b66" font-size="11">M = 640× 幂律仍平行</text>
+
+          <line x1="500" y1="118" x2="521" y2="158" stroke="#b23b35" stroke-width="1.8"/>
+          <circle cx="521" cy="158" r="6" fill="#b23b35"/>
+          <rect x="444" y="76" width="136" height="42" rx="5" fill="#fceceb" stroke="#e5a5a1"/>
+          <text x="512" y="92" text-anchor="middle" fill="#b23b35" font-size="12" font-weight="700">OLMo-1B (3T)</text>
+          <text x="512" y="108" text-anchor="middle" fill="#7d2520" font-size="11">3,000× 微调反输 2.3T</text>
+
+          <line x1="615" y1="118" x2="585" y2="158" stroke="#1b6b66" stroke-width="1.8"/>
+          <circle cx="585" cy="158" r="6" fill="#1b6b66"/>
+          <line x1="646" y1="118" x2="653" y2="158" stroke="#1b6b66" stroke-width="1.8"/>
+          <circle cx="653" cy="158" r="6" fill="#1b6b66"/>
+          <rect x="588" y="76" width="144" height="42" rx="5" fill="#ffffff" stroke="#8fc4bf"/>
+          <text x="660" y="92" text-anchor="middle" fill="#182635" font-size="12" font-weight="700">SmolLM2 系列</text>
+          <text x="660" y="108" text-anchor="middle" fill="#1b6b66" font-size="11">1.7B: 6.5k× · 135M: 14.8k×</text>
+
+          <line x1="770" y1="118" x2="770" y2="158" stroke="#b56517" stroke-width="2"/>
+          <circle cx="770" cy="158" r="6.5" fill="#b56517"/>
+          <rect x="736" y="76" width="108" height="42" rx="5" fill="#ffffff" stroke="#e7b877"/>
+          <text x="790" y="92" text-anchor="middle" fill="#182635" font-size="12" font-weight="700">Qwen3-0.6B</text>
+          <text x="790" y="108" text-anchor="middle" fill="#b56517" font-size="11">36T ≈ 60,000×</text>
+
+          <rect x="48" y="214" width="374" height="82" rx="7" fill="#fceceb" stroke="#e5a5a1"/>
+          <text x="64" y="236" fill="#b23b35" font-size="13" font-weight="700">为什么固定配方硬训会撞墙？（Springer 等, 2025）</text>
+          <text x="64" y="257" fill="#3d4f60" font-size="12.5">参数对权重更新的敏感度随步数持续升高；SFT 改写参数时，</text>
+          <text x="64" y="277" fill="#3d4f60" font-size="12.5">旧知识遗忘幅度超过基座后期微弱增益，形成 U 型反转。</text>
+
+          <rect x="438" y="214" width="374" height="82" rx="7" fill="#e7f3f1" stroke="#8fc4bf"/>
+          <text x="454" y="236" fill="#124e4a" font-size="13" font-weight="700">为什么 SmolLM2 / Qwen3 能推到 11T–36T？</text>
+          <text x="454" y="257" fill="#3d4f60" font-size="12.5">不靠单一网页重复硬磨，而是分阶段引入高密度代码/数学合成语料，</text>
+          <text x="454" y="277" fill="#3d4f60" font-size="12.5">并在 WSD 末期将学习率线性退火归零，提前把目标能力吸纳进基座。</text>
+        </svg>
+      </div>
+      <div class="visual-caption">
+        <strong>读图结论：</strong>端侧部署场景下，0.5B–3B 模型实用数据量级普遍落在 <strong>2T–18T tokens</strong>（若语料池含大规模多语种与合成数据如 Qwen3 可达 36T），但不能把整段预算铺在同一份网页分布上。
+      </div>
+    </div>
+
+    <div class="visual-card">
+      <div class="visual-card-header">
+        <strong>原图精读 1｜OLMo-1B 预训练从 2.3T 延展到 3T，基座上升但微调后全面倒退</strong>
+        <span class="visual-badge">来源：Springer 等 (2025) Figure 2 · 点击原图可放大</span>
+      </div>
+      <div class="paper-studio">
+        <div class="paper-shot" @click="openLightbox('/research/slm-pretraining-2026/fig-overtrain-olmo1b.png', 'OLMo-1B 预训练 1T 到 3T 微调前后对比', 'Springer 等 (arXiv:2503.19206) Figure 2：OLMo-1B 各预训练检查点在 Anthropic-HH 指令微调（左）与 LLaVA 多模态微调（右）前后的得分对比。')">
+          <img src="/research/slm-pretraining-2026/fig-overtrain-olmo1b.png" alt="OLMo-1B 在预训练 1T 到 3T 过程中基座虚线持续上升，但微调实线在 2.3T 后下降">
+          <span class="zoom-hint">点击放大查看 300 DPI 原图</span>
+        </div>
+        <div class="studio-notes-row">
+          <div class="note-point">
+            <strong>1. 看虚线（微调前基座）</strong>
+            黑色虚线从 0.5T 到 3T 全程单调爬升，印证如果只测 Base 模型榜单，“多喂 Token 永远涨分”看似无懈可击<sup id="cite-1-3"><a href="#ref-1">[1]</a></sup>。
+          </div>
+          <div class="note-point" data-kind="warn">
+            <strong>2. 看实线拐点（2.3T → 3T）</strong>
+            左半幅经 Anthropic-HH 微调后，3T 模型在 AlpacaEval 掉分最多达 <strong>3%</strong>，ARC 掉分超 <strong>2%</strong>，整体跌回 1.5T（少训一半数据）的水平<sup id="cite-1-4"><a href="#ref-1">[1]</a></sup>。
+          </div>
+          <div class="note-point" data-kind="amber">
+            <strong>3. 规模效应与规避条件</strong>
+            同一微调设置下 OLMo-7B 到 3T（仅 ~430×）尚未见退化；只有小模型率先跨过 <code>M &gt; 2,500×</code> 门槛，因此小模型后期必须靠退火与小步长微调护住特征几何<sup id="cite-1-5"><a href="#ref-1">[1]</a></sup>。
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="document-section" id="sec-data" aria-labelledby="h-data">
+    <h2 id="h-data" tabindex="-1">二、数据配方：网页双分类器打底，最后 10% 退火注入合成与推理语料定胜负 <a class="header-anchor" href="#h-data" aria-label="章节链接">&#8203;</a></h2>
+    <div class="thesis-banner" data-tone="caution">
+      <strong>核心判断：</strong>小模型容量有限、对噪声极度敏感，数据配方的收益分两层兑现：① <strong>稳定期（前 85%–90% 步数）</strong>不能迷信单一“教育分”分类器，混配问答风格网页能补齐常识短板；② <strong>退火期（最后 10%–20% 步数）</strong>学习率线性归零时，集中上采样精筛数学/代码与合成教科书，能用 1T 预算跑出前面 10T 都拿不到的推理跃迁。
+    </div>
+
+    <p>
+      在网页过滤环节，SmolLM2 的 350B 受控消融揭开了一个常被忽视的偏差：同样是用模型分类器清洗 Common Crawl，<strong>分类器的打分偏好直接决定了小模型长出哪类能力</strong><sup id="cite-2-4"><a href="#ref-2">[2]</a></sup>。
+    </p>
+
+    <div class="ab-grid">
+      <div class="ab-card">
+        <h4><span>FineWeb-Edu（Llama-3-70B 教育打分，1.3T）</span><span class="pill-good">强于学科知识</span></h4>
+        <p>偏好教材与结构化讲解。单训 350B 时 MMLU 达 <strong>37.5</strong>、ARC 达 <strong>57.5</strong>，但日常语境与常识偏弱（HellaSwag 60.1，CommonsenseQA 仅 36.2）<sup id="cite-2-5"><a href="#ref-2">[2]</a></sup>。</p>
+      </div>
+      <div class="ab-card">
+        <h4><span>DCLM（OpenHermes + ELI5 fastText，3.8T）</span><span class="pill-good">强于常识推理</span></h4>
+        <p>偏好真实问答与口语推演。单训 350B 时 HellaSwag 升至 <strong>62.3</strong>、CommonsenseQA 升至 <strong>40.1</strong>，但 ARC 跌至 53.5。<strong>按 60/40 混配后两头兼得</strong>（ARC 56.0 + HellaSwag 62.2）<sup id="cite-2-6"><a href="#ref-2">[2]</a></sup>。</p>
+      </div>
+    </div>
+
+    <p>
+      真正拉开现代 0.5B–3B 模型代差的，是<strong>专用精筛/合成语料与 WSD（Warmup-Stable-Decay）退火阶段的耦合</strong>。高质量推理语料总量往往只有百亿级（如 <code>FineMath4+</code> 仅 10B tokens、<code>Stack-Edu</code> 125B、合成教科书 <code>Cosmopedia v2</code> 30B）；若从第 0 步就均匀撒进 11T 大池子，要么占比不到 0.1% 被网页噪声淹没，要么重复几十轮触发过拟合（Muennighoff 4–5 轮上限）<sup id="cite-2-7"><a href="#ref-2">[2]</a></sup>。SmolLM2 与 Qwen3（S2 推理加速衰减阶段 5T）一致采用了<strong>“前期雪藏、中期试水、退火重仓”</strong>的节奏<sup id="cite-2-8"><a href="#ref-2">[2]</a></sup><sup id="cite-6-4"><a href="#ref-6">[6]</a></sup>。
+    </p>
+
+    <div class="visual-card">
+      <div class="visual-card-header">
+        <strong>原图精读 2｜SmolLM2 四阶段数据换挡（左）与 FineMath 退火消融曲线（右）</strong>
+        <span class="visual-badge">来源：Ben Allal 等 (2025) Figure 2 &amp; Figure 1 · 点击可放大</span>
+      </div>
+      <div class="visual-body">
+        <div class="paper-shot-pair">
+          <div class="paper-shot" @click="openLightbox('/research/slm-pretraining-2026/fig-smollm2-stages.png', 'SmolLM2 四阶段数据混合比例图', 'SmolLM2 (arXiv:2502.02737) Figure 2：0→11T 四个阶段的数据配比演变。Stage 4（10T–11T）为学习率线性退火阶段。')">
+            <img src="/research/slm-pretraining-2026/fig-smollm2-stages.png" alt="SmolLM2 0到11T四阶段数据混合比例图">
+            <span class="zoom-hint">放大左图</span>
+          </div>
+          <div class="paper-shot" @click="openLightbox('/research/slm-pretraining-2026/fig-smollm2-finemath.png', 'FineMath 退火曲线对比', 'SmolLM2 (arXiv:2502.02737) Figure 1：不同数学数据集在 100B 退火消融中的准确率曲线。FineMath4+ 取得断层领先。')">
+            <img src="/research/slm-pretraining-2026/fig-smollm2-finemath.png" alt="FineMath4+ 与 InfiMM-WebMath、OWM 在 GSM8K、MATH、MMLU STEM 上的退火曲线对比">
+            <span class="zoom-hint">放大右图</span>
+          </div>
+        </div>
+        <div class="studio-notes-row" style="margin-top: 14px;">
+          <div class="note-point">
+            <strong>左图：把稀缺好料留给 10T–11T</strong>
+            前 6T 完全不放数学；10T–11T 线性退火时，网页压降至 58%，代码提至 <strong>24%</strong>，精筛数学提至 <strong>14%</strong>，并注入 <strong>4% Cosmopedia v2 合成教材</strong><sup id="cite-2-9"><a href="#ref-2">[2]</a></sup>。
+          </div>
+          <div class="note-point" data-kind="amber">
+            <strong>右图：推演步骤过滤比题海重要</strong>
+            只保留 Llama-3.1-70B 评 4–5 分（含完整分步推导）的 <code>FineMath4+</code>（橙线），相比 InfiMM-WebMath 在 GSM8K <strong>翻 2 倍</strong>、MATH <strong>翻 6 倍</strong><sup id="cite-2-10"><a href="#ref-2">[2]</a></sup>。
+          </div>
+          <div class="note-point" data-kind="warn">
+            <strong>右图绿线：10 轮重复即见顶</strong>
+            体量仅 8.5B 的 <code>Infi-WebMath4+</code>（深绿线）前期猛涨，但在 80B tokens（约重复 10 轮）后明显走平甚至回落，印证退火池必须兼具高纯度与足够独特词元<sup id="cite-2-11"><a href="#ref-2">[2]</a></sup>。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-scroll" role="region" aria-labelledby="tbl-smollm2" tabindex="0">
+        <table>
+          <caption id="tbl-smollm2">
+            表 1｜SmolLM2-1.7B 跨阶段能力跃迁实测：最后 1T 退火兑现了绝大部分推理增益
+            <span>数据来源：SmolLM2 原文 §4.2–4.5、表 3 与附录表 8（Stage 1–3 为恒定学习率 5×10<sup>−4</sup>，Stage 4 线性衰减至 0）</span>
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">训练阶段与区间</th>
+              <th scope="col">核心配方变化</th>
+              <th scope="col" class="bar-cell">MMLU (MCF)</th>
+              <th scope="col" class="bar-cell">GSM8K</th>
+              <th scope="col">MATH</th>
+              <th scope="col">HumanEval</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Stage 1 · 0–6T</th>
+              <td>90% 网页(60/40) + 10% StarCoderData</td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">29.62</span><div class="bar-track"><div class="bar-fill indigo" style="width:49%"></div></div></div></td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">4.32</span><div class="bar-track"><div class="bar-fill amber" style="width:11%"></div></div></div></td>
+              <td>2.10</td>
+              <td>10.97</td>
+            </tr>
+            <tr>
+              <th scope="row">Stage 2 · 6–8T</th>
+              <td>代码提至 20%，首加 5% OWM 数学</td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">37.96</span><div class="bar-track"><div class="bar-fill indigo" style="width:63%"></div></div></div></td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">4.62</span><div class="bar-track"><div class="bar-fill amber" style="width:12%"></div></div></div></td>
+              <td>2.78</td>
+              <td>9.15</td>
+            </tr>
+            <tr>
+              <th scope="row">Stage 3 · 8–10T</th>
+              <td>网页调为 40/60，换 Stack-Edu + 10% 数学</td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">42.54</span><div class="bar-track"><div class="bar-fill indigo" style="width:71%"></div></div></div></td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">10.01</span><div class="bar-track"><div class="bar-fill amber" style="width:26%"></div></div></div></td>
+              <td>4.52</td>
+              <td>17.68</td>
+            </tr>
+            <tr class="row-highlight">
+              <th scope="row">Stage 4 · 10–11T (退火)</th>
+              <td>LR→0；14% FineMath4+ 等 + 24% 代码 + 4% 教材</td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">48.87</span><div class="bar-track"><div class="bar-fill" style="width:81%"></div></div></div></td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">32.60</span><div class="bar-track"><div class="bar-fill" style="width:85%"></div></div></div> <span class="delta-tag">+22.6 pp</span></td>
+              <td><strong>11.54</strong> <span class="delta-tag">+7.0 pp</span></td>
+              <td><strong>22.60</strong> <span class="delta-tag">+4.9 pp</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <p>
+      <strong>一个关键的规模反例：</strong>多阶段课表并非越小越灵。Hugging Face 在训练更小的 <code>SmolLM2-135M (2T)</code> 与 <code>360M (4T)</code> 时重新跑了全长消融，发现亚十亿模型容量太窄，<strong>取消多阶段切换、从头到尾全程喂入高纯度混合语料（经 FW-Edu 二次过滤的 DCLM + Stack-Edu + FineMath + Cosmopedia，配 20% WSD 退火）反而效果最佳</strong><sup id="cite-2-12"><a href="#ref-2">[2]</a></sup>。同时，用 15 个语言专属分类器清洗出的 <code>Stack-Edu</code> 在缩减 57%–84% 代码体积后，使 Python HumanEval 从 <code>20.7 → 25.6</code>、C++ 从 <code>16.7 → 24.8</code><sup id="cite-2-13"><a href="#ref-2">[2]</a></sup>——对小模型而言，<strong>删掉低信息密度代码比堆总词元重要得多</strong>。
+    </p>
+  </section>
+
+  <section class="document-section" id="sec-arch" aria-labelledby="h-arch">
+    <h2 id="h-arch" tabindex="-1">三、架构取舍：回收“词表税”，把预算全部换成深窄层数与片上复用 <a class="header-anchor" href="#h-arch" aria-label="章节链接">&#8203;</a></h2>
+    <div class="thesis-banner">
+      <strong>核心判断：</strong>Kaplan 提出的“固定总参数下深宽比无关紧要”在 3B 以下完全失效。小模型头号结构包袱是<strong>输入输出词表矩阵吃掉了 20%–40%+ 参数</strong>；高性价比标准解是：<strong>词表控制在 32k–64k + 强制绑定输入输出 Embedding + GQA（3:1–4:1）+ SwiGLU</strong>，再将省出的全部参数投入 <strong>30–54 层深而窄</strong>的骨干中。
+    </div>
+
+    <p>
+      为什么大模型不在乎词表共享，一到 0.5B–3B 就成了生死线？设隐藏维 <code>d = 512</code>、词表 <code>V = 32,000</code>，输入词嵌入与输出 LM Head 各占 <code>16.4M</code> 参数，两块合起来占掉 125M 模型超过 <strong>23%</strong> 的权重；倘若照搬大模型流行的 <code>128k–152k</code> 多语种大词表且不共享（如 <code>d = 1536</code>、<code>V = 151,936</code>），仅输入输出两张表就要吞掉 <strong>4.67 亿参数</strong>——还没排一层 Transformer，一个 0.5B 模型就已经爆仓了！而在 70B 模型中，词表占比仅 <strong>0.7%</strong><sup id="cite-3-2"><a href="#ref-3">[3]</a></sup>。这正是为什么 <strong>Qwen3 架构表精确以 4B 划界</strong>：<code>0.6B / 1.7B / 4B</code> 全部开启 <code>Tie Embedding = Yes</code>，到了 <code>8B / 14B / 32B</code> 才解绑<sup id="cite-6-5"><a href="#ref-6">[6]</a></sup>；SmolLM2 亦专门定制了紧凑的 <code>49,152</code> 词表并绑定权重<sup id="cite-2-14"><a href="#ref-2">[2]</a></sup>。
+    </p>
+
+    <div class="visual-card" id="fig-svg-arch">
+      <div class="visual-card-header">
+        <strong>图 2｜小模型“词表税”参数重分配机制（左）与 SRAM 驻留块级共享（右）</strong>
+        <span class="visual-badge">自绘架构解剖图 · 据 MobileLLM §2.2–2.3 与表 1/7/10</span>
+      </div>
+      <div class="visual-body">
+        <svg viewBox="0 0 860 285" role="img" aria-labelledby="svg2-title">
+          <title id="svg2-title">左图展示词表参数占比从70B的0.7%暴涨至125M的24%及绑定词表回填深度的闭环；右图展示MobileLLM-LS紧邻块在20MB片上SRAM连算两次仅增2.6%延迟</title>
+          <rect x="16" y="14" width="424" height="256" rx="8" fill="#faf8f4" stroke="#dfd9ce"/>
+          <text x="34" y="38" fill="#182635" font-size="13.5" font-weight="700">A. 词表税反差：为什么 ≤4B 必须绑定 Embedding</text>
+          <text x="34" y="68" fill="#3d4f60" font-size="12">LLaMA-70B</text>
+          <rect x="128" y="54" width="240" height="18" rx="4" fill="#d9e4ec"/>
+          <rect x="128" y="54" width="4" height="18" rx="2" fill="#b23b35"/>
+          <text x="376" y="68" fill="#667686" font-size="11.5" font-family="JetBrains Mono, monospace">0.7% 词表</text>
+          <text x="34" y="96" fill="#3d4f60" font-size="12">LLaMA-7B</text>
+          <rect x="128" y="82" width="240" height="18" rx="4" fill="#d9e4ec"/>
+          <rect x="128" y="82" width="11" height="18" rx="2" fill="#b23b35"/>
+          <text x="376" y="96" fill="#667686" font-size="11.5" font-family="JetBrains Mono, monospace">3.7% 词表</text>
+          <text x="34" y="124" fill="#b23b35" font-size="12" font-weight="700">135M 未共享</text>
+          <rect x="128" y="110" width="240" height="18" rx="4" fill="#d9e4ec"/>
+          <rect x="128" y="110" width="58" height="18" rx="3" fill="#b23b35"/>
+          <text x="376" y="124" fill="#b23b35" font-size="11.5" font-weight="700" font-family="JetBrains Mono, monospace">24.3% 词表</text>
+          <text x="34" y="154" fill="#124e4a" font-size="12" font-weight="700">MobileLLM</text>
+          <rect x="128" y="140" width="240" height="18" rx="4" fill="#cde6e3"/>
+          <rect x="128" y="140" width="30" height="18" rx="3" fill="#1b6b66"/>
+          <text x="376" y="154" fill="#124e4a" font-size="11.5" font-weight="700" font-family="JetBrains Mono, monospace">省 11.8% 换深</text>
+
+          <rect x="34" y="176" width="388" height="78" rx="6" fill="#ffffff" stroke="#8fc4bf"/>
+          <text x="46" y="197" fill="#124e4a" font-size="12.5" font-weight="700">参数回填闭环（MobileLLM 表 1 &amp; 表 10 实测）：</text>
+          <text x="46" y="217" fill="#3d4f60" font-size="11.5">① 共享输入/输出词表：135M→119M（均分仅微降 0.2，44.8→44.6）</text>
+          <text x="46" y="237" fill="#3d4f60" font-size="11.5">② GQA (3:1) 裁冗余 KV 投影 → 回填至 30–32 层主干（反超至 45.0）</text>
+
+          <rect x="456" y="14" width="388" height="256" rx="8" fill="#faf8f4" stroke="#dfd9ce"/>
+          <text x="474" y="38" fill="#182635" font-size="13.5" font-weight="700">B. 紧邻块权重共享（MobileLLM-LS）：零体积涨深度</text>
+          <rect x="474" y="54" width="144" height="58" rx="6" fill="#fdf3e4" stroke="#e7b877"/>
+          <text x="546" y="75" text-anchor="middle" fill="#8b4a0b" font-size="12" font-weight="700">片上 SRAM (~20MB)</text>
+          <text x="546" y="96" text-anchor="middle" fill="#3d4f60" font-size="11">同一权重驻留连算 2 次</text>
+          <path d="M622 83 H668 M660 77 L668 83 L660 89" fill="none" stroke="#1b6b66" stroke-width="2"/>
+          <path d="M658 67 C680 48, 706 48, 718 67" fill="none" stroke="#b56517" stroke-width="1.8" stroke-dasharray="4 3"/>
+          <text x="688" y="52" text-anchor="middle" fill="#b56517" font-size="10.5" font-weight="700">免重搬 DRAM</text>
+          <rect x="672" y="54" width="154" height="58" rx="6" fill="#e7f3f1" stroke="#8fc4bf"/>
+          <text x="749" y="75" text-anchor="middle" fill="#124e4a" font-size="12" font-weight="700">等效 2×30 = 60 层计算</text>
+          <text x="749" y="96" text-anchor="middle" fill="#3d4f60" font-size="11">参数仍为 124.6M (+0 MB)</text>
+
+          <text x="474" y="138" fill="#182635" font-size="12" font-weight="700">端侧单步执行延迟与准确率（125M 实测，表 7 &amp; 表 10）：</text>
+          <text x="474" y="164" fill="#3d4f60" font-size="11.5">30层 基线</text>
+          <rect x="566" y="151" width="112" height="16" rx="3" fill="#8fc4bf"/>
+          <text x="686" y="164" fill="#182635" font-size="11.5" font-family="JetBrains Mono, monospace">15.6 ms · 45.0分</text>
+          <text x="474" y="192" fill="#124e4a" font-size="11.5" font-weight="700">LS 紧邻共享</text>
+          <rect x="566" y="179" width="115" height="16" rx="3" fill="#1b6b66"/>
+          <text x="686" y="192" fill="#124e4a" font-size="11.5" font-weight="700" font-family="JetBrains Mono, monospace">16.0 ms (+2.6%) · 46.1分</text>
+          <text x="474" y="220" fill="#b23b35" font-size="11.5">真 60层 不共享</text>
+          <rect x="566" y="207" width="208" height="16" rx="3" fill="#e5a5a1"/>
+          <text x="652" y="250" text-anchor="middle" fill="#b23b35" font-size="11.5" font-family="JetBrains Mono, monospace">真 60层需 29.0 ms (+85.9% 带宽瓶颈，体积翻倍)</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="visual-card">
+      <div class="visual-card-header">
+        <strong>原图精读 3｜MobileLLM 逐项架构消融阶梯（左）与 19 组深宽比受控对照（右）</strong>
+        <span class="visual-badge">来源：Liu 等 (ICML 2024) Figure 3 &amp; Figure 4 · 点击可放大</span>
+      </div>
+      <div class="visual-body">
+        <div class="paper-shot-pair">
+          <div class="paper-shot" @click="openLightbox('/research/slm-pretraining-2026/fig-mobilellm-roadmap.png', 'MobileLLM 架构消融阶梯', 'MobileLLM (arXiv:2402.14905) Figure 3：125M 与 350M 从 12/15 层宽浅基线逐步叠加 SwiGLU、深窄结构、词表共享、GQA 与层共享的零样本常识推理均分与参数量（紫星）。')">
+            <img src="/research/slm-pretraining-2026/fig-mobilellm-roadmap.png" alt="MobileLLM 逐项架构改动准确率与参数量变化柱状图">
+            <span class="zoom-hint">放大左图</span>
+          </div>
+          <div class="paper-shot" @click="openLightbox('/research/slm-pretraining-2026/fig-mobilellm-depth.png', 'MobileLLM 深宽比对照曲线', 'MobileLLM (arXiv:2402.14905) Figure 4：在固定约 135M 与 380M 参数预算下，层数从 4–5 层（深绿线）增至 30–66 层（橙红线）在常识推理、TriviaQA 与 RACE 上的表现。')">
+            <img src="/research/slm-pretraining-2026/fig-mobilellm-depth.png" alt="MobileLLM 不同层深与宽度组合在常识推理、TQA 和 RACE 上的对比曲线">
+            <span class="zoom-hint">放大右图</span>
+          </div>
+        </div>
+        <div class="studio-notes-row" style="margin-top: 14px;">
+          <div class="note-point">
+            <strong>SwiGLU + 深窄化贡献最大底盘</strong>
+            左图 125M 从 12 层宽浅基线（42.6）换用 SwiGLU（43.9）并拉深至 30 层窄网络（44.8），不加一分钱数据便涨 <strong>+2.2 分</strong>；350M 同步从 47.4 升至 49.8<sup id="cite-3-3"><a href="#ref-3">[3]</a></sup>。
+          </div>
+          <div class="note-point" data-kind="amber">
+            <strong>问答与阅读对“深度”极度饥渴</strong>
+            右图 (c)(d) 最具冲击力：同为 ~380M 参数，5 层超宽模型（<code>d=2048</code>，深绿线）TriviaQA 5-shot 仅 <strong>7.8</strong>，而 32 层深窄模型（<code>d=896</code>，橙线）达 <strong>14.5</strong>，几近翻倍<sup id="cite-3-4"><a href="#ref-3">[3]</a></sup>。
+          </div>
+          <div class="note-point">
+            <strong>甜点区间落在 30–54 层，而非无限加深</strong>
+            右图与附录表 11 显示超过 42–46 层后收益趋平（62/66 层略微回落且拉长串行时延）；扩至 1B/1.5B 时，54 层 <code>MobileLLM-1.5B</code>（59.4）直接反超参数更多的 <code>Qwen1.5-1.8B</code>（56.5）与 <code>Pythia-2.8B</code>（55.8）<sup id="cite-3-5"><a href="#ref-3">[3]</a></sup>。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p>
+      至于注意力机制：在小尺度常规上下文（2k–8k）中，<strong>GQA（Q 头取 16 左右、Q:KV 比取 3:1 至 4:1）是兼具减重与省 KV 缓存的稳健甜点</strong>——MobileLLM 表 13 显示 350M 将 KV 头从 16 压到 4 省下近 10% 参数仅微跌 0.2 分，继续压成 MQA（KV=1）则会掉 1.7–2.0 分<sup id="cite-3-6"><a href="#ref-3">[3]</a></sup>。而 MLA 或可训练稀疏注意力（如 MiniCPM4-0.5B 的 InfLLM v2）主要收益体现在 <strong>32k–128k 长上下文预填充与解码加速</strong>，对短上下文基座能力本身并非决定项。
+    </p>
+  </section>
+
+  <section class="document-section" id="sec-routes" aria-labelledby="h-routes">
+    <h2 id="h-routes" tabindex="-1">四、三条路线正面对决：从头预训练、Logit 蒸馏与结构化剪枝谁更占优？ <a class="header-anchor" href="#h-routes" aria-label="章节链接">&#8203;</a></h2>
+    <div class="thesis-banner" data-tone="caution">
+      <strong>核心判断：</strong>“蒸馏一定比从头训好”是错觉。Apple 蒸馏缩放律与 NVIDIA Minitron 拼出了完整真相：① <strong>没有现成教师、只造单个端侧模型时，直接从头预训练在任意算力预算下都优于“先训大教师再蒸馏”</strong>；② <strong>已有现成强教师时，蒸馏在中低数据预算下大幅领先，但大教师不能强过头（容量鸿沟）且超长预算下会被从头训练追平</strong>；③ <strong>若手里已有同词表同族大模型（如 8B/15B），“结构化剪宽 + 纯 Forward-KL Logit 蒸馏”能省下高达 40 倍重训数据并大幅碾压等算力从头训</strong>。
+    </div>
+
+    <p>
+      为什么 MobileLLM 论文附录表 16 用 LLaMA-2-7B 蒸馏 350M 模型时，训练时间从 42 小时暴涨到 109 小时（2.6 倍），零样本均分反而从 <code>49.1</code> 微跌到 <code>48.8</code><sup id="cite-3-7"><a href="#ref-3">[3]</a></sup>；而 Llama-3.2-1B、Gemma-3-1B 与 Minitron-4B 却靠蒸馏大获成功？Busbridge 等（Apple, ICML 2025）通过 697 次受控蒸馏拟合出的<strong>断裂幂律（Broken Power Law）</strong>给出了定量解答<sup id="cite-4-2"><a href="#ref-4">[4]</a></sup>：
+    </p>
+    <div class="math-block" data-tex="L_S(N_S, D_S, L_T) = L_T + \frac{1}{L_T^{c_0}}\left(1 + \left(\frac{L_T}{\widetilde{L}_S d_1}\right)^{1/f_1}\right)^{-c_1 f_1}\left(\frac{A}{N_S^{\alpha'}} + \frac{B}{D_S^{\beta'}}\right)^{\gamma'}"></div>
+    <p>
+      其中 <span class="math-inline" data-tex="L_T"></span> 为教师验证损失，<span class="math-inline" data-tex="\widetilde{L}_S"></span> 为该学生用同量数据直接从头监督训练可达到的损失；比值 <span class="math-inline" data-tex="L_T / \widetilde{L}_S = d_1"></span> 处发生容量鸿沟相变<sup id="cite-4-3"><a href="#ref-4">[4]</a></sup>。
+    </p>
+
+    <div class="visual-card">
+      <div class="visual-card-header">
+        <strong>原图精读 4｜何时蒸馏赢、何时从头训赢：数据预算蓝红相图（左）与总算力曲线（右）</strong>
+        <span class="visual-badge">来源：Busbridge 等 (ICML 2025) Figure 6 &amp; Figure 8 · 点击可放大</span>
+      </div>
+      <div class="visual-body">
+        <div class="paper-shot-pair">
+          <div class="paper-shot" @click="openLightbox('/research/slm-pretraining-2026/fig-apple-contours.png', 'Apple 蒸馏与监督学习蓝红等高线图', 'Apple Distillation Scaling Laws (arXiv:2502.08606) Figure 6：蓝色代表蒸馏优于从头训练，红色代表从头训练反超蒸馏，黑实线为零差值分界线。')">
+            <img src="/research/slm-pretraining-2026/fig-apple-contours.png" alt="Apple 蒸馏与监督学习交叉熵差值蓝红等高线图">
+            <span class="zoom-hint">放大左图</span>
+          </div>
+          <div class="paper-shot" @click="openLightbox('/research/slm-pretraining-2026/fig-apple-crossover.png', 'Apple 总算力交叉曲线', 'Apple Distillation Scaling Laws (arXiv:2502.08606) Figure 8：300M、1B、3B、10B 四档学生在五种算力记账口径下的最低验证交叉熵随总算力（FLOPs）的变化。')">
+            <img src="/research/slm-pretraining-2026/fig-apple-crossover.png" alt="300M、1B、3B、10B 学生模型在四种蒸馏口径与监督训练下的损失曲线">
+            <span class="zoom-hint">放大右图</span>
+          </div>
+        </div>
+        <div class="studio-notes-row" style="margin-top: 14px;">
+          <div class="note-point">
+            <strong>左图黑实线：数据越多，从头训越追上来</strong>
+            蓝色区集中在左中侧（<code>1B–数百B tokens</code>）：蒸馏改变了收敛路径，却改不了学生参数量 <code>N<sub>S</sub></code> 决定的假设空间上限；当 <code>D<sub>S</sub></code> 推向数万亿词元（右侧），从头训练追平甚至反超非最优教师蒸馏<sup id="cite-4-4"><a href="#ref-4">[4]</a></sup>。
+          </div>
+          <div class="note-point" data-kind="warn">
+            <strong>右图绿/红线恒在黑线上方：别为单个小模型专门训教师</strong>
+            只要把教师预训练算力算进总账（绿线与红线），它们在 <code>300M / 1B / 3B</code> 全程高于黑线（直接从头监督训练）。只有教师成本已被云端主力模型或全家族分摊（蓝/橙线），蒸馏才划算<sup id="cite-4-5"><a href="#ref-4">[4]</a></sup>。
+          </div>
+          <div class="note-point" data-kind="amber">
+            <strong>容量鸿沟：教师不是越大越好</strong>
+            当学生太小且数据预算有限而教师过强时，师生 KL 散度拉大，学生损失反而反弹（见左下角与右下角淡红反转区）；且每步蒸馏还要额外支付教师前向推理开销<sup id="cite-4-6"><a href="#ref-4">[4]</a></sup>。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p>
+      一旦团队<strong>已经拥有同词表的更大基座</strong>（例如已训好 8B 或 15B 模型，要顺带产出 0.5B–4B 端侧家族），NVIDIA Minitron（NeurIPS 2024）证明<strong>“结构化剪枝 + 纯 Logit 蒸馏重训”对从头预训练形成了降维打击</strong><sup id="cite-5-2"><a href="#ref-5">[5]</a></sup>。
+    </p>
+
+    <div class="table-card">
+      <div class="table-scroll" role="region" aria-labelledby="tbl-minitron" tabindex="0">
+        <table>
+          <caption id="tbl-minitron">
+            表 2｜构造紧凑模型的四条路线等算力正面对决（Minitron 4B 实测，* 标示等总算力）
+            <span>数据来源：Muralidharan 等 (NeurIPS 2024) 表 11；蒸馏组因含教师前向传播，Token 数折算为 100B 以对齐 150B 从头训练 FLOPs</span>
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">训练路线</th>
+              <th scope="col">训练数据量</th>
+              <th scope="col" class="bar-cell">HellaSwag</th>
+              <th scope="col" class="bar-cell">MMLU（随机为 25%）</th>
+              <th scope="col">机制诊断</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">① 随机初始化从头预训练</th>
+              <td>150B*</td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">46.22</span><div class="bar-track"><div class="bar-fill indigo" style="width:65%"></div></div></div></td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">24.36</span><div class="bar-track"><div class="bar-fill danger" style="width:45%"></div></div></div></td>
+              <td>短预算下尚未涌现学科知识</td>
+            </tr>
+            <tr>
+              <th scope="row">② 随机初始化加倍预算</th>
+              <td>400B</td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">48.23</span><div class="bar-track"><div class="bar-fill indigo" style="width:68%"></div></div></div></td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">26.24</span><div class="bar-track"><div class="bar-fill amber" style="width:48%"></div></div></div></td>
+              <td>2.7 倍算力仅刚跨过随机线</td>
+            </tr>
+            <tr class="row-warn">
+              <th scope="row">③ 15B 剪枝 + 常规真实标签 CE</th>
+              <td>150B*</td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">50.85</span><div class="bar-track"><div class="bar-fill amber" style="width:72%"></div></div></div></td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">24.57</span><div class="bar-track"><div class="bar-fill danger" style="width:45%"></div></div></div> <span class="delta-tag neg">知识崩塌</span></td>
+              <td><strong>只剪枝不蒸馏，MMLU 完全无法恢复</strong></td>
+            </tr>
+            <tr>
+              <th scope="row">④ 15B 一步剪枝 + 纯 Logit KLD</th>
+              <td>100B*</td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">51.04</span><div class="bar-track"><div class="bar-fill" style="width:73%"></div></div></div></td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">37.81</span><div class="bar-track"><div class="bar-fill" style="width:70%"></div></div></div> <span class="delta-tag">+13.5 pp</span></td>
+              <td>软分布暗知识迅速修复被裁通道</td>
+            </tr>
+            <tr class="row-highlight">
+              <th scope="row">⑤ 15B→8B→4B 迭代剪枝 + Logit KLD</th>
+              <td>100B*</td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">52.04</span><div class="bar-track"><div class="bar-fill" style="width:75%"></div></div></div></td>
+              <td class="bar-cell"><div class="bar-wrap"><span class="bar-val">42.45</span><div class="bar-track"><div class="bar-fill" style="width:80%"></div></div></div> <span class="delta-tag">+18.1 pp</span></td>
+              <td><strong>避开单次裁 73% 权重的断崖冲击</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <p>
+      <strong>剪宽不剪深（Width over Depth）：</strong>Minitron 表 10 将 15B 压到 ~8B 时，纯宽度剪枝（裁 MLP 神经元、注意力头与通道，7.74B）重训后验证损失为 <code>2.049</code>，显著击败参数反而更多的纯深度剪层（9.39B，损失 <code>2.155–2.177</code>）以及深宽混剪（7.91B，损失 <code>2.062</code>，重训 200 步后即被纯剪宽反超）<sup id="cite-5-3"><a href="#ref-5">[5]</a></sup>。
+    </p>
+    <p>
+      <strong>纯 Forward-KL 最优 + 后训练接在线强弱蒸馏：</strong>Minitron 表 15 显示单用 <code>L<sub>logits</sub>(KLD)</code> 困惑度最优（<code>8.720</code>），混入硬标签 CE 退至 <code>8.791</code>，改用 Reverse-KL 恶化至 <code>9.008</code>（Apple 表 7 同样证实 Forward-KL <code>2.42</code> 优于 Reverse-KL <code>2.70</code>）<sup id="cite-4-7"><a href="#ref-4">[4]</a></sup><sup id="cite-5-4"><a href="#ref-5">[5]</a></sup>；在不大幅删层时，加中间隐藏层对齐损失并无额外收益（Minitron 表 18：MMLU <code>58.0 vs 58.3</code>）<sup id="cite-5-5"><a href="#ref-5">[5]</a></sup>。进入后训练推理阶段后，Qwen3（表 21）证明用 <strong>Off-policy + On-policy 强到弱蒸馏</strong>仅耗 <strong>1/10 GPU 小时（1,800 vs 17,920）</strong>即可把 AIME’24 推至 <strong>74.4%</strong>，反超直接 RL 的 <strong>67.6%</strong><sup id="cite-6-6"><a href="#ref-6">[6]</a></sup>。
+    </p>
+
+    <div class="visual-card" id="fig-svg-routes">
+      <div class="visual-card-header">
+        <strong>图 3｜0.5B–3B 基座构建三条路线的胜负边界（综合 Apple 缩放律 + NVIDIA Minitron）</strong>
+        <span class="visual-badge">自绘决策相图 · 教师条件 × 学生数据预算</span>
+      </div>
+      <div class="visual-body">
+        <svg viewBox="0 0 860 250" role="img" aria-labelledby="svg3-title">
+          <title id="svg3-title">按教师可用性与学生可用Token预算划分的三条训练路线胜负象限图</title>
+          <text x="20" y="24" fill="#667686" font-size="12" font-weight="700">纵轴：教师模型条件 ↓ / 横轴：学生可用训练数据预算 D_S →</text>
+          <rect x="188" y="36" width="318" height="26" rx="4" fill="#ebe5d8"/>
+          <text x="347" y="54" text-anchor="middle" fill="#182635" font-size="12" font-weight="700">中小数据预算（50B – 1T tokens）</text>
+          <rect x="518" y="36" width="322" height="26" rx="4" fill="#ebe5d8"/>
+          <text x="679" y="54" text-anchor="middle" fill="#182635" font-size="12" font-weight="700">高倍超训预算（2T – 36T tokens）</text>
+
+          <rect x="20" y="70" width="156" height="52" rx="6" fill="#e7f3f1" stroke="#8fc4bf"/>
+          <text x="98" y="92" text-anchor="middle" fill="#124e4a" font-size="12" font-weight="700">已有同族大模型</text>
+          <text x="98" y="110" text-anchor="middle" fill="#3d4f60" font-size="11">（同词表 8B / 15B）</text>
+          <rect x="188" y="70" width="318" height="52" rx="6" fill="#e7f3f1" stroke="#1b6b66" stroke-width="1.6"/>
+          <text x="204" y="92" fill="#124e4a" font-size="12.5" font-weight="700">★ 最优：迭代剪宽 + 纯 Forward-KL 蒸馏</text>
+          <text x="204" y="111" fill="#3d4f60" font-size="11.5">Minitron 省 40× 数据，MMLU 较从头训 +18.1 pp</text>
+          <rect x="518" y="70" width="322" height="52" rx="6" fill="#f1f8f7" stroke="#8fc4bf"/>
+          <text x="534" y="92" fill="#124e4a" font-size="12.5" font-weight="700">剪宽初始化 + 长程蒸馏（Llama-3.2 路线）</text>
+          <text x="534" y="111" fill="#3d4f60" font-size="11.5">8B 剪至 1B/3B 后配 9T 蒸馏，兼顾起步与上限</text>
+
+          <rect x="20" y="130" width="156" height="52" rx="6" fill="#eaf0fa" stroke="#9cb4de"/>
+          <text x="98" y="152" text-anchor="middle" fill="#2e4f8a" font-size="12" font-weight="700">仅有异构现成教师</text>
+          <text x="98" y="170" text-anchor="middle" fill="#3d4f60" font-size="11">（成本已由云端分摊）</text>
+          <rect x="188" y="130" width="318" height="52" rx="6" fill="#eaf0fa" stroke="#2e4f8a" stroke-width="1.4"/>
+          <text x="204" y="152" fill="#2e4f8a" font-size="12.5" font-weight="700">★ 占优：从头初始化 + 匹配教师 Logit 蒸馏</text>
+          <text x="204" y="171" fill="#3d4f60" font-size="11.5">选过训练中型教师防容量鸿沟（Apple 图 6 蓝区）</text>
+          <rect x="518" y="130" width="322" height="52" rx="6" fill="#fdf3e4" stroke="#e7b877"/>
+          <text x="534" y="152" fill="#8b4a0b" font-size="12.5" font-weight="700">反转区：直接从头 WSD 超训追平/反超</text>
+          <text x="534" y="171" fill="#3d4f60" font-size="11.5">省去昂贵教师前向推理 FLOPs，后训练再接在线蒸馏</text>
+
+          <rect x="20" y="190" width="156" height="50" rx="6" fill="#fceceb" stroke="#e5a5a1"/>
+          <text x="98" y="212" text-anchor="middle" fill="#b23b35" font-size="12" font-weight="700">无现成教师</text>
+          <text x="98" y="229" text-anchor="middle" fill="#3d4f60" font-size="11">（仅需训单个端侧模型）</text>
+          <rect x="188" y="190" width="652" height="50" rx="6" fill="#fceceb" stroke="#b23b35" stroke-width="1.5"/>
+          <text x="514" y="212" text-anchor="middle" fill="#b23b35" font-size="12.5" font-weight="700">★ 全区间铁律：直接从头监督预训练必胜（严禁分算力先训临时教师再蒸馏 · Apple 图 8 绿/红线）</text>
+          <text x="514" y="230" text-anchor="middle" fill="#7d2520" font-size="11.5">将 100% 算力投入深窄绑定架构与 WSD 退火数据，始终低于“自建教师+蒸馏”曲线</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="decision-widget" aria-label="0.5B–3B 小模型训练路线交互速查">
+      <div class="decision-tabs" role="tablist">
+        <button class="decision-tab" role="tab" :aria-selected="activeTab === 'a' ? 'true' : 'false'" @click="activeTab = 'a'" type="button">
+          <strong>场景 A · 已有同词表主力大模型</strong>
+          例如已训好 8B/14B，需派生 0.5B–3B 端侧版
+        </button>
+        <button class="decision-tab" role="tab" :aria-selected="activeTab === 'b' ? 'true' : 'false'" @click="activeTab = 'b'" type="button">
+          <strong>场景 B · 无同族教师，定制全新架构/词表</strong>
+          例如专用小词表、超深窄端侧架构且算力充裕
+        </button>
+        <button class="decision-tab" role="tab" :aria-selected="activeTab === 'c' ? 'true' : 'false'" @click="activeTab = 'c'" type="button">
+          <strong>场景 C · 有现成开源教师，但训练预算中等</strong>
+          例如仅有 100B–1T 预算，目标 1B–3B 模型
+        </button>
+      </div>
+
+      <div v-show="activeTab === 'a'" class="decision-panel" role="tabpanel">
+        <div class="dp-box">
+          <span class="kicker">首选路线</span>
+          <strong>迭代结构化剪宽 + 纯 Logit KLD 重训</strong><br>
+          直接拿已完成多阶段退火的最终基座，用 1024 条校准样本单次前向估激活重要性（Batch L2 + Seq Mean），保留层深、裁剪通道/MLP/头<sup id="cite-5-6"><a href="#ref-5">[5]</a></sup>。
+        </div>
+        <div class="dp-box">
+          <span class="kicker">数据与算力账</span>
+          <strong>仅需原模型 &lt;3%–10% 数据（90B–1T）</strong><br>
+          跨度超 50% 参数时分两跳（如 15B→8B→4B 或 8B→3B→1B），每步重训均用高质量退火段语料与纯 Forward-KL（<code>τ=1</code>）。
+        </div>
+        <div class="dp-box">
+          <span class="kicker">必避陷阱</span>
+          <strong>严禁只剪枝+普通 CE 重训；严禁拦腰砍半层数</strong><br>
+          不加教师软分布会导致 MMLU 跌回随机猜测；砍层深虽零样本略好看，重训 200 步后即输给剪宽。
+        </div>
+      </div>
+
+      <div v-show="activeTab === 'b'" class="decision-panel" role="tabpanel">
+        <div class="dp-box">
+          <span class="kicker">首选路线</span>
+          <strong>深窄绑定架构 + 从头 WSD 超训与末期退火</strong><br>
+          词表定在 32k–64k 并绑定输入输出 Embedding，采用 30–54 层深窄比例 + SwiGLU + GQA(3:1~4:1)，不花算力先训临时教师<sup id="cite-3-8"><a href="#ref-3">[3]</a></sup><sup id="cite-4-8"><a href="#ref-4">[4]</a></sup>。
+        </div>
+        <div class="dp-box">
+          <span class="kicker">数据与算力账</span>
+          <strong>预算配至 2T–11T+ tokens（M ≈ 3,000–10,000×）</strong><br>
+          &lt;0.5B 全程喂高纯度混合数据；1B–3B 前 90% 用双分类器网页+基础代码打底，最后 10% 线性退火重仓精筛推理与合成教材<sup id="cite-2-15"><a href="#ref-2">[2]</a></sup>。
+        </div>
+        <div class="dp-box">
+          <span class="kicker">必避陷阱</span>
+          <strong>警惕单一网页分布硬训过 2,500× 诱发微调退化</strong><br>
+          必须监控“微调后检查点”而非仅看 Base 指标，并在退火与 SFT 阶段收紧学习率以抑制参数敏感度遗忘<sup id="cite-1-6"><a href="#ref-1">[1]</a></sup>。
+        </div>
+      </div>
+
+      <div v-show="activeTab === 'c'" class="decision-panel" role="tabpanel">
+        <div class="dp-box">
+          <span class="kicker">首选路线</span>
+          <strong>匹配尺度的现成过训练教师 Logit 蒸馏</strong><br>
+          处于 Apple 蓝红相图左侧深蓝区：直接用同词表或对齐后的现成教师提供高覆盖率 Forward-KL 信号，收敛速度远快于硬标签<sup id="cite-4-9"><a href="#ref-4">[4]</a></sup>。
+        </div>
+        <div class="dp-box">
+          <span class="kicker">教师选择铁律</span>
+          <strong>选“小而充分过训练”的教师，而非巨型未训透教师</strong><br>
+          学生损失只认教师损失 <code>L<sub>T</sub></code>；参数更小但充分过训练的教师（如 4B–8B）能以低得多的推理开销提供同等 <code>L<sub>T</sub></code> 且避开容量鸿沟<sup id="cite-4-10"><a href="#ref-4">[4]</a></sup>。
+        </div>
+        <div class="dp-box">
+          <span class="kicker">后训练衔接</span>
+          <strong>接两阶段强到弱蒸馏（Off-policy → On-policy）</strong><br>
+          后训练阶段用在线策略 Logit 对齐替代昂贵的小模型从头 RL，可以十倍算力优势获得更高数学与代码推理分<sup id="cite-6-7"><a href="#ref-6">[6]</a></sup>。
+        </div>
+      </div>
+    </div>
+
+    <details class="supplement">
+      <summary>实验口径、评测差异与未核实边界说明（按需展开）</summary>
+      <p>
+        1. <strong>参数口径差异：</strong>Apple《Distillation Scaling Laws》全文以非词表参数记 <code>N</code>，而 MobileLLM、SmolLM2 与 Minitron 主表默认报告含词表总参数量（Minitron-4B 非词表参数为 2.6B，落入本文核心关注的 ≤3B 骨干区间）。
+      </p>
+      <p>
+        2. <strong>跨工作榜单不可直接横比绝对分：</strong>SmolLM2 的 MMLU 进展采用显式四选一生成格式（MCF），Qwen3 的 GSM8K/MATH 采用 4-shot CoT 评测，MobileLLM 聚焦 8 项零样本常识推理与 TQA/RACE。本文所有结论均严格取自<strong>各论文内部控制变量消融表</strong>。
+      </p>
+      <p>
+        3. <strong>待进一步实证的空白：</strong>公开文献中尚缺少在 ≥10T 词元与 ≥50B 合成推理退火条件下，对同一 1B–3B 架构完全等总算力横评“从头 WSD 超训 vs 同族 8B 剪宽蒸馏”的端到端开源对照。
+      </p>
+    </details>
+  </section>
+
+  <section class="document-section" id="references" aria-labelledby="h-refs">
+    <h2 id="h-refs" tabindex="-1">来源与阅读范围 <a class="header-anchor" href="#h-refs" aria-label="章节链接">&#8203;</a></h2>
+    <ol class="reference-list">
+      <li id="ref-1">
+        Jacob Mitchell Springer 等，<cite>Overtrained Language Models Are Harder to Fine-Tune</cite>（arXiv:2503.19206v1，2025），定位：§2.1–2.2、图 2（OLMo-1B 2.3T→3T 微调退化）、§3.1–3.4、图 3–7（渐进参数敏感度）。
+        <a href="https://arxiv.org/abs/2503.19206" target="_blank" rel="noopener">arXiv 原文</a>
+        <a class="reference-backlink" href="#cite-1" aria-label="返回正文引用">↩</a>
+      </li>
+      <li id="ref-2">
+        Loubna Ben Allal 等（Hugging Face），<cite>SmolLM2: When Smol Goes Big — Data-Centric Training of a Small Language Model</cite>（arXiv:2502.02737v1，2025），定位：§3.2 表 1、§3.3.2 图 1（FineMath 退火消融）、§3.4 表 2（Stack-Edu）、§4.1–4.5 图 2 与表 3/6/8、§6（135M/360M 单阶段结论）。
+        <a href="https://arxiv.org/abs/2502.02737" target="_blank" rel="noopener">arXiv 原文</a>
+        <a class="reference-backlink" href="#cite-2" aria-label="返回正文引用">↩</a>
+      </li>
+      <li id="ref-3">
+        Zechun Liu 等（Meta），<cite>MobileLLM: Optimizing Sub-billion Parameter Language Models for On-Device Use Cases</cite>（ICML 2024，arXiv:2402.14905v2），定位：§2.2–2.3、图 3–6、表 1（词表共享）、表 7（SRAM 层共享延迟）、表 8–13（深宽比与 GQA）、表 16（LLaMA-2-7B 蒸馏对照）。
+        <a href="https://arxiv.org/abs/2402.14905" target="_blank" rel="noopener">arXiv 原文</a>
+        <a class="reference-backlink" href="#cite-3" aria-label="返回正文引用">↩</a>
+      </li>
+      <li id="ref-4">
+        Dan Busbridge 等（Apple），<cite>Distillation Scaling Laws</cite>（ICML 2025，arXiv:2502.08606v2），定位：§4.2–4.3 式 (8) 与图 4、§5.1–5.3 图 6–9 与表 2–3、表 7（Forward vs Reverse KL）、附录 D.4。
+        <a href="https://arxiv.org/abs/2502.08606" target="_blank" rel="noopener">arXiv 原文</a>
+        <a class="reference-backlink" href="#cite-4" aria-label="返回正文引用">↩</a>
+      </li>
+      <li id="ref-5">
+        Saurav Muralidharan 等（NVIDIA），<cite>Compact Language Models via Pruning and Knowledge Distillation</cite>（NeurIPS 2024，arXiv:2407.14679v2），定位：§2.2–2.3、§3、§4.1–4.3、表 10 与图 6、表 11（4B 等算力对照）、表 15 与表 18。
+        <a href="https://arxiv.org/abs/2407.14679" target="_blank" rel="noopener">arXiv 原文</a>
+        <a class="reference-backlink" href="#cite-5" aria-label="返回正文引用">↩</a>
+      </li>
+      <li id="ref-6">
+        Qwen Team，<cite>Qwen3 Technical Report</cite>（arXiv:2505.09388，2025），定位：表 1（0.6B–4B 绑定 Embedding 与 8B+ 解绑）、§3.1–3.2（36T 三阶段预训练）、表 8、§4.5 与表 21（强到弱在线蒸馏 vs RL）。
+        <a href="https://arxiv.org/abs/2505.09388" target="_blank" rel="noopener">arXiv 原文</a>
+        <a class="reference-backlink" href="#cite-6" aria-label="返回正文引用">↩</a>
+      </li>
+      <li id="ref-7">
+        Samir Yitzhak Gadre 等，<cite>Language models scale reliably with over-training and on downstream tasks</cite>（arXiv:2403.08540v2，2024），定位：§2.2–2.3 式 (4)–(5)、表 6 与表 8。
+        <a href="https://arxiv.org/abs/2403.08540" target="_blank" rel="noopener">arXiv 原文</a>
+        <a class="reference-backlink" href="#cite-7" aria-label="返回正文引用">↩</a>
+      </li>
+    </ol>
+  </section>
+
+  <dialog ref="dialogRef" class="research-lightbox" aria-label="原论文图表放大预览" @click="onDialogClick">
+    <img v-if="lbSrc" :src="lbSrc" :alt="lbAlt">
+    <div class="lightbox-bar">
+      <span>{{ lbCap }}</span>
+      <button class="lightbox-close" type="button" @click="closeLightbox">关闭 (Esc)</button>
+    </div>
+  </dialog>
+</article>

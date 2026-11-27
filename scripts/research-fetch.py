@@ -7,6 +7,7 @@ Subcommands:
   citations   Fetch references & citations for an anchor paper (S2 -> OpenAlex -> Crossref).
   read-paper  Tiered full-text reader: arXiv HTML -> LaTeX source -> PDF -> Jina.
   read-web    Clean article/blog/docs reader: direct HTML -> optional Jina Reader fallback.
+  extract-figures  Index, render, and 300-DPI crop original figures from arXiv/local PDFs (requires PyMuPDF).
 
 Optional environment variables (never printed):
   OPENALEX_API_KEY, OPENALEX_EMAIL, S2_API_KEY, JINA_API_KEY
@@ -1469,6 +1470,82 @@ def cmd_read_web(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_extract_figures(args: argparse.Namespace) -> int:
+    try:
+        import fitz  # type: ignore
+    except ImportError:
+        print('Error: PyMuPDF (fitz) is required for extract-figures. Install with: pip install pymupdf', file=sys.stderr)
+        return 1
+
+    target = args.target.strip()
+    local_pdf = Path(target)
+    if local_pdf.is_file():
+        pdf_path = local_pdf
+        label = local_pdf.stem
+    else:
+        base_id, vid = parse_arxiv_id(target)
+        if not base_id:
+            raise ValueError(f'Expected local PDF path or arXiv ID/URL, got: {target}')
+        label = vid or base_id
+        pdf_path = cache_path('pdf_figures', label, '.pdf')
+        if args.refresh or not pdf_path.exists():
+            data, _ = http_get(f'https://arxiv.org/pdf/{label}.pdf', timeout=60, max_bytes=60_000_000)
+            pdf_path.write_bytes(data)
+
+    doc = fitz.open(str(pdf_path))
+    total_pages = len(doc)
+
+    if args.list or (not args.pages and not args.crop):
+        print(f'# Figures in {label} ({total_pages} pages, cached at {pdf_path})')
+        found = 0
+        for pno in range(min(total_pages, args.max_pages)):
+            txt = doc[pno].get_text()
+            for m in re.finditer(r'(Fig(?:ure)?\.?\s*\d+[:\.][^\n]+(?:\n[^\n]+){0,2})', txt):
+                clean = ' '.join(m.group(1).split())
+                print(f'- p.{pno + 1}: {clean[:200]}')
+                found += 1
+        if found == 0:
+            print('(No "Figure N" captions matched in scanned pages.)')
+        return 0
+
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.pages:
+        for tok in args.pages.split(','):
+            tok = tok.strip()
+            if not tok:
+                continue
+            pno = int(tok)
+            if not (1 <= pno <= total_pages):
+                raise ValueError(f'Page {pno} out of range 1..{total_pages}')
+            pix = doc[pno - 1].get_pixmap(dpi=args.dpi, alpha=False)
+            dest = out_dir / f'{label}_p{pno}.png'
+            pix.save(str(dest))
+            print(f'Rendered page {pno}: {dest} ({pix.width}x{pix.height})')
+
+    if args.crop:
+        for spec in args.crop:
+            parts = spec.split(':')
+            if len(parts) != 3:
+                raise ValueError(f'Invalid --crop spec "{spec}". Expected "PAGE:x0,y0,x1,y1:filename.png"')
+            pno = int(parts[0])
+            coords = [float(v) for v in parts[1].split(',')]
+            if len(coords) != 4:
+                raise ValueError(f'Invalid normalized box in "{spec}". Expected 4 floats x0,y0,x1,y1')
+            fname = parts[2].strip()
+            if not (1 <= pno <= total_pages):
+                raise ValueError(f'Page {pno} out of range 1..{total_pages}')
+            page = doc[pno - 1]
+            r = page.rect
+            clip = fitz.Rect(r.width * coords[0], r.height * coords[1], r.width * coords[2], r.height * coords[3])
+            pix = page.get_pixmap(clip=clip, dpi=args.dpi, alpha=False)
+            dest = out_dir / fname
+            pix.save(str(dest))
+            print(f'Cropped p.{pno} -> {dest} ({pix.width}x{pix.height}, {dest.stat().st_size} bytes)')
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description='Lightweight unified research retrieval CLI')
     sub = p.add_subparsers(dest='cmd', required=True)
@@ -1508,6 +1585,17 @@ def build_parser() -> argparse.ArgumentParser:
     wp.add_argument('--max-chars', type=int, default=12000)
     wp.add_argument('--refresh', action='store_true')
     wp.set_defaults(func=cmd_read_web)
+
+    fp = sub.add_parser('extract-figures', help='Index, render, and 300-DPI crop original figures from arXiv/local PDFs')
+    fp.add_argument('target', help='arXiv ID/URL or local PDF file path')
+    fp.add_argument('--list', action='store_true', help='List Figure captions and page numbers')
+    fp.add_argument('--pages', help='Comma-separated 1-based page numbers to render for inspection (e.g. 2,4,5)')
+    fp.add_argument('--crop', action='append', help='Crop spec PAGE:x0,y0,x1,y1:filename.png (normalized 0..1 coords; repeatable)')
+    fp.add_argument('--out-dir', default='.research/cache/figures', help='Output directory for rendered/cropped PNGs')
+    fp.add_argument('--dpi', type=int, default=300, help='Render DPI (default 300; use 180-200 for full-page inspection)')
+    fp.add_argument('--max-pages', type=int, default=30, help='Max pages to scan when listing figures')
+    fp.add_argument('--refresh', action='store_true')
+    fp.set_defaults(func=cmd_extract_figures)
 
     return p
 

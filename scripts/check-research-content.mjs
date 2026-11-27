@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { build } from 'esbuild'
 import matter from 'gray-matter'
 import { createHash } from 'node:crypto'
+import { readContent } from './content-source.mjs'
 
 const result = await build({ entryPoints: ['docs/.vitepress/public-content.ts', 'docs/.vitepress/research-sidebar.ts'], bundle: true, write: false, outdir: 'unused', platform: 'node', format: 'esm' })
 const modules = await Promise.all(result.outputFiles.map(file => import(`data:text/javascript;base64,${Buffer.from(file.text).toString('base64')}`)))
@@ -17,8 +18,9 @@ assert.deepEqual(links.map(item => item.link), expectedRoutes)
 assert.deepEqual(researchCards.map(card => card.link), expectedRoutes)
 assert.equal(new Set(catalog.map(item => item.route)).size, catalog.length)
 for (const row of catalog) {
-  const raw = await readFile(`docs${row.route}.md`, 'utf8')
-  const { data, content } = matter(raw)
+  const filePath = `docs${row.route}.md`
+  const raw = await readFile(filePath, 'utf8')
+  const { data, content } = readContent(filePath)
   if (row.delivery) {
     assert.match(row.delivery.acceptance_sha256, /^[a-f0-9]{64}$/)
     assert.match(row.delivery.article_sha256, /^[a-f0-9]{64}$/)
@@ -38,8 +40,13 @@ for (const row of catalog) {
     const doc = matter(await readFile('docs' + child.link + '.md', 'utf8'))
     assert.ok(isPublicContent(child.link, doc.data), child.link)
   }
-  assert.equal((content.match(/^# /gm) ?? []).length, 1)
-  assert.ok(content.includes('## 来源与阅读范围'))
+  if (data.contentFormat === 'html') {
+    assert.equal((content.match(/<h1\b/gi) ?? []).length, 1, row.route)
+    assert.ok(content.includes('来源与阅读范围'), row.route)
+  } else {
+    assert.equal((content.match(/^# /gm) ?? []).length, 1, row.route)
+    assert.ok(content.includes('## 来源与阅读范围'), row.route)
+  }
 }
 if (process.argv.includes('--built')) {
   const page = await readFile('docs/.vitepress/dist/research/index.html', 'utf8')

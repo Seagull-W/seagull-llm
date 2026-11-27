@@ -18,8 +18,8 @@
 - <原文链接 / PDF / 截图转写路径；无则填“无，由执行者自行检索”>
 
 ## 本轮任务与边界（固定文本，Hermes 不得增改）
-- 按 `.agents/skills/paper-research/SKILL.md` 第 1–2 节完成选材、检索、读原文与事实核对（优先使用 `scripts/research-fetch.py`）。
-- 输出精简、带原文章节/表格定位的调研笔记至 `<绝对路径，如 .research/handoffs/<task>/research-notes.md>`。
+- 按 `.agents/skills/paper-research/SKILL.md` 第 1–2 节完成选材、检索、读原文与事实核对（优先使用 `scripts/research-fetch.py`）；若原论文有关键曲线、消融阶梯或相图，一并用 `research-fetch.py extract-figures` 高精裁切（300 DPI）到任务目录 `figures/` 下并在笔记中标明文件名与图注。
+- 输出精简、带原文章节/表格/配图定位的调研笔记至 `<绝对路径，如 .research/handoffs/<task>/research-notes.md>`。
 - 仅做调研与事实核对，不代替写作，不写最终 HTML；轻量单线程执行，不拉起并发子进程；允许联网检索：<是/否>；禁止提交或发布。
 ```
 

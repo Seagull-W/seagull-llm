@@ -15,10 +15,10 @@ interface CuratedTopic {
 const topics: CuratedTopic[] = [
   {
     key: 'sandbox', name: '智能体的沙箱，究竟隔离了什么？', short: '智能体沙箱',
-    deck: '从一个 Linux 进程的边界，读到沙箱的恢复成本，再看大批容器怎样分摊调度。',
+    deck: '从一个 Linux 进程的边界，读到训练环境的隔离编排，再看大批容器怎样撑起代码强化学习。',
     readings: [
       ['隔离边界', '/linux-notes/linux-isolation'],
-      ['运行成本', '/research/2026-10-20-agent-sandbox-wrong-target'],
+      ['环境编排', '/papers/engineering/data-and-environments'],
       ['训练实例', '/papers/projects/deepswe-preview/'],
     ],
   },

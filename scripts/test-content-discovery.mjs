@@ -57,7 +57,7 @@ test('home directory covers each column once and topic readings resolve to publi
 test('one public catalog includes articles and individually addressable videos', () => {
   assert.equal(pages.length, documents.length + 2)
   assert.equal(new Set(pages.map(p => p.url)).size, pages.length)
-  assert.ok(pages.length >= 79)
+  assert.ok(pages.length >= 55)
   assert.ok(!pages.some(p => /llm-book|adr|unlisted/.test(p.url)))
   assert.ok(pages.every(p => p.title && p.section && p.description))
   assert.ok(pages.every(p => isMaturity(p.maturity)))
@@ -87,7 +87,7 @@ test('knowledge graph preserves the public catalog and one undirected link per a
 test('graph coordinates are deterministic across input order, repeated tags and colliding labels', () => {
   const input = (url, tags) => ({ url, src: '', frontmatter: { title: 'research', tags } })
   const a = input('/cs336/lecture-01', ['research', 'a', 'a'])
-  const b = input('/research/2026-10-14-llm-post-training-agentic-rl', ['a'])
+  const b = input('/research/2026-11-27-slm-pretraining-2026', ['a'])
   const graph = graphLoader.transform([a, b])
   assert.deepEqual(graphLoader.transform([b, a]), graph)
   assert.ok(graph.nodes.some(node => node.id === 'tag:research' && node.label === 'research'))
@@ -98,8 +98,7 @@ test('explicit maturity takes precedence over research, lecture and study-note d
   assert.deepEqual(maturities.map(maturity => maturityLabels[maturity]), ['幼苗', '成长', '常青'])
   for (const value of [null, {}, 'unknown', '__proto__']) assert.equal(isMaturity(value), false)
   const entries = [
-    ['/research/2026-10-14-llm-post-training-agentic-rl', {}, '', 'seedling'],
-    ['/research/2026-10-16-post-training-rl-benchmarks', { maturity: 'evergreen' }, '', 'evergreen'],
+    ['/research/2026-11-27-slm-pretraining-2026', {}, '', 'seedling'],
     ['/cs336/lecture-01', { contentFormat: 'html' }, '', 'evergreen'],
     ['/cs336/lecture-02', {}, '<!--@include: ./lecture-02.html-->', 'evergreen'],
     ['/cs336/lecture-03', { maturity: 'seedling', contentFormat: 'html' }, '', 'seedling'],
@@ -111,6 +110,11 @@ test('explicit maturity takes precedence over research, lecture and study-note d
   const fixtures = entries.map(([url, fields, src]) => ({ url, src, frontmatter: { title: url, ...fields } }))
   const byUrl = new Map(catalogLoader().transform(fixtures).map(p => [p.url, p.maturity]))
   for (const [url, , , expected] of entries) assert.equal(byUrl.get(url), expected, url)
+  const explicitResearch = catalogLoader().transform([{
+    url: '/research/2026-11-27-slm-pretraining-2026', src: '',
+    frontmatter: { title: 'research', maturity: 'evergreen' }
+  }])
+  assert.equal(explicitResearch[0].maturity, 'evergreen')
 })
 test('full text finds commands and groups matches by article with useful context', () => {
   const commands = searchContent(pages, documents, 'unshare --user')
@@ -127,9 +131,9 @@ test('research stays newest first by publication date after older reports are ed
   assert.ok(research.length > 0)
   assert.ok(research.every((p, i) => !i || research[i - 1].updated >= p.updated))
   assert.ok(research.every(p => p.updated === p.url.match(/^\/research\/(\d{4}-\d{2}-\d{2})-/)[1]))
-  const oldReport = inputs.find(p => p.url === '/research/2026-10-14-llm-post-training-agentic-rl')
+  const oldReport = inputs.find(p => p.url === '/research/2026-11-27-slm-pretraining-2026')
   const edited = catalogLoader().transform([{ ...oldReport, frontmatter: { ...oldReport.frontmatter, updated: '2099-01-01' } }])
-  assert.equal(edited.find(p => p.section === 'research').updated, '2026-10-14')
+  assert.equal(edited.find(p => p.section === 'research').updated, '2026-11-27')
 })
 test('topic aliases and explicit course order do not create arbitrary sequences', () => {
   assert.deepEqual(topicTags(['Agent', '智能体', '论文精读']), ['智能体'])

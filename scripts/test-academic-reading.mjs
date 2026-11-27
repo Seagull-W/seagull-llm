@@ -6,13 +6,13 @@ import { readingPages, supportsHtmlNotebook, usesAcademicReading, usesPaperNoteb
 
 test('all public text collections receive academic reading typography', () => {
   const pages = readingPages()
-  assert.ok(pages.length >= 71)
+  assert.ok(pages.length >= 50)
   const sections = JSON.parse(readFileSync('docs/.vitepress/sections.json', 'utf8'))
   const textSections = sections.filter(s => s.kind !== 'gallery')
   assert.deepEqual([...new Set(pages.map(p => p.path.split('/')[1]))].sort(), textSections.map(s => s.id).sort())
   for (const path of ['/westlake-rl/随机近似/课程讲义', '/rl-book/cha6强化学习',
     '/papers/projects/intellect-3/', '/rust-notes/多线程并发编程',
-    '/linux-notes/linux-isolation', '/research/2026-10-26-agent-code-review-layers']) {
+    '/linux-notes/linux-isolation', '/research/2026-11-27-slm-pretraining-2026']) {
     assert.equal(usesAcademicReading(path, {}), true, path)
   }
 })

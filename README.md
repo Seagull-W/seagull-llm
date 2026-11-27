@@ -103,7 +103,7 @@ VitePress 将 Markdown 和 HTML 正文构建为静态页面，Vue 组件提供 P
 | 从零实现大模型，跟着讲义做作业和 GPU 实验 | [Stanford CS336 学习笔记](https://seagull-llm.pages.dev/cs336/) |
 | 学习强化学习的数学推导、奖励建模与训练实践 | [西湖强化学习](https://seagull-llm.pages.dev/westlake-rl/) · [强化学习笔记](https://seagull-llm.pages.dev/rl-book/) |
 | 对照 R1-Zero 和 R1 的训练过程，读懂奖励设计 | [DeepSeek-R1 阅读笔记](https://seagull-llm.pages.dev/papers/deepseek-r1/) · [更多论文与项目](https://seagull-llm.pages.dev/papers/) |
-| 理解一次 rollout 的算力花在哪里 | [一条训练样本值多少 token](https://seagull-llm.pages.dev/research/2026-10-28-rollout-compute-economics) |
+| 拆解 0.5B–3B 小模型预训练的数据配方、架构与蒸馏取舍 | [0.5B–3B 小模型预训练调研](https://seagull-llm.pages.dev/research/2026-11-27-slm-pretraining-2026) |
 | 从代码理解并发，从操作系统理解隔离 | [Rust 笔记](https://seagull-llm.pages.dev/rust-notes/) · [Linux 笔记](https://seagull-llm.pages.dev/linux-notes/) |
 
 ## 许可协议
@@ -114,6 +114,6 @@ VitePress 将 Markdown 和 HTML 正文构建为静态页面，Vue 组件提供 P
 
 节选文章时，可以这样署名。
 
-> 本文节选自 Seagull 的《[Rollout 的算力账](https://seagull-llm.pages.dev/research/2026-10-28-rollout-compute-economics)》，按 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) 使用，部分段落已删节。
+> 本文节选自 Seagull 的《[0.5B–3B 小模型预训练](https://seagull-llm.pages.dev/research/2026-11-27-slm-pretraining-2026)》，按 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) 使用，部分段落已删节。
 
 **第三方材料**按各自的授权使用，包括收录或翻译的论文与课件、引用图表、影视和游戏画面、字体及第三方代码。请查阅相应文件、图注或原始来源中的声明。[CS336 作业一许可](docs/public/cs336/sources/assignment1/LICENSE) · [作业二许可](docs/public/cs336/sources/assignment2/LICENSE) · [Noto Serif SC 字体许可](docs/.vitepress/theme/fonts/OFL-NotoSerifSC.txt)
