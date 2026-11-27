@@ -1,7 +1,7 @@
 {
   "family": "Noto Serif SC",
   "license": "SIL OFL 1.1",
-  "character_count": 1799,
+  "character_count": 1830,
   "pages": [
     {
       "path": "/cs336/a1-bpe.md",
@@ -78,6 +78,10 @@
     {
       "path": "/datawhale-agentic-rl/task-04.md",
       "title": "Task 04 · DeepMath 在线策略蒸馏实验"
+    },
+    {
+      "path": "/datawhale-agentic-rl/task-05.md",
+      "title": "task05 general opd 实战与 SFT 对照"
     },
     {
       "path": "/linux-notes/linux-isolation.md",

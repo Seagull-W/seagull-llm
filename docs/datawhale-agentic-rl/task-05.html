@@ -1,0 +1,207 @@
+<article class="native-document format-lab" data-format="lab" data-design="linux-notebook" aria-label="task05 general opd 实战与 SFT 对照">
+<header class="document-intro note-hero">
+<p class="note-kicker">DataWhale Agentic RL</p>
+<h1 id="task-05" tabindex="-1">task05 general opd 实战与 SFT 对照 <a class="header-anchor" href="#task-05" aria-label="章节链接">&#8203;</a></h1>
+<blockquote>
+<p>本文为 <a href="https://github.com/datawhalechina">DataWhale</a> 开源项目 <a href="https://github.com/datawhalechina/agentic-rl-lab">agentic-rl-lab</a> 的学习笔记与实验记录，感谢 DataWhale 与 PyTRIO 的支持。</p>
+</blockquote>
+</header>
+<nav class="note-jump" aria-label="页内导航"><details><summary>本页目录</summary>
+<a href="#design">一、场景选择与实验设计</a>
+<a href="#training">二、训练过程对比：OPD vs SFT</a>
+<a href="#evaluation">三、60 题固定评测：OPD 与 SFT 的真实表现</a>
+<a href="#errors">四、错误归因与典型案例</a>
+<a href="#conclusions">五、对照结论与实验边界</a>
+</details></nav>
+<section class="document-section note-panel" aria-labelledby="design">
+<h2 id="design" tabindex="-1">一、场景选择与实验设计 <a class="header-anchor" href="#design" aria-label="章节链接">&#8203;</a></h2>
+<p>在 <a href="/datawhale-agentic-rl/task-04">Task04</a> 的 DeepMath 试跑中，4B Student 生成的 160 条回答全部用满了 512 token 上限，训练只覆盖了推导前半段，几乎没机会给最终答案打分。本次实战改用单轮工具调用数据集 <code>Team-ACE/ToolACE</code>：模型读取用户请求与候选工具说明，直接输出一条带参数的函数调用（选对接口算工具名正确，参数键和值也一致才算整题正确）。回复本身很短，既能避开截断、压低 PyTRIO 开销，也方便本地解析打分，不实际执行工具。</p>
+<p>从 11,300 条原始记录中，保留原始 system prompt、不额外加格式示例，只取第一组 user / assistant 对话，按「2–5 个候选工具、system ≤ 2,500 字符、标准调用 ≤ 400 字符且可解析」筛选出 752 条，对用户请求去重后剩 747 条；固定种子 42 切出 200 条训练池和 60 条评测集（零重叠）。<a href="/datawhale-agentic-rl/task-05/00-prepare-data.py.txt" download="00-prepare-data.py">数据准备脚本</a></p>
+<p>为了公平对照 <strong>General OPD</strong> 与 <strong>离线 SFT</strong>，两组均从同一个 <code>Qwen/Qwen3.5-4B</code> 基座出发，使用相同 LoRA（rank 32）、学习率 <code>4e-5</code>、关闭 thinking，按相同顺序覆盖训练池前 100 条请求，各更新 25 步（每步 4 题）。核心差异只落在监督方式本身：</p>
+<table>
+<thead>
+<tr>
+<th>对比项</th>
+<th>General OPD（异步）</th>
+<th>离线 SFT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>监督来源</td>
+<td>只用 <code>system + user</code>（prompt-only），由冻结的 <code>Qwen/Qwen3.8-27B</code> 对 4B 采样轨迹逐 token 打分</td>
+<td>数据集中的标准 <code>assistant</code> 调用与 EOS</td>
+</tr>
+<tr>
+<td>更新目标</td>
+<td>每题采 2 条轨迹，<code>importance_sampling</code> 优化 reverse KL（<code>kl_penalty_coef = 1.0</code>）</td>
+<td>4 条标注样本，回答与 EOS 区间计算 <code>cross_entropy</code>（prompt 权重为 0）</td>
+</tr>
+<tr>
+<td>采样 / 长度</td>
+<td>每步刷新 sampler，<code>temperature = 1.0</code>，<code>max_tokens = 256</code>，并发 8</td>
+<td><code>max_length = 1,024</code>，无需在线采样</td>
+</tr>
+<tr>
+<td>训练脚本与记录</td>
+<td><a href="/datawhale-agentic-rl/task-05/01-train-opd-async.py.txt" download="01-train-opd-async.py">01-train-opd-async.py</a> · <a href="https://swanlab.cn/@WenJiaxin/agentic-rl-lab-opd/runs/il9bm5xb">SwanLab</a></td>
+<td><a href="/datawhale-agentic-rl/task-05/02-train-sft-async.py.txt" download="02-train-sft-async.py">02-train-sft-async.py</a> · <a href="https://swanlab.cn/@WenJiaxin/agentic-rl-lab-opd/runs/5e052iht">SwanLab</a></td>
+</tr>
+</tbody>
+</table>
+<p>训练结束后分别导出 sampler 权重用于评测：OPD 为 <code>trio://run_1p6ij55dcxu9/sampler_weights/toolace-opd-step25</code>，SFT 为 <code>trio://run_ibas1nlgbbu3/sampler_weights/toolace-sft-step25</code>。</p>
+</section>
+<section class="document-section note-panel" aria-labelledby="training">
+<h2 id="training" tabindex="-1">二、训练过程对比：OPD vs SFT <a class="header-anchor" href="#training" aria-label="章节链接">&#8203;</a></h2>
+<figure class="note-figure"><a href="/datawhale-agentic-rl/task-05/training.png"><img src="/datawhale-agentic-rl/task-05/training.png" alt="25 步训练曲线：OPD（reverse KL、trainer loss、生成长度、耗时、吞吐）与 SFT（回答区间交叉熵）" loading="lazy"></a><figcaption>25 步训练曲线：OPD（reverse KL、trainer loss、生成长度、耗时、吞吐）与 SFT（回答区间交叉熵）</figcaption></figure>
+<p>结合训练曲线与逐步汇总数据（<a href="/datawhale-agentic-rl/task-05/opd_summary.json">OPD summary</a> · <a href="/datawhale-agentic-rl/task-05/sft_summary.json">SFT summary</a>），两组训练有三点直接差异：</p>
+<ol>
+<li>
+<p><strong>彻底消除截断，但短输出下 OPD 固定开销占比高</strong></p>
+<ul>
+<li>本轮 OPD 25 步共生成 200 条轨迹，平均长度仅 <strong>22.36 token</strong>，总生成量 <strong>4,471 token</strong>（只有 Task04 10 步 DeepMath 81,920 token 的 <code>5.46%</code>），<strong>截断率从 100% 降至 0%</strong>，训练完整覆盖了函数调用的收尾。</li>
+<li>单步耗时降到 <strong>19.75 秒</strong>（Task04 同步版为 <code>119.15 秒</code>），但按生成 token 算出的吞吐只有 <strong>9.13 token/s</strong>：每步仅生成约 179 个 token，刷新 sampler、27B Teacher 打分和优化器更新这些固定开销占了大头。</li>
+</ul>
+</li>
+<li>
+<p><strong>SFT 交叉熵明确回落，OPD 的 reverse KL 以题间波动为主</strong></p>
+<ul>
+<li><strong>SFT</strong> 在 100 条演示上共监督 2,048 个回答 token（含 EOS），回答区间交叉熵从前 5 步均值 <strong>0.1295</strong> 降至后 5 步 <strong>0.0655</strong>（单步仍有批次波动，首末两步分别为 <code>0.0308</code> 和 <code>0.0557</code>）。</li>
+<li><strong>OPD</strong> 每步的 <code>reverse_kl_mean</code> 在 <code>0.0069–0.1899</code> 之间波动，前 5 步均值 <code>0.0705</code> 与后 5 步均值 <code>0.0698</code> 基本持平，但逐 token 标准差从前 5 步 <code>0.5621</code> 收敛至后 5 步 <code>0.4494</code>。服务端 <code>trainer/loss_mean</code> 全程均值为 <code>0.00278</code>（分母计入了 prompt 占位 token，与仅统计生成 token 的 reverse KL 口径不同）。</li>
+</ul>
+</li>
+<li>
+<p><strong>同样 25 步覆盖 100 题，OPD 处理量约为 SFT 的 5 倍</strong></p>
+<ul>
+<li><strong>离线 SFT</strong>：总耗时 <strong>123.3 秒</strong>，训练输入 <strong>54,992 token</strong>。</li>
+<li><strong>General OPD</strong>：总耗时 <strong>512.5 秒</strong>，各环节累计处理 <strong>278,433 token</strong>（采样输入 <code>53,044</code> + 生成 <code>4,471</code> + Teacher 打分输入 <code>110,559</code> + 训练输入 <code>110,359</code>），约为 SFT 的 <strong>5.06 倍</strong>。即便输出极短，候选工具说明的 prefill 以及采样、Teacher 打分和训练三段重复处理，仍使 OPD 的开销明显高于 SFT。</li>
+</ul>
+</li>
+</ol>
+</section>
+<section class="document-section note-panel" aria-labelledby="evaluation">
+<h2 id="evaluation" tabindex="-1">三、60 题固定评测：OPD 与 SFT 的真实表现 <a class="header-anchor" href="#evaluation" aria-label="章节链接">&#8203;</a></h2>
+<p>在 60 题 held-out 评测集上，四个模型统一单次贪心采样（<code>temperature = 0</code>，<code>max_tokens = 256</code>，关闭 thinking）。评测解析器要求单调用且参数键值准确，同时兼容 ToolACE 原始 prompt 模板允许的无引号字符串写法（<code>k=v</code>）、数值等价（<code>1 == 1.0</code>）以及标准 JSON 工具调用格式，避免纯语法风格差异掩盖真实调用能力。<a href="https://github.com/Seagull-W/agentic-rl-lab/blob/7b943ada903e0e81a0e4b10faa8a95720b33cdc3/experiments/general-opd/toolace/toolace.py">评分实现</a></p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th style="text-align:right">格式合法</th>
+<th style="text-align:right">工具名正确</th>
+<th style="text-align:right">调用完全匹配</th>
+<th style="text-align:right">平均生成 token</th>
+<th style="text-align:right">截断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base 4B</td>
+<td style="text-align:right">54/60（90.0%）</td>
+<td style="text-align:right">51/60（85.0%）</td>
+<td style="text-align:right">44/60（73.3%）</td>
+<td style="text-align:right">23.62</td>
+<td style="text-align:right">0/60</td>
+</tr>
+<tr>
+<td><strong>OPD 4B</strong></td>
+<td style="text-align:right">55/60（91.7%）</td>
+<td style="text-align:right">52/60（86.7%）</td>
+<td style="text-align:right"><strong>48/60（80.0%）</strong></td>
+<td style="text-align:right">22.08</td>
+<td style="text-align:right">0/60</td>
+</tr>
+<tr>
+<td>Teacher 27B</td>
+<td style="text-align:right">56/60（93.3%）</td>
+<td style="text-align:right">55/60（91.7%）</td>
+<td style="text-align:right">49/60（81.7%）</td>
+<td style="text-align:right">23.23</td>
+<td style="text-align:right">0/60</td>
+</tr>
+<tr>
+<td><strong>SFT 4B</strong></td>
+<td style="text-align:right"><strong>60/60（100%）</strong></td>
+<td style="text-align:right"><strong>59/60（98.3%）</strong></td>
+<td style="text-align:right"><strong>52/60（86.7%）</strong></td>
+<td style="text-align:right">20.40</td>
+<td style="text-align:right">0/60</td>
+</tr>
+</tbody>
+</table>
+<p>从这组四方对照可以看到清晰的能力梯度：</p>
+<ol>
+<li><strong>General OPD 零退步提分，追回了 80% 的师生差距</strong>：在不看任何标准答案的前提下，OPD 4B 仅靠 25 步、100 条纯 prompt 的在线蒸馏，就将完全匹配率从 Base 4B 的 <strong>73.3%（44/60）</strong> 提升至 <strong>80.0%（48/60）</strong>（+4 题 / +6.7 个百分点），而且 4 题改对、0 题改错，没有引入新退步。对比 Teacher 27B 的 <strong>81.7%（49/60）</strong>，OPD 追回了师生差距的 <strong>80.0%</strong>（<code>4 / 5</code>），几乎贴近 Teacher 上界。</li>
+<li><strong>离线 SFT 拿到最高分，并且超过了 Teacher</strong>：SFT 4B 达到 <strong>86.7%（52/60）</strong>（+8 题 / +13.3 个百分点，由 9 题改对和 1 题改错组成），比 27B Teacher 还高出 5 个百分点。原因在于 SFT 直接见过 100 条单调用标注示范，彻底学会了“遇到带条件分支的复合请求时只先发第一步调用”的数据集约定；而 OPD 只能学到 Teacher 的分布，Teacher 自己在这类复合请求上也倾向一次输出两个调用，因此 OPD 无法单靠蒸馏跨过 Teacher 的习惯。</li>
+<li><strong>短训练下未见明显遗忘差异</strong>：在附带的 30 题 GSM8K-mini 抽测上（<code>max_tokens = 384</code>，<code>math-verify</code> 判分），Base、SFT、OPD 三组 4B 均为 <strong>26/30（86.7%）</strong>（各 2 题截断）。OPD 与 Base 答对的题目完全一致，SFT 在两题上互有得失（改对 <code>gsm8k-919</code>、在 <code>gsm8k-569</code> 上截断）。25 步规模下还不足以体现 SFT 与 OPD 在防遗忘上的分化。</li>
+</ol>
+</section>
+<section class="document-section note-panel" aria-labelledby="errors">
+<h2 id="errors" tabindex="-1">四、错误归因与典型案例 <a class="header-anchor" href="#errors" aria-label="章节链接">&#8203;</a></h2>
+<p>将失败样本按「截断 → 格式（含多调用） → 工具名 → 参数键 → 参数值」互斥归类，可以直观看出 OPD 和 SFT 各自解决了什么问题：<a href="/datawhale-agentic-rl/task-05/eval-results.zip">四组逐题输出</a></p>
+<table>
+<thead>
+<tr>
+<th>失败主因（题）</th>
+<th style="text-align:right">Base 4B</th>
+<th style="text-align:right">OPD 4B</th>
+<th style="text-align:right">Teacher 27B</th>
+<th style="text-align:right">SFT 4B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>格式错误（含多调用）</td>
+<td style="text-align:right">6</td>
+<td style="text-align:right">5</td>
+<td style="text-align:right">4</td>
+<td style="text-align:right">0</td>
+</tr>
+<tr>
+<td>选错工具</td>
+<td style="text-align:right">3</td>
+<td style="text-align:right">3</td>
+<td style="text-align:right">1</td>
+<td style="text-align:right">1</td>
+</tr>
+<tr>
+<td>参数键错误</td>
+<td style="text-align:right">4</td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">4</td>
+<td style="text-align:right">2</td>
+</tr>
+<tr>
+<td>参数值错误</td>
+<td style="text-align:right">3</td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">5</td>
+</tr>
+<tr>
+<td>截断</td>
+<td style="text-align:right">0</td>
+<td style="text-align:right">0</td>
+<td style="text-align:right">0</td>
+<td style="text-align:right">0</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>多调用与格式（SFT 独有优势）</strong>：Base 4B 的 6 道格式错里，1 道是 <code>toolace-04293</code> 漏写调用括号（<code>[list_countries]</code>），其余 5 道均为复合请求一次返回两个调用（如 <code>toolace-00547</code>、<code>toolace-00746</code>、<code>toolace-00665</code>、<code>toolace-00781</code>、<code>toolace-05361</code>）。OPD 跟着 Teacher 修复了 <code>toolace-04293</code>，但其余 5 道多调用问题仍与 Base 一致；SFT 则直接把这 5 道多调用全部收敛为单步首调用，格式错误清零。</li>
+<li><strong>参数键与参数值（OPD 表现更稳）</strong>：OPD 把参数键错误从 4 题压到 2 题、参数值错误从 3 题压到 2 题——例如 <code>toolace-03099</code> 去掉了 Base 多传的 <code>unit=&quot;kilograms&quot;</code>，<code>toolace-07959</code> 去掉了多余的 <code>manufacturer=&quot;Apple&quot;</code>，<code>toolace-01876</code> 把 <code>&quot;advertising campaign&quot;</code> 收敛为标注的 <code>&quot;advertising&quot;</code>。相比之下，SFT 虽然也减少了参数键错误，但参数值错误反而从 3 题增至 5 题（如 <code>toolace-04164</code> 把原本 Base 写对的 <code>device_name=&quot;laptop&quot;</code> 改成了 <code>&quot;Dell laptop&quot;</code>），体现了直接拟合少量示范时更容易出现的细节过拟合。</li>
+</ul>
+</section>
+<section class="document-section note-panel" aria-labelledby="conclusions">
+<h2 id="conclusions" tabindex="-1">五、对照结论与实验边界 <a class="header-anchor" href="#conclusions" aria-label="章节链接">&#8203;</a></h2>
+<ol>
+<li><strong>OPD 确实能在无标答条件下高效逼近 Teacher</strong>：仅用 100 条纯 prompt 跑 25 步，OPD 4B 就在 ToolACE 上把完全匹配率从 <code>73.3%</code> 推到 <code>80.0%</code>，零退步追回 27B Teacher（<code>81.7%</code>）80% 的差距，验证了逐 token 密集蒸馏在小样本、短轨迹上的高样本效率。</li>
+<li><strong>OPD 与 SFT 的核心分水岭在“能力上界”与“数据形态”</strong>：
+<ul>
+<li>当任务有现成高质量标注、且存在需要强制对齐的输出习惯（如本实验的严格单步调用）时，<strong>离线 SFT</strong> 以约 1/5 的 token 处理量和 1/4 的耗时拿到了更高的绝对分数（<code>86.7%</code>），并能超过 Teacher 自身的零样本表现，但在参数值细节上略易出现过拟合；</li>
+<li>当缺少标准答案、或希望在不引入新退步的前提下把大模型能力温和迁移到小模型时，<strong>General OPD</strong> 是更自然的选择，但其上限受限于 Teacher 本身的表现。</li>
+</ul>
+</li>
+<li><strong>实验边界</strong>：本次对照仅覆盖 100 条训练请求、25 步、单随机种子；60 题工具评测每题占 <code>1.67</code> 个百分点，30 题数学抽测每题占 <code>3.33</code> 个百分点，既不足以验证长期训练下 SFT 与 OPD 的防遗忘差异，也未覆盖真实工具执行与多轮纠错。</li>
+</ol>
+</section>
+</article>
